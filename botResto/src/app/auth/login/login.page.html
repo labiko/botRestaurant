@@ -1,0 +1,100 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Connexion {{ userType === 'restaurant' ? 'Restaurant' : 'Livreur' }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="login-content">
+  <div class="login-container">
+    
+    <!-- Logo et titre -->
+    <div class="login-header">
+      <ion-icon [name]="userType === 'restaurant' ? 'restaurant' : 'bicycle'" class="profile-icon"></ion-icon>
+      <h2>{{ userType === 'restaurant' ? 'Espace Restaurant' : 'Espace Livreur' }}</h2>
+      <p>Connectez-vous pour accéder à votre tableau de bord</p>
+    </div>
+
+    <!-- Formulaire Restaurant -->
+    <form *ngIf="userType === 'restaurant'" class="login-form">
+      <ion-item>
+        <ion-label position="stacked">Email</ion-label>
+        <ion-input 
+          type="email" 
+          [(ngModel)]="restaurantEmail" 
+          name="email"
+          placeholder="restaurant@example.com"
+          required>
+        </ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="stacked">Mot de passe</ion-label>
+        <ion-input 
+          type="password" 
+          [(ngModel)]="restaurantPassword" 
+          name="password"
+          placeholder="••••••••"
+          required>
+        </ion-input>
+      </ion-item>
+
+      <ion-button 
+        expand="block" 
+        class="btn-primary login-button"
+        (click)="loginRestaurant()"
+        [disabled]="!restaurantEmail || !restaurantPassword">
+        Se connecter
+      </ion-button>
+    </form>
+
+    <!-- Formulaire Livreur -->
+    <form *ngIf="userType === 'delivery'" class="login-form">
+      <ion-item>
+        <ion-label position="stacked">Numéro de téléphone</ion-label>
+        <ion-input 
+          type="tel" 
+          [(ngModel)]="deliveryPhone" 
+          name="phone"
+          placeholder="624 12 34 56"
+          required>
+        </ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="stacked">Code d'accès</ion-label>
+        <ion-input 
+          type="text" 
+          [(ngModel)]="deliveryCode" 
+          name="code"
+          placeholder="Code à 6 chiffres"
+          maxlength="6"
+          required>
+        </ion-input>
+      </ion-item>
+
+      <ion-button 
+        expand="block" 
+        class="btn-secondary login-button"
+        (click)="loginDelivery()"
+        [disabled]="!deliveryPhone || !deliveryCode">
+        Se connecter
+      </ion-button>
+    </form>
+
+    <!-- Options supplémentaires -->
+    <div class="login-footer">
+      <p *ngIf="userType === 'restaurant'">
+        <a href="#">Mot de passe oublié ?</a>
+      </p>
+      <p>
+        <a (click)="goBack()">Changer de profil</a>
+      </p>
+    </div>
+    
+  </div>
+</ion-content>

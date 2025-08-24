@@ -1,0 +1,31 @@
+<ion-content class="home-content">
+  <div class="welcome-section">
+    <div class="logo-container">
+      <ion-icon name="restaurant-outline" class="app-logo"></ion-icon>
+    </div>
+    <h1>Bot Resto Conakry</h1>
+    <p class="tagline">Système de gestion de commandes et livraisons</p>
+  </div>
+  
+  <div class="profile-selection">
+    <h2>Choisissez votre profil</h2>
+    
+    <div class="profile-cards-container">
+      <div class="profile-card" (click)="selectProfile('restaurant')">
+        <ion-icon name="restaurant"></ion-icon>
+        <h3>Restaurant</h3>
+        <p>Gérer les commandes et votre établissement</p>
+      </div>
+      
+      <div class="profile-card" (click)="selectProfile('delivery')">
+        <ion-icon name="bicycle"></ion-icon>
+        <h3>Livreur</h3>
+        <p>Effectuer les livraisons</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-info">
+    <p>Version 1.0.0 | © 2024 Bot Resto Conakry</p>
+  </div>
+</ion-content>

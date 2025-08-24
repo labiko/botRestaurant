@@ -1,0 +1,68 @@
+.home-content {
+  --background: var(--background-gray);
+  padding: 0;
+}
+
+.welcome-section {
+  background: linear-gradient(135deg, var(--primary-purple) 0%, var(--secondary-purple) 100%);
+  padding: 60px 20px 40px;
+  text-align: center;
+  color: white;
+
+  .logo-container {
+    margin-bottom: 20px;
+
+    .app-logo {
+      font-size: 80px;
+      color: white;
+    }
+  }
+
+  h1 {
+    margin: 0 0 10px 0;
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
+    color: white;
+  }
+
+  .tagline {
+    margin: 0;
+    font-size: var(--text-base);
+    opacity: 0.9;
+    color: white;
+  }
+}
+
+.profile-selection {
+  padding: 40px 20px;
+
+  h2 {
+    text-align: center;
+    margin: 0 0 30px 0;
+    font-size: var(--text-xl);
+    color: var(--text-primary);
+  }
+
+  .profile-cards-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    max-width: 500px;
+    margin: 0 auto;
+
+    @media (min-width: 768px) {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+}
+
+.footer-info {
+  padding: 20px;
+  text-align: center;
+
+  p {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+  }
+}

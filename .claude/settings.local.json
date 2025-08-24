@@ -34,7 +34,13 @@
       "Read(/C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\Resto/**)",
       "Read(/C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\Resto/**)",
       "Read(/C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\Resto/**)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm install:*)",
+      "Bash(ionic start:*)",
+      "Bash(cat:*)",
+      "Bash(curl:*)",
+      "Bash(npm run start:*)",
+      "Bash(ionic serve:*)"
     ],
     "deny": [],
     "ask": []

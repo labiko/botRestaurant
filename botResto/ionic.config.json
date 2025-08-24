@@ -1,0 +1,7 @@
+{
+  "name": "botResto",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}

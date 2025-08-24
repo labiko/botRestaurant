@@ -1,0 +1,129 @@
+/*
+ * App Global CSS
+ * ----------------------------------------------------------------------------
+ * Put style rules here that you want to apply globally. These styles are for
+ * the entire app and not just one component. Additionally, this file can be
+ * used as an entry point to import other CSS/Sass files to be included in the
+ * output CSS.
+ * For more information on global stylesheets, visit the documentation:
+ * https://ionicframework.com/docs/layout/global-stylesheets
+ */
+
+/* Core CSS required for Ionic components to work properly */
+@import "@ionic/angular/css/core.css";
+
+/* Basic CSS for apps built with Ionic */
+@import "@ionic/angular/css/normalize.css";
+@import "@ionic/angular/css/structure.css";
+@import "@ionic/angular/css/typography.css";
+@import "@ionic/angular/css/display.css";
+
+/* Optional CSS utils that can be commented out */
+@import "@ionic/angular/css/padding.css";
+@import "@ionic/angular/css/float-elements.css";
+@import "@ionic/angular/css/text-alignment.css";
+@import "@ionic/angular/css/text-transformation.css";
+@import "@ionic/angular/css/flex-utils.css";
+
+/**
+ * Ionic Dark Mode
+ * -----------------------------------------------------
+ * For more info, please see:
+ * https://ionicframework.com/docs/theming/dark-mode
+ */
+
+/* @import "@ionic/angular/css/palettes/dark.always.css"; */
+/* @import "@ionic/angular/css/palettes/dark.class.css"; */
+@import "@ionic/angular/css/palettes/dark.system.css";
+
+/**
+ * Bot Resto Custom Styles
+ * -----------------------------------------------------
+ */
+
+// Boutons personnalisés
+.btn-primary {
+  --background: linear-gradient(135deg, var(--primary-purple) 0%, #9333EA 100%);
+  --border-radius: 24px;
+  --padding-start: 28px;
+  --padding-end: 28px;
+  --padding-top: 14px;
+  --padding-bottom: 14px;
+  --box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
+  font-weight: var(--font-semibold);
+}
+
+.btn-secondary {
+  --background: linear-gradient(135deg, var(--primary-green) 0%, #65A30D 100%);
+  --border-radius: 24px;
+  --padding-start: 28px;
+  --padding-end: 28px;
+  --padding-top: 14px;
+  --padding-bottom: 14px;
+  --box-shadow: 0 4px 14px rgba(132, 204, 22, 0.3);
+  font-weight: var(--font-semibold);
+}
+
+// Cartes modernes
+.card-modern {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+  border: 1px solid var(--border-light);
+}
+
+// Sections colorées
+.section-highlight {
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+// Typography
+ion-content {
+  --font-family: var(--font-family-primary);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  font-weight: var(--font-semibold);
+}
+
+p {
+  color: var(--text-secondary);
+}
+
+// Profile cards pour la page d'accueil
+.profile-card {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+
+  ion-icon {
+    font-size: 48px;
+    color: var(--primary-purple);
+    margin-bottom: 20px;
+  }
+
+  h3 {
+    margin: 10px 0;
+    font-size: var(--text-xl);
+    color: var(--text-primary);
+  }
+
+  p {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+}
