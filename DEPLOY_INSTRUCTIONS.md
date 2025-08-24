@@ -23,18 +23,26 @@ Dans l'onglet "Table editor", vous devriez voir :
 
 ## 🚀 Déploiement de la Function Edge
 
-### Option 1: Via Supabase CLI (si Docker fonctionne)
-```bash
-cd "C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant"
-supabase functions deploy webhook-whatsapp --project-ref vgxcrwgzcfyebetpinoh
-```
+⚠️ **Note**: Le déploiement CLI rencontre une erreur d'autorisation. Utilisez l'interface web.
 
-### Option 2: Via l'Interface Web (recommandé)
-1. Allez sur "Edge Functions" dans le dashboard
+### Via l'Interface Web Supabase (RECOMMANDÉ)
+1. Allez sur "Edge Functions" dans le dashboard Supabase
 2. Cliquez sur "Create a new function"
 3. Nom: `webhook-whatsapp`
-4. Copiez le contenu du fichier `supabase/functions/webhook-whatsapp/index.ts`
+4. Copiez TOUT le contenu du fichier `supabase/functions/webhook-whatsapp/index.ts`
 5. Cliquez sur "Deploy function"
+
+**⚠️ IMPORTANT**: Le fichier `index.ts` contient maintenant l'architecture complète avec:
+- Intégration base de données (repositories)
+- Tous les handlers avec injection de dépendances
+- Orchestrateur de conversations
+- Gestion complète des sessions et commandes
+
+### Code GitHub Disponible
+📂 **Repository**: https://github.com/labiko/botRestaurant.git
+- Commit complet avec toute l'architecture
+- Script SQL d'initialisation
+- Documentation complète
 
 ## 🔧 Configuration des Variables
 

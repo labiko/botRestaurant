@@ -14,7 +14,13 @@ export class AccueilHandler implements IConversationHandler {
     private messageService: IMessageService,
     private restaurantRepository: RestaurantRepository,
     private clientRepository: ClientRepository
-  ) {}
+  ) {
+    console.log('🏗️ AccueilHandler constructor called');
+    console.log('🔍 messageService:', !!this.messageService);
+    console.log('🔍 restaurantRepository:', !!this.restaurantRepository);
+    console.log('🔍 clientRepository in constructor:', !!this.clientRepository);
+    console.log('🔍 clientRepository.findOrCreateByPhone in constructor:', typeof this.clientRepository?.findOrCreateByPhone);
+  }
 
   canHandle(session: Session, message: IIncomingMessage): boolean {
     // Messages d'initialisation
@@ -42,9 +48,44 @@ export class AccueilHandler implements IConversationHandler {
 
   private async showWelcomeMenu(phoneNumber: string, session: Session): Promise<void> {
     try {
-      // Récupérer ou créer le client
-      const client = await this.clientRepository.findOrCreateByPhone(phoneNumber);
+      console.log('🔍 showWelcomeMenu called, checking clientRepository...');
+      console.log('🔍 this.clientRepository:', !!this.clientRepository);
+      console.log('🔍 this.clientRepository type:', typeof this.clientRepository);
+      console.log('🔍 this object keys:', Object.keys(this));
       
+      // Vérification explicite du repository
+      if (!this.clientRepository || typeof this.clientRepository.findOrCreateByPhone !== 'function') {
+        console.error('❌ ClientRepository not properly initialized:', this.clientRepository);
+        console.error('❌ AccueilHandler context issue. This object:', this);
+        
+        // Solution de contournement: créer un repository temporaire
+        console.log('🚑 Emergency fix: creating temporary ClientRepository');
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+        const tempSupabase = createClient(supabaseUrl, supabaseKey);
+        const { ClientRepository } = await import('../../infrastructure/repositories/ClientRepository.ts');
+        this.clientRepository = new ClientRepository(tempSupabase);
+        console.log('✅ Temporary ClientRepository created');
+      }
+      
+      // Récupérer ou créer le client
+      console.log('🔍 Finding/creating client for:', phoneNumber);
+      const client = await this.clientRepository.findOrCreateByPhone(phoneNumber);
+      console.log('✅ Client found/created:', client.id);
+      
+      // Vérifier et corriger restaurantRepository si nécessaire
+      if (!this.restaurantRepository) {
+        console.log('🚑 Emergency fix: creating temporary RestaurantRepository');
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+        const tempSupabase = createClient(supabaseUrl, supabaseKey);
+        const { RestaurantRepository } = await import('../../infrastructure/repositories/RestaurantRepository.ts');
+        this.restaurantRepository = new RestaurantRepository(tempSupabase);
+        console.log('✅ Temporary RestaurantRepository created');
+      }
+
       // Récupérer le restaurant favori s'il existe
       let favoriteRestaurant = null;
       if (client.restaurantFavoriId) {
