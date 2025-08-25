@@ -1,15 +1,18 @@
 {
-  "name": "botResto",
-  "version": "0.0.1",
-  "author": "Ionic Framework",
-  "homepage": "https://ionicframework.com/",
+  "name": "bot-resto-conakry",
+  "version": "1.0.0",
+  "author": "Bot Resto Conakry",
+  "homepage": "https://bot-resto-conakry.vercel.app/",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build --configuration production",
+    "build:prod": "ng build --configuration production --aot --build-optimizer",
+    "build:vercel": "ionic build --prod",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "serve:prod": "ng serve --configuration production"
   },
   "private": true,
   "dependencies": {
@@ -63,5 +66,5 @@
     "karma-jasmine-html-reporter": "~2.1.0",
     "typescript": "~5.8.0"
   },
-  "description": "An Ionic project"
+  "description": "Bot Resto Conakry - Système moderne de gestion de commandes et livraisons pour restaurants via WhatsApp Business"
 }
