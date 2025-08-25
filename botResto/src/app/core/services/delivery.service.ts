@@ -971,7 +971,19 @@ export class DeliveryService {
 
   async sendWhatsAppWelcomeMessage(deliveryUser: DeliveryUser, restaurantName: string): Promise<WhatsAppResponse> {
     try {
-      const message = this.generateWelcomeMessage(deliveryUser, restaurantName);
+      // Récupérer les informations complètes du restaurant (incluant le téléphone)
+      const { data: restaurant, error } = await this.supabase
+        .from('restaurants')
+        .select('nom, telephone')
+        .eq('id', deliveryUser.restaurant_id)
+        .single();
+
+      if (error) {
+        console.warn('Could not fetch restaurant details:', error);
+      }
+
+      const restaurantPhone = restaurant?.telephone || null;
+      const message = this.generateWelcomeMessage(deliveryUser, restaurantName, restaurantPhone);
       
       console.log('🚀 Sending WhatsApp welcome message to:', deliveryUser.telephone);
       console.log('📝 Message preview:', message.substring(0, 100) + '...');
@@ -1068,25 +1080,30 @@ export class DeliveryService {
     return phone;
   }
 
-  private generateWelcomeMessage(deliveryUser: DeliveryUser, restaurantName: string): string {
+  private generateWelcomeMessage(deliveryUser: DeliveryUser, restaurantName: string, restaurantPhone?: string | null): string {
     // Convertir le numéro au format local pour l'affichage
     const displayPhone = this.getLocalPhoneFormat(deliveryUser.telephone);
     
-    return `🚴 *Bienvenue chez ${restaurantName} !*
+    // Formatter le téléphone restaurant si disponible
+    const restaurantPhoneDisplay = restaurantPhone ? this.getLocalPhoneFormat(restaurantPhone) : null;
+    
+    let message = `🚴 *Bienvenue chez ${restaurantName} !*
 
 Bonjour *${deliveryUser.nom}*,
 
 📋 *Vos informations de connexion :*
 👤 Nom: ${deliveryUser.nom}
 📱 Téléphone: ${displayPhone}
-🔐 Code d'accès: *${deliveryUser.code_access}*
+🔐 Code d'accès: *${deliveryUser.code_access}*`;
 
-⚡ *Comment vous connecter :*
-1️⃣ Utilisez le numéro: *${displayPhone}*
-2️⃣ Utilisez le code: *${deliveryUser.code_access}*
-3️⃣ Rendez-vous sur l'app livreur
+    // Ajouter le téléphone du restaurant si disponible
+    if (restaurantPhoneDisplay) {
+      message += `\n\n📞 *Restaurant :* ${restaurantPhoneDisplay}`;
+    }
 
-Bonne chance dans vos livraisons ! 🚴‍♂️💨`;
+    message += `\n\nBonne chance dans vos livraisons ! 🚴‍♂️💨`;
+    
+    return message;
   }
 
   private async forceLogoutBlockedUser(userId: number): Promise<void> {
