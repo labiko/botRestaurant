@@ -1,0 +1,103 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'botResto/package-lock.json'
+
+      - name: Install Dependencies
+        working-directory: ./botResto
+        run: |
+          npm ci
+          npm install -g @ionic/cli
+
+      - name: Build Application
+        working-directory: ./botResto
+        run: |
+          ionic build --prod
+        env:
+          CI: false
+
+      - name: Deploy to Vercel (Production)
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./botResto/www
+          vercel-args: '--prod'
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+
+      - name: Deploy to Vercel (Preview)
+        if: github.event_name == 'pull_request'
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./botResto/www
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+
+      - name: Comment PR with Preview URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && comment.body.includes('Preview deployment')
+            );
+            
+            const commentBody = `## 🚀 Preview deployment ready!
+            
+            **Bot Resto Conakry** preview is now available:
+            - 🔗 **Preview URL**: [View Preview](https://botrestaurant-preview.vercel.app)
+            - 📱 **Mobile optimized**: Ready for testing
+            - ⚡ **Auto-updated**: Synced with this PR
+            
+            ---
+            *Deployed with ❤️ by [Vercel](https://vercel.com)*`;
+            
+            if (botComment) {
+              github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+            } else {
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+            }
