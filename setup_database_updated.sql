@@ -81,6 +81,7 @@ CREATE TABLE public.delivery_users (
   longitude numeric,
   coordinates_updated_at timestamp with time zone,
   accuracy numeric,
+  is_blocked boolean NOT NULL DEFAULT false,
   CONSTRAINT delivery_users_pkey PRIMARY KEY (id),
   CONSTRAINT delivery_users_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
 );

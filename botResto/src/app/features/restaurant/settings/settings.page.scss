@@ -350,6 +350,21 @@
   }
 }
 
+// Currency selector
+.currency-selector {
+  ion-item {
+    --background: var(--ion-color-light);
+    --border-radius: 12px;
+    margin-bottom: 12px;
+  }
+  
+  ion-text p {
+    font-size: 0.85rem;
+    margin: 8px 16px;
+    line-height: 1.4;
+  }
+}
+
 // Auto-save toast
 :host {
   ::ng-deep .auto-save-toast {
@@ -362,6 +377,22 @@
     
     .toast-wrapper {
       opacity: 0.95;
+    }
+  }
+
+  // Edit menu modal styling
+  ::ng-deep .edit-menu-modal {
+    --width: 95%;
+    --max-width: 600px;
+    --height: auto;
+    --max-height: 95vh;
+    --border-radius: 16px;
+    --background: var(--ion-background-color);
+    
+    @media (max-width: 768px) {
+      --width: 100%;
+      --height: 100vh;
+      --border-radius: 0;
     }
   }
 }
@@ -463,7 +494,7 @@
 
 .navigation-tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 16px;
   margin-bottom: 32px;
   
@@ -890,5 +921,357 @@
         }
       }
     }
+  }
+}
+
+// ================================
+// STYLES GESTION MENUS
+// ================================
+
+// Statistiques du menu
+.menu-stats {
+  margin-bottom: 32px;
+  
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--ion-color-light);
+      padding: 16px;
+      border-radius: 12px;
+      transition: transform 0.2s ease;
+      
+      &:hover {
+        transform: translateY(-2px);
+      }
+      
+      ion-icon {
+        font-size: 24px;
+        flex-shrink: 0;
+      }
+      
+      div {
+        .stat-number {
+          display: block;
+          font-size: 0.9rem;
+          font-weight: var(--font-bold);
+          color: var(--text-primary);
+          line-height: 1.1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        .stat-label {
+          display: block;
+          font-size: var(--text-xs);
+          color: var(--text-secondary);
+          font-weight: var(--font-medium);
+        }
+      }
+    }
+  }
+}
+
+// Menu management section
+.add-menu-header {
+  margin-bottom: 20px;
+  
+  ion-button {
+    --border-radius: 12px;
+    --border-width: 2px;
+    --color: var(--ion-color-success);
+    --border-color: var(--ion-color-success);
+    font-weight: 600;
+    
+    &:hover {
+      --background: var(--ion-color-success-tint);
+    }
+  }
+}
+
+// Formulaire d'ajout de plat
+.add-menu-form {
+  background: var(--ion-color-light);
+  padding: 24px;
+  border-radius: 16px;
+  margin-bottom: 32px;
+  
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 24px 0;
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+    
+    ion-icon {
+      font-size: 24px;
+    }
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  }
+  
+  .form-item {
+    --padding-start: 16px;
+    --padding-end: 16px;
+  }
+  
+  .form-actions {
+    margin-top: 24px;
+    
+    ion-button {
+      height: 48px;
+      font-weight: var(--font-semibold);
+    }
+  }
+}
+
+// Filtres par catégorie
+.category-filters {
+  margin-bottom: 32px;
+  
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 16px 0;
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+    
+    ion-icon {
+      font-size: 20px;
+    }
+  }
+  
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    
+    ion-chip {
+      cursor: pointer;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        transform: translateY(-1px);
+      }
+      
+      ion-icon {
+        font-size: 16px;
+        margin-right: 4px;
+      }
+    }
+  }
+}
+
+// Liste des plats
+.menu-items-list {
+  h3 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0 20px 0;
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+    
+    ion-icon {
+      font-size: 20px;
+      margin-right: 8px;
+    }
+  }
+  
+  .menu-item-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .menu-item-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+      
+      .menu-item-image {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        overflow: hidden;
+        flex-shrink: 0;
+        
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
+      
+      .menu-item-details {
+        flex: 1;
+        
+        h4 {
+          margin: 0 0 8px 0;
+          font-size: var(--text-base);
+          font-weight: var(--font-semibold);
+          color: var(--text-primary);
+          line-height: 1.3;
+        }
+        
+        .item-description {
+          margin: 0 0 12px 0;
+          font-size: var(--text-sm);
+          color: var(--text-secondary);
+          line-height: 1.4;
+        }
+        
+        .item-meta {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          
+          .item-price {
+            font-size: var(--text-base);
+            font-weight: var(--font-bold);
+            color: var(--primary-purple);
+          }
+        }
+
+        .menu-item-dates {
+          margin-top: 8px;
+          
+          small {
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            
+            .date-icon {
+              font-size: 0.9rem;
+              opacity: 0.7;
+            }
+          }
+        }
+      }
+    }
+    
+    .menu-item-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+      
+      .availability-chip {
+        margin: 0;
+      }
+      
+      .action-buttons {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        
+        ion-button {
+          --padding-start: 8px;
+          --padding-end: 8px;
+          
+          ion-icon {
+            font-size: 18px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// États vides
+.no-menu-items,
+.no-filtered-items {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-secondary);
+  
+  .empty-icon {
+    font-size: 64px;
+    color: var(--text-disabled);
+    margin-bottom: 16px;
+  }
+  
+  p {
+    margin: 0 0 8px 0;
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    color: var(--text-secondary);
+  }
+  
+  small {
+    font-size: var(--text-sm);
+    color: var(--text-disabled);
+  }
+}
+
+// Responsive pour navigation à 3 onglets
+@media (max-width: 768px) {
+  .navigation-tabs {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    
+    .tab-card {
+      padding: 16px;
+      
+      .tab-content {
+        h3 {
+          font-size: var(--text-base);
+        }
+        
+        p {
+          font-size: var(--text-xs);
+        }
+      }
+    }
+  }
+  
+  .menu-item-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    
+    .menu-item-actions {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

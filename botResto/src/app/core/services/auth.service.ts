@@ -16,6 +16,7 @@ export interface User {
     nom: string;
     latitude: number;
     longitude: number;
+    currency?: string;
   };
 }
 
@@ -59,10 +60,10 @@ export class AuthService {
         return false;
       }
 
-      // Get restaurant details separately
+      // Get restaurant details separately including currency
       const { data: restaurant, error: restaurantError } = await this.supabase
         .from('restaurants')
-        .select('id, nom, latitude, longitude')
+        .select('id, nom, latitude, longitude, currency')
         .eq('id', restaurantUser.restaurant_id)
         .single();
       
@@ -86,7 +87,8 @@ export class AuthService {
             id: restaurant.id,
             nom: restaurant.nom,
             latitude: restaurant.latitude,
-            longitude: restaurant.longitude
+            longitude: restaurant.longitude,
+            currency: restaurant.currency || 'GNF'
           } : undefined
         };
         

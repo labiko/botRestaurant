@@ -1,0 +1,62 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Configuration de la devise</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" (click)="close()">
+        <ion-icon name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="currency-info">
+    <ion-text color="medium">
+      <p>Choisissez la devise principale pour votre application. Cette configuration affectera l'affichage des prix dans toute l'application.</p>
+    </ion-text>
+  </div>
+
+  <div class="currency-list">
+    <ion-radio-group [(ngModel)]="currentCurrency.code" (ionChange)="selectCurrency(availableCurrencies.find(c => c.code === $event.detail.value)!)">
+      <div class="currency-item" *ngFor="let currency of availableCurrencies">
+        <ion-item>
+          <ion-radio slot="start" [value]="currency.code"></ion-radio>
+          <ion-label>
+            <div class="currency-details">
+              <h3>{{ currency.name }}</h3>
+              <p>{{ currency.symbol }} - {{ currency.code }}</p>
+              <div class="currency-sample">
+                Exemple: {{ currency.code === 'GNF' ? '220 000' : currency.code === 'XOF' ? '3 500' : '12,50' }} {{ currency.symbol }}
+              </div>
+            </div>
+          </ion-label>
+        </ion-item>
+      </div>
+    </ion-radio-group>
+  </div>
+
+  <div class="current-selection">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Devise sélectionnée</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="selected-currency">
+          <ion-icon name="checkmark-circle" color="success"></ion-icon>
+          <span>{{ currentCurrency.name }} ({{ currentCurrency.symbol }})</span>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <div class="actions">
+    <ion-button expand="block" (click)="confirm()" color="primary">
+      <ion-icon name="checkmark" slot="start"></ion-icon>
+      Appliquer la devise
+    </ion-button>
+    
+    <ion-button expand="block" fill="clear" (click)="close()" color="medium">
+      Annuler
+    </ion-button>
+  </div>
+</ion-content>

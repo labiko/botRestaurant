@@ -4,6 +4,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { ScheduleService, RestaurantSchedule, RestaurantStatus } from '../../../core/services/schedule.service';
 import { DeliveryService, DeliveryUser, CreateDeliveryUserRequest, WhatsAppResponse } from '../../../core/services/delivery.service';
+import { MenuService, MenuItem, CreateMenuItemRequest, MenuItemsStats } from '../../../core/services/menu.service';
 import { ModalController, ToastController, AlertController } from '@ionic/angular';
 
 @Component({
@@ -18,9 +19,16 @@ export class SettingsPage implements OnInit, OnDestroy {
   weekDays = this.scheduleService.getWeekDays();
   currentStatus: string = 'ouvert';
   tempCloseReason: string = '';
+  currentCurrency: string = 'GNF';
+  availableCurrencies = [
+    { code: 'GNF', name: 'Franc Guinéen' },
+    { code: 'XOF', name: 'Franc CFA' },
+    { code: 'EUR', name: 'Euro' },
+    { code: 'USD', name: 'Dollar US' }
+  ];
   
   // Navigation
-  currentTab: 'restaurant' | 'drivers' = 'restaurant';
+  currentTab: 'restaurant' | 'drivers' | 'menus' = 'restaurant';
   
   // Delivery management
   drivers: DeliveryUser[] = [];
@@ -30,6 +38,23 @@ export class SettingsPage implements OnInit, OnDestroy {
   };
   isLoadingDrivers = false;
   
+  // Menu management
+  menuItems: MenuItem[] = [];
+  filteredMenuItems: MenuItem[] = [];
+  menuStats: MenuItemsStats | null = null;
+  selectedCategory: string = 'all';
+  availableCategories = this.menuService.getAvailableCategories();
+  newMenuItem = {
+    nom_plat: '',
+    description: '',
+    prix_display: null as number | null,
+    categorie: '',
+    photo_url: '',
+    ordre_affichage: 0
+  };
+  isLoadingMenuItems = false;
+  showNewMenuItemForm = false;
+  
   private subscriptions: Subscription[] = [];
 
   constructor(
@@ -37,6 +62,7 @@ export class SettingsPage implements OnInit, OnDestroy {
     private authService: AuthService,
     private scheduleService: ScheduleService,
     private deliveryService: DeliveryService,
+    private menuService: MenuService,
     private modalController: ModalController,
     private toastController: ToastController,
     private alertController: AlertController
@@ -50,6 +76,13 @@ export class SettingsPage implements OnInit, OnDestroy {
     }
 
     await this.loadRestaurantData(user.restaurantId || 'default-id');
+    
+    // Définir la devise du restaurant dans le service menu
+    if (user.restaurant?.currency) {
+      this.currentCurrency = user.restaurant.currency;
+      this.menuService.setCurrency(user.restaurant.currency);
+    }
+    
     // Ne pas charger les livreurs automatiquement, seulement si l'utilisateur clique sur l'onglet
   }
 
@@ -252,12 +285,17 @@ export class SettingsPage implements OnInit, OnDestroy {
   // NAVIGATION
   // =====================================
 
-  switchTab(tab: 'restaurant' | 'drivers') {
+  switchTab(tab: 'restaurant' | 'drivers' | 'menus') {
     this.currentTab = tab;
     
     // Si on passe à l'onglet livreurs, charger les données
     if (tab === 'drivers' && this.drivers.length === 0) {
       this.loadDrivers();
+    }
+    
+    // Si on passe à l'onglet menus, charger les données
+    if (tab === 'menus' && this.menuItems.length === 0) {
+      this.loadMenuItems();
     }
     
     // Animation subtile
@@ -476,6 +514,249 @@ export class SettingsPage implements OnInit, OnDestroy {
     
     // Par défaut, retourner tel quel
     return cleanPhone;
+  }
+
+  // =====================================
+  // MENU MANAGEMENT
+  // =====================================
+
+  async loadMenuItems() {
+    if (!this.restaurantStatus) return;
+    
+    console.log(`🍽️ Loading menu items for restaurant ${this.restaurantStatus.id}`);
+    this.isLoadingMenuItems = true;
+    try {
+      this.menuItems = await this.menuService.getMenuItemsByRestaurant(this.restaurantStatus.id);
+      this.menuStats = await this.menuService.getMenuStats(this.restaurantStatus.id);
+      this.applyCurrentFilter();
+      console.log(`✅ Loaded ${this.menuItems.length} menu items`);
+    } catch (error) {
+      console.error('Error loading menu items:', error);
+      this.showToast('Erreur lors du chargement des menus', 'danger');
+    } finally {
+      this.isLoadingMenuItems = false;
+    }
+  }
+
+  async createMenuItem() {
+    if (!this.restaurantStatus || !this.newMenuItem.nom_plat || !this.newMenuItem.categorie || !this.newMenuItem.prix_display) {
+      return;
+    }
+
+    try {
+      const request: CreateMenuItemRequest = {
+        restaurant_id: this.restaurantStatus.id,
+        nom_plat: this.newMenuItem.nom_plat,
+        description: this.newMenuItem.description || undefined,
+        prix: this.menuService.convertToBaseAmount(this.newMenuItem.prix_display),
+        categorie: this.newMenuItem.categorie as any,
+        photo_url: this.newMenuItem.photo_url || undefined
+      };
+
+      const newItem = await this.menuService.createMenuItem(request);
+      
+      this.showToast(`✅ "${newItem.nom_plat}" ajouté au menu`, 'success');
+      
+      // Reset form
+      this.newMenuItem = {
+        nom_plat: '',
+        description: '',
+        prix_display: null,
+        categorie: '',
+        photo_url: '',
+        ordre_affichage: 0
+      };
+      
+      // Fermer le formulaire après ajout
+      this.showNewMenuItemForm = false;
+      
+      await this.loadMenuItems();
+
+    } catch (error: any) {
+      console.error('Error creating menu item:', error);
+      this.showToast(error.message || 'Erreur lors de la création du plat', 'danger');
+    }
+  }
+
+  async toggleMenuItemAvailability(item: MenuItem) {
+    try {
+      const updatedItem = await this.menuService.toggleMenuItemAvailability(item.id);
+      
+      const status = updatedItem.disponible ? 'disponible' : 'indisponible';
+      this.showToast(`🍽️ "${item.nom_plat}" marqué comme ${status}`, 'success');
+      
+      await this.loadMenuItems();
+    } catch (error) {
+      console.error('Error toggling menu item availability:', error);
+      this.showToast('Erreur lors de la mise à jour', 'danger');
+    }
+  }
+
+  async editMenuItem(item: MenuItem) {
+    const { EditMenuItemModalComponent } = await import('./components/edit-menu-item-modal/edit-menu-item-modal.component');
+    
+    const modal = await this.modalController.create({
+      component: EditMenuItemModalComponent,
+      componentProps: {
+        menuItem: item
+      },
+      cssClass: 'edit-menu-modal'
+    });
+
+    await modal.present();
+
+    const { data } = await modal.onWillDismiss();
+    if (data?.updated) {
+      console.log('✅ Menu item updated:', data.menuItem);
+      // Recharger la liste des menus pour refléter les changements
+      await this.loadMenuItems();
+    }
+  }
+
+  async deleteMenuItem(item: MenuItem) {
+    const alert = await this.alertController.create({
+      header: 'Supprimer le plat',
+      message: `Êtes-vous sûr de vouloir supprimer "${item.nom_plat}" du menu ?`,
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        },
+        {
+          text: 'Supprimer',
+          role: 'destructive',
+          handler: async () => {
+            try {
+              await this.menuService.deleteMenuItem(item.id);
+              this.showToast(`🗑️ "${item.nom_plat}" supprimé du menu`, 'success');
+              await this.loadMenuItems();
+            } catch (error) {
+              console.error('Error deleting menu item:', error);
+              this.showToast('Erreur lors de la suppression', 'danger');
+            }
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  async refreshMenuItems() {
+    await this.loadMenuItems();
+    this.showToast('✅ Menu actualisé', 'success', 1000);
+  }
+
+  // Filtrage et tri
+  filterByCategory(category: string) {
+    this.selectedCategory = category;
+    this.applyCurrentFilter();
+  }
+
+  private applyCurrentFilter() {
+    if (this.selectedCategory === 'all') {
+      this.filteredMenuItems = [...this.menuItems];
+    } else {
+      this.filteredMenuItems = this.menuItems.filter(item => item.categorie === this.selectedCategory);
+    }
+  }
+
+  getCategoryCount(category: string): number {
+    return this.menuItems.filter(item => item.categorie === category).length;
+  }
+
+  getFilterTitle(): string {
+    if (this.selectedCategory === 'all') {
+      return 'Tous les plats';
+    }
+    
+    const category = this.availableCategories.find(cat => cat.value === this.selectedCategory);
+    return category ? category.label : 'Plats filtrés';
+  }
+
+  getCategoryColor(categorie: string): string {
+    const colors: { [key: string]: string } = {
+      'entree': 'success',
+      'plat': 'primary', 
+      'accompagnement': 'secondary',
+      'dessert': 'tertiary',
+      'boisson': 'warning'
+    };
+    return colors[categorie] || 'medium';
+  }
+
+  getCategoryIcon(categorie: string): string {
+    const icons: { [key: string]: string } = {
+      'entree': 'restaurant',
+      'plat': 'pizza',
+      'accompagnement': 'leaf',
+      'dessert': 'ice-cream',
+      'boisson': 'wine'
+    };
+    return icons[categorie] || 'restaurant';
+  }
+
+  getCategoryLabel(categorie: string): string {
+    const category = this.availableCategories.find(cat => cat.value === categorie);
+    return category ? category.label : categorie;
+  }
+
+  formatPrice(amount: number): string {
+    return this.menuService.formatPrice(amount);
+  }
+
+  getCurrencySymbol(): string {
+    return this.menuService.getCurrency();
+  }
+
+  formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  async updateCurrency() {
+    if (!this.restaurantStatus) return;
+
+    try {
+      // Mettre à jour dans la base de données
+      const { error } = await this.supabase
+        .from('restaurants')
+        .update({ currency: this.currentCurrency })
+        .eq('id', this.restaurantStatus.id);
+
+      if (error) {
+        console.error('Error updating currency:', error);
+        await this.showToast('Erreur lors de la mise à jour de la devise', 'danger');
+        return;
+      }
+
+      // Mettre à jour dans le service
+      this.menuService.setCurrency(this.currentCurrency);
+
+      await this.showToast('Devise mise à jour avec succès', 'success');
+    } catch (error) {
+      console.error('Error updating currency:', error);
+      await this.showToast('Erreur lors de la mise à jour de la devise', 'danger');
+    }
+  }
+
+  private get supabase() {
+    return (this.scheduleService as any).supabase.client;
+  }
+
+  getCategoriesCount(): number {
+    if (!this.menuStats) return 0;
+    return Object.keys(this.menuStats.categories).length;
+  }
+
+  toggleNewMenuItemForm(): void {
+    this.showNewMenuItemForm = !this.showNewMenuItemForm;
   }
 
   private async showToast(message: string, color: string, duration = 2000) {

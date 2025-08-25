@@ -1,0 +1,79 @@
+.currency-info {
+  margin-bottom: 1.5rem;
+  
+  p {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+}
+
+.currency-list {
+  margin-bottom: 2rem;
+}
+
+.currency-item {
+  margin-bottom: 0.5rem;
+  border-radius: 12px;
+  overflow: hidden;
+  
+  ion-item {
+    --border-radius: 12px;
+    --background: var(--ion-color-light);
+    margin-bottom: 8px;
+  }
+}
+
+.currency-details {
+  h3 {
+    margin: 0 0 4px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+  }
+  
+  p {
+    margin: 0 0 4px 0;
+    font-size: 0.9rem;
+    color: var(--ion-color-medium);
+    font-weight: 500;
+  }
+  
+  .currency-sample {
+    font-size: 0.8rem;
+    color: var(--ion-color-primary);
+    font-style: italic;
+  }
+}
+
+.current-selection {
+  margin-bottom: 2rem;
+  
+  ion-card {
+    --background: var(--ion-color-success-tint);
+    border: 1px solid var(--ion-color-success);
+  }
+  
+  .selected-currency {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    
+    ion-icon {
+      font-size: 1.2rem;
+    }
+  }
+}
+
+.actions {
+  padding-top: 1rem;
+  border-top: 1px solid var(--ion-color-light-shade);
+  
+  ion-button {
+    margin-bottom: 8px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}

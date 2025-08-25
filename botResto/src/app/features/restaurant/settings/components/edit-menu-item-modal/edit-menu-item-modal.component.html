@@ -1,0 +1,178 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>
+      <ion-icon name="create" class="title-icon"></ion-icon>
+      Modifier le plat
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" (click)="close()">
+        <ion-icon name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form class="edit-form">
+    <!-- Image du plat -->
+    <div class="image-section" *ngIf="editForm.photo_url">
+      <div class="image-preview">
+        <img [src]="editForm.photo_url" [alt]="editForm.nom_plat" />
+        <div class="image-overlay">
+          <ion-button fill="clear" size="small" color="light" (click)="removeImage()">
+            <ion-icon name="trash"></ion-icon>
+          </ion-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Informations principales -->
+    <div class="form-section">
+      <div class="section-header">
+        <ion-icon name="restaurant"></ion-icon>
+        <h3>Informations du plat</h3>
+      </div>
+
+      <ion-item class="modern-input">
+        <ion-label position="stacked">Nom du plat *</ion-label>
+        <ion-input
+          name="nom_plat"
+          [(ngModel)]="editForm.nom_plat"
+          placeholder="Ex: Pizza Margherita"
+          maxlength="100"
+          clear-input="true">
+        </ion-input>
+      </ion-item>
+
+      <ion-item class="modern-input">
+        <ion-label position="stacked">Description</ion-label>
+        <ion-textarea
+          name="description"
+          [(ngModel)]="editForm.description"
+          placeholder="Description du plat (optionnelle)..."
+          rows="3"
+          maxlength="500"
+          auto-grow="true">
+        </ion-textarea>
+      </ion-item>
+
+      <div class="form-row">
+        <ion-item class="modern-input flex-item">
+          <ion-label position="stacked">Prix ({{ getCurrencySymbol() }}) *</ion-label>
+          <ion-input
+            name="prix_display"
+            type="number"
+            [(ngModel)]="editForm.prix_display"
+            placeholder="Ex: 25000"
+            min="1">
+          </ion-input>
+        </ion-item>
+
+        <ion-item class="modern-input flex-item">
+          <ion-label position="stacked">Catégorie *</ion-label>
+          <ion-select 
+            name="categorie"
+            [(ngModel)]="editForm.categorie"
+            placeholder="Choisir une catégorie">
+            <ion-select-option *ngFor="let cat of availableCategories" [value]="cat.value">
+              <ion-icon [name]="cat.icon"></ion-icon>
+              {{ cat.label }}
+            </ion-select-option>
+          </ion-select>
+        </ion-item>
+      </div>
+    </div>
+
+    <!-- Photo -->
+    <div class="form-section">
+      <div class="section-header">
+        <ion-icon name="image"></ion-icon>
+        <h3>Photo du plat</h3>
+      </div>
+
+      <ion-item class="modern-input">
+        <ion-label position="stacked">URL de l'image</ion-label>
+        <ion-input
+          name="photo_url"
+          [(ngModel)]="editForm.photo_url"
+          placeholder="https://example.com/image.jpg"
+          type="url">
+        </ion-input>
+      </ion-item>
+    </div>
+
+    <!-- Disponibilité -->
+    <div class="form-section">
+      <div class="section-header">
+        <ion-icon name="eye"></ion-icon>
+        <h3>Disponibilité</h3>
+      </div>
+
+      <div class="availability-toggle">
+        <ion-item class="toggle-item">
+          <ion-label>
+            <h4>Plat disponible</h4>
+            <p>Le plat sera visible pour les clients</p>
+          </ion-label>
+          <ion-toggle
+            name="disponible"
+            [(ngModel)]="editForm.disponible"
+            slot="end"
+            [color]="editForm.disponible ? 'success' : 'medium'">
+          </ion-toggle>
+        </ion-item>
+      </div>
+    </div>
+
+    <!-- Aperçu des modifications -->
+    <div class="form-section" *ngIf="menuItem">
+      <div class="section-header">
+        <ion-icon name="eye"></ion-icon>
+        <h3>Aperçu</h3>
+      </div>
+      
+      <div class="preview-card">
+        <div class="preview-image" *ngIf="editForm.photo_url">
+          <img [src]="editForm.photo_url" [alt]="editForm.nom_plat" />
+        </div>
+        <div class="preview-content">
+          <h4>{{ editForm.nom_plat || 'Nom du plat' }}</h4>
+          <p *ngIf="editForm.description">{{ editForm.description }}</p>
+          <div class="preview-meta">
+            <ion-chip [color]="editForm.disponible ? 'success' : 'danger'" size="small">
+              <ion-icon [name]="getCategoryIcon(editForm.categorie)"></ion-icon>
+              <ion-label>{{ getCategoryLabel(editForm.categorie) }}</ion-label>
+            </ion-chip>
+            <span class="preview-price">
+              {{ formatPrice(editForm.prix_display || 0) }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button 
+        fill="clear" 
+        expand="block" 
+        color="medium"
+        (click)="close()">
+        Annuler
+      </ion-button>
+      
+      <ion-button 
+        expand="block" 
+        color="primary"
+        [disabled]="!isFormValid() || isLoading"
+        (click)="save()">
+        <ion-spinner name="crescent" *ngIf="isLoading" slot="start"></ion-spinner>
+        <ion-icon name="checkmark" *ngIf="!isLoading" slot="start"></ion-icon>
+        {{ isLoading ? 'Sauvegarde...' : 'Sauvegarder' }}
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

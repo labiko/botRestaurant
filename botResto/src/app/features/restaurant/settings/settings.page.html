@@ -39,6 +39,19 @@
         </div>
         <div class="tab-indicator" *ngIf="currentTab === 'drivers'"></div>
       </div>
+      
+      <div class="tab-card" 
+           [class.active]="currentTab === 'menus'" 
+           (click)="switchTab('menus')">
+        <div class="tab-icon">
+          <ion-icon name="restaurant"></ion-icon>
+        </div>
+        <div class="tab-content">
+          <h3>Gestion Menus</h3>
+          <p>Créer et gérer les plats du menu</p>
+        </div>
+        <div class="tab-indicator" *ngIf="currentTab === 'menus'"></div>
+      </div>
     </div>
 
     <!-- Card 1: Paramétrage Restaurant -->
@@ -320,6 +333,255 @@
     </ion-card>
     </div>
 
+    <!-- Card 3: Gestion des Menus -->
+    <div *ngIf="currentTab === 'menus'">
+    <ion-card class="main-card">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="restaurant" class="card-icon"></ion-icon>
+          Gestion des Menus
+        </ion-card-title>
+        <ion-card-subtitle>Créer et gérer les plats du restaurant</ion-card-subtitle>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <!-- Statistiques du menu -->
+        <div class="menu-stats" *ngIf="menuStats">
+          <div class="stats-grid">
+            <div class="stat-item">
+              <ion-icon name="restaurant" color="primary"></ion-icon>
+              <div>
+                <span class="stat-number">{{ menuStats.total_items }}</span>
+                <span class="stat-label">Plats total</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <ion-icon name="checkmark-circle" color="success"></ion-icon>
+              <div>
+                <span class="stat-number">{{ menuStats.available_items }}</span>
+                <span class="stat-label">Disponibles</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <ion-icon name="cash" color="warning"></ion-icon>
+              <div>
+                <span class="stat-number">{{ formatPrice(menuStats.average_price) }}</span>
+                <span class="stat-label">Prix moyen</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <ion-icon name="albums" color="medium"></ion-icon>
+              <div>
+                <span class="stat-number">{{ getCategoriesCount() }}</span>
+                <span class="stat-label">Catégories</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bouton pour ajouter un nouveau plat -->
+        <div class="add-menu-header">
+          <ion-button 
+            expand="block" 
+            fill="outline" 
+            color="success"
+            (click)="toggleNewMenuItemForm()">
+            <ion-icon [name]="showNewMenuItemForm ? 'remove' : 'add'" slot="start"></ion-icon>
+            {{ showNewMenuItemForm ? 'Fermer le formulaire' : 'Ajouter un nouveau plat' }}
+          </ion-button>
+        </div>
+
+        <!-- Formulaire d'ajout de plat -->
+        <div class="add-menu-form" *ngIf="showNewMenuItemForm">
+          <h3>
+            <ion-icon name="restaurant" color="success"></ion-icon>
+            Nouveau plat
+          </h3>
+          
+          <ion-item>
+            <ion-label position="stacked">Nom du plat *</ion-label>
+            <ion-input 
+              [(ngModel)]="newMenuItem.nom_plat" 
+              placeholder="Ex: Riz sauce arachide"
+              maxlength="100">
+            </ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="stacked">Description</ion-label>
+            <ion-textarea 
+              [(ngModel)]="newMenuItem.description" 
+              placeholder="Description du plat..."
+              rows="2"
+              maxlength="500">
+            </ion-textarea>
+          </ion-item>
+          
+          <div class="form-row">
+            <ion-item class="form-item">
+              <ion-label position="stacked">Prix ({{ getCurrencySymbol() }}) *</ion-label>
+              <ion-input 
+                type="number"
+                [(ngModel)]="newMenuItem.prix_display" 
+                placeholder="220000"
+                min="0">
+              </ion-input>
+            </ion-item>
+            
+            <ion-item class="form-item">
+              <ion-label position="stacked">Catégorie *</ion-label>
+              <ion-select 
+                [(ngModel)]="newMenuItem.categorie" 
+                placeholder="Choisir une catégorie">
+                <ion-select-option 
+                  *ngFor="let cat of availableCategories" 
+                  [value]="cat.value">
+                  {{ cat.label }}
+                </ion-select-option>
+              </ion-select>
+            </ion-item>
+          </div>
+          
+          <ion-item>
+            <ion-label position="stacked">URL de l'image (optionnel)</ion-label>
+            <ion-input 
+              [(ngModel)]="newMenuItem.photo_url" 
+              placeholder="https://example.com/image.jpg"
+              type="url">
+            </ion-input>
+          </ion-item>
+          
+          <div class="form-actions">
+            <ion-button 
+              expand="block" 
+              (click)="createMenuItem()" 
+              [disabled]="!newMenuItem.nom_plat || !newMenuItem.categorie || !newMenuItem.prix_display"
+              color="success">
+              <ion-icon name="add" slot="start"></ion-icon>
+              Créer le plat
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Filtres par catégorie -->
+        <div class="category-filters" *ngIf="menuItems.length > 0">
+          <h3>
+            <ion-icon name="filter"></ion-icon>
+            Filtrer par catégorie
+          </h3>
+          <div class="filter-chips">
+            <ion-chip 
+              [color]="selectedCategory === 'all' ? 'primary' : 'medium'"
+              (click)="filterByCategory('all')">
+              <ion-label>Tous ({{ menuItems.length }})</ion-label>
+            </ion-chip>
+            <ion-chip 
+              *ngFor="let cat of availableCategories" 
+              [color]="selectedCategory === cat.value ? 'primary' : 'medium'"
+              (click)="filterByCategory(cat.value)">
+              <ion-icon [name]="cat.icon"></ion-icon>
+              <ion-label>{{ cat.label }} ({{ getCategoryCount(cat.value) }})</ion-label>
+            </ion-chip>
+          </div>
+        </div>
+
+        <!-- Liste des plats -->
+        <div class="menu-items-list">
+          <h3 *ngIf="filteredMenuItems.length > 0">
+            <ion-icon name="list"></ion-icon>
+            {{ getFilterTitle() }} ({{ filteredMenuItems.length }})
+            <ion-button 
+              fill="clear" 
+              size="small" 
+              (click)="refreshMenuItems()"
+              color="primary">
+              <ion-icon name="refresh"></ion-icon>
+            </ion-button>
+          </h3>
+          
+          <div *ngFor="let item of filteredMenuItems" class="menu-item-card">
+            <div class="menu-item-info">
+              <div class="menu-item-image" *ngIf="item.photo_url">
+                <img [src]="item.photo_url" [alt]="item.nom_plat" />
+              </div>
+              <div class="menu-item-details">
+                <h4>{{ item.nom_plat }}</h4>
+                <p class="item-description" *ngIf="item.description">{{ item.description }}</p>
+                <div class="item-meta">
+                  <ion-chip [color]="getCategoryColor(item.categorie)" size="small">
+                    <ion-icon [name]="getCategoryIcon(item.categorie)"></ion-icon>
+                    <ion-label>{{ getCategoryLabel(item.categorie) }}</ion-label>
+                  </ion-chip>
+                  <span class="item-price">{{ formatPrice(item.prix) }}</span>
+                </div>
+                
+                <div class="menu-item-dates" *ngIf="item.updated_at">
+                  <ion-text color="medium">
+                    <small>
+                      <ion-icon name="time" class="date-icon"></ion-icon>
+                      Modifié le {{ formatDate(item.updated_at) }}
+                    </small>
+                  </ion-text>
+                </div>
+              </div>
+            </div>
+            
+            <div class="menu-item-actions">
+              <ion-chip 
+                [color]="item.disponible ? 'success' : 'danger'"
+                class="availability-chip">
+                <ion-icon 
+                  [name]="item.disponible ? 'checkmark-circle' : 'close-circle'">
+                </ion-icon>
+                <ion-label>{{ item.disponible ? 'Disponible' : 'Indisponible' }}</ion-label>
+              </ion-chip>
+              
+              <div class="action-buttons">
+                <ion-button 
+                  fill="clear" 
+                  size="small" 
+                  [color]="item.disponible ? 'warning' : 'success'"
+                  (click)="toggleMenuItemAvailability(item)">
+                  <ion-icon 
+                    [name]="item.disponible ? 'eye-off' : 'eye'">
+                  </ion-icon>
+                </ion-button>
+                
+                <ion-button 
+                  fill="clear" 
+                  size="small" 
+                  color="primary"
+                  (click)="editMenuItem(item)">
+                  <ion-icon name="create"></ion-icon>
+                </ion-button>
+                
+                <ion-button 
+                  fill="clear" 
+                  size="small" 
+                  color="danger"
+                  (click)="deleteMenuItem(item)">
+                  <ion-icon name="trash"></ion-icon>
+                </ion-button>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="filteredMenuItems.length === 0 && menuItems.length === 0" class="no-menu-items">
+            <ion-icon name="restaurant" class="empty-icon"></ion-icon>
+            <p>Aucun plat dans votre menu</p>
+            <small>Commencez par créer votre premier plat</small>
+          </div>
+          
+          <div *ngIf="filteredMenuItems.length === 0 && menuItems.length > 0" class="no-filtered-items">
+            <ion-icon name="filter" class="empty-icon"></ion-icon>
+            <p>Aucun plat dans cette catégorie</p>
+            <small>Essayez une autre catégorie</small>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+    </div>
+
     <!-- Information -->
     <div class="info-section">
       <ion-card class="info-card">
@@ -337,6 +599,27 @@
             <div>
               <h4>Fermeture temporaire</h4>
               <p>Utilisez la fermeture temporaire pour des pauses courtes, ruptures de stock ou problèmes techniques.</p>
+            </div>
+          </div>
+
+          <!-- Currency Configuration (inline) -->
+          <div class="info-item">
+            <ion-icon name="cash"></ion-icon>
+            <div>
+              <h4>Devise du Restaurant</h4>
+              <div class="currency-selector">
+                <ion-item>
+                  <ion-label>Devise utilisée</ion-label>
+                  <ion-select [(ngModel)]="currentCurrency" (ionChange)="updateCurrency()">
+                    <ion-select-option *ngFor="let currency of availableCurrencies" [value]="currency.code">
+                      {{ currency.name }} ({{ currency.code }})
+                    </ion-select-option>
+                  </ion-select>
+                </ion-item>
+                <ion-text color="medium">
+                  <p>Cette devise sera utilisée pour l'affichage de tous les prix dans l'application.</p>
+                </ion-text>
+              </div>
             </div>
           </div>
         </ion-card-content>

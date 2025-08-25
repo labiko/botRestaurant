@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 
 import { SettingsPageRoutingModule } from './settings-routing.module';
+import { EditMenuItemModalComponent } from './components/edit-menu-item-modal/edit-menu-item-modal.component';
 
 import { SettingsPage } from './settings.page';
 
@@ -15,6 +16,9 @@ import { SettingsPage } from './settings.page';
     IonicModule,
     SettingsPageRoutingModule
   ],
-  declarations: [SettingsPage]
+  declarations: [
+    SettingsPage,
+    EditMenuItemModalComponent
+  ]
 })
 export class SettingsPageModule {}
