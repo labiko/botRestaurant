@@ -1251,7 +1251,12 @@ async function createOrder(phoneNumber: string, session: any, paymentTiming: str
       client_id: client.id,
       restaurant_id: restaurantId,
       items_count: items.length,
-      total: total
+      total: total,
+      mode: session.context.mode,
+      adresse_livraison: session.context.deliveryAddress,
+      latitude_livraison: session.context.userLatitude,
+      longitude_livraison: session.context.userLongitude,
+      distance_km: session.context.distance
     });
 
     const { data: commande, error } = await supabase
@@ -1265,6 +1270,10 @@ async function createOrder(phoneNumber: string, session: any, paymentTiming: str
         frais_livraison: fraisLivraison,
         total: total,
         mode: session.context.mode,
+        adresse_livraison: session.context.deliveryAddress || null,
+        latitude_livraison: session.context.userLatitude || null,
+        longitude_livraison: session.context.userLongitude || null,
+        distance_km: session.context.distance || null,
         paiement_mode: paymentTiming,
         statut: 'en_attente',
         paiement_statut: paymentTiming === 'maintenant' ? 'en_attente' : 'en_attente',

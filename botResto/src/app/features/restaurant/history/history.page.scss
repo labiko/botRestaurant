@@ -1,0 +1,83 @@
+// History page styles
+@import '../orders/orders.page.scss';
+
+.history-card {
+  opacity: 0.9;
+  
+  .order-header {
+    .order-info {
+      ion-card-title {
+        color: var(--ion-color-medium-tint);
+      }
+    }
+  }
+}
+
+.order-timeline {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--ion-color-step-50);
+  border-radius: 8px;
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--ion-color-dark);
+  }
+
+  .timeline-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    ion-icon {
+      font-size: 1.2rem;
+      margin-right: 0.75rem;
+      min-width: 24px;
+    }
+
+    span {
+      font-size: 0.9rem;
+      color: var(--ion-color-dark);
+    }
+  }
+}
+
+.payment-info {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--ion-color-step-100);
+  border-radius: 8px;
+  border-left: 4px solid var(--ion-color-success);
+
+  h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--ion-color-success);
+  }
+
+  p {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+    color: var(--ion-color-dark);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// Responsive design
+@media (min-width: 768px) {
+  .history-card {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

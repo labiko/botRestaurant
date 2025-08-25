@@ -1,0 +1,183 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/restaurant/dashboard"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Gestion des Commandes</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="manualRefresh()">
+        <ion-icon name="refresh" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+
+  <!-- Filter tabs -->
+  <ion-toolbar>
+    <ion-segment [(ngModel)]="selectedFilter" scrollable>
+      <ion-segment-button value="all">
+        <ion-label>Toutes ({{ getOrderCountByStatus('all') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="en_attente">
+        <ion-label>En attente ({{ getOrderCountByStatus('en_attente') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="confirmee">
+        <ion-label>Confirmées ({{ getOrderCountByStatus('confirmee') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="preparation">
+        <ion-label>En préparation ({{ getOrderCountByStatus('preparation') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="prete">
+        <ion-label>Prêtes ({{ getOrderCountByStatus('prete') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="en_livraison">
+        <ion-label>En livraison ({{ getOrderCountByStatus('en_livraison') }})</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- Loading spinner -->
+  <div *ngIf="isLoading" class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Chargement des commandes...</p>
+  </div>
+
+  <!-- Orders list -->
+  <div *ngIf="!isLoading">
+    <!-- No orders message -->
+    <ion-card *ngIf="getFilteredOrders().length === 0" class="no-orders-card">
+      <ion-card-content>
+        <div class="no-orders-content">
+          <ion-icon name="receipt-outline" class="no-orders-icon"></ion-icon>
+          <h3>Aucune commande</h3>
+          <p>Il n'y a aucune commande pour le moment.</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Orders cards -->
+    <ion-card *ngFor="let order of getFilteredOrders()" class="order-card">
+      <ion-card-header>
+        <div class="order-header">
+          <div class="order-info">
+            <ion-card-title>#{{ order.numero_commande }}</ion-card-title>
+            <ion-card-subtitle>{{ order.client_nom }} • {{ formatTime(order.created_at) }}</ion-card-subtitle>
+          </div>
+          <div class="order-badges">
+            <ion-badge [color]="getStatusColor(order.statut)" class="status-badge">
+              {{ getStatusText(order.statut) }}
+            </ion-badge>
+            <ion-badge color="medium" outline>
+              {{ order.mode === 'sur_place' ? 'Sur place' : order.mode === 'emporter' ? 'À emporter' : 'Livraison' }}
+            </ion-badge>
+          </div>
+        </div>
+      </ion-card-header>
+
+      <ion-card-content>
+        <!-- Order items -->
+        <div class="order-items">
+          <h4>Articles commandés:</h4>
+          <div *ngFor="let item of order.items" class="item-row">
+            <span class="item-name">{{ item.quantite }}x {{ item.nom_plat }}</span>
+            <span class="item-price">{{ formatPrice(item.prix_total) }}</span>
+          </div>
+        </div>
+
+        <!-- Order totals -->
+        <div class="order-totals">
+          <div class="total-row">
+            <span>Sous-total:</span>
+            <span>{{ formatPrice(order.sous_total) }}</span>
+          </div>
+          <div *ngIf="order.frais_livraison > 0" class="total-row">
+            <span>Frais de livraison:</span>
+            <span>{{ formatPrice(order.frais_livraison) }}</span>
+          </div>
+          <div class="total-row total-final">
+            <span><strong>Total:</strong></span>
+            <span><strong>{{ formatPrice(order.total) }}</strong></span>
+          </div>
+        </div>
+
+        <!-- Order status information -->
+        <div class="delivery-info">
+          <h4>Informations commande:</h4>
+          <p><strong>Créée le:</strong> {{ formatDateTime(order.created_at) }}</p>
+          <p *ngIf="getStatusDate(order)"><strong>{{ getStatusDateLabel(order) }}:</strong> {{ formatDateTime(getStatusDate(order)!) }}</p>
+        </div>
+
+        <!-- Delivery information -->
+        <div *ngIf="order.mode === 'livraison'" class="delivery-info">
+          <div class="delivery-header">
+            <h4>Informations livraison:</h4>
+            <ion-button 
+              fill="solid" 
+              size="small" 
+              color="primary"
+              class="maps-button"
+              (click)="openDrivingDirections(order.latitude_livraison, order.longitude_livraison)">
+              <ion-icon name="navigate" slot="start"></ion-icon>
+              Itinéraire
+            </ion-button>
+          </div>
+          <p><strong>Adresse:</strong> {{ order.adresse_livraison }}</p>
+          <p><strong>Téléphone:</strong> {{ order.client_phone }}</p>
+          <p><strong>Client se trouve à</strong> {{ order.distanceDisplay }}</p>
+          <div *ngIf="order.livreur_nom" class="assigned-delivery">
+            <p><strong>Livreur assigné:</strong> {{ order.livreur_nom }} ({{ order.livreur_phone }})</p>
+            <p *ngIf="order.assigned_at"><strong>Assigné le:</strong> {{ formatDateTime(order.assigned_at) }}</p>
+            <p *ngIf="order.accepted_by_delivery_at"><strong>Accepté le:</strong> {{ formatDateTime(order.accepted_by_delivery_at) }}</p>
+            <!-- Code de validation masqué pour la sécurité -->
+          </div>
+        </div>
+
+        <!-- Client notes -->
+        <div *ngIf="order.note_client" class="client-note">
+          <h4>Note du client:</h4>
+          <p class="note-text">{{ order.note_client }}</p>
+        </div>
+
+        <!-- Restaurant notes -->
+        <div *ngIf="order.note_restaurant" class="restaurant-note">
+          <h4>Note restaurant:</h4>
+          <p class="note-text">{{ order.note_restaurant }}</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="order-actions">
+          <!-- Status update buttons -->
+          <div *ngIf="order.availableActions && order.availableActions.length > 0" class="status-actions">
+            <ion-button 
+              *ngFor="let action of order.availableActions"
+              size="small" 
+              [color]="action.color"
+              (click)="onActionButtonClick(order, action)">
+              {{ action.label }}
+            </ion-button>
+          </div>
+
+          <!-- Delivery assignment -->
+          <div *ngIf="order.statut === 'prete' && order.mode === 'livraison' && !order.livreur_nom" 
+               class="delivery-assignment">
+            <ion-button 
+              expand="block" 
+              color="primary" 
+              fill="outline"
+              (click)="openDeliveryAssignmentModal(order)"
+              class="assign-delivery-button">
+              <ion-icon name="bicycle" slot="start"></ion-icon>
+              Affecter un livreur
+            </ion-button>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Refresh spinner -->
+  <ion-refresher slot="fixed" (ionRefresh)="manualRefresh()">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+</ion-content>

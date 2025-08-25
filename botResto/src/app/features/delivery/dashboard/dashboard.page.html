@@ -1,0 +1,160 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Tableau de Bord Livreur</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="logout()">
+        <ion-icon name="log-out"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="delivery-content">
+  <div class="delivery-container">
+    
+    <!-- Status Banner -->
+    <div class="status-banner" [class.online]="isOnline" [class.offline]="!isOnline">
+      <div class="status-info">
+        <ion-icon [name]="isOnline ? 'checkmark-circle' : 'pause-circle'"></ion-icon>
+        <div>
+          <h3>{{ isOnline ? 'En ligne' : 'Hors ligne' }}</h3>
+          <p>{{ isOnline ? 'Prêt à recevoir des commandes' : 'Indisponible pour les livraisons' }}</p>
+        </div>
+      </div>
+      <ion-toggle 
+        [(ngModel)]="isOnline" 
+        (ionChange)="toggleOnlineStatus()"
+        class="status-toggle">
+      </ion-toggle>
+    </div>
+
+
+    <!-- Tabs -->
+    <div class="tabs-section">
+      <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()">
+        <ion-segment-button value="active">
+          <ion-label>En cours</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="history">
+          <ion-label>Historique</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <!-- Current Orders -->
+    <div class="section">
+      <div class="section-header">
+        <h2>{{ selectedTab === 'active' ? 'Commandes en cours' : 'Historique des livraisons' }}</h2>
+        <ion-button 
+          fill="clear" 
+          size="small" 
+          (click)="goToOrders()">
+          Voir tout
+          <ion-icon name="chevron-forward" slot="end"></ion-icon>
+        </ion-button>
+      </div>
+
+      <div *ngIf="currentOrders.length === 0" class="empty-state">
+        <ion-icon name="bicycle" class="empty-icon"></ion-icon>
+        <h3>Aucune commande active</h3>
+        <p>{{ isOnline ? 'Attendez de nouvelles commandes' : 'Activez votre statut pour recevoir des commandes' }}</p>
+      </div>
+
+      <div class="orders-list" *ngIf="currentOrders.length > 0">
+        <div class="order-card" *ngFor="let order of currentOrders">
+          <div class="order-header">
+            <div class="order-info">
+              <h4>{{ order.restaurantName }}</h4>
+              <p class="order-id">#{{ order.orderNumber }}</p>
+            </div>
+            <div class="order-status" [attr.data-status]="order.status">
+              {{ order.status === 'assigned' ? 'Assignée' : 
+                 order.status === 'picked_up' ? 'Récupérée' : 
+                 order.status === 'in_transit' ? 'En transit' : order.status }}
+            </div>
+          </div>
+
+          <div class="order-details">
+            <div class="customer-info">
+              <ion-icon name="person"></ion-icon>
+              <span class="clickable-client" (click)="viewClientInfo(order.clientId)">{{ order.customerName }}</span>
+            </div>
+            <div class="customer-phone">
+              <ion-icon name="call"></ion-icon>
+              <span>{{ order.customerPhone }}</span>
+            </div>
+            <div class="address-info">
+              <ion-icon name="location"></ion-icon>
+              <span>{{ order.customerAddress }}</span>
+            </div>
+            <div class="order-meta">
+              <span class="amount">{{ formatAmount(order.totalAmount) }}</span>
+              <span class="distance">{{ order.distance }} km</span>
+              <span class="time">{{ order.estimatedTime }}</span>
+            </div>
+            <div class="payment-info">
+              <div class="payment-status">
+                <ion-icon name="card"></ion-icon>
+                <span>{{ getPaymentStatusLabel(order.paymentStatus) }}</span>
+              </div>
+              <div class="payment-method" *ngIf="order.paymentMethod">
+                <ion-icon name="wallet"></ion-icon>
+                <span>{{ getPaymentMethodLabel(order.paymentMethod) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="order-actions">
+            <ion-button 
+              fill="outline" 
+              size="small" 
+              (click)="callCustomer(order.customerPhone)">
+              <ion-icon name="call" slot="icon-only"></ion-icon>
+            </ion-button>
+            
+            <ion-button 
+              fill="outline" 
+              size="small" 
+              (click)="startNavigation(order.latitudeLivraison, order.longitudeLivraison)">
+              <ion-icon name="map" slot="icon-only"></ion-icon>
+            </ion-button>
+
+            <ion-button 
+              *ngIf="order.status === 'assigned'" 
+              class="btn-primary" 
+              size="small"
+              (click)="acceptOrder(order.id)">
+              Accepter
+            </ion-button>
+
+            <ion-button 
+              *ngIf="order.status === 'picked_up'" 
+              class="btn-primary" 
+              size="small"
+              (click)="updateOrderStatus(order.id, 'in_transit')">
+              En route
+            </ion-button>
+
+            <ion-button 
+              *ngIf="order.status === 'in_transit'" 
+              class="btn-success" 
+              size="small"
+              (click)="updateOrderStatus(order.id, 'delivered')">
+              Marquer livré
+            </ion-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+</ion-content>
+
+<!-- OTP Validation Modal -->
+<app-otp-validation-modal
+  [(isOpen)]="showOtpModal"
+  [orderNumber]="currentOrderNumberForOtp"
+  (onValidate)="onOtpValidate($event)"
+  (onCancel)="onOtpCancel()">
+</app-otp-validation-modal>

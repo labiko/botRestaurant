@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -20,7 +21,8 @@ export class LoginPage implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) { }
 
   ngOnInit() {
@@ -33,15 +35,32 @@ export class LoginPage implements OnInit {
   }
 
   async loginRestaurant() {
-    // TODO: Implémenter la connexion restaurant via Supabase
-    console.log('Login restaurant:', this.restaurantEmail);
-    // this.router.navigate(['/restaurant/dashboard']);
+    try {
+      const success = await this.authService.loginRestaurant(this.restaurantEmail, this.restaurantPassword);
+      if (success) {
+        this.router.navigate(['/restaurant/dashboard']);
+      } else {
+        // TODO: Show error toast
+        console.error('Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+    }
   }
 
+
   async loginDelivery() {
-    // TODO: Implémenter la connexion livreur
-    console.log('Login delivery:', this.deliveryPhone);
-    // this.router.navigate(['/delivery/dashboard']);
+    try {
+      const success = await this.authService.loginDelivery(this.deliveryPhone, this.deliveryCode);
+      if (success) {
+        this.router.navigate(['/delivery/dashboard']);
+      } else {
+        // TODO: Show error toast
+        console.error('Login failed - Invalid phone or code');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+    }
   }
 
   goBack() {

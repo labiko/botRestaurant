@@ -1,0 +1,166 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Mes Commandes</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="orders-content">
+  <div class="orders-container">
+    
+    <!-- Filter Segment -->
+    <div class="filter-section">
+      <ion-segment 
+        [(ngModel)]="selectedFilter" 
+        (ionChange)="onFilterChange()"
+        class="filter-segment">
+        <ion-segment-button value="active">
+          <ion-label>En cours</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="history">
+          <ion-label>Historique</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <!-- Orders List -->
+    <div *ngIf="filteredOrders.length === 0" class="empty-state">
+      <ion-icon name="receipt" class="empty-icon"></ion-icon>
+      <h3>Aucune commande</h3>
+      <p>{{ selectedFilter === 'all' ? 'Aucune commande disponible' : 'Aucune commande avec ce statut' }}</p>
+    </div>
+
+    <div class="orders-list" *ngIf="filteredOrders.length > 0">
+      <div class="order-card" *ngFor="let order of filteredOrders">
+        <div class="order-header">
+          <div class="order-info">
+            <h4>{{ order.restaurantName }}</h4>
+            <p class="order-id">#{{ order.orderNumber }}</p>
+          </div>
+          <div class="order-status" [attr.data-status]="order.status">
+            {{ order.status === 'assigned' ? 'Assignée' : 
+               order.status === 'picked_up' ? 'Récupérée' : 
+               order.status === 'in_transit' ? 'En transit' : 
+               order.status === 'delivered' ? 'Livrée' : order.status }}
+          </div>
+        </div>
+
+        <div class="order-details">
+          <div class="customer-info">
+            <ion-icon name="person"></ion-icon>
+            <div>
+              <span class="customer-name clickable-client" (click)="viewClientInfo(order.clientId)">{{ order.customerName }}</span>
+              <span class="customer-phone">{{ order.customerPhone }}</span>
+            </div>
+          </div>
+          
+          <div class="address-info">
+            <ion-icon name="location"></ion-icon>
+            <span>{{ order.customerAddress }}</span>
+          </div>
+
+          <div class="items-info">
+            <ion-icon name="restaurant"></ion-icon>
+            <span>{{ order.items }}</span>
+          </div>
+
+          <div class="order-meta">
+            <div class="meta-row">
+              <span class="label">Montant total:</span>
+              <span class="amount">{{ (order.totalAmount / 1000).toFixed(0) }}K GNF</span>
+            </div>
+            <div class="meta-row">
+              <span class="label">Frais livraison:</span>
+              <span class="delivery-fee">{{ formatAmount(order.deliveryFee) }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="label">Statut paiement:</span>
+              <span class="payment-status">{{ getPaymentStatusLabel(order.paymentStatus) }}</span>
+            </div>
+            <div class="meta-row" *ngIf="order.paymentMethod">
+              <span class="label">Méthode paiement:</span>
+              <span class="payment-method">{{ getPaymentMethodLabel(order.paymentMethod) }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="label">Distance:</span>
+              <span>{{ order.distance }} km</span>
+            </div>
+            <div class="meta-row" *ngIf="order.status !== 'delivered'">
+              <span class="label">Temps estimé:</span>
+              <span>{{ order.estimatedTime }}</span>
+            </div>
+          </div>
+
+          <!-- Timestamps -->
+          <div class="timestamps" *ngIf="order.pickupTime || order.deliveredTime">
+            <div *ngIf="order.pickupTime" class="timestamp">
+              <ion-icon name="checkmark-circle"></ion-icon>
+              <span>Récupérée: {{ order.pickupTime | date:'short' }}</span>
+            </div>
+            <div *ngIf="order.deliveredTime" class="timestamp">
+              <ion-icon name="checkmark-done-circle"></ion-icon>
+              <span>Livrée: {{ order.deliveredTime | date:'short' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="order-actions" *ngIf="order.status !== 'delivered'">
+          <ion-button 
+            fill="outline" 
+            size="small" 
+            (click)="callCustomer(order.customerPhone)">
+            <ion-icon name="call" slot="start"></ion-icon>
+            Appeler
+          </ion-button>
+          
+          <ion-button 
+            fill="outline" 
+            size="small" 
+            (click)="startNavigation(order.latitudeLivraison, order.longitudeLivraison)">
+            <ion-icon name="map" slot="start"></ion-icon>
+            Navigation
+          </ion-button>
+
+          <ion-button 
+            *ngIf="order.status === 'assigned'" 
+            class="btn-primary" 
+            size="small"
+            (click)="acceptOrder(order.id)">
+            <ion-icon name="checkmark" slot="start"></ion-icon>
+            Accepter
+          </ion-button>
+
+          <ion-button 
+            *ngIf="order.status === 'picked_up'" 
+            class="btn-primary" 
+            size="small"
+            (click)="updateOrderStatus(order.id, 'in_transit')">
+            <ion-icon name="car" slot="start"></ion-icon>
+            En route
+          </ion-button>
+
+          <ion-button 
+            *ngIf="order.status === 'in_transit'" 
+            class="btn-success" 
+            size="small"
+            (click)="updateOrderStatus(order.id, 'delivered')">
+            <ion-icon name="checkmark-done" slot="start"></ion-icon>
+            Marquer livré
+          </ion-button>
+        </div>
+
+        <!-- Delivered Badge -->
+        <div *ngIf="order.status === 'delivered'" class="delivered-badge">
+          <ion-icon name="checkmark-done-circle"></ion-icon>
+          <span>Commande livrée avec succès</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</ion-content>

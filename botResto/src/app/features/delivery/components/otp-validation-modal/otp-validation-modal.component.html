@@ -1,0 +1,116 @@
+<ion-modal [isOpen]="isOpen" (willDismiss)="closeModal()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar color="primary">
+        <ion-title>Validation de Livraison</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="cancel()">
+            <ion-icon name="close"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="otp-content">
+      <div class="otp-container">
+        <div class="otp-header">
+          <ion-icon name="lock-closed" class="lock-icon"></ion-icon>
+          <h2>Code de Validation</h2>
+          <p>Commande #{{ orderNumber }}</p>
+          <p class="instruction">Demandez au client son code à 4 chiffres</p>
+        </div>
+
+        <div class="otp-inputs" [class.error]="showError">
+          <input
+            #digit1
+            type="text"
+            maxlength="1"
+            [(ngModel)]="otp1"
+            (input)="onDigitInput($event, 1)"
+            (keydown.backspace)="!otp1 && onDigitInput($event, 1)"
+            (keypress)="onlyNumbers($event)"
+            inputmode="numeric"
+            pattern="[0-9]"
+            class="otp-input"
+            [disabled]="isValidating"
+            autocomplete="off"
+            style="color: #000000 !important; -webkit-text-fill-color: #000000 !important;"
+          />
+          <input
+            #digit2
+            type="text"
+            maxlength="1"
+            [(ngModel)]="otp2"
+            (input)="onDigitInput($event, 2)"
+            (keydown.backspace)="!otp2 && onDigitInput($event, 2)"
+            (keypress)="onlyNumbers($event)"
+            inputmode="numeric"
+            pattern="[0-9]"
+            class="otp-input"
+            [disabled]="isValidating"
+            autocomplete="off"
+            style="color: #000000 !important; -webkit-text-fill-color: #000000 !important;"
+          />
+          <input
+            #digit3
+            type="text"
+            maxlength="1"
+            [(ngModel)]="otp3"
+            (input)="onDigitInput($event, 3)"
+            (keydown.backspace)="!otp3 && onDigitInput($event, 3)"
+            (keypress)="onlyNumbers($event)"
+            inputmode="numeric"
+            pattern="[0-9]"
+            class="otp-input"
+            [disabled]="isValidating"
+            autocomplete="off"
+            style="color: #000000 !important; -webkit-text-fill-color: #000000 !important;"
+          />
+          <input
+            #digit4
+            type="text"
+            maxlength="1"
+            [(ngModel)]="otp4"
+            (input)="onDigitInput($event, 4)"
+            (keydown.backspace)="!otp4 && onDigitInput($event, 4)"
+            (keypress)="onlyNumbers($event)"
+            inputmode="numeric"
+            pattern="[0-9]"
+            class="otp-input"
+            [disabled]="isValidating"
+            autocomplete="off"
+            style="color: #000000 !important; -webkit-text-fill-color: #000000 !important;"
+          />
+        </div>
+
+        <div class="error-message" *ngIf="showError">
+          <ion-icon name="alert-circle"></ion-icon>
+          Code incorrect. Veuillez réessayer.
+        </div>
+
+        <div class="action-buttons">
+          <ion-button 
+            fill="outline" 
+            expand="block" 
+            (click)="cancel()"
+            [disabled]="isValidating">
+            Annuler
+          </ion-button>
+          <ion-button 
+            expand="block" 
+            (click)="validate()"
+            [disabled]="isValidating || !otp1 || !otp2 || !otp3 || !otp4"
+            class="validate-button">
+            <ion-spinner name="crescent" *ngIf="isValidating"></ion-spinner>
+            <span *ngIf="!isValidating">Valider la Livraison</span>
+          </ion-button>
+        </div>
+
+        <div class="help-text">
+          <ion-icon name="information-circle"></ion-icon>
+          <span>Le code de validation a été envoyé au client par WhatsApp</span>
+        </div>
+      </div>
+    </ion-content>
+  </ng-template>
+</ion-modal>

@@ -61,6 +61,14 @@
     height: 48px;
     font-size: var(--text-base);
   }
+
+  .demo-button {
+    margin-top: 15px;
+    height: 44px;
+    font-size: var(--text-sm);
+    --border-color: var(--primary-purple);
+    --color: var(--primary-purple);
+  }
 }
 
 .login-footer {

@@ -1,0 +1,146 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Historique des Commandes</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="refreshHistory()">
+        <ion-icon name="refresh" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+
+  <!-- Filter tabs -->
+  <ion-toolbar>
+    <ion-segment [(ngModel)]="selectedFilter" scrollable>
+      <ion-segment-button value="all">
+        <ion-label>Toutes ({{ getOrderCountByStatus('all') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="livree">
+        <ion-label>Livrées ({{ getOrderCountByStatus('livree') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="terminee">
+        <ion-label>Terminées ({{ getOrderCountByStatus('terminee') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="annulee">
+        <ion-label>Annulées ({{ getOrderCountByStatus('annulee') }})</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- Loading spinner -->
+  <div *ngIf="isLoading" class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Chargement de l'historique...</p>
+  </div>
+
+  <!-- Orders list -->
+  <div *ngIf="!isLoading">
+    <!-- No orders message -->
+    <ion-card *ngIf="getFilteredOrders().length === 0" class="no-orders-card">
+      <ion-card-content>
+        <div class="no-orders-content">
+          <ion-icon name="archive-outline" class="no-orders-icon"></ion-icon>
+          <h3>Aucune commande</h3>
+          <p>Aucune commande terminée pour le moment.</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Orders cards (read-only version) -->
+    <ion-card *ngFor="let order of getFilteredOrders()" class="order-card history-card">
+      <ion-card-header>
+        <div class="order-header">
+          <div class="order-info">
+            <ion-card-title>#{{ order.numero_commande }}</ion-card-title>
+            <ion-card-subtitle>{{ order.client_nom }} • {{ formatTime(order.created_at) }}</ion-card-subtitle>
+          </div>
+          <div class="order-badges">
+            <ion-badge [color]="getStatusColor(order.statut)" class="status-badge">
+              {{ getStatusText(order.statut) }}
+            </ion-badge>
+            <ion-badge color="medium" outline>
+              {{ order.mode === 'sur_place' ? 'Sur place' : order.mode === 'emporter' ? 'À emporter' : 'Livraison' }}
+            </ion-badge>
+          </div>
+        </div>
+      </ion-card-header>
+
+      <ion-card-content>
+        <!-- Order items -->
+        <div class="order-items">
+          <h4>Articles commandés:</h4>
+          <div *ngFor="let item of order.items" class="item-row">
+            <span class="item-name">{{ item.quantite }}x {{ item.nom_plat }}</span>
+            <span class="item-price">{{ formatPrice(item.prix_total || (item.prix_unitaire * item.quantite) || 0) }}</span>
+          </div>
+        </div>
+
+        <!-- Order totals -->
+        <div class="order-totals">
+          <div class="total-row">
+            <span>Sous-total:</span>
+            <span>{{ formatPrice(order.sous_total) }}</span>
+          </div>
+          <div *ngIf="order.frais_livraison > 0" class="total-row">
+            <span>Frais de livraison:</span>
+            <span>{{ formatPrice(order.frais_livraison) }}</span>
+          </div>
+          <div class="total-row total-final">
+            <span><strong>Total:</strong></span>
+            <span><strong>{{ formatPrice(order.total) }}</strong></span>
+          </div>
+        </div>
+
+        <!-- Order timeline -->
+        <div class="order-timeline">
+          <h4>Chronologie:</h4>
+          <div class="timeline-item" *ngIf="order.created_at">
+            <ion-icon name="add-circle" color="medium"></ion-icon>
+            <span>Créée le {{ formatDateTime(order.created_at) }}</span>
+          </div>
+          <div class="timeline-item" *ngIf="order.confirmed_at">
+            <ion-icon name="checkmark-circle" color="primary"></ion-icon>
+            <span>Confirmée le {{ formatDateTime(order.confirmed_at) }}</span>
+          </div>
+          <div class="timeline-item" *ngIf="order.prepared_at">
+            <ion-icon name="restaurant" color="secondary"></ion-icon>
+            <span>Préparée le {{ formatDateTime(order.prepared_at) }}</span>
+          </div>
+          <div class="timeline-item" *ngIf="order.assigned_at">
+            <ion-icon name="bicycle" color="tertiary"></ion-icon>
+            <span>Assignée le {{ formatDateTime(order.assigned_at) }}</span>
+          </div>
+          <div class="timeline-item" *ngIf="order.accepted_by_delivery_at">
+            <ion-icon name="hand-right" color="warning"></ion-icon>
+            <span>Acceptée le {{ formatDateTime(order.accepted_by_delivery_at) }}</span>
+          </div>
+          <div class="timeline-item" *ngIf="order.delivered_at">
+            <ion-icon name="checkmark-circle" color="success"></ion-icon>
+            <span>Livrée le {{ formatDateTime(order.delivered_at) }}</span>
+          </div>
+          <div class="timeline-item" *ngIf="order.cancelled_at">
+            <ion-icon name="close-circle" color="danger"></ion-icon>
+            <span>Annulée le {{ formatDateTime(order.cancelled_at) }}</span>
+          </div>
+        </div>
+
+        <!-- Payment info -->
+        <div class="payment-info" *ngIf="order.paiement_statut">
+          <h4>Paiement:</h4>
+          <p><strong>Mode:</strong> {{ getPaymentModeText(order.paiement_mode) }}</p>
+          <p><strong>Statut:</strong> 
+            <ion-badge [color]="getPaymentStatusColor(order.paiement_statut)">
+              {{ getPaymentStatusText(order.paiement_statut) }}
+            </ion-badge>
+          </p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Refresh spinner -->
+  <ion-refresher slot="fixed" (ionRefresh)="refreshHistory()">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+</ion-content>

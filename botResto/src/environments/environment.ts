@@ -5,9 +5,10 @@
 export const environment = {
   production: false,
   supabase: {
-    url: 'YOUR_SUPABASE_URL',
-    anonKey: 'YOUR_SUPABASE_ANON_KEY'
-  }
+    url: 'https://ymlzjvposzzdgpksgvsn.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltbHpqdnBvc3p6ZGdwa3NndnNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjIyMTksImV4cCI6MjA3MTQzODIxOX0.vMq49kBoK-uXBr2mDhs0dakwUnZts-BBqVSympdDjgY'
+  },
+  greenApiToken: 'dev-token-placeholder' // À remplacer par le vrai token de dev
 };
 
 /*

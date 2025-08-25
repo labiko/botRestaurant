@@ -1,0 +1,206 @@
+.otp-content {
+  --background: var(--ion-color-light);
+}
+
+.otp-container {
+  padding: 20px;
+  max-width: 400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  justify-content: center;
+}
+
+.otp-header {
+  text-align: center;
+  margin-bottom: 30px;
+
+  .lock-icon {
+    font-size: 48px;
+    color: var(--ion-color-primary);
+    margin-bottom: 15px;
+  }
+
+  h2 {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 10px 0;
+    color: var(--ion-color-dark);
+  }
+
+  p {
+    color: var(--ion-color-medium);
+    margin: 5px 0;
+    
+    &.instruction {
+      font-size: 14px;
+      margin-top: 10px;
+    }
+  }
+}
+
+.otp-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 30px 0;
+  
+  &.error {
+    animation: shake 0.5s;
+  }
+
+  .otp-input {
+    width: 60px;
+    height: 60px;
+    border: 2px solid var(--ion-color-medium-tint);
+    border-radius: 12px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    background: white;
+    color: var(--ion-color-dark) !important;
+    transition: all 0.3s ease;
+    
+    &:focus {
+      outline: none;
+      border-color: var(--ion-color-primary);
+      box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.1);
+      color: var(--ion-color-dark) !important;
+    }
+    
+    &:disabled {
+      background: var(--ion-color-light);
+      opacity: 0.6;
+      color: var(--ion-color-medium) !important;
+    }
+    
+    // Remove number input arrows
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    
+    &[type=number] {
+      -moz-appearance: textfield;
+    }
+
+    // Ensure placeholder is visible too
+    &::placeholder {
+      color: var(--ion-color-medium) !important;
+    }
+
+    // Override any Ionic styles that might interfere
+    &.otp-input {
+      color: var(--ion-color-dark) !important;
+      -webkit-text-fill-color: var(--ion-color-dark) !important;
+    }
+  }
+}
+
+.error-message {
+  color: var(--ion-color-danger);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  animation: fadeIn 0.3s;
+  
+  ion-icon {
+    font-size: 18px;
+  }
+}
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin: 30px 0;
+  
+  ion-button {
+    --border-radius: 8px;
+    height: 48px;
+    font-weight: 600;
+    
+    &.validate-button {
+      --background: var(--ion-color-success);
+      --background-activated: var(--ion-color-success-shade);
+      
+      ion-spinner {
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+}
+
+.help-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ion-color-medium);
+  font-size: 12px;
+  text-align: center;
+  margin-top: 20px;
+  
+  ion-icon {
+    font-size: 16px;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+// Force text visibility in all states
+:host ::ng-deep {
+  .otp-input {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    
+    &:focus {
+      color: #000000 !important;
+      -webkit-text-fill-color: #000000 !important;
+    }
+    
+    &:active {
+      color: #000000 !important;
+      -webkit-text-fill-color: #000000 !important;
+    }
+  }
+}
+
+// Mobile optimizations
+@media (max-width: 576px) {
+  .otp-inputs {
+    gap: 10px;
+    
+    .otp-input {
+      width: 50px;
+      height: 50px;
+      font-size: 20px;
+      color: #000000 !important;
+      -webkit-text-fill-color: #000000 !important;
+    }
+  }
+  
+  .action-buttons {
+    grid-template-columns: 1fr;
+    
+    ion-button:first-child {
+      order: 2;
+    }
+  }
+}

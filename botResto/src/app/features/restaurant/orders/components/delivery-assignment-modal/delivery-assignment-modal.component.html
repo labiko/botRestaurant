@@ -1,0 +1,128 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title style="font-size: 1rem; font-weight: 600;">Affecter un livreur</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" (click)="cancel()" style="--color: #6b7280;">
+        <ion-icon name="close" style="font-size: 1.25rem;"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="delivery-modal-content">
+  
+  <!-- Order Summary -->
+  <div class="order-summary">
+    <ion-card class="summary-card">
+      <ion-card-content>
+        <div class="summary-header">
+          <ion-icon name="receipt-outline" class="summary-icon"></ion-icon>
+          <div class="summary-info">
+            <h3>Commande #{{ orderDetails.numero_commande }}</h3>
+            <p>{{ orderDetails.client_nom }} • {{ orderDetails.adresse_livraison }}</p>
+          </div>
+          <div class="summary-amount">
+            <span class="amount">{{ orderDetails.total | currency:'GNF':'symbol':'1.0-0' }}</span>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- No delivery users available -->
+  <div *ngIf="availableDeliveryUsers.length === 0" class="no-delivery-users">
+    <ion-card>
+      <ion-card-content>
+        <div class="no-users-content">
+          <ion-icon name="bicycle-outline" class="no-users-icon"></ion-icon>
+          <h3>Aucun livreur disponible</h3>
+          <p>Il n'y a aucun livreur en ligne pour le moment.</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Delivery Users List -->
+  <div *ngIf="availableDeliveryUsers.length > 0" class="delivery-users-section">
+    <div class="section-header">
+      <h2>Choisir un livreur</h2>
+      <p>{{ availableDeliveryUsers.length }} livreur(s) disponible(s)</p>
+    </div>
+
+    <div class="delivery-users-list">
+      <div 
+        *ngFor="let user of availableDeliveryUsers" 
+        class="delivery-user-card"
+        [class.selected]="selectedDeliveryUser?.id === user.id"
+        (click)="selectDeliveryUser(user)">
+        
+        <div class="user-header">
+          <div class="user-avatar">
+            <ion-avatar>
+              <ion-icon name="person-circle"></ion-icon>
+            </ion-avatar>
+            <ion-badge 
+              [color]="getStatusColor(user.is_online)" 
+              class="status-badge">
+              {{ getStatusText(user.is_online) }}
+            </ion-badge>
+          </div>
+          
+          <div class="user-info">
+            <h3>{{ user.nom }}</h3>
+            <p class="user-phone">{{ user.telephone }}</p>
+            
+            <div class="user-rating">
+              <div class="stars">
+                <ion-icon 
+                  *ngFor="let star of getRatingStars(user.rating)" 
+                  [name]="star" 
+                  class="star-icon">
+                </ion-icon>
+              </div>
+              <span class="rating-text">{{ user.rating }}/5</span>
+            </div>
+          </div>
+          
+          <div class="user-stats">
+            <div class="stat-item">
+              <span class="stat-number">{{ user.total_deliveries }}</span>
+              <span class="stat-label">Livraisons</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selection indicator -->
+        <div class="selection-indicator" *ngIf="selectedDeliveryUser?.id === user.id">
+          <ion-icon name="checkmark-circle-outline"></ion-icon>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</ion-content>
+
+<!-- Footer Actions -->
+<ion-footer *ngIf="availableDeliveryUsers.length > 0">
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button 
+        fill="clear" 
+        color="medium" 
+        (click)="cancel()"
+        class="cancel-button">
+        Annuler
+      </ion-button>
+      
+      <ion-button 
+        expand="block" 
+        color="primary"
+        [disabled]="!selectedDeliveryUser"
+        (click)="assignDelivery()"
+        class="assign-button">
+        <ion-icon name="bicycle" slot="start"></ion-icon>
+        Affecter {{ selectedDeliveryUser ? selectedDeliveryUser.nom : 'ce livreur' }}
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

@@ -1,0 +1,541 @@
+.settings-content {
+  --background: var(--background-gray);
+}
+
+.settings-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+// Section
+.section {
+  margin-bottom: 32px;
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+
+    div:first-child {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    ion-icon {
+      font-size: 24px;
+      color: var(--primary-purple);
+    }
+
+    h2 {
+      margin: 0;
+      font-size: var(--text-lg);
+      font-weight: var(--font-semibold);
+      color: var(--text-primary);
+    }
+
+    .global-toggle {
+      ion-chip {
+        font-weight: var(--font-medium);
+        --border-width: 2px;
+        
+        ion-icon {
+          margin-right: 4px;
+          font-size: 16px;
+        }
+      }
+    }
+  }
+}
+
+// Status Card
+.status-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+
+  .current-status {
+    margin-bottom: 24px;
+
+    .status-info {
+      margin-bottom: 12px;
+
+      h3 {
+        margin: 0 0 8px 0;
+        font-size: var(--text-xl);
+        font-weight: var(--font-semibold);
+        color: var(--text-primary);
+      }
+
+      .status-chip {
+        font-weight: var(--font-medium);
+        
+        ion-icon {
+          margin-right: 4px;
+        }
+      }
+    }
+
+    .status-details {
+      .next-opening {
+        margin: 8px 0 0 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: var(--text-sm);
+        color: var(--text-secondary);
+
+        ion-icon {
+          font-size: 16px;
+        }
+      }
+    }
+  }
+
+  .status-controls {
+    ion-segment {
+      background: var(--background-gray);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 16px;
+
+      ion-segment-button {
+        --color: var(--text-secondary);
+        --color-checked: var(--primary-purple);
+        --background-checked: white;
+        --border-radius: 8px;
+        font-weight: var(--font-medium);
+        min-height: 44px;
+        
+        ion-label {
+          margin: 0;
+        }
+      }
+    }
+
+    .reason-input {
+      --background: var(--background-gray);
+      --border-radius: 12px;
+      --padding-start: 16px;
+      --padding-end: 16px;
+      margin: 0;
+
+      ion-label {
+        margin-bottom: 8px;
+        color: var(--text-secondary);
+        font-size: var(--text-sm);
+        font-weight: var(--font-medium);
+      }
+
+      ion-input {
+        --color: var(--text-primary);
+        --placeholder-color: var(--text-secondary);
+      }
+    }
+  }
+}
+
+// Templates Section
+.templates-section {
+  margin-bottom: 24px;
+  
+  h4 {
+    margin: 0 0 12px 0;
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+  }
+
+  .template-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    ion-button {
+      height: 36px;
+      font-size: var(--text-sm);
+      --border-radius: 18px;
+      --border-width: 2px;
+      --border-color: var(--border-light);
+      --color: var(--text-secondary);
+      
+      &:hover, &:focus {
+        --border-color: var(--primary-purple);
+        --color: var(--primary-purple);
+      }
+
+      ion-icon {
+        font-size: 16px;
+        margin-right: 6px;
+      }
+    }
+  }
+}
+
+// Modern Schedule
+.modern-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.schedule-item {
+  transition: all 0.3s ease;
+  
+  &.closed {
+    opacity: 0.7;
+  }
+  
+  &.today {
+    .day-card {
+      border: 2px solid var(--primary-purple);
+      box-shadow: 0 4px 20px rgba(139, 69, 19, 0.1);
+    }
+  }
+
+  .day-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+  }
+
+  .day-header-modern {
+    margin-bottom: 20px;
+
+    .day-info-modern {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+
+      .day-badge {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        .day-name {
+          font-size: var(--text-lg);
+          font-weight: var(--font-bold);
+          color: var(--text-primary);
+        }
+
+        .day-indicator {
+          font-size: var(--text-xs);
+          color: var(--primary-purple);
+          font-weight: var(--font-semibold);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        &.today-badge {
+          .day-name {
+            color: var(--primary-purple);
+          }
+        }
+      }
+
+      .status-toggle {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        
+        ion-toggle {
+          --handle-width: 22px;
+          --handle-height: 22px;
+          --track-width: 48px;
+          --track-height: 28px;
+          --handle-border-radius: 50%;
+        }
+
+        .toggle-label {
+          font-size: var(--text-sm);
+          font-weight: var(--font-medium);
+          color: var(--text-secondary);
+          transition: color 0.3s ease;
+        }
+      }
+    }
+  }
+
+  .time-controls-simple {
+    .time-inputs-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+
+      .time-item {
+        flex: 1;
+        --background: var(--ion-color-light);
+        --border-radius: 12px;
+        --padding-start: 16px;
+        --padding-end: 16px;
+        --min-height: 80px;
+        
+        ion-icon {
+          font-size: 20px;
+        }
+        
+        ion-label {
+          font-weight: var(--font-medium);
+          font-size: var(--text-sm);
+          margin-bottom: 4px;
+        }
+        
+        ion-input {
+          --color: var(--text-primary);
+          font-size: var(--text-lg);
+          font-weight: var(--font-semibold);
+        }
+      }
+    }
+
+    .duration-display {
+      display: flex;
+      justify-content: center;
+      margin-top: 8px;
+
+      ion-chip {
+        --background: transparent;
+        --color: var(--primary-purple);
+        font-weight: var(--font-medium);
+        font-size: var(--text-sm);
+        
+        ion-icon {
+          margin-right: 4px;
+          font-size: 14px;
+        }
+      }
+    }
+  }
+
+  .closed-indicator-modern {
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+
+    .closed-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      background: rgba(220, 38, 127, 0.05);
+      border-radius: 20px;
+      border: 2px solid rgba(220, 38, 127, 0.1);
+
+      .closed-icon {
+        font-size: 24px;
+        color: var(--ion-color-danger);
+      }
+
+      .closed-text {
+        font-size: var(--text-sm);
+        color: var(--ion-color-danger);
+        font-weight: var(--font-semibold);
+      }
+    }
+  }
+}
+
+// Save Section
+.save-section {
+  margin-top: 24px;
+
+  .save-button {
+    height: 48px;
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+
+    ion-icon {
+      font-size: 20px;
+    }
+  }
+}
+
+// Actions Grid
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.action-button {
+  height: auto;
+  min-height: 60px;
+  --border-radius: 12px;
+  --border-width: 2px;
+  --border-color: var(--border-light);
+  --color: var(--text-primary);
+  text-align: left;
+  padding: 16px;
+
+  &:hover {
+    --border-color: var(--primary-purple);
+    --color: var(--primary-purple);
+  }
+
+  ion-icon {
+    font-size: 24px;
+    margin-right: 12px;
+  }
+
+  div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    div {
+      font-weight: var(--font-semibold);
+      font-size: var(--text-base);
+      margin-bottom: 4px;
+    }
+
+    small {
+      font-size: var(--text-xs);
+      color: var(--text-secondary);
+      font-weight: var(--font-normal);
+    }
+  }
+}
+
+// Info Section
+.info-section {
+  .info-card {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border-radius: 16px;
+
+    ion-card-content {
+      padding: 20px;
+    }
+
+    .info-item {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      ion-icon {
+        font-size: 24px;
+        color: var(--primary-purple);
+        margin-top: 4px;
+        flex-shrink: 0;
+      }
+
+      div {
+        h4 {
+          margin: 0 0 8px 0;
+          font-size: var(--text-base);
+          font-weight: var(--font-semibold);
+          color: var(--text-primary);
+        }
+
+        p {
+          margin: 0;
+          font-size: var(--text-sm);
+          color: var(--text-secondary);
+          line-height: 1.5;
+        }
+      }
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .settings-container {
+    padding: 16px;
+  }
+
+  .section {
+    margin-bottom: 24px;
+  }
+
+  .status-card,
+  .schedule-card {
+    padding: 16px;
+  }
+
+  .actions-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .action-button {
+    min-height: 50px;
+    padding: 12px;
+
+    ion-icon {
+      font-size: 20px;
+      margin-right: 8px;
+    }
+
+    div div {
+      font-size: var(--text-sm);
+    }
+
+    div small {
+      font-size: var(--text-xs);
+    }
+  }
+
+  // Simple schedule responsive
+  .time-controls-simple {
+    .time-inputs-row {
+      flex-direction: column;
+      gap: 8px;
+
+      .time-item {
+        --min-height: 70px;
+      }
+    }
+  }
+
+  .template-buttons {
+    flex-direction: column;
+    align-items: stretch;
+
+    ion-button {
+      justify-content: flex-start;
+    }
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+
+    .global-toggle {
+      align-self: flex-end;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .status-controls {
+    ion-segment {
+      ion-segment-button {
+        min-height: 40px;
+
+        ion-label {
+          font-size: var(--text-xs);
+        }
+      }
+    }
+  }
+}

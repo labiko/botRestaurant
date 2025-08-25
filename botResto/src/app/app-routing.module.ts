@@ -11,9 +11,29 @@ const routes: Routes = [
     loadChildren: () => import('./auth/login/login.module').then( m => m.LoginPageModule)
   },
   {
+    path: 'restaurant/dashboard',
+    loadChildren: () => import('./features/restaurant/dashboard/dashboard.module').then( m => m.DashboardPageModule)
+  },
+  {
     path: '',
     redirectTo: 'home',
     pathMatch: 'full'
+  },
+  {
+    path: 'delivery/dashboard',
+    loadChildren: () => import('./features/delivery/dashboard/dashboard.module').then( m => m.DashboardPageModule)
+  },
+  {
+    path: 'delivery/orders',
+    loadChildren: () => import('./features/delivery/orders/orders.module').then( m => m.OrdersPageModule)
+  },
+  {
+    path: 'restaurant/settings',
+    loadChildren: () => import('./features/restaurant/settings/settings.module').then( m => m.SettingsPageModule)
+  },
+  {
+    path: 'restaurant',
+    loadChildren: () => import('./features/restaurant/tabs/tabs.module').then( m => m.TabsPageModule)
   },
 ];
 

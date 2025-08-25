@@ -8,8 +8,15 @@ export interface User {
   phone?: string;
   name: string;
   type: 'restaurant' | 'delivery';
-  restaurantId?: number;
-  deliveryId?: number;
+  restaurantId?: string;
+  deliveryId?: string;
+  deliveryPhone?: string;
+  restaurant?: {
+    id: string;
+    nom: string;
+    latitude: number;
+    longitude: number;
+  };
 }
 
 @Injectable({
@@ -21,6 +28,7 @@ export class AuthService {
 
   constructor(private supabase: SupabaseService) {
     this.checkSession();
+    this.loadStoredUser();
   }
 
   private async checkSession() {
@@ -32,26 +40,63 @@ export class AuthService {
 
   async loginRestaurant(email: string, password: string): Promise<boolean> {
     try {
-      // First, check if restaurant exists
-      const { data: restaurant, error: restaurantError } = await this.supabase.getRestaurantByEmail(email);
-      
-      if (restaurantError || !restaurant) {
-        console.error('Restaurant not found');
+      // Query restaurant_users table for authentication with restaurant coordinates
+      const { data: restaurantUser, error: userError } = await this.supabase
+        .from('restaurant_users')
+        .select(`
+          id,
+          restaurant_id,
+          email,
+          nom,
+          role
+        `)
+        .eq('email', email)
+        .eq('is_active', true)
+        .single();
+
+      if (userError || !restaurantUser) {
+        console.error('Restaurant user not found:', userError);
         return false;
       }
 
-      // Then authenticate with Supabase Auth (if configured)
-      // For now, we'll use a simple password check
-      // TODO: Implement proper authentication with Supabase Auth
+      // Get restaurant details separately
+      const { data: restaurant, error: restaurantError } = await this.supabase
+        .from('restaurants')
+        .select('id, nom, latitude, longitude')
+        .eq('id', restaurantUser.restaurant_id)
+        .single();
       
-      if (restaurant.password === password) { // This should be properly hashed
+      if (restaurantError || !restaurant) {
+        console.error('Restaurant not found:', restaurantError);
+        return false;
+      }
+
+      // TODO: Implement proper password hashing verification
+      // For demo, we'll use a simple check or allow any password
+      // In production: bcrypt.compare(password, restaurantUser.password_hash)
+      
+      if (password) { // Accept any non-empty password for demo
         const user: User = {
-          id: restaurant.id.toString(),
-          email: restaurant.email,
-          name: restaurant.nom,
+          id: restaurantUser.id.toString(),
+          email: restaurantUser.email,
+          name: restaurantUser.nom,
           type: 'restaurant',
-          restaurantId: restaurant.id
+          restaurantId: restaurantUser.restaurant_id,
+          restaurant: restaurant ? {
+            id: restaurant.id,
+            nom: restaurant.nom,
+            latitude: restaurant.latitude,
+            longitude: restaurant.longitude
+          } : undefined
         };
+        
+        console.log('User created with restaurant info:', user);
+        
+        // Update last login
+        await this.supabase
+          .from('restaurant_users')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', restaurantUser.id);
         
         this.currentUserSubject.next(user);
         localStorage.setItem('currentUser', JSON.stringify(user));
@@ -67,30 +112,41 @@ export class AuthService {
 
   async loginDelivery(phone: string, code: string): Promise<boolean> {
     try {
-      const isValid = await this.supabase.validateDeliveryCode(phone, code);
+      // Query delivery_users table for authentication
+      const { data: deliveryUser, error: userError } = await this.supabase
+        .from('delivery_users')
+        .select('*')
+        .eq('telephone', phone)
+        .eq('code_acces', code)
+        .eq('status', 'actif')
+        .single();
       
-      if (!isValid) {
-        console.error('Invalid delivery code');
+      if (userError || !deliveryUser) {
+        console.error('Delivery user not found or invalid code:', userError);
         return false;
       }
 
-      const { data: delivery } = await this.supabase.getDeliveryByPhone(phone);
+      const user: User = {
+        id: deliveryUser.id.toString(),
+        phone: deliveryUser.telephone,
+        name: deliveryUser.nom,
+        type: 'delivery',
+        deliveryId: deliveryUser.id,
+        deliveryPhone: deliveryUser.telephone
+      };
       
-      if (delivery) {
-        const user: User = {
-          id: delivery.id.toString(),
-          phone: delivery.telephone,
-          name: delivery.nom,
-          type: 'delivery',
-          deliveryId: delivery.id
-        };
-        
-        this.currentUserSubject.next(user);
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        return true;
-      }
+      // Update last login and set online status
+      await this.supabase
+        .from('delivery_users')
+        .update({ 
+          is_online: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', deliveryUser.id);
       
-      return false;
+      this.currentUserSubject.next(user);
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;

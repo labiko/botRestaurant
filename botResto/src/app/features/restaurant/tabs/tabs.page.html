@@ -1,0 +1,20 @@
+<ion-tabs>
+  <ion-tab-bar slot="bottom" color="primary">
+    <ion-tab-button tab="orders">
+      <ion-icon name="list-outline"></ion-icon>
+      <ion-label>Commandes</ion-label>
+      <ion-badge *ngIf="activeOrdersCount > 0" color="danger">{{ activeOrdersCount }}</ion-badge>
+    </ion-tab-button>
+    
+    <ion-tab-button tab="history">
+      <ion-icon name="archive-outline"></ion-icon>
+      <ion-label>Historique</ion-label>
+    </ion-tab-button>
+    
+    <ion-tab-button tab="payments">
+      <ion-icon name="cash-outline"></ion-icon>
+      <ion-label>Versement</ion-label>
+      <ion-badge *ngIf="pendingPaymentsCount > 0" color="warning">{{ pendingPaymentsCount }}</ion-badge>
+    </ion-tab-button>
+  </ion-tab-bar>
+</ion-tabs>

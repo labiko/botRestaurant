@@ -1,0 +1,250 @@
+// Payments page styles - use orders design
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  height: 50vh;
+
+  ion-spinner {
+    margin-bottom: 1rem;
+  }
+
+  p {
+    color: var(--ion-color-medium);
+    text-align: center;
+  }
+}
+
+.no-orders-card {
+  margin: 1rem;
+  text-align: center;
+
+  .no-orders-content {
+    padding: 2rem;
+
+    .no-orders-icon {
+      font-size: 4rem;
+      color: var(--ion-color-medium);
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      color: var(--ion-color-dark);
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: var(--ion-color-medium);
+    }
+  }
+}
+
+.order-card {
+  margin: 0.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid var(--ion-color-warning);
+
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    .order-info {
+      flex: 1;
+
+      ion-card-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--ion-color-primary);
+      }
+
+      ion-card-subtitle {
+        font-size: 0.9rem;
+        color: var(--ion-color-medium);
+        margin-top: 0.25rem;
+      }
+    }
+
+    .order-badges {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.25rem;
+
+      .status-badge {
+        font-weight: 600;
+        font-size: 0.8rem;
+      }
+    }
+  }
+
+  ion-card-content {
+    padding-top: 1rem;
+  }
+
+  .order-items {
+    margin-bottom: 1rem;
+
+    h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--ion-color-dark);
+    }
+
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.25rem 0;
+      border-bottom: 1px solid var(--ion-color-light);
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .item-name {
+        font-size: 0.9rem;
+        color: var(--ion-color-dark);
+      }
+
+      .item-price {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--ion-color-primary);
+      }
+    }
+  }
+
+  .order-totals {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--ion-color-light);
+    border-radius: 8px;
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.25rem;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      &.total-final {
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--ion-color-medium);
+        font-size: 1.1rem;
+      }
+
+      span {
+        font-size: 0.95rem;
+      }
+    }
+  }
+
+  .delivery-info,
+  .payment-info {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--ion-color-step-50);
+    border-radius: 8px;
+    border-left: 4px solid var(--ion-color-primary);
+
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--ion-color-primary);
+    }
+
+    p {
+      font-size: 0.9rem;
+      margin-bottom: 0.25rem;
+      color: var(--ion-color-dark);
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    .assigned-delivery {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--ion-color-light);
+
+      p {
+        color: var(--ion-color-success);
+        font-weight: 500;
+      }
+    }
+  }
+
+  .order-actions {
+    margin-top: 1rem;
+    border-top: 1px solid var(--ion-color-light);
+    padding-top: 1rem;
+
+    .payment-actions {
+      .pay-button {
+        --border-radius: 12px;
+        height: 48px;
+        font-weight: 600;
+        
+        ion-icon {
+          font-size: 1.2rem;
+        }
+      }
+    }
+  }
+}
+
+.payment-completed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--ion-color-success-tint);
+  border-radius: 8px;
+
+  ion-icon {
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+  }
+
+  span {
+    font-weight: 600;
+    color: var(--ion-color-success-shade);
+  }
+}
+
+// Responsive design
+@media (min-width: 768px) {
+  .order-card {
+    margin: 1rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+// Filter segment customization
+ion-segment {
+  --background: var(--ion-color-light);
+  margin: 0 0.5rem;
+  border-radius: 8px;
+
+  ion-segment-button {
+    --color: var(--ion-color-medium);
+    --color-checked: var(--ion-color-primary);
+    --background-checked: white;
+    --border-radius: 6px;
+    margin: 0.25rem;
+    font-size: 0.85rem;
+  }
+}

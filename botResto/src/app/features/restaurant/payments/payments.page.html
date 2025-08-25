@@ -1,0 +1,139 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Versements & Paiements</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="refreshPayments()">
+        <ion-icon name="refresh" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+
+  <!-- Filter tabs -->
+  <ion-toolbar>
+    <ion-segment [(ngModel)]="selectedFilter" scrollable>
+      <ion-segment-button value="all">
+        <ion-label>Tous ({{ getOrderCountByStatus('all') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="en_attente">
+        <ion-label>À encaisser ({{ getOrderCountByStatus('en_attente') }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="paye">
+        <ion-label>Encaissés ({{ getOrderCountByStatus('paye') }})</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- Loading spinner -->
+  <div *ngIf="isLoading" class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Chargement des paiements...</p>
+  </div>
+
+  <!-- Orders list -->
+  <div *ngIf="!isLoading">
+    <!-- No orders message -->
+    <ion-card *ngIf="getFilteredOrders().length === 0" class="no-orders-card">
+      <ion-card-content>
+        <div class="no-orders-content">
+          <ion-icon name="cash-outline" class="no-orders-icon"></ion-icon>
+          <h3>Aucun paiement</h3>
+          <p>Aucun paiement à la livraison confirmé pour le moment.</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Payment cards -->
+    <ion-card *ngFor="let order of getFilteredOrders()" class="order-card">
+      <ion-card-header>
+        <div class="order-header">
+          <div class="order-info">
+            <ion-card-title>#{{ order.numero_commande }}</ion-card-title>
+            <ion-card-subtitle>{{ order.client_nom }} • {{ formatTime(order.created_at) }}</ion-card-subtitle>
+          </div>
+          <div class="order-badges">
+            <ion-badge [color]="getPaymentStatusColor(order.paiement_statut)" class="status-badge">
+              {{ getPaymentStatusText(order.paiement_statut) }}
+            </ion-badge>
+            <ion-badge [color]="getStatusColor(order.statut)" outline>
+              {{ getStatusText(order.statut) }}
+            </ion-badge>
+          </div>
+        </div>
+      </ion-card-header>
+
+      <ion-card-content>
+        <!-- Order items -->
+        <div class="order-items">
+          <h4>Articles commandés:</h4>
+          <div *ngFor="let item of order.items" class="item-row">
+            <span class="item-name">{{ item.quantite }}x {{ item.nom_plat }}</span>
+            <span class="item-price">{{ formatPrice(item.prix_total || (item.prix_unitaire * item.quantite) || 0) }}</span>
+          </div>
+        </div>
+
+        <!-- Order totals -->
+        <div class="order-totals">
+          <div class="total-row">
+            <span>Sous-total:</span>
+            <span>{{ formatPrice(order.sous_total) }}</span>
+          </div>
+          <div *ngIf="order.frais_livraison > 0" class="total-row">
+            <span>Frais de livraison:</span>
+            <span>{{ formatPrice(order.frais_livraison) }}</span>
+          </div>
+          <div class="total-row total-final">
+            <span><strong>Total à encaisser:</strong></span>
+            <span><strong>{{ formatPrice(order.total) }}</strong></span>
+          </div>
+        </div>
+
+        <!-- Delivery information -->
+        <div class="delivery-info">
+          <h4>Informations livraison:</h4>
+          <p><strong>Adresse:</strong> {{ order.adresse_livraison }}</p>
+          <p><strong>Téléphone:</strong> {{ order.client_phone }}</p>
+          <div *ngIf="order.livreur_nom" class="assigned-delivery">
+            <p><strong>Livreur assigné:</strong> {{ order.livreur_nom }} ({{ order.livreur_phone }})</p>
+            <!-- Code de validation masqué pour la sécurité -->
+          </div>
+        </div>
+
+        <!-- Order status information -->
+        <div class="payment-info">
+          <h4>Informations paiement:</h4>
+          <p><strong>Mode:</strong> Paiement à la livraison (cash)</p>
+          <p><strong>Créée le:</strong> {{ formatDateTime(order.created_at) }}</p>
+          <p *ngIf="order.delivered_at"><strong>Livrée le:</strong> {{ formatDateTime(order.delivered_at) }}</p>
+        </div>
+
+        <!-- Payment actions -->
+        <div class="order-actions">
+          <div *ngIf="order.paiement_statut === 'en_attente'" class="payment-actions">
+            <ion-button 
+              expand="block" 
+              color="success" 
+              fill="solid"
+              (click)="markAsPaid(order.id)"
+              class="pay-button">
+              <ion-icon name="checkmark-circle" slot="start"></ion-icon>
+              Marquer comme payé
+            </ion-button>
+          </div>
+
+          <!-- Payment completed info -->
+          <div class="payment-completed" *ngIf="order.paiement_statut === 'paye'">
+            <ion-icon name="checkmark-circle" color="success"></ion-icon>
+            <span>Paiement encaissé</span>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Refresh spinner -->
+  <ion-refresher slot="fixed" (ionRefresh)="refreshPayments()">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+</ion-content>

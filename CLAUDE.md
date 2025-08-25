@@ -124,3 +124,11 @@ Avant chaque déploiement:
 - Variables d'environnement configurées
 - Green API Instance: 8101819298
 - Numéro test: 224623542219
+
+## Fichiers de référence base de données
+
+- **Schéma complet**: `C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant\setup_database_updated.sql`
+
+## Fichier bot WhatsApp
+
+- **Code principal**: `C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant\supabase\functions\webhook-whatsapp\index.ts`
