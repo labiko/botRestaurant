@@ -59,7 +59,8 @@
       "Read(/C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\Resto/**)",
       "Read(/C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\Resto/**)",
       "Bash(npx ng build:*)",
-      "Bash(ng serve:*)"
+      "Bash(ng serve:*)",
+      "Bash(npm start)"
     ],
     "deny": [],
     "ask": []

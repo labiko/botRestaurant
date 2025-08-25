@@ -30,7 +30,9 @@ jobs:
       - name: Install Dependencies
         working-directory: ./botResto
         run: |
-          npm ci
+          npm config set registry https://registry.npmjs.org/
+          rm -f package-lock.json
+          npm install --registry https://registry.npmjs.org/
           npm install -g @ionic/cli
 
       - name: Build Application
