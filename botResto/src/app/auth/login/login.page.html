@@ -1,11 +1,14 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar color="primary">
     <ion-buttons slot="start">
       <ion-button (click)="goBack()">
         <ion-icon name="arrow-back"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title>Connexion {{ userType === 'restaurant' ? 'Restaurant' : 'Livreur' }}</ion-title>
+    <ion-title>
+      <ion-icon [name]="userType === 'restaurant' ? 'restaurant' : 'bicycle'" class="title-icon"></ion-icon>
+      Connexion {{ userType === 'restaurant' ? 'Restaurant' : 'Livreur' }}
+    </ion-title>
   </ion-toolbar>
 </ion-header>
 

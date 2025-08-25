@@ -442,6 +442,8 @@
             </ion-item>
           </div>
           
+          <!-- Image URL field temporarily hidden -->
+          <!--
           <ion-item>
             <ion-label position="stacked">URL de l'image (optionnel)</ion-label>
             <ion-input 
@@ -450,6 +452,7 @@
               type="url">
             </ion-input>
           </ion-item>
+          -->
           
           <div class="form-actions">
             <ion-button 
@@ -501,9 +504,12 @@
           
           <div *ngFor="let item of filteredMenuItems" class="menu-item-card">
             <div class="menu-item-info">
+              <!-- Image display temporarily hidden -->
+              <!--
               <div class="menu-item-image" *ngIf="item.photo_url">
                 <img [src]="item.photo_url" [alt]="item.nom_plat" />
               </div>
+              -->
               <div class="menu-item-details">
                 <h4>{{ item.nom_plat }}</h4>
                 <p class="item-description" *ngIf="item.description">{{ item.description }}</p>

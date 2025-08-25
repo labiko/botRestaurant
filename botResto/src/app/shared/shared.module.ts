@@ -2,11 +2,11 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
-import { CurrencySelectorComponent } from './components/currency-selector/currency-selector.component';
+import { BotRestoLogoComponent } from './components/bot-resto-logo/bot-resto-logo.component';
 
 @NgModule({
   declarations: [
-    CurrencySelectorComponent
+    BotRestoLogoComponent
   ],
   imports: [
     CommonModule,
@@ -14,7 +14,7 @@ import { CurrencySelectorComponent } from './components/currency-selector/curren
     IonicModule
   ],
   exports: [
-    CurrencySelectorComponent
+    BotRestoLogoComponent
   ]
 })
 export class SharedModule { }

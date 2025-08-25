@@ -14,7 +14,8 @@
 
 <ion-content class="ion-padding">
   <form class="edit-form">
-    <!-- Image du plat -->
+    <!-- Image section temporarily hidden -->
+    <!--
     <div class="image-section" *ngIf="editForm.photo_url">
       <div class="image-preview">
         <img [src]="editForm.photo_url" [alt]="editForm.nom_plat" />
@@ -25,6 +26,7 @@
         </div>
       </div>
     </div>
+    -->
 
     <!-- Informations principales -->
     <div class="form-section">
@@ -83,7 +85,8 @@
       </div>
     </div>
 
-    <!-- Photo -->
+    <!-- Photo section temporarily hidden -->
+    <!--
     <div class="form-section">
       <div class="section-header">
         <ion-icon name="image"></ion-icon>
@@ -100,6 +103,7 @@
         </ion-input>
       </ion-item>
     </div>
+    -->
 
     <!-- Disponibilité -->
     <div class="form-section">
@@ -132,9 +136,12 @@
       </div>
       
       <div class="preview-card">
+        <!-- Image preview temporarily hidden -->
+        <!--
         <div class="preview-image" *ngIf="editForm.photo_url">
           <img [src]="editForm.photo_url" [alt]="editForm.nom_plat" />
         </div>
+        -->
         <div class="preview-content">
           <h4>{{ editForm.nom_plat || 'Nom du plat' }}</h4>
           <p *ngIf="editForm.description">{{ editForm.description }}</p>
