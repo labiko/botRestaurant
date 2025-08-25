@@ -5,13 +5,15 @@ import { IonicModule } from '@ionic/angular';
 
 import { PaymentsPageRoutingModule } from './payments-routing.module';
 import { PaymentsPage } from './payments.page';
+import { OtpInputComponent } from '../../../shared/components/otp-input/otp-input.component';
 
 @NgModule({
   imports: [
     CommonModule,
     FormsModule,
     IonicModule,
-    PaymentsPageRoutingModule
+    PaymentsPageRoutingModule,
+    OtpInputComponent
   ],
   declarations: [PaymentsPage]
 })

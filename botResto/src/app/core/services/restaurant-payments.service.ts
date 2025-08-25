@@ -28,6 +28,8 @@ export interface Order {
   delivered_at?: string;
   cancelled_at?: string;
   assigned_at?: string;
+  versement_confirmed?: boolean;
+  versement_otp_validated_at?: string;
   accepted_by_delivery_at?: string;
   validation_code?: string;
 }
@@ -79,7 +81,9 @@ export class RestaurantPaymentsService {
           cancelled_at,
           assigned_at,
           accepted_by_delivery_at,
-          validation_code
+          validation_code,
+          versement_confirmed,
+          versement_otp_validated_at
         `)
         .eq('restaurant_id', restaurantId)
         .eq('paiement_mode', 'livraison')
@@ -149,7 +153,9 @@ export class RestaurantPaymentsService {
           cancelled_at: order.cancelled_at,
           assigned_at: order.assigned_at,
           accepted_by_delivery_at: order.accepted_by_delivery_at,
-          validation_code: order.validation_code
+          validation_code: order.validation_code,
+          versement_confirmed: order.versement_confirmed,
+          versement_otp_validated_at: order.versement_otp_validated_at
         };
       });
 

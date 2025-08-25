@@ -201,27 +201,47 @@
         }
       }
     }
+
+    .payment-status-badges {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+
+      .status-badge {
+        font-size: 0.875rem;
+        font-weight: 500;
+        padding: 8px 16px;
+        display: flex;
+        align-items: center;
+        justify-self: flex-start;
+        width: fit-content;
+        
+        ion-icon {
+          font-size: 1rem;
+          margin-right: 6px;
+        }
+
+        .badge-content {
+          display: flex;
+          flex-direction: column;
+          
+          span {
+            font-weight: 500;
+          }
+          
+          small {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            font-weight: 400;
+            margin-top: 2px;
+          }
+        }
+      }
+    }
   }
 }
 
-.payment-completed {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  background: var(--ion-color-success-tint);
-  border-radius: 8px;
-
-  ion-icon {
-    font-size: 1.5rem;
-    margin-right: 0.5rem;
-  }
-
-  span {
-    font-weight: 600;
-    color: var(--ion-color-success-shade);
-  }
-}
 
 // Responsive design
 @media (min-width: 768px) {
@@ -247,4 +267,88 @@ ion-segment {
     margin: 0.25rem;
     font-size: 0.85rem;
   }
+}
+
+// Driver info card styling
+.driver-info-card {
+  margin-top: 0.75rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--ion-color-primary);
+  background: rgba(var(--ion-color-primary-rgb), 0.05);
+
+  .driver-title {
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    
+    ion-icon {
+      font-size: 1.2rem;
+    }
+  }
+
+  .driver-details {
+    p {
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+    
+    .validation-code {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--ion-color-light);
+      
+      ion-badge {
+        font-weight: 600;
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
+      }
+    }
+  }
+}
+
+// No driver assigned styling
+.no-driver {
+  margin-top: 0.75rem;
+  
+  .no-driver-item {
+    --background: rgba(var(--ion-color-warning-rgb), 0.1);
+    --border-radius: 8px;
+    --padding-start: 1rem;
+    --padding-end: 1rem;
+    
+    ion-label h3 {
+      color: var(--ion-color-warning);
+      font-weight: 600;
+    }
+    
+    ion-label p {
+      color: var(--ion-color-medium);
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// OTP Versement styling
+.versement-button {
+  --border-radius: 12px;
+  height: 48px;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  
+  &[disabled] {
+    opacity: 0.6;
+  }
+  
+  ion-icon {
+    font-size: 1.2rem;
+  }
+}
+
+.cancel-otp-button {
+  --border-radius: 8px;
+  height: 40px;
+  margin-top: 0.5rem;
+  font-weight: 500;
 }

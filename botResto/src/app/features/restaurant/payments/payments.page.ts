@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { RestaurantPaymentsService, Order } from '../../../core/services/restaurant-payments.service';
+import { VersementOtpService } from '../../../core/services/versement-otp.service';
 
 @Component({
   selector: 'app-payments',
@@ -15,11 +16,17 @@ export class PaymentsPage implements OnInit, OnDestroy {
   selectedFilter: string = 'all';
   isLoading = true;
   
+  // OTP versement states
+  showOtpInput: { [orderId: string]: boolean } = {};
+  otpLoadingStates: { [orderId: string]: boolean } = {};
+  otpAttempts: { [orderId: string]: number } = {};
+  
   private subscriptions: Subscription[] = [];
 
   constructor(
     private authService: AuthService,
     private paymentsService: RestaurantPaymentsService,
+    private versementOtpService: VersementOtpService,
     private router: Router
   ) { }
 
@@ -184,5 +191,87 @@ export class PaymentsPage implements OnInit, OnDestroy {
       this.isLoading = true;
       await this.paymentsService.loadRestaurantPayments(user.restaurantId);
     }
+  }
+
+  // === OTP VERSEMENT METHODS ===
+  
+  // Show OTP input for versement confirmation
+  async confirmVersement(orderId: string) {
+    console.log('🔐 Demande confirmation versement:', orderId);
+    
+    this.otpLoadingStates[orderId] = true;
+    
+    const success = await this.versementOtpService.generateAndSendOTP(orderId);
+    
+    if (success) {
+      this.showOtpInput[orderId] = true;
+      this.otpAttempts[orderId] = 0;
+      console.log('✅ OTP généré et envoyé au livreur');
+    } else {
+      console.error('❌ Erreur génération/envoi OTP');
+      // TODO: Show error toast
+    }
+    
+    this.otpLoadingStates[orderId] = false;
+  }
+
+  // Handle OTP validation
+  async onOtpValidated(orderId: string, otpCode: string, otpComponent: any) {
+    console.log('🔍 Validation OTP:', { orderId, otpCode });
+    
+    this.otpLoadingStates[orderId] = true;
+    
+    const isValid = await this.versementOtpService.validateOTP(orderId, otpCode);
+    
+    if (isValid) {
+      console.log('✅ OTP validé, versement confirmé');
+      this.showOtpInput[orderId] = false;
+      this.otpAttempts[orderId] = 0;
+      
+      // Refresh data to show updated status
+      await this.refreshPayments();
+    } else {
+      console.log('❌ OTP invalide');
+      this.otpAttempts[orderId] = (this.otpAttempts[orderId] || 0) + 1;
+      
+      // Notify the OTP component of the validation failure
+      otpComponent.handleValidationResult(false);
+      
+      // If max attempts reached, hide OTP input
+      if (this.otpAttempts[orderId] >= 3) {
+        this.showOtpInput[orderId] = false;
+      }
+    }
+    
+    this.otpLoadingStates[orderId] = false;
+  }
+
+  // Handle OTP regeneration
+  async onRegenerateOtp(orderId: string) {
+    console.log('🔄 Régénération OTP:', orderId);
+    
+    this.otpLoadingStates[orderId] = true;
+    
+    const success = await this.versementOtpService.regenerateOTP(orderId);
+    
+    if (success) {
+      console.log('✅ Nouveau OTP généré et envoyé');
+      this.otpAttempts[orderId] = 0;
+    } else {
+      console.error('❌ Erreur régénération OTP');
+    }
+    
+    this.otpLoadingStates[orderId] = false;
+  }
+
+  // Cancel OTP input
+  cancelOtpInput(orderId: string) {
+    this.showOtpInput[orderId] = false;
+    this.otpAttempts[orderId] = 0;
+  }
+
+  // Get driver phone for OTP display
+  getDriverPhone(order: Order): string {
+    return order.livreur_phone || 'N/A';
   }
 }

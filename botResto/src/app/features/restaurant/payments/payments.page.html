@@ -94,9 +94,36 @@
           <h4>Informations livraison:</h4>
           <p><strong>Adresse:</strong> {{ order.adresse_livraison }}</p>
           <p><strong>Téléphone:</strong> {{ order.client_phone }}</p>
+          
+          <!-- Detailed delivery driver info -->
           <div *ngIf="order.livreur_nom" class="assigned-delivery">
-            <p><strong>Livreur assigné:</strong> {{ order.livreur_nom }} ({{ order.livreur_phone }})</p>
-            <!-- Code de validation masqué pour la sécurité -->
+            <ion-card class="driver-info-card">
+              <ion-card-header>
+                <ion-card-title class="driver-title">
+                  <ion-icon name="bicycle" color="primary"></ion-icon>
+                  Livreur assigné
+                </ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+                <div class="driver-details">
+                  <p><strong>👤 Nom:</strong> {{ order.livreur_nom }}</p>
+                  <p><strong>📞 Téléphone:</strong> {{ order.livreur_phone }}</p>
+                  <p *ngIf="order.assigned_at"><strong>📅 Assigné le:</strong> {{ formatDateTime(order.assigned_at) }}</p>
+                  <p *ngIf="order.accepted_by_delivery_at"><strong>✅ Accepté le:</strong> {{ formatDateTime(order.accepted_by_delivery_at) }}</p>
+                </div>
+              </ion-card-content>
+            </ion-card>
+          </div>
+          
+          <!-- No driver assigned -->
+          <div *ngIf="!order.livreur_nom" class="no-driver">
+            <ion-item lines="none" class="no-driver-item">
+              <ion-icon name="alert-circle" slot="start" color="warning"></ion-icon>
+              <ion-label>
+                <h3>Aucun livreur assigné</h3>
+                <p>En attente d'assignation d'un livreur</p>
+              </ion-label>
+            </ion-item>
           </div>
         </div>
 
@@ -110,7 +137,49 @@
 
         <!-- Payment actions -->
         <div class="order-actions">
-          <div *ngIf="order.paiement_statut === 'en_attente'" class="payment-actions">
+          <!-- For delivery orders with driver - Check versement status -->
+          <div *ngIf="order.paiement_mode === 'livraison' && order.livreur_phone && order.paiement_statut === 'paye' && !order.versement_confirmed" class="payment-actions">
+            <!-- Show OTP input if requested -->
+            <div *ngIf="showOtpInput[order.id]">
+              <app-otp-input
+                #otpInput
+                [driverPhone]="getDriverPhone(order)"
+                [isLoading]="otpLoadingStates[order.id]"
+                [attempts]="otpAttempts[order.id] || 0"
+                [maxAttempts]="3"
+                (otpValidated)="onOtpValidated(order.id, $event, otpInput)"
+                (regenerateRequested)="onRegenerateOtp(order.id)">
+              </app-otp-input>
+              
+              <ion-button 
+                expand="block" 
+                fill="outline" 
+                color="medium"
+                (click)="cancelOtpInput(order.id)"
+                class="cancel-otp-button">
+                <ion-icon name="close" slot="start"></ion-icon>
+                Annuler
+              </ion-button>
+            </div>
+            
+            <!-- Show confirmation button if OTP not requested -->
+            <div *ngIf="!showOtpInput[order.id]">
+              <ion-button 
+                expand="block" 
+                color="warning" 
+                fill="solid"
+                [disabled]="otpLoadingStates[order.id]"
+                (click)="confirmVersement(order.id)"
+                class="versement-button">
+                <ion-icon name="lock-closed" slot="start"></ion-icon>
+                <span *ngIf="!otpLoadingStates[order.id]">Confirmer versement</span>
+                <ion-spinner *ngIf="otpLoadingStates[order.id]" name="crescent"></ion-spinner>
+              </ion-button>
+            </div>
+          </div>
+
+          <!-- For other payment modes -->
+          <div *ngIf="order.paiement_mode !== 'livraison' && order.paiement_statut === 'en_attente'" class="payment-actions">
             <ion-button 
               expand="block" 
               color="success" 
@@ -122,10 +191,28 @@
             </ion-button>
           </div>
 
-          <!-- Payment completed info -->
-          <div class="payment-completed" *ngIf="order.paiement_statut === 'paye'">
-            <ion-icon name="checkmark-circle" color="success"></ion-icon>
-            <span>Paiement encaissé</span>
+          <!-- Payment status badges -->
+          <div class="payment-status-badges">
+            <!-- Payment received badge -->
+            <ion-badge 
+              *ngIf="order.paiement_statut === 'paye'" 
+              color="success" 
+              class="status-badge">
+              <ion-icon name="checkmark-circle" slot="start"></ion-icon>
+              Paiement encaissé
+            </ion-badge>
+            
+            <!-- Versement confirmed badge -->
+            <ion-badge 
+              *ngIf="order.versement_confirmed" 
+              color="primary" 
+              class="status-badge">
+              <ion-icon name="wallet" slot="start"></ion-icon>
+              <div class="badge-content">
+                <span>Versement confirmé</span>
+                <small *ngIf="order.versement_otp_validated_at">{{ formatDateTime(order.versement_otp_validated_at) }}</small>
+              </div>
+            </ion-badge>
           </div>
         </div>
       </ion-card-content>

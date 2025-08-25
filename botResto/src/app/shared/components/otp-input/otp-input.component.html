@@ -1,0 +1,122 @@
+<div class="otp-container">
+  <!-- Header -->
+  <div class="otp-header">
+    <ion-item lines="none">
+      <ion-icon name="checkmark-circle" slot="start" color="success"></ion-icon>
+      <ion-label>
+        <h3>Code envoyé au livreur</h3>
+        <p>{{ driverPhone }}</p>
+      </ion-label>
+    </ion-item>
+  </div>
+
+  <!-- OTP Input -->
+  <div class="otp-input-section">
+    <h4>Saisissez le code de versement</h4>
+    
+    <div class="otp-digits" [class.error]="showError">
+      <input
+        #digit1
+        type="text"
+        maxlength="1"
+        [(ngModel)]="otp1"
+        (input)="onDigitInput($event, 1)"
+        (keydown.backspace)="!otp1 && onDigitInput($event, 1)"
+        (keypress)="onlyNumbers($event)"
+        inputmode="numeric"
+        pattern="[0-9]"
+        class="otp-digit"
+        [disabled]="isLoading || isMaxAttemptsReached"
+        autocomplete="off"
+      />
+      <input
+        #digit2
+        type="text"
+        maxlength="1"
+        [(ngModel)]="otp2"
+        (input)="onDigitInput($event, 2)"
+        (keydown.backspace)="!otp2 && onDigitInput($event, 2)"
+        (keypress)="onlyNumbers($event)"
+        inputmode="numeric"
+        pattern="[0-9]"
+        class="otp-digit"
+        [disabled]="isLoading || isMaxAttemptsReached"
+        autocomplete="off"
+      />
+      <input
+        #digit3
+        type="text"
+        maxlength="1"
+        [(ngModel)]="otp3"
+        (input)="onDigitInput($event, 3)"
+        (keydown.backspace)="!otp3 && onDigitInput($event, 3)"
+        (keypress)="onlyNumbers($event)"
+        inputmode="numeric"
+        pattern="[0-9]"
+        class="otp-digit"
+        [disabled]="isLoading || isMaxAttemptsReached"
+        autocomplete="off"
+      />
+      <input
+        #digit4
+        type="text"
+        maxlength="1"
+        [(ngModel)]="otp4"
+        (input)="onDigitInput($event, 4)"
+        (keydown.backspace)="!otp4 && onDigitInput($event, 4)"
+        (keypress)="onlyNumbers($event)"
+        inputmode="numeric"
+        pattern="[0-9]"
+        class="otp-digit"
+        [disabled]="isLoading || isMaxAttemptsReached"
+        autocomplete="off"
+      />
+    </div>
+    
+    <div class="error-message" *ngIf="showError">
+      <ion-icon name="alert-circle"></ion-icon>
+      Code incorrect. Veuillez réessayer.
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="otp-actions">
+    <ion-button 
+      expand="block" 
+      color="success"
+      [disabled]="isLoading || !otp1 || !otp2 || !otp3 || !otp4 || isMaxAttemptsReached"
+      (click)="validateOTP()">
+      <ion-icon name="checkmark" slot="start"></ion-icon>
+      <span *ngIf="!isLoading">VALIDER</span>
+      <ion-spinner *ngIf="isLoading" name="crescent"></ion-spinner>
+    </ion-button>
+
+    <ion-button 
+      expand="block" 
+      fill="outline" 
+      color="primary"
+      [disabled]="isLoading || isMaxAttemptsReached"
+      (click)="regenerateOTP()">
+      <ion-icon name="refresh" slot="start"></ion-icon>
+      RENVOYER CODE
+    </ion-button>
+  </div>
+
+  <!-- Status -->
+  <div class="otp-status">
+    <div *ngIf="attempts > 0 && !isMaxAttemptsReached" class="attempts-info">
+      <ion-chip color="warning">
+        <ion-icon name="warning" color="warning"></ion-icon>
+        <ion-label>{{ remainingAttempts }} tentative(s) restante(s)</ion-label>
+      </ion-chip>
+    </div>
+
+    <div *ngIf="isMaxAttemptsReached" class="max-attempts-reached">
+      <ion-chip color="danger">
+        <ion-icon name="close-circle" color="danger"></ion-icon>
+        <ion-label>Maximum de tentatives atteint</ion-label>
+      </ion-chip>
+      <p>Demandez un nouveau code au livreur</p>
+    </div>
+  </div>
+</div>
