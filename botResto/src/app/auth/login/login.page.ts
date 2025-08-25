@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AlertController } from '@ionic/angular';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -22,7 +23,8 @@ export class LoginPage implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private alertController: AlertController
   ) { }
 
   ngOnInit() {
@@ -30,6 +32,12 @@ export class LoginPage implements OnInit {
     this.route.queryParams.subscribe(params => {
       if (params['userType']) {
         this.userType = params['userType'];
+      }
+      
+      // Vérifier si l'utilisateur a été déconnecté pour blocage
+      if (params['blocked'] === 'true') {
+        console.log('🚫 Livreur déconnecté pour cause de blocage');
+        // TODO: Afficher un message d'erreur à l'utilisateur
       }
     });
   }
@@ -51,16 +59,69 @@ export class LoginPage implements OnInit {
 
   async loginDelivery() {
     try {
-      const success = await this.authService.loginDelivery(this.deliveryPhone, this.deliveryCode);
-      if (success) {
+      const result = await this.authService.loginDelivery(this.deliveryPhone, this.deliveryCode);
+      if (result.success) {
         this.router.navigate(['/delivery/dashboard']);
       } else {
-        // TODO: Show error toast
-        console.error('Login failed - Invalid phone or code');
+        this.showDeliveryError(result.error || 'UNKNOWN_ERROR');
       }
     } catch (error) {
       console.error('Login error:', error);
+      this.showDeliveryError('NETWORK_ERROR');
     }
+  }
+
+  private showDeliveryError(errorCode: string) {
+    let message = '';
+    let title = '';
+
+    switch (errorCode) {
+      case 'PHONE_NOT_FOUND':
+        title = '📱 Numéro non reconnu';
+        message = 'Ce numéro de téléphone n\'est pas enregistré comme livreur. Vérifiez votre numéro ou contactez le restaurant.';
+        break;
+      case 'INVALID_CODE':
+        title = '🔐 Code incorrect';
+        message = 'Le code d\'accès saisi est incorrect. Vérifiez votre code à 6 chiffres reçu par WhatsApp.';
+        break;
+      case 'USER_BLOCKED':
+        title = '🚫 Accès bloqué';
+        message = 'Votre compte livreur a été temporairement bloqué par le restaurant. Contactez le restaurant pour plus d\'informations.';
+        break;
+      case 'USER_INACTIVE':
+        title = '💤 Compte inactif';
+        message = 'Votre compte livreur est actuellement inactif. Contactez le restaurant pour réactiver votre compte.';
+        break;
+      case 'NETWORK_ERROR':
+        title = '🌐 Erreur de connexion';
+        message = 'Impossible de se connecter. Vérifiez votre connexion internet et réessayez.';
+        break;
+      default:
+        title = '⚠️ Erreur de connexion';
+        message = 'Une erreur inattendue s\'est produite. Veuillez réessayer.';
+    }
+
+    // Afficher une alerte moderne au lieu d'un toast
+    this.showModernAlert(title, message);
+  }
+
+  private async showModernAlert(title: string, message: string) {
+    console.error(`${title}: ${message}`);
+    
+    const alert = await this.alertController.create({
+      header: title,
+      message: message,
+      buttons: [{
+        text: 'Compris',
+        role: 'confirm',
+        handler: () => {
+          console.log('User acknowledged error');
+        }
+      }],
+      cssClass: 'custom-alert'
+    });
+
+    await alert.present();
   }
 
   goBack() {

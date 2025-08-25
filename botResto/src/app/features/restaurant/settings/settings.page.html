@@ -12,207 +12,312 @@
 <ion-content class="settings-content">
   <div class="settings-container">
     
-    <!-- Restaurant Status -->
-    <div class="section">
-      <div class="section-header">
-        <ion-icon name="restaurant"></ion-icon>
-        <h2>Statut du Restaurant</h2>
+    <!-- Navigation Tabs -->
+    <div class="navigation-tabs">
+      <div class="tab-card" 
+           [class.active]="currentTab === 'restaurant'" 
+           (click)="switchTab('restaurant')">
+        <div class="tab-icon">
+          <ion-icon name="settings"></ion-icon>
+        </div>
+        <div class="tab-content">
+          <h3>Paramétrage Restaurant</h3>
+          <p>Statut et horaires d'ouverture</p>
+        </div>
+        <div class="tab-indicator" *ngIf="currentTab === 'restaurant'"></div>
       </div>
       
-      <div class="status-card" *ngIf="restaurantStatus">
-        <div class="current-status">
-          <div class="status-info">
-            <h3>{{ restaurantStatus.name }}</h3>
-            <ion-chip [color]="getStatusColor(restaurantStatus.status)" class="status-chip">
-              <ion-icon [name]="restaurantStatus.is_open_now ? 'checkmark-circle' : 'close-circle'"></ion-icon>
-              <ion-label>{{ getStatusText(restaurantStatus.status) }}</ion-label>
-            </ion-chip>
-          </div>
-          
-          <div class="status-details" *ngIf="!restaurantStatus.is_open_now && restaurantStatus.next_opening">
-            <p class="next-opening">
-              <ion-icon name="time"></ion-icon>
-              Prochaine ouverture: {{ restaurantStatus.next_opening }}
-            </p>
-          </div>
+      <div class="tab-card" 
+           [class.active]="currentTab === 'drivers'" 
+           (click)="switchTab('drivers')">
+        <div class="tab-icon">
+          <ion-icon name="bicycle"></ion-icon>
         </div>
-
-        <div class="status-controls">
-          <ion-segment [(ngModel)]="currentStatus" (ionChange)="updateStatus()">
-            <ion-segment-button value="ouvert">
-              <ion-label>Ouvert</ion-label>
-            </ion-segment-button>
-            <ion-segment-button value="ferme">
-              <ion-label>Fermé</ion-label>
-            </ion-segment-button>
-            <ion-segment-button value="temporairement_ferme">
-              <ion-label>Temp. Fermé</ion-label>
-            </ion-segment-button>
-          </ion-segment>
-
-          <ion-item *ngIf="currentStatus === 'temporairement_ferme'" class="reason-input">
-            <ion-label position="stacked">Raison de la fermeture temporaire</ion-label>
-            <ion-input 
-              [(ngModel)]="tempCloseReason" 
-              placeholder="Ex: Rupture de stock, problème technique..."
-              (ionBlur)="updateStatus()">
-            </ion-input>
-          </ion-item>
+        <div class="tab-content">
+          <h3>Gestion Livreurs</h3>
+          <p>Créer, gérer et bloquer les livreurs</p>
         </div>
+        <div class="tab-indicator" *ngIf="currentTab === 'drivers'"></div>
       </div>
     </div>
 
-    <!-- Operating Hours -->
-    <div class="section">
-      <div class="section-header">
-        <div>
-          <ion-icon name="time"></ion-icon>
-          <h2>Horaires d'Ouverture</h2>
-        </div>
-        <div class="global-toggle">
-          <ion-chip [color]="restaurantStatus?.is_open_now ? 'success' : 'danger'" outline>
-            <ion-icon [name]="restaurantStatus?.is_open_now ? 'restaurant' : 'close'"></ion-icon>
-            <ion-label>{{ restaurantStatus?.is_open_now ? 'Restaurant ouvert' : 'Restaurant fermé' }}</ion-label>
-          </ion-chip>
-        </div>
-      </div>
-
-      <!-- Quick Templates -->
-      <div class="templates-section">
-        <h4>Templates rapides</h4>
-        <div class="template-buttons">
-          <ion-button fill="outline" size="small" (click)="applyTemplate('classic')">
-            <ion-icon name="restaurant" slot="start"></ion-icon>
-            Classique (11h-22h)
-          </ion-button>
-          <ion-button fill="outline" size="small" (click)="applyTemplate('fastfood')">
-            <ion-icon name="fast-food" slot="start"></ion-icon>
-            Fast Food (10h-23h)
-          </ion-button>
-          <ion-button fill="outline" size="small" (click)="applyTemplate('evening')">
-            <ion-icon name="wine" slot="start"></ion-icon>
-            Soirée (18h-2h)
-          </ion-button>
-        </div>
-      </div>
-
-      <div class="modern-schedule">
-        <div class="schedule-item" *ngFor="let day of schedule; let i = index" 
-             [class.closed]="day.is_closed"
-             [class.today]="isToday(day.day_of_week)">
+    <!-- Card 1: Paramétrage Restaurant -->
+    <div *ngIf="currentTab === 'restaurant'">
+    <ion-card class="main-card">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="settings" class="card-icon"></ion-icon>
+          Paramétrage Restaurant
+        </ion-card-title>
+        <ion-card-subtitle>Statut et horaires d'ouverture</ion-card-subtitle>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <!-- Restaurant Status -->
+        <div class="section">
+          <div class="section-header">
+            <ion-icon name="restaurant"></ion-icon>
+            <h3>Statut du Restaurant</h3>
+          </div>
           
-          <div class="day-card">
-            <div class="day-header-modern">
-              <div class="day-info-modern">
-                <div class="day-badge" [class.today-badge]="isToday(day.day_of_week)">
-                  <span class="day-name">{{ getDayName(day.day_of_week) }}</span>
-                  <span class="day-indicator" *ngIf="isToday(day.day_of_week)">Aujourd'hui</span>
-                </div>
-                
-                <div class="status-toggle">
-                  <ion-toggle 
-                    [checked]="!day.is_closed" 
-                    (ionChange)="toggleDayClosed(i)"
-                    [color]="!day.is_closed ? 'success' : 'medium'">
-                  </ion-toggle>
-                  <span class="toggle-label">{{ !day.is_closed ? 'Ouvert' : 'Fermé' }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="time-controls-simple" *ngIf="!day.is_closed">
-              <div class="time-inputs-row">
-                <ion-item class="time-item">
-                  <ion-icon name="sunny" slot="start" color="warning"></ion-icon>
-                  <ion-label position="stacked">Ouverture</ion-label>
-                  <ion-input 
-                    type="time"
-                    [(ngModel)]="day.open_time"
-                    placeholder="09:00">
-                  </ion-input>
-                </ion-item>
-                
-                <ion-item class="time-item">
-                  <ion-icon name="moon" slot="start" color="medium"></ion-icon>
-                  <ion-label position="stacked">Fermeture</ion-label>
-                  <ion-input 
-                    type="time"
-                    [(ngModel)]="day.close_time"
-                    placeholder="22:00">
-                  </ion-input>
-                </ion-item>
-              </div>
-
-              <div class="duration-display" *ngIf="day.open_time && day.close_time">
-                <ion-chip color="tertiary" fill="outline">
-                  <ion-icon name="time-outline"></ion-icon>
-                  <ion-label>{{ calculateDuration(day.open_time, day.close_time) }} d'ouverture</ion-label>
+          <div class="status-card" *ngIf="restaurantStatus">
+            <div class="current-status">
+              <div class="status-info">
+                <h4>{{ restaurantStatus.name }}</h4>
+                <ion-chip [color]="getStatusColor(restaurantStatus.status)" class="status-chip">
+                  <ion-icon [name]="restaurantStatus.is_open_now ? 'checkmark-circle' : 'close-circle'"></ion-icon>
+                  <ion-label>{{ getStatusText(restaurantStatus.status) }}</ion-label>
                 </ion-chip>
               </div>
+              
+              <div class="status-details" *ngIf="!restaurantStatus.is_open_now && restaurantStatus.next_opening">
+                <p class="next-opening">
+                  <ion-icon name="time"></ion-icon>
+                  Prochaine ouverture: {{ restaurantStatus.next_opening }}
+                </p>
+              </div>
             </div>
 
-            <div class="closed-indicator-modern" *ngIf="day.is_closed">
-              <div class="closed-content">
-                <ion-icon name="bed" class="closed-icon"></ion-icon>
-                <span class="closed-text">Jour de fermeture</span>
+            <div class="status-controls">
+              <ion-segment [(ngModel)]="currentStatus" (ionChange)="updateStatus()">
+                <ion-segment-button value="ouvert">
+                  <ion-label>Ouvert</ion-label>
+                </ion-segment-button>
+                <ion-segment-button value="ferme">
+                  <ion-label>Fermé</ion-label>
+                </ion-segment-button>
+                <ion-segment-button value="temporairement_ferme">
+                  <ion-label>Temp. Fermé</ion-label>
+                </ion-segment-button>
+              </ion-segment>
+
+              <ion-item *ngIf="currentStatus === 'temporairement_ferme'" class="reason-input">
+                <ion-label position="stacked">Raison de la fermeture temporaire</ion-label>
+                <ion-input 
+                  [(ngModel)]="tempCloseReason" 
+                  placeholder="Ex: Rupture de stock, problème technique..."
+                  (ionBlur)="updateStatus()">
+                </ion-input>
+              </ion-item>
+            </div>
+          </div>
+        </div>
+
+        <!-- Operating Hours -->
+        <div class="section">
+          <div class="section-header">
+            <div>
+              <ion-icon name="time"></ion-icon>
+              <h3>Horaires d'Ouverture</h3>
+            </div>
+            <div class="global-toggle">
+              <ion-chip [color]="restaurantStatus?.is_open_now ? 'success' : 'danger'" outline>
+                <ion-icon [name]="restaurantStatus?.is_open_now ? 'restaurant' : 'close'"></ion-icon>
+                <ion-label>{{ restaurantStatus?.is_open_now ? 'Restaurant ouvert' : 'Restaurant fermé' }}</ion-label>
+              </ion-chip>
+            </div>
+          </div>
+
+          <!-- Quick Templates -->
+          <div class="templates-section">
+            <h4>Templates rapides</h4>
+            <div class="template-buttons">
+              <ion-button fill="outline" size="small" (click)="applyTemplate('classic')">
+                <ion-icon name="restaurant" slot="start"></ion-icon>
+                Classique (11h-22h)
+              </ion-button>
+              <ion-button fill="outline" size="small" (click)="applyTemplate('fastfood')">
+                <ion-icon name="fast-food" slot="start"></ion-icon>
+                Fast Food (10h-23h)
+              </ion-button>
+              <ion-button fill="outline" size="small" (click)="applyTemplate('evening')">
+                <ion-icon name="wine" slot="start"></ion-icon>
+                Soirée (18h-2h)
+              </ion-button>
+            </div>
+          </div>
+
+          <div class="modern-schedule">
+            <div class="schedule-item" *ngFor="let day of schedule; let i = index" 
+                 [class.closed]="day.is_closed"
+                 [class.today]="isToday(day.day_of_week)">
+              
+              <div class="day-card">
+                <div class="day-header-modern">
+                  <div class="day-info-modern">
+                    <div class="day-badge" [class.today-badge]="isToday(day.day_of_week)">
+                      <span class="day-name">{{ getDayName(day.day_of_week) }}</span>
+                      <span class="day-indicator" *ngIf="isToday(day.day_of_week)">Aujourd'hui</span>
+                    </div>
+                    
+                    <div class="status-toggle">
+                      <ion-toggle 
+                        [checked]="!day.is_closed" 
+                        (ionChange)="toggleDayClosed(i, $event)"
+                        [color]="!day.is_closed ? 'success' : 'medium'">
+                      </ion-toggle>
+                      <span class="toggle-label">{{ !day.is_closed ? 'Ouvert' : 'Fermé' }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="time-controls-simple" *ngIf="!day.is_closed">
+                  <div class="time-inputs-row">
+                    <ion-item class="time-item">
+                      <ion-icon name="sunny" slot="start" color="warning"></ion-icon>
+                      <ion-label position="stacked">Ouverture</ion-label>
+                      <ion-input 
+                        type="time"
+                        [(ngModel)]="day.open_time"
+                        (ionInput)="onTimeChange(i, 'open_time', $event)"
+                        placeholder="09:00">
+                      </ion-input>
+                    </ion-item>
+                    
+                    <ion-item class="time-item">
+                      <ion-icon name="moon" slot="start" color="medium"></ion-icon>
+                      <ion-label position="stacked">Fermeture</ion-label>
+                      <ion-input 
+                        type="time"
+                        [(ngModel)]="day.close_time"
+                        (ionInput)="onTimeChange(i, 'close_time', $event)"
+                        placeholder="22:00">
+                      </ion-input>
+                    </ion-item>
+                  </div>
+
+                  <div class="duration-display" *ngIf="day.open_time && day.close_time">
+                    <ion-chip color="tertiary" fill="outline">
+                      <ion-icon name="time-outline"></ion-icon>
+                      <ion-label>{{ calculateDuration(day.open_time, day.close_time) }} d'ouverture</ion-label>
+                    </ion-chip>
+                  </div>
+                </div>
+
+                <div class="closed-indicator-modern" *ngIf="day.is_closed">
+                  <div class="closed-content">
+                    <ion-icon name="bed" class="closed-icon"></ion-icon>
+                    <span class="closed-text">Jour de fermeture</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="save-section">
-        <ion-button 
-          expand="block" 
-          class="btn-primary save-button"
-          (click)="saveSchedule()">
-          <ion-icon name="save" slot="start"></ion-icon>
-          Enregistrer les Horaires
-        </ion-button>
-      </div>
+      </ion-card-content>
+    </ion-card>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="section">
-      <div class="section-header">
-        <ion-icon name="flash"></ion-icon>
-        <h2>Actions Rapides</h2>
-      </div>
-
-      <div class="actions-grid">
-        <ion-button 
-          fill="outline" 
-          class="action-button"
-          (click)="currentStatus = 'temporairement_ferme'; tempCloseReason = 'Pause déjeuner'; updateStatus()">
-          <ion-icon name="cafe" slot="start"></ion-icon>
-          <div>
-            <div>Pause Déjeuner</div>
-            <small>Fermeture temporaire</small>
+    <!-- Card 2: Gestion des Livreurs -->
+    <div *ngIf="currentTab === 'drivers'">
+    <ion-card class="main-card">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="bicycle" class="card-icon"></ion-icon>
+          Gestion des Livreurs
+        </ion-card-title>
+        <ion-card-subtitle>Créer, gérer et bloquer les livreurs</ion-card-subtitle>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <!-- Ajouter Nouveau Livreur -->
+        <div class="section">
+          <div class="section-header">
+            <ion-icon name="person-add"></ion-icon>
+            <h3>Nouveau Livreur</h3>
           </div>
-        </ion-button>
-
-        <ion-button 
-          fill="outline" 
-          class="action-button"
-          (click)="currentStatus = 'temporairement_ferme'; tempCloseReason = 'Rupture de stock'; updateStatus()">
-          <ion-icon name="warning" slot="start"></ion-icon>
-          <div>
-            <div>Rupture Stock</div>
-            <small>Fermeture temporaire</small>
+          
+          <div class="add-driver-form">
+            <ion-item>
+              <ion-label position="stacked">Nom complet</ion-label>
+              <ion-input 
+                [(ngModel)]="newDriver.name" 
+                placeholder="Ex: Amadou Diallo"
+                maxlength="50">
+              </ion-input>
+            </ion-item>
+            
+            <ion-item>
+              <ion-label position="stacked">Téléphone</ion-label>
+              <ion-input 
+                [(ngModel)]="newDriver.phone" 
+                placeholder="Ex: +224623456789, 623456789, +33123456789"
+                type="tel">
+              </ion-input>
+            </ion-item>
+            
+            <ion-button 
+              expand="block" 
+              (click)="createDriver()" 
+              [disabled]="!newDriver.name || !newDriver.phone"
+              color="success">
+              <ion-icon name="person-add" slot="start"></ion-icon>
+              Créer Livreur
+            </ion-button>
           </div>
-        </ion-button>
+        </div>
 
-        <ion-button 
-          fill="outline" 
-          class="action-button"
-          (click)="currentStatus = 'ouvert'; updateStatus()">
-          <ion-icon name="checkmark-circle" slot="start"></ion-icon>
-          <div>
-            <div>Réouvrir</div>
-            <small>Reprendre service</small>
+        <!-- Liste des Livreurs -->
+        <div class="section">
+          <div class="section-header">
+            <ion-icon name="people"></ion-icon>
+            <h3>Livreurs Actifs ({{ drivers.length }})</h3>
+            <ion-button fill="clear" size="small" (click)="refreshDrivers()">
+              <ion-icon name="refresh"></ion-icon>
+            </ion-button>
           </div>
-        </ion-button>
-      </div>
+
+          <div class="drivers-list" *ngIf="drivers.length > 0">
+            <ion-item *ngFor="let driver of drivers" class="driver-item">
+              <ion-avatar slot="start">
+                <ion-icon name="person" class="driver-avatar"></ion-icon>
+              </ion-avatar>
+              
+              <ion-label>
+                <h3>{{ driver.nom }}</h3>
+                <p>{{ driver.telephone }}</p>
+                <p class="driver-code">Code: {{ driver.code_access }}</p>
+              </ion-label>
+              
+              <div slot="end" class="driver-actions">
+                <ion-chip 
+                  [color]="driver.is_blocked ? 'danger' : 'success'" 
+                  class="status-chip">
+                  <ion-icon 
+                    [name]="driver.is_blocked ? 'close-circle' : 'checkmark-circle'">
+                  </ion-icon>
+                  <ion-label>{{ driver.is_blocked ? 'Bloqué' : 'Actif' }}</ion-label>
+                </ion-chip>
+                
+                <ion-button 
+                  fill="clear" 
+                  size="small" 
+                  [color]="driver.is_blocked ? 'success' : 'warning'"
+                  (click)="toggleDriverBlock(driver)">
+                  <ion-icon 
+                    [name]="driver.is_blocked ? 'checkmark' : 'ban'">
+                  </ion-icon>
+                </ion-button>
+                
+                <ion-button 
+                  fill="clear" 
+                  size="small" 
+                  color="danger"
+                  (click)="deleteDriver(driver)">
+                  <ion-icon name="trash"></ion-icon>
+                </ion-button>
+              </div>
+            </ion-item>
+          </div>
+
+          <div *ngIf="drivers.length === 0" class="no-drivers">
+            <ion-icon name="bicycle" class="empty-icon"></ion-icon>
+            <p>Aucun livreur enregistré</p>
+            <small>Commencez par créer votre premier livreur</small>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
     </div>
 
     <!-- Information -->

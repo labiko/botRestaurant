@@ -350,17 +350,18 @@
   }
 }
 
-// Save Section
-.save-section {
-  margin-top: 24px;
-
-  .save-button {
-    height: 48px;
-    font-size: var(--text-base);
-    font-weight: var(--font-semibold);
-
-    ion-icon {
-      font-size: 20px;
+// Auto-save toast
+:host {
+  ::ng-deep .auto-save-toast {
+    --background: rgba(0, 200, 83, 0.9);
+    --color: white;
+    --border-radius: 8px;
+    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    font-size: 14px;
+    font-weight: 500;
+    
+    .toast-wrapper {
+      opacity: 0.95;
     }
   }
 }
@@ -456,10 +457,362 @@
   }
 }
 
+// ================================
+// NAVIGATION TABS MODERNES
+// ================================
+
+.navigation-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+  
+  .tab-card {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      border-color: rgba(139, 69, 19, 0.1);
+    }
+    
+    &.active {
+      border-color: var(--primary-purple);
+      box-shadow: 0 8px 25px rgba(139, 69, 19, 0.15);
+      background: linear-gradient(135deg, rgba(139, 69, 19, 0.02) 0%, white 100%);
+      
+      .tab-icon {
+        background: var(--primary-purple);
+        color: white;
+        transform: scale(1.1);
+        
+        ion-icon {
+          transform: rotate(360deg);
+        }
+      }
+      
+      .tab-content h3 {
+        color: var(--primary-purple);
+      }
+      
+      .tab-indicator {
+        opacity: 1;
+        transform: scaleX(1);
+      }
+    }
+    
+    .tab-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: var(--ion-color-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      
+      ion-icon {
+        font-size: 28px;
+        color: var(--text-secondary);
+        transition: all 0.3s ease;
+      }
+    }
+    
+    .tab-content {
+      h3 {
+        margin: 0 0 8px 0;
+        font-size: var(--text-lg);
+        font-weight: var(--font-bold);
+        color: var(--text-primary);
+        transition: color 0.3s ease;
+      }
+      
+      p {
+        margin: 0;
+        font-size: var(--text-sm);
+        color: var(--text-secondary);
+        line-height: 1.4;
+      }
+    }
+    
+    .tab-indicator {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-purple), rgba(139, 69, 19, 0.8));
+      opacity: 0;
+      transform: scaleX(0);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 0 0 16px 16px;
+    }
+  }
+}
+
+// Animation d'entrée pour les contenus
+.main-card {
+  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ================================
+// NOUVEAUX STYLES GESTION LIVREURS
+// ================================
+
+// Main Cards
+.main-card {
+  margin-bottom: 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  ion-card-header {
+    padding: 20px 20px 0 20px;
+
+    ion-card-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: var(--text-xl);
+      font-weight: var(--font-bold);
+      color: var(--text-primary);
+      margin: 0;
+
+      .card-icon {
+        font-size: 28px;
+        color: var(--primary-purple);
+      }
+    }
+
+    ion-card-subtitle {
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      margin-top: 4px;
+    }
+  }
+
+  ion-card-content {
+    padding: 20px;
+  }
+}
+
+// Driver Form
+.add-driver-form {
+  ion-item {
+    --background: var(--ion-color-light);
+    --border-radius: 12px;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --min-height: 80px;
+    margin-bottom: 16px;
+    
+    ion-label {
+      font-weight: var(--font-medium);
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+    
+    ion-input {
+      --color: var(--text-primary);
+      --placeholder-color: var(--text-secondary);
+      font-size: var(--text-base);
+      font-weight: var(--font-medium);
+    }
+  }
+
+  ion-button {
+    margin-top: 8px;
+    height: 48px;
+    --border-radius: 12px;
+    font-weight: var(--font-semibold);
+    
+    ion-icon {
+      margin-right: 8px;
+      font-size: 20px;
+    }
+  }
+}
+
+// Section Headers
+.section {
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+  }
+}
+
+// Drivers List
+.drivers-list {
+  .driver-item {
+    --background: var(--ion-color-light);
+    --border-radius: 16px;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    margin-bottom: 12px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+
+    &:hover {
+      --background: white;
+      border-color: var(--ion-color-light-shade);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .driver-avatar {
+      background: var(--primary-purple);
+      color: white;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+    }
+
+    ion-label {
+      h3 {
+        margin: 0 0 4px 0;
+        font-size: var(--text-base);
+        font-weight: var(--font-semibold);
+        color: var(--text-primary);
+      }
+
+      p {
+        margin: 2px 0;
+        font-size: var(--text-sm);
+        color: var(--text-secondary);
+      }
+
+      .driver-code {
+        color: var(--primary-purple);
+        font-weight: var(--font-semibold);
+        font-size: var(--text-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+
+    .driver-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .status-chip {
+        font-weight: var(--font-medium);
+        font-size: var(--text-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        
+        ion-icon {
+          margin-right: 4px;
+          font-size: 14px;
+        }
+      }
+
+      ion-button {
+        --border-radius: 8px;
+        width: 40px;
+        height: 40px;
+        
+        ion-icon {
+          font-size: 18px;
+        }
+      }
+    }
+  }
+}
+
+// Empty State
+.no-drivers {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+
+  .empty-icon {
+    font-size: 48px;
+    color: var(--ion-color-medium);
+    margin-bottom: 16px;
+  }
+
+  p {
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+  }
+
+  small {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+}
+
 // Responsive
 @media (max-width: 768px) {
   .settings-container {
     padding: 16px;
+  }
+  
+  // Navigation tabs responsive
+  .navigation-tabs {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+    
+    .tab-card {
+      padding: 16px;
+      
+      .tab-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        
+        ion-icon {
+          font-size: 24px;
+        }
+      }
+      
+      .tab-content {
+        h3 {
+          font-size: var(--text-base);
+        }
+        
+        p {
+          font-size: var(--text-xs);
+        }
+      }
+    }
   }
 
   .section {

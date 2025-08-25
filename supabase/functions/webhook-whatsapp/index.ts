@@ -175,11 +175,19 @@ class SimpleClient {
 // Gestion des restaurants simplifiée
 class SimpleRestaurant {
   static async getOpenRestaurants() {
-    const { data: restaurants } = await supabase
+    console.log('🔍 Requête restaurants ouverts...');
+    
+    const { data: restaurants, error } = await supabase
       .from('restaurants')
       .select('*')
       .eq('statut', 'ouvert')
       .order('nom');
+
+    console.log('📊 Requête résultats:', { 
+      count: restaurants?.length || 0, 
+      error: error?.message,
+      restaurants: restaurants?.map(r => ({ nom: r.nom, statut: r.statut })) 
+    });
 
     return restaurants || [];
   }
@@ -1063,8 +1071,12 @@ function isRestaurantOpen(restaurant: any): {
   const currentDay = now.toLocaleDateString('fr-FR', { weekday: 'long' }).toLowerCase();
   const currentTime = now.toLocaleTimeString('fr-FR', { hour12: false, hour: '2-digit', minute: '2-digit' });
   
+  console.log(`🕒 Restaurant ${restaurant.nom} - Jour: ${currentDay}, Heure: ${currentTime}`);
+  console.log(`🕒 Horaires disponibles:`, Object.keys(restaurant.horaires || {}));
+  
   const horaires = restaurant.horaires;
   if (!horaires || !horaires[currentDay]) {
+    console.log(`❌ Pas d'horaires pour ${currentDay}`);
     return {
       isOpen: false,
       reason: 'outside_hours'
@@ -1072,16 +1084,32 @@ function isRestaurantOpen(restaurant: any): {
   }
 
   const dayHours = horaires[currentDay];
+  
+  console.log(`🕒 Horaires ${currentDay}:`, dayHours);
+  
+  // Vérifier si le restaurant est fermé ce jour-là
+  if (dayHours.ferme === true) {
+    console.log(`❌ Restaurant fermé le ${currentDay} (ferme: true)`);
+    return {
+      isOpen: false,
+      reason: 'outside_hours'
+    };
+  }
+  
   const openTime = dayHours.ouverture;
   const closeTime = dayHours.fermeture;
+  
+  console.log(`🕒 Comparaison: ${currentTime} entre ${openTime} et ${closeTime}`);
 
   // Comparer les heures
   if (currentTime >= openTime && currentTime <= closeTime) {
+    console.log(`✅ Restaurant ouvert !`);
     return {
       isOpen: true,
       reason: 'open'
     };
   } else {
+    console.log(`❌ Restaurant fermé - hors horaires`);
     // Calculer la prochaine heure d'ouverture
     let nextOpenTime = openTime;
     if (currentTime > closeTime) {

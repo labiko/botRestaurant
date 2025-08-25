@@ -4,6 +4,7 @@ import { SupabaseService } from './supabase.service';
 import { WhatsAppNotificationService } from './whatsapp-notification.service';
 import { AuthService } from './auth.service';
 import { GeolocationService } from './geolocation.service';
+import { environment } from '../../../environments/environment';
 
 export interface DeliveryOrder {
   id: number;
@@ -38,6 +39,33 @@ export interface DeliveryStats {
   avgDeliveryTime: number;
   rating: number;
   completionRate: number;
+}
+
+export interface DeliveryUser {
+  id: number;
+  telephone: string;
+  nom: string;
+  code_access: string;
+  status: 'actif' | 'inactif' | 'suspendu';
+  is_blocked: boolean;
+  is_online: boolean;
+  rating: number;
+  total_deliveries: number;
+  total_earnings: number;
+  restaurant_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateDeliveryUserRequest {
+  nom: string;
+  telephone: string;
+  restaurant_id: string;
+}
+
+export interface WhatsAppResponse {
+  success: boolean;
+  message: string;
 }
 
 @Injectable({
@@ -822,6 +850,281 @@ export class DeliveryService {
     } catch (error) {
       console.error('Error calculating real estimated time:', error);
       return '25 min';
+    }
+  }
+
+  // ============================================
+  // NOUVELLES MÉTHODES DE GESTION DES LIVREURS
+  // ============================================
+
+  async getDeliveryUsersByRestaurant(restaurantId: string): Promise<DeliveryUser[]> {
+    const { data, error } = await this.supabase
+      .from('delivery_users')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching delivery users:', error);
+      throw error;
+    }
+
+    // Mapper code_acces vers code_access pour l'interface
+    return data?.map(user => ({ 
+      ...user, 
+      code_access: user.code_acces || user.code_access 
+    })) || [];
+  }
+
+  async createDeliveryUser(request: CreateDeliveryUserRequest): Promise<DeliveryUser> {
+    // Vérifier si le téléphone existe déjà - avec gestion d'erreur robuste
+    try {
+      const { data: existing, error: checkError } = await this.supabase
+        .from('delivery_users')
+        .select('id')
+        .eq('telephone', request.telephone)
+        .maybeSingle(); // Utiliser maybeSingle() au lieu de single()
+
+      // Si erreur de requête (406, etc.), on ignore et continue
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.warn('Warning checking phone uniqueness:', checkError);
+        // Continue sans vérification d'unicité
+      } else if (existing) {
+        throw new Error('Un livreur avec ce numéro de téléphone existe déjà');
+      }
+    } catch (error) {
+      // Si erreur réseau ou autre, on log mais on continue
+      console.warn('Could not check phone uniqueness, proceeding:', error);
+    }
+
+    // Générer code d'accès automatiquement (4 chiffres)
+    const code_access = this.generateAccessCode();
+
+    const { data, error } = await this.supabase
+      .from('delivery_users')
+      .insert({
+        nom: request.nom,
+        telephone: request.telephone,
+        restaurant_id: request.restaurant_id,
+        code_acces: code_access, // Note: utilisation de code_acces (base existante)
+        status: 'actif',
+        is_blocked: false,
+        is_online: false
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating delivery user:', error);
+      throw error;
+    }
+
+    return { ...data, code_access }; // Mapper pour l'interface
+  }
+
+  async updateDeliveryUserBlockStatus(userId: number, isBlocked: boolean): Promise<void> {
+    console.log(`🔄 updateDeliveryUserBlockStatus called:`, { userId, isBlocked });
+    
+    const updateData: any = { 
+      is_blocked: isBlocked,
+      updated_at: new Date().toISOString()
+    };
+
+    // Si on bloque le livreur, le mettre offline
+    if (isBlocked) {
+      updateData.is_online = false;
+    }
+
+    console.log(`📝 Update data:`, updateData);
+
+    const { error } = await this.supabase
+      .from('delivery_users')
+      .update(updateData)
+      .eq('id', userId);
+
+    if (error) {
+      console.error('❌ Error updating delivery user block status:', error);
+      throw error;
+    }
+
+    console.log(`✅ Database update successful for user ${userId}`);
+
+    // Si bloqué, forcer la déconnexion immédiatement
+    if (isBlocked) {
+      console.log(`🚫 Forcing logout for blocked user ${userId}`);
+      // Déconnexion immédiate
+      await this.forceLogoutBlockedUser(userId);
+    }
+  }
+
+  async deleteDeliveryUser(userId: number): Promise<void> {
+    const { error } = await this.supabase
+      .from('delivery_users')
+      .delete()
+      .eq('id', userId);
+
+    if (error) {
+      console.error('Error deleting delivery user:', error);
+      throw error;
+    }
+  }
+
+  async sendWhatsAppWelcomeMessage(deliveryUser: DeliveryUser, restaurantName: string): Promise<WhatsAppResponse> {
+    try {
+      const message = this.generateWelcomeMessage(deliveryUser, restaurantName);
+      
+      console.log('🚀 Sending WhatsApp welcome message to:', deliveryUser.telephone);
+      console.log('📝 Message preview:', message.substring(0, 100) + '...');
+      
+      // Utiliser le service WhatsApp existant pour envoyer le message
+      const sent = await this.whatsAppService.sendMessage(
+        deliveryUser.telephone,
+        message
+      );
+
+      if (sent) {
+        console.log('✅ WhatsApp welcome message sent successfully');
+        return {
+          success: true,
+          message: 'Message de bienvenue envoyé avec succès'
+        };
+      } else {
+        console.error('❌ Failed to send WhatsApp welcome message');
+        return {
+          success: false,
+          message: 'Échec de l\'envoi du message WhatsApp'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error sending WhatsApp message:', error);
+      return {
+        success: false,
+        message: 'Erreur lors de l\'envoi du message WhatsApp'
+      };
+    }
+  }
+
+  async checkDeliveryUserExists(telephone: string): Promise<boolean> {
+    try {
+      const { data, error } = await this.supabase
+        .from('delivery_users')
+        .select('id')
+        .eq('telephone', telephone)
+        .maybeSingle();
+
+      // Si erreur, on assume qu'il n'existe pas
+      if (error) {
+        console.warn('Error checking delivery user existence:', error);
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.warn('Could not check delivery user existence:', error);
+      return false;
+    }
+  }
+
+  async getActiveDeliveryUsers(restaurantId: string): Promise<DeliveryUser[]> {
+    const { data, error } = await this.supabase
+      .from('delivery_users')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .eq('is_blocked', false)
+      .eq('status', 'actif')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching active delivery users:', error);
+      throw error;
+    }
+
+    return data?.map(user => ({ ...user, code_access: user.code_acces })) || [];
+  }
+
+  private generateAccessCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  private getLocalPhoneFormat(phone: string): string {
+    // Convertir le format international vers le format local pour l'affichage
+    
+    // +33667326357 → 667326357
+    if (/^\+33[1-9][0-9]{8}$/.test(phone)) {
+      return phone.substring(3); // Enlever "+33"
+    }
+    
+    // +224622879890 → 622879890
+    if (/^\+224[6-7][0-9]{8}$/.test(phone)) {
+      return phone.substring(4); // Enlever "+224"
+    }
+    
+    // Si c'est déjà au format local, retourner tel quel
+    if (/^[1-9][0-9]{8}$/.test(phone) || /^[6-7][0-9]{8}$/.test(phone)) {
+      return phone;
+    }
+    
+    // Par défaut, retourner le numéro tel quel
+    return phone;
+  }
+
+  private generateWelcomeMessage(deliveryUser: DeliveryUser, restaurantName: string): string {
+    // Convertir le numéro au format local pour l'affichage
+    const displayPhone = this.getLocalPhoneFormat(deliveryUser.telephone);
+    
+    return `🚴 *Bienvenue chez ${restaurantName} !*
+
+Bonjour *${deliveryUser.nom}*,
+
+📋 *Vos informations de connexion :*
+👤 Nom: ${deliveryUser.nom}
+📱 Téléphone: ${displayPhone}
+🔐 Code d'accès: *${deliveryUser.code_access}*
+
+⚡ *Comment vous connecter :*
+1️⃣ Utilisez le numéro: *${displayPhone}*
+2️⃣ Utilisez le code: *${deliveryUser.code_access}*
+3️⃣ Rendez-vous sur l'app livreur
+
+Bonne chance dans vos livraisons ! 🚴‍♂️💨`;
+  }
+
+  private async forceLogoutBlockedUser(userId: number): Promise<void> {
+    try {
+      console.log(`🚫 Forçage déconnexion du livreur bloqué ID: ${userId}`);
+      
+      // 1. Marquer comme offline dans la base
+      const { error } = await this.supabase
+        .from('delivery_users')
+        .update({ 
+          is_online: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+        .eq('is_blocked', true); // S'assurer qu'il est toujours bloqué
+
+      if (error) {
+        console.error('Error forcing logout blocked user:', error);
+      } else {
+        console.log(`✅ Livreur ${userId} marqué comme offline`);
+      }
+
+      // 2. Supprimer les sessions utilisateur actives
+      const { error: sessionError } = await this.supabase
+        .from('user_sessions')
+        .delete()
+        .eq('user_id', userId)
+        .eq('user_type', 'delivery');
+        
+      if (!sessionError) {
+        console.log(`✅ Sessions supprimées pour livreur ${userId}`);
+      }
+
+      // 3. Log pour confirmation - la déconnexion se fera par vérification périodique
+      console.log(`⏰ Le livreur ${userId} sera déconnecté dans la prochaine minute via vérification périodique`)
+        
+    } catch (error) {
+      console.error('Error in forceLogoutBlockedUser:', error);
     }
   }
 }

@@ -57,7 +57,7 @@ export class ScheduleService {
           day_of_week: dayMap[day as keyof typeof dayMap] || 0,
           open_time: openTime,
           close_time: closeTime,
-          is_closed: false // Always open by default, can be toggled
+          is_closed: hours.ferme === true // Convert: ferme=true means closed
         });
       }
     });

@@ -3,7 +3,8 @@ import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { ScheduleService, RestaurantSchedule, RestaurantStatus } from '../../../core/services/schedule.service';
-import { ModalController } from '@ionic/angular';
+import { DeliveryService, DeliveryUser, CreateDeliveryUserRequest, WhatsAppResponse } from '../../../core/services/delivery.service';
+import { ModalController, ToastController, AlertController } from '@ionic/angular';
 
 @Component({
   selector: 'app-settings',
@@ -18,13 +19,27 @@ export class SettingsPage implements OnInit, OnDestroy {
   currentStatus: string = 'ouvert';
   tempCloseReason: string = '';
   
+  // Navigation
+  currentTab: 'restaurant' | 'drivers' = 'restaurant';
+  
+  // Delivery management
+  drivers: DeliveryUser[] = [];
+  newDriver = {
+    name: '',
+    phone: ''
+  };
+  isLoadingDrivers = false;
+  
   private subscriptions: Subscription[] = [];
 
   constructor(
     private router: Router,
     private authService: AuthService,
     private scheduleService: ScheduleService,
-    private modalController: ModalController
+    private deliveryService: DeliveryService,
+    private modalController: ModalController,
+    private toastController: ToastController,
+    private alertController: AlertController
   ) { }
 
   async ngOnInit() {
@@ -35,6 +50,7 @@ export class SettingsPage implements OnInit, OnDestroy {
     }
 
     await this.loadRestaurantData(user.restaurantId || 'default-id');
+    // Ne pas charger les livreurs automatiquement, seulement si l'utilisateur clique sur l'onglet
   }
 
   ngOnDestroy() {
@@ -90,19 +106,45 @@ export class SettingsPage implements OnInit, OnDestroy {
     }
   }
 
-  async saveSchedule() {
+
+  async toggleDayClosed(dayIndex: number, event: any) {
+    this.schedule[dayIndex].is_closed = !event.detail.checked;
+    await this.saveScheduleAutomatically();
+  }
+
+  async onTimeChange(dayIndex: number, field: 'open_time' | 'close_time', event: any) {
+    this.schedule[dayIndex][field] = event.detail.value;
+    await this.saveScheduleAutomatically();
+  }
+
+  private async saveScheduleAutomatically() {
     if (!this.restaurantStatus) return;
 
     try {
       await this.scheduleService.updateSchedule(this.restaurantStatus.id, this.schedule);
-      // Optionally show success message
+      console.log('✅ Horaires sauvegardées automatiquement');
+      
+      // Afficher un toast de confirmation subtil
+      const toast = await this.toastController.create({
+        message: '✅ Horaires mises à jour',
+        duration: 1000,
+        position: 'top',
+        color: 'success',
+        cssClass: 'auto-save-toast'
+      });
+      await toast.present();
     } catch (error) {
-      console.error('Error saving schedule:', error);
+      console.error('❌ Erreur lors de la sauvegarde automatique:', error);
+      
+      // Afficher un toast d'erreur
+      const errorToast = await this.toastController.create({
+        message: '❌ Erreur de sauvegarde',
+        duration: 2000,
+        position: 'top',
+        color: 'danger'
+      });
+      await errorToast.present();
     }
-  }
-
-  toggleDayClosed(dayIndex: number) {
-    this.schedule[dayIndex].is_closed = !this.schedule[dayIndex].is_closed;
   }
 
   getStatusColor(status: string): string {
@@ -175,7 +217,7 @@ export class SettingsPage implements OnInit, OnDestroy {
 
 
   // Templates rapides
-  applyTemplate(template: string) {
+  async applyTemplate(template: string) {
     let templateTimes: {open: string, close: string};
     
     switch (template) {
@@ -201,5 +243,248 @@ export class SettingsPage implements OnInit, OnDestroy {
     });
 
     console.log(`Applied ${template} template`, templateTimes);
+    
+    // Sauvegarder automatiquement
+    await this.saveScheduleAutomatically();
+  }
+
+  // =====================================
+  // NAVIGATION
+  // =====================================
+
+  switchTab(tab: 'restaurant' | 'drivers') {
+    this.currentTab = tab;
+    
+    // Si on passe à l'onglet livreurs, charger les données
+    if (tab === 'drivers' && this.drivers.length === 0) {
+      this.loadDrivers();
+    }
+    
+    // Animation subtile
+    const content = document.querySelector('ion-content');
+    if (content) {
+      content.scrollToTop(300);
+    }
+  }
+
+  // =====================================
+  // NOUVELLES MÉTHODES GESTION LIVREURS
+  // =====================================
+
+  async loadDrivers() {
+    if (!this.restaurantStatus) return;
+    
+    console.log(`🔄 Loading drivers for restaurant ${this.restaurantStatus.id}`);
+    this.isLoadingDrivers = true;
+    try {
+      this.drivers = await this.deliveryService.getDeliveryUsersByRestaurant(this.restaurantStatus.id);
+      console.log(`✅ Loaded ${this.drivers.length} drivers for restaurant:`, this.drivers.map(d => ({
+        id: d.id,
+        nom: d.nom,
+        is_blocked: d.is_blocked,
+        is_online: d.is_online
+      })));
+    } catch (error) {
+      console.error('Error loading drivers:', error);
+      this.showToast('Erreur lors du chargement des livreurs', 'danger');
+    } finally {
+      this.isLoadingDrivers = false;
+    }
+  }
+
+  async createDriver() {
+    if (!this.restaurantStatus || !this.newDriver.name || !this.newDriver.phone) {
+      return;
+    }
+
+    // Validation format téléphone
+    if (!this.isValidPhoneNumber(this.newDriver.phone)) {
+      this.showToast('Format de téléphone invalide (ex: +224623456789, 623456789, +33123456789)', 'danger');
+      return;
+    }
+
+    try {
+      const normalizedPhone = this.normalizePhoneNumber(this.newDriver.phone.trim());
+      
+      const request: CreateDeliveryUserRequest = {
+        nom: this.newDriver.name.trim(),
+        telephone: normalizedPhone,
+        restaurant_id: this.restaurantStatus.id
+      };
+
+      const newDriver = await this.deliveryService.createDeliveryUser(request);
+      
+      // Envoyer le message de bienvenue
+      const whatsAppResult = await this.deliveryService.sendWhatsAppWelcomeMessage(
+        newDriver, 
+        this.restaurantStatus.name
+      );
+
+      if (whatsAppResult.success) {
+        this.showToast(
+          `✅ Livreur créé et message WhatsApp envoyé à ${newDriver.nom}`, 
+          'success'
+        );
+      } else {
+        this.showToast(
+          `⚠️ Livreur créé mais échec envoi WhatsApp: ${whatsAppResult.message}`, 
+          'warning'
+        );
+      }
+
+      // Reset form et reload
+      this.newDriver = { name: '', phone: '' };
+      await this.loadDrivers();
+
+    } catch (error: any) {
+      console.error('Error creating driver:', error);
+      this.showToast(error.message || 'Erreur lors de la création du livreur', 'danger');
+    }
+  }
+
+  async toggleDriverBlock(driver: DeliveryUser) {
+    console.log(`🔄 Toggling block status for driver ${driver.nom}:`, {
+      currentStatus: driver.is_blocked,
+      driverId: driver.id
+    });
+    
+    const newBlockStatus = !driver.is_blocked;
+    const actionText = newBlockStatus ? 'bloquer' : 'débloquer';
+    
+    console.log(`➡️ New status will be: ${newBlockStatus ? 'BLOCKED' : 'UNBLOCKED'}`);
+    
+    const alert = await this.alertController.create({
+      header: 'Confirmation',
+      message: `Êtes-vous sûr de vouloir ${actionText} ${driver.nom} ?`,
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        },
+        {
+          text: 'Confirmer',
+          handler: async () => {
+            try {
+              console.log(`🔧 Calling updateDeliveryUserBlockStatus(${driver.id}, ${newBlockStatus})`);
+              await this.deliveryService.updateDeliveryUserBlockStatus(driver.id, newBlockStatus);
+              console.log(`✅ Successfully updated driver ${driver.id} block status to ${newBlockStatus}`);
+              
+              if (newBlockStatus) {
+                this.showToast(
+                  `🚫 ${driver.nom} a été bloqué (déconnexion dans 5 min)`, 
+                  'warning'
+                );
+              } else {
+                this.showToast(
+                  `✅ ${driver.nom} a été débloqué`, 
+                  'success'
+                );
+              }
+              
+              console.log(`🔄 Reloading drivers list...`);
+              await this.loadDrivers();
+              console.log(`✅ Drivers list reloaded`);
+            } catch (error) {
+              console.error('Error toggling driver block:', error);
+              this.showToast('Erreur lors du changement de statut', 'danger');
+            }
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  async deleteDriver(driver: DeliveryUser) {
+    const alert = await this.alertController.create({
+      header: 'Supprimer le livreur',
+      message: `⚠️ Êtes-vous sûr de vouloir supprimer définitivement ${driver.nom} ?`,
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        },
+        {
+          text: 'Supprimer',
+          cssClass: 'danger',
+          handler: async () => {
+            try {
+              await this.deliveryService.deleteDeliveryUser(driver.id);
+              this.showToast(`🗑️ ${driver.nom} a été supprimé`, 'success');
+              await this.loadDrivers();
+            } catch (error) {
+              console.error('Error deleting driver:', error);
+              this.showToast('Erreur lors de la suppression', 'danger');
+            }
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  async refreshDrivers() {
+    await this.loadDrivers();
+    this.showToast('✅ Liste des livreurs actualisée', 'success', 1000);
+  }
+
+  private isValidPhoneNumber(phone: string): boolean {
+    const cleanPhone = phone.trim();
+    
+    // Vérifier les formats acceptés:
+    // France: +33XXXXXXXXX (9 chiffres après indicatif) ou 33XXXXXXXXX
+    // Guinée: +224XXXXXXXXX (9 chiffres après indicatif), 224XXXXXXXXX, ou 6XXXXXXXX (local)
+    
+    const franceRegex = /^(\+33|33)[1-9][0-9]{8}$/;
+    const guineeFullRegex = /^(\+224|224)[6-7][0-9]{8}$/;
+    const guineeLocalRegex = /^[6-7][0-9]{8}$/;
+    
+    return franceRegex.test(cleanPhone) || 
+           guineeFullRegex.test(cleanPhone) || 
+           guineeLocalRegex.test(cleanPhone);
+  }
+
+  private normalizePhoneNumber(phone: string): string {
+    const cleanPhone = phone.trim();
+    
+    // Normaliser vers le format international standard
+    
+    // Si c'est un numéro français
+    if (/^(\+33|33)[1-9][0-9]{8}$/.test(cleanPhone)) {
+      if (cleanPhone.startsWith('+33')) {
+        return cleanPhone; // Déjà au bon format
+      } else {
+        return '+' + cleanPhone; // Ajouter le +
+      }
+    }
+    
+    // Si c'est un numéro guinéen complet
+    if (/^(\+224|224)[6-7][0-9]{8}$/.test(cleanPhone)) {
+      if (cleanPhone.startsWith('+224')) {
+        return cleanPhone; // Déjà au bon format
+      } else {
+        return '+' + cleanPhone; // Ajouter le +
+      }
+    }
+    
+    // Si c'est un numéro guinéen local (6XXXXXXXX)
+    if (/^[6-7][0-9]{8}$/.test(cleanPhone)) {
+      return '+224' + cleanPhone; // Ajouter l'indicatif international
+    }
+    
+    // Par défaut, retourner tel quel
+    return cleanPhone;
+  }
+
+  private async showToast(message: string, color: string, duration = 2000) {
+    const toast = await this.toastController.create({
+      message,
+      duration,
+      position: 'top',
+      color
+    });
+    await toast.present();
   }
 }
