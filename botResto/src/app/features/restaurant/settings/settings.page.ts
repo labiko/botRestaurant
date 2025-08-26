@@ -198,6 +198,32 @@ export class SettingsPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Vérifie si le restaurant est ouvert manuellement (malgré les horaires)
+   */
+  isManuallyOpen(): boolean {
+    if (!this.restaurantStatus) return false;
+    
+    // Si le statut est 'ouvert' mais que selon les horaires il devrait être fermé
+    return this.restaurantStatus.status === 'ouvert' && !this.restaurantStatus.is_open_now;
+  }
+
+  /**
+   * Affiche un message simple pour l'ouverture manuelle
+   */
+  async showManualOpenInfo() {
+    const alert = await this.alertController.create({
+      header: 'ℹ️ Restaurant ouvert pour consultation',
+      message: 'Restaurant ouvert hors horaires normaux.\n\n' +
+               '👀 Les clients peuvent voir votre menu et horaires\n' +
+               '⏰ Les commandes ne seront possibles que pendant vos heures d\'ouverture définies\n\n' +
+               '✅ Cela permet aux clients de découvrir votre restaurant.',
+      buttons: ['Compris']
+    });
+    await alert.present();
+  }
+
+
   getDayName(dayOfWeek: number): string {
     return this.weekDays.find(d => d.value === dayOfWeek)?.name || '';
   }
