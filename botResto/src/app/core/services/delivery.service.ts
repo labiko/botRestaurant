@@ -97,7 +97,7 @@ export class DeliveryService {
     try {
       console.log(`🚚 Loading delivery orders for phone: ${deliveryUserPhone}`);
       
-      // Query orders assigned to this delivery person
+      // Récupérer TOUTES les commandes assignées au livreur (en cours + historique)
       const { data: orders, error } = await this.supabase
         .from('commandes')
         .select(`
@@ -126,13 +126,11 @@ export class DeliveryService {
           paiement_statut,
           paiement_methode
         `)
-        .eq('livreur_phone', deliveryUserPhone)
-        .eq('mode', 'livraison')
-        .not('assigned_at', 'is', null)
-        .is('delivered_at', null)
-        .in('statut', ['prete', 'en_livraison'])
-        .order('assigned_at', { ascending: false })
-        .limit(10);
+        .eq('livreur_phone', deliveryUserPhone)  // ✅ Assigné au livreur
+        .not('assigned_at', 'is', null)         // ✅ Doit être assigné
+        .or('statut.eq.prete,statut.eq.en_livraison,statut.eq.livree') // ✅ Tous statuts pertinents
+        .order('created_at', { ascending: false })
+        .limit(50); // ✅ Plus de résultats pour l'historique
 
       console.log(`📋 Found ${orders?.length || 0} orders for delivery user`);
 
@@ -737,6 +735,16 @@ export class DeliveryService {
     clientLng: number
   ): number {
     try {
+      console.log(`🧮 Calculating delivery time:`, {
+        deliveryLat, deliveryLng, clientLat, clientLng
+      });
+
+      // Validate coordinates
+      if (!deliveryLat || !deliveryLng || !clientLat || !clientLng) {
+        console.error('❌ Invalid coordinates for delivery time calculation');
+        return 15; // Reduced fallback
+      }
+
       // Calculate distance using Haversine formula
       const R = 6371; // Earth's radius in km
       const dLat = this.toRadians(clientLat - deliveryLat);
@@ -749,21 +757,24 @@ export class DeliveryService {
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       const distanceKm = R * c;
       
+      console.log(`📏 Raw distance calculated: ${distanceKm.toFixed(3)}km`);
+
       // Estimate delivery time based on distance
-      // Assume average speed of 20 km/h for delivery in Conakry traffic
-      const averageSpeedKmh = 20;
+      // More realistic speed for Conakry: 15 km/h average (traffic + stops)
+      const averageSpeedKmh = 15;
       const timeHours = distanceKm / averageSpeedKmh;
       const timeMinutes = Math.round(timeHours * 60);
       
-      // Add 5 minutes buffer and minimum of 10 minutes
-      const estimatedTime = Math.max(timeMinutes + 5, 10);
+      // Add buffer based on distance: 3-5 minutes
+      const buffer = distanceKm > 2 ? 5 : 3;
+      const estimatedTime = Math.max(timeMinutes + buffer, 8); // Minimum 8 minutes
       
-      console.log(`📍 Distance: ${distanceKm.toFixed(2)}km, Estimated time: ${estimatedTime} minutes`);
+      console.log(`📍 Distance: ${distanceKm.toFixed(2)}km, Time: ${timeMinutes}min + ${buffer}min buffer = ${estimatedTime}min total`);
       
       return estimatedTime;
     } catch (error) {
-      console.error('Error calculating delivery time:', error);
-      return 25; // Default fallback
+      console.error('❌ Error calculating delivery time:', error);
+      return 15; // Reduced fallback from 25 to 15
     }
   }
 
@@ -1142,6 +1153,96 @@ Bonjour *${deliveryUser.nom}*,
         
     } catch (error) {
       console.error('Error in forceLogoutBlockedUser:', error);
+    }
+  }
+
+  // === LOCATION TRACKING ===
+
+  // Mettre à jour la position du livreur
+  async updateDriverLocation(
+    phone: string, 
+    latitude: number, 
+    longitude: number, 
+    accuracy?: number
+  ): Promise<boolean> {
+    try {
+      console.log(`📍 Updating location for driver ${phone}:`, { latitude, longitude, accuracy });
+
+      const updateData: any = {
+        latitude,
+        longitude,
+        coordinates_updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      if (accuracy !== null && accuracy !== undefined) {
+        updateData.accuracy = accuracy;
+      }
+
+      const { error } = await this.supabase
+        .from('delivery_users')
+        .update(updateData)
+        .eq('telephone', phone);
+
+      if (error) {
+        console.error('❌ Error updating driver location:', error);
+        return false;
+      }
+
+      console.log(`✅ Location updated successfully for ${phone}`);
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error in updateDriverLocation:', error);
+      return false;
+    }
+  }
+
+  // Obtenir le statut du livreur
+  async getDriverStatus(phone: string): Promise<any> {
+    try {
+      const { data, error } = await this.supabase
+        .from('delivery_users')
+        .select('id, nom, is_online, status, latitude, longitude')
+        .eq('telephone', phone)
+        .single();
+
+      if (error) {
+        console.error('❌ Error getting driver status:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('❌ Error in getDriverStatus:', error);
+      return null;
+    }
+  }
+
+  // Mettre à jour le statut en ligne du livreur
+  async updateDriverOnlineStatus(phone: string, isOnline: boolean): Promise<boolean> {
+    try {
+      console.log(`🔄 Updating driver online status: ${phone} -> ${isOnline}`);
+
+      const { error } = await this.supabase
+        .from('delivery_users')
+        .update({
+          is_online: isOnline,
+          updated_at: new Date().toISOString()
+        })
+        .eq('telephone', phone);
+
+      if (error) {
+        console.error('❌ Error updating driver online status:', error);
+        return false;
+      }
+
+      console.log(`✅ Driver online status updated: ${phone} -> ${isOnline}`);
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error in updateDriverOnlineStatus:', error);
+      return false;
     }
   }
 }

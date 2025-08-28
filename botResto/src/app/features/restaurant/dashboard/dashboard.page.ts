@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService, User } from '../../../core/services/auth.service';
-import { AnalyticsService, RevenueStats, ChartDataPoint } from '../../../core/services/analytics.service';
+import { AnalyticsService, RevenueStats, ChartDataPoint, OrderStats } from '../../../core/services/analytics.service';
 import { ScheduleService } from '../../../core/services/schedule.service';
 
 @Component({
@@ -48,6 +48,7 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   selectedPeriod: 'day' | 'week' | 'month' = 'day';
   isLoading = true;
+  restaurantCurrency = 'GNF'; // Devise par défaut
 
   constructor(
     private authService: AuthService,
@@ -63,6 +64,9 @@ export class DashboardPage implements OnInit, OnDestroy {
       this.router.navigate(['/home']);
       return;
     }
+
+    // Charger la devise du restaurant depuis la base de données
+    await this.loadRestaurantCurrency();
 
     await this.loadDashboardData();
     
@@ -104,13 +108,15 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     switch (this.selectedPeriod) {
       case 'day':
-        this.chartData.daily = await this.analyticsService.getDailyRevenue(this.restaurant.restaurantId, 30);
+        // Pour l'onglet JOUR, on affiche seulement les revenus d'aujourd'hui (répartition par heure)
+        this.chartData.daily = await this.analyticsService.getHourlyRevenue(this.restaurant.restaurantId);
         break;
       case 'week':
-        // TODO: Implement weekly revenue
+        // Pour l'onglet SEMAINE, afficher les 7 derniers jours
         this.chartData.daily = await this.analyticsService.getDailyRevenue(this.restaurant.restaurantId, 7);
         break;
       case 'month':
+        // Pour l'onglet MOIS, afficher les 12 derniers mois
         this.chartData.monthly = await this.analyticsService.getMonthlyRevenue(this.restaurant.restaurantId, 12);
         break;
     }
@@ -134,14 +140,10 @@ export class DashboardPage implements OnInit, OnDestroy {
   async loadOrderStats() {
     if (!this.restaurant?.restaurantId) return;
     
-    // TODO: Implement order statistics loading
-    // For now, using mock data
-    this.stats = {
-      pending: 5,
-      inProgress: 3,
-      completed: 24,
-      todayRevenue: this.revenueStats.today
-    };
+    const orderStats = await this.analyticsService.getOrderStats(this.restaurant.restaurantId);
+    this.stats = orderStats;
+    
+    console.log('📊 Statistiques réelles chargées:', this.stats);
   }
 
   navigateToSettings() {
@@ -180,10 +182,34 @@ export class DashboardPage implements OnInit, OnDestroy {
     return max > 0 ? (value / max) * 100 : 0;
   }
 
+  async loadRestaurantCurrency() {
+    if (!this.restaurant?.restaurantId) return;
+
+    try {
+      const supabase = (this.scheduleService as any).supabase.client;
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('currency')
+        .eq('id', this.restaurant.restaurantId)
+        .single();
+
+      if (data && !error && data.currency) {
+        this.restaurantCurrency = data.currency;
+        console.log('✅ Devise restaurant chargée:', data.currency);
+      }
+    } catch (error) {
+      console.error('❌ Erreur chargement devise restaurant:', error);
+      // Garder la devise par défaut GNF en cas d'erreur
+    }
+  }
+
   formatCurrency(value: number): string {
-    return new Intl.NumberFormat('fr-GN', {
+    // Adapter la locale selon la devise
+    const locale = this.restaurantCurrency === 'EUR' ? 'fr-FR' : 'fr-GN';
+    
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'GNF',
+      currency: this.restaurantCurrency,
       minimumFractionDigits: 0
     }).format(value);
   }

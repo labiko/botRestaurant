@@ -62,7 +62,7 @@
         <div class="order-header">
           <div class="order-info">
             <ion-card-title>#{{ order.numero_commande }}</ion-card-title>
-            <ion-card-subtitle>{{ order.client_nom }} • {{ formatTime(order.created_at) }}</ion-card-subtitle>
+            <ion-card-subtitle>{{ order.client_phone }} • {{ formatTime(order.created_at) }}</ion-card-subtitle>
           </div>
           <div class="order-badges">
             <ion-badge [color]="getStatusColor(order.statut)" class="status-badge">
@@ -70,6 +70,9 @@
             </ion-badge>
             <ion-badge color="medium" outline>
               {{ order.mode === 'sur_place' ? 'Sur place' : order.mode === 'emporter' ? 'À emporter' : 'Livraison' }}
+            </ion-badge>
+            <ion-badge color="tertiary" outline *ngIf="order.paiement_mode">
+              {{ getPaymentModeText(order.paiement_mode) }}
             </ion-badge>
           </div>
         </div>
@@ -130,6 +133,18 @@
             <p *ngIf="order.assigned_at"><strong>Assigné le:</strong> {{ formatDateTime(order.assigned_at) }}</p>
             <p *ngIf="order.accepted_by_delivery_at"><strong>Accepté le:</strong> {{ formatDateTime(order.accepted_by_delivery_at) }}</p>
             <!-- Code de validation masqué pour la sécurité -->
+            
+            <!-- Bouton pour changer de livreur (uniquement pour les commandes en livraison) -->
+            <ion-button 
+              *ngIf="order.statut === 'en_livraison' && order.mode === 'livraison'"
+              size="small"
+              color="warning" 
+              fill="outline"
+              (click)="openChangeDeliveryModal(order)"
+              class="change-delivery-button">
+              <ion-icon name="swap-horizontal" slot="start"></ion-icon>
+              Changer de livreur
+            </ion-button>
           </div>
         </div>
 

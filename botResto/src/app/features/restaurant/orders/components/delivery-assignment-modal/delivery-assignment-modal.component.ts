@@ -14,10 +14,28 @@ export class DeliveryAssignmentModalComponent implements OnInit {
   availableDeliveryUsers: DeliveryUser[] = [];
   selectedDeliveryUser: DeliveryUser | null = null;
   orderDetails: any = {};
+  isReassignment: boolean = false;
+  currentDriver: string = '';
   
   constructor(private modalController: ModalController) { }
 
-  ngOnInit() {}
+  ngOnInit() {
+    console.log('🚀 Modal initialized with:', {
+      isReassignment: this.isReassignment,
+      currentDriver: this.currentDriver,
+      totalUsers: this.availableDeliveryUsers?.length || 0,
+      users: this.availableDeliveryUsers
+    });
+    
+    // Filtrer le livreur actuel de la liste si c'est une réassignation
+    if (this.isReassignment && this.currentDriver) {
+      console.log(`🔍 Filtering out current driver: ${this.currentDriver}`);
+      this.availableDeliveryUsers = this.availableDeliveryUsers.filter(
+        user => user.nom !== this.currentDriver
+      );
+      console.log(`📋 After filtering: ${this.availableDeliveryUsers.length} drivers available`);
+    }
+  }
 
   selectDeliveryUser(user: DeliveryUser) {
     this.selectedDeliveryUser = user;

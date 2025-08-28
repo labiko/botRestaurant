@@ -112,8 +112,8 @@
         </ion-segment>
       </div>
 
-      <!-- Graphique principal simplifié -->
-      <div class="chart-container">
+      <!-- Graphique principal (semaine et mois) -->
+      <div class="chart-container" *ngIf="selectedPeriod !== 'day'">
         <div class="simple-chart">
           <div class="chart-title">Évolution des revenus</div>
           <div class="chart-bars">
@@ -128,16 +128,22 @@
         </div>
       </div>
 
-      <!-- Répartition par heure (aujourd'hui uniquement) -->
+      <!-- Répartition par heure (onglet JOUR uniquement) -->
       <div class="hourly-chart" *ngIf="selectedPeriod === 'day'">
-        <h3>Répartition par heure (aujourd'hui)</h3>
-        <div class="hourly-bars">
-          <div 
-            class="hour-bar" 
-            *ngFor="let hour of chartData.hourly"
-            [style.height.%]="getBarHeight(hour.value, chartData.hourly)">
-            <div class="bar-value">{{ formatCurrency(hour.value) }}</div>
-            <div class="bar-label">{{ hour.label }}</div>
+        <div class="simple-chart">
+          <div class="chart-title">Répartition par heure (aujourd'hui)</div>
+          <div class="chart-bars">
+            <div 
+              class="chart-bar" 
+              *ngFor="let hour of chartData.daily"
+              [style.height.%]="getBarHeight(hour.value, chartData.daily)">
+              <div class="bar-value">{{ formatCurrency(hour.value) }}</div>
+              <div class="bar-label">{{ hour.label }}</div>
+            </div>
+          </div>
+          <!-- Message si aucune commande aujourd'hui -->
+          <div *ngIf="chartData.daily.length === 0" class="no-data-message">
+            <p>Aucune commande aujourd'hui</p>
           </div>
         </div>
       </div>

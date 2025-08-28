@@ -14,6 +14,7 @@ export class OrdersPage implements OnInit, OnDestroy {
   allOrders: DeliveryOrder[] = [];
   filteredOrders: DeliveryOrder[] = [];
   selectedFilter: string = 'active';
+  isDriverOnline: boolean = false;
   
   private subscriptions: Subscription[] = [];
 
@@ -45,6 +46,11 @@ export class OrdersPage implements OnInit, OnDestroy {
       
       if (user && user.deliveryPhone) {
         console.log(`📞 Loading orders for delivery phone: ${user.deliveryPhone}`);
+        
+        // Charger le statut du livreur
+        const driverData = await this.deliveryService.getDriverStatus(user.deliveryPhone);
+        this.isDriverOnline = driverData?.is_online || false;
+        
         await this.deliveryService.loadDeliveryOrders(user.deliveryPhone);
       } else {
         console.error('❌ No delivery phone found for current user:', { user });

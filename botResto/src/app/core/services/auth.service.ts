@@ -39,72 +39,68 @@ export class AuthService {
     }
   }
 
-  async loginRestaurant(email: string, password: string): Promise<boolean> {
+  async loginRestaurant(phone: string, password: string): Promise<boolean> {
     try {
-      // Query restaurant_users table for authentication with restaurant coordinates
-      const { data: restaurantUser, error: userError } = await this.supabase
-        .from('restaurant_users')
-        .select(`
-          id,
-          restaurant_id,
-          email,
-          nom,
-          role
-        `)
-        .eq('email', email)
-        .eq('is_active', true)
-        .single();
+      // Normaliser le numéro de téléphone
+      const normalizedPhone = this.normalizePhoneForRestaurant(phone.trim());
+      console.log('🔍 Restaurant login attempt:', { original: phone, normalized: normalizedPhone });
 
-      if (userError || !restaurantUser) {
-        console.error('Restaurant user not found:', userError);
-        return false;
-      }
-
-      // Get restaurant details separately including currency
+      // Query restaurants table directly for authentication
       const { data: restaurant, error: restaurantError } = await this.supabase
         .from('restaurants')
-        .select('id, nom, latitude, longitude, currency')
-        .eq('id', restaurantUser.restaurant_id)
+        .select(`
+          id,
+          nom,
+          password,
+          telephone,
+          latitude,
+          longitude,
+          currency,
+          statut
+        `)
+        .eq('telephone', normalizedPhone)
+        .eq('statut', 'ouvert')
         .single();
-      
+
       if (restaurantError || !restaurant) {
         console.error('Restaurant not found:', restaurantError);
         return false;
       }
 
       // TODO: Implement proper password hashing verification
-      // For demo, we'll use a simple check or allow any password
-      // In production: bcrypt.compare(password, restaurantUser.password_hash)
+      // For demo, we'll use a simple check
+      // In production: bcrypt.compare(password, restaurant.password)
       
-      if (password) { // Accept any non-empty password for demo
+      if (password === restaurant.password) { // Simple check for now
         const user: User = {
-          id: restaurantUser.id.toString(),
-          email: restaurantUser.email,
-          name: restaurantUser.nom,
+          id: restaurant.id,
+          phone: restaurant.telephone,
+          name: restaurant.nom,
           type: 'restaurant',
-          restaurantId: restaurantUser.restaurant_id,
-          restaurant: restaurant ? {
+          restaurantId: restaurant.id,
+          restaurant: {
             id: restaurant.id,
             nom: restaurant.nom,
             latitude: restaurant.latitude,
             longitude: restaurant.longitude,
             currency: restaurant.currency || 'GNF'
-          } : undefined
+          }
         };
         
         console.log('User created with restaurant info:', user);
         
-        // Update last login
+        // Update last login (add a last_login field to restaurants table if needed)
         await this.supabase
-          .from('restaurant_users')
-          .update({ last_login: new Date().toISOString() })
-          .eq('id', restaurantUser.id);
+          .from('restaurants')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', restaurant.id);
         
         this.currentUserSubject.next(user);
         localStorage.setItem('currentUser', JSON.stringify(user));
         return true;
       }
       
+      console.error('Password incorrect');
       return false;
     } catch (error) {
       console.error('Login error:', error);
@@ -348,6 +344,19 @@ export class AuthService {
     }
     
     // Retourner tel quel si aucun pattern ne correspond
+    return cleanPhone;
+  }
+
+  private normalizePhoneForRestaurant(phone: string): string {
+    const cleanPhone = phone.trim();
+    
+    // Pour les restaurants, on stocke sans le + dans la base
+    // Retirer le + si présent
+    if (cleanPhone.startsWith('+')) {
+      return cleanPhone.substring(1);
+    }
+    
+    // Si c'est déjà sans +, retourner tel quel
     return cleanPhone;
   }
 }

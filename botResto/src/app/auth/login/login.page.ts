@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 import { AuthService } from '../../core/services/auth.service';
+import { PasswordRecoveryUIService } from '../../core/services/password-recovery-ui.service';
 
 @Component({
   selector: 'app-login',
@@ -13,7 +14,7 @@ export class LoginPage implements OnInit {
   userType: 'restaurant' | 'delivery' = 'restaurant';
   
   // Restaurant login
-  restaurantEmail: string = '';
+  restaurantPhone: string = '';
   restaurantPassword: string = '';
   
   // Delivery login
@@ -24,7 +25,8 @@ export class LoginPage implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private authService: AuthService,
-    private alertController: AlertController
+    private alertController: AlertController,
+    private passwordRecoveryUI: PasswordRecoveryUIService
   ) { }
 
   ngOnInit() {
@@ -44,18 +46,19 @@ export class LoginPage implements OnInit {
 
   async loginRestaurant() {
     try {
-      const success = await this.authService.loginRestaurant(this.restaurantEmail, this.restaurantPassword);
+      const success = await this.authService.loginRestaurant(this.restaurantPhone, this.restaurantPassword);
       if (success) {
         this.router.navigate(['/restaurant/dashboard']);
       } else {
         // TODO: Show error toast
         console.error('Login failed');
+        this.showModernAlert('❌ Connexion échouée', 'Numéro de téléphone ou mot de passe incorrect');
       }
     } catch (error) {
       console.error('Login error:', error);
+      this.showModernAlert('🌐 Erreur réseau', 'Vérifiez votre connexion internet et réessayez');
     }
   }
-
 
   async loginDelivery() {
     try {
@@ -126,5 +129,19 @@ export class LoginPage implements OnInit {
 
   goBack() {
     this.router.navigate(['/home']);
+  }
+
+  /**
+   * Affiche la modal de récupération de code d'accès pour les livreurs
+   */
+  async showPasswordRecovery() {
+    await this.passwordRecoveryUI.showDeliveryPasswordRecovery();
+  }
+
+  /**
+   * Affiche la modal de récupération de mot de passe pour les restaurants
+   */
+  async showRestaurantPasswordRecovery() {
+    await this.passwordRecoveryUI.showRestaurantPasswordRecovery();
   }
 }

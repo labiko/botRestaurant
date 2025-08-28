@@ -60,7 +60,15 @@
       "Read(/C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\Resto/**)",
       "Bash(npx ng build:*)",
       "Bash(ng serve:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Read(/C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\SCREEN/**)",
+      "Bash(move:*)",
+      "Read(C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\BOT-V3/**)",
+      "Read(C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\BOT-V3/**)",
+      "Read(C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\BOT-V3/**)",
+      "Read(C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\BOT-V3/**)",
+      "Read(C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\BOT-V3/**)",
+      "Read(C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\BOT-V3/**)"
     ],
     "deny": [],
     "ask": []

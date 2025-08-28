@@ -156,6 +156,16 @@ export class OrdersPage implements OnInit, OnDestroy {
     }
   }
 
+  getPaymentModeText(paymentMode: string): string {
+    switch (paymentMode) {
+      case 'fin_repas': return 'Paiement fin repas';
+      case 'recuperation': return 'Paiement récupération';
+      case 'livraison': return 'Paiement livraison';
+      case 'maintenant': return 'Paiement immédiat';
+      default: return paymentMode;
+    }
+  }
+
   // Get next tab filter based on status
   getNextTabForStatus(status: Order['statut']): string {
     switch (status) {
@@ -235,6 +245,39 @@ export class OrdersPage implements OnInit, OnDestroy {
     if (!success) {
       // TODO: Show error toast
       console.error('Failed to assign delivery person');
+    }
+  }
+
+  // Open change delivery modal
+  async openChangeDeliveryModal(order: Order) {
+    const modal = await this.modalController.create({
+      component: DeliveryAssignmentModalComponent,
+      componentProps: {
+        orderDetails: order,
+        availableDeliveryUsers: this.availableDeliveryUsers,
+        isReassignment: true, // Flag pour indiquer qu'il s'agit d'un changement
+        currentDriver: order.livreur_nom
+      },
+      backdropDismiss: false
+    });
+
+    await modal.present();
+
+    const { data } = await modal.onWillDismiss();
+    if (data && data.assigned) {
+      await this.reassignDeliveryPerson(order.id, data.deliveryUser.id);
+    }
+  }
+
+  // Reassign delivery person
+  async reassignDeliveryPerson(orderId: string, newDeliveryUserId: number) {
+    const success = await this.ordersService.reassignDeliveryDriver(orderId, newDeliveryUserId);
+    if (success) {
+      console.log('✅ Livreur changé avec succès');
+      // La mise à jour de l'interface se fait automatiquement via le BehaviorSubject
+    } else {
+      // TODO: Show error toast
+      console.error('❌ Échec du changement de livreur');
     }
   }
 

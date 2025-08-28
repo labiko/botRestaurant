@@ -52,6 +52,19 @@
         </div>
         <div class="tab-indicator" *ngIf="currentTab === 'menus'"></div>
       </div>
+
+      <div class="tab-card" 
+           [class.active]="currentTab === 'delivery'" 
+           (click)="switchTab('delivery')">
+        <div class="tab-icon">
+          <ion-icon name="car"></ion-icon>
+        </div>
+        <div class="tab-content">
+          <h3>Modes de Livraison</h3>
+          <p>Paramétrer les modes de livraison et paiement</p>
+        </div>
+        <div class="tab-indicator" *ngIf="currentTab === 'delivery'"></div>
+      </div>
     </div>
 
     <!-- Card 1: Paramétrage Restaurant -->
@@ -80,6 +93,7 @@
                 <ion-chip [color]="getStatusColor(restaurantStatus.status)" class="status-chip">
                   <ion-icon [name]="restaurantStatus.is_open_now ? 'checkmark-circle' : 'close-circle'"></ion-icon>
                   <ion-label>{{ getStatusText(restaurantStatus.status) }}</ion-label>
+                  <ion-icon *ngIf="isManuallyOpen()" name="information-circle-outline" color="primary" (click)="showManualOpenInfo()"></ion-icon>
                 </ion-chip>
               </div>
               
@@ -608,23 +622,207 @@
             </div>
           </div>
 
-          <!-- Currency Configuration (inline) -->
-          <div class="info-item">
-            <ion-icon name="cash"></ion-icon>
-            <div>
-              <h4>Devise du Restaurant</h4>
-              <div class="currency-selector">
-                <ion-item>
-                  <ion-label>Devise utilisée</ion-label>
-                  <ion-select [(ngModel)]="currentCurrency" (ionChange)="updateCurrency()">
-                    <ion-select-option *ngFor="let currency of availableCurrencies" [value]="currency.code">
-                      {{ currency.name }} ({{ currency.code }})
-                    </ion-select-option>
-                  </ion-select>
-                </ion-item>
-                <ion-text color="medium">
-                  <p>Cette devise sera utilisée pour l'affichage de tous les prix dans l'application.</p>
-                </ion-text>
+
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Card 2: Configuration Devise -->
+      <ion-card class="main-card">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="cash" class="card-icon"></ion-icon>
+            Configuration Devise
+          </ion-card-title>
+          <ion-card-subtitle>Paramétrer la devise utilisée par le restaurant</ion-card-subtitle>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <div class="currency-configuration">
+            <div class="current-currency-info">
+              <h3>Devise Actuelle</h3>
+              <ion-chip color="primary">
+                <ion-icon name="cash"></ion-icon>
+                <ion-label>{{ getCurrentCurrencyName() }}</ion-label>
+              </ion-chip>
+            </div>
+            
+            <div class="currency-selector">
+              <h4>Changer la Devise</h4>
+              <ion-item>
+                <ion-label>Nouvelle devise</ion-label>
+                <ion-select [(ngModel)]="currentCurrency" (ionChange)="updateCurrency()" placeholder="Sélectionner une devise">
+                  <ion-select-option *ngFor="let currency of availableCurrencies" [value]="currency.code">
+                    {{ currency.name }} ({{ currency.code }})
+                  </ion-select-option>
+                </ion-select>
+              </ion-item>
+              <ion-text color="medium">
+                <p>Cette devise sera utilisée pour l'affichage de tous les prix dans l'application et le bot WhatsApp.</p>
+              </ion-text>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+    <!-- Card 4: Modes de Livraison -->
+    <div *ngIf="currentTab === 'delivery'">
+      <ion-card class="main-card">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="car" class="card-icon"></ion-icon>
+            Modes de Livraison & Paiement
+          </ion-card-title>
+          <ion-card-subtitle>Paramétrer les modes de récupération et de paiement disponibles</ion-card-subtitle>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <div class="delivery-modes-section">
+            <p class="section-description">Configurez les modes de récupération disponibles pour vos clients</p>
+            
+            <!-- Warning Message -->
+            <div class="warning-message" *ngIf="!isAtLeastOneModeActive()">
+              <div class="warning-content">
+                <ion-icon name="warning"></ion-icon>
+                <div>
+                  <h4>Attention</h4>
+                  <p>Au moins un mode doit être activé pour accepter des commandes</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Success Message -->
+            <div class="success-message" *ngIf="deliveryModesUpdateSuccess">
+              <div class="success-content">
+                <ion-icon name="checkmark-circle"></ion-icon>
+                <p>Modes de livraison mis à jour avec succès</p>
+              </div>
+            </div>
+            
+            <!-- Delivery Modes Grid -->
+            <div class="delivery-modes-grid">
+              <!-- Sur place -->
+              <div class="delivery-mode-item" [class.active]="deliveryModes.allow_dine_in">
+                <div class="mode-header">
+                  <div class="mode-info">
+                    <div class="mode-icon">
+                      <ion-icon name="restaurant"></ion-icon>
+                    </div>
+                    <div class="mode-content">
+                      <h4>Sur place</h4>
+                      <p>Les clients peuvent manger au restaurant</p>
+                    </div>
+                  </div>
+                  <ion-checkbox [(ngModel)]="deliveryModes.allow_dine_in" (ionChange)="updateDeliveryModes()"></ion-checkbox>
+                </div>
+                <div class="mode-description">
+                  Parfait pour les clients qui souhaitent profiter de l'ambiance du restaurant
+                </div>
+              </div>
+              
+              <!-- À emporter -->
+              <div class="delivery-mode-item" [class.active]="deliveryModes.allow_takeaway">
+                <div class="mode-header">
+                  <div class="mode-info">
+                    <div class="mode-icon">
+                      <ion-icon name="bag-handle"></ion-icon>
+                    </div>
+                    <div class="mode-content">
+                      <h4>À emporter</h4>
+                      <p>Les clients viennent récupérer leur commande</p>
+                    </div>
+                  </div>
+                  <ion-checkbox [(ngModel)]="deliveryModes.allow_takeaway" (ionChange)="updateDeliveryModes()"></ion-checkbox>
+                </div>
+                <div class="mode-description">
+                  Commande préparée à l'avance, récupération rapide au comptoir
+                </div>
+              </div>
+              
+              <!-- Livraison -->
+              <div class="delivery-mode-item" [class.active]="deliveryModes.allow_delivery">
+                <div class="mode-header">
+                  <div class="mode-info">
+                    <div class="mode-icon">
+                      <ion-icon name="bicycle"></ion-icon>
+                    </div>
+                    <div class="mode-content">
+                      <h4>Livraison</h4>
+                      <p>Livraison à domicile disponible</p>
+                    </div>
+                  </div>
+                  <ion-checkbox [(ngModel)]="deliveryModes.allow_delivery" (ionChange)="updateDeliveryModes()"></ion-checkbox>
+                </div>
+                <div class="mode-description">
+                  Service de livraison à domicile via nos livreurs partenaires
+                </div>
+              </div>
+            </div>
+            
+
+            <!-- Payment Modes Configuration -->
+            <div class="payment-modes-section">
+              <h4>💳 Modes de Paiement</h4>
+              <p class="section-description">Configurez les modes de paiement acceptés par votre restaurant</p>
+              
+              <!-- Payment Warning Message -->
+              <div class="warning-message" *ngIf="!isAtLeastOnePaymentModeActive()">
+                <div class="warning-content">
+                  <ion-icon name="warning"></ion-icon>
+                  <div>
+                    <h4>Attention</h4>
+                    <p>Au moins un mode de paiement doit être activé</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Payment Success Message -->
+              <div class="success-message" *ngIf="paymentModesUpdateSuccess">
+                <div class="success-content">
+                  <ion-icon name="checkmark-circle"></ion-icon>
+                  <p>Modes de paiement mis à jour avec succès</p>
+                </div>
+              </div>
+              
+              <!-- Payment Modes Grid -->
+              <div class="delivery-modes-grid">
+                <!-- Pay Now -->
+                <div class="delivery-mode-item" [class.active]="paymentModes.allow_pay_now">
+                  <div class="mode-header">
+                    <div class="mode-info">
+                      <div class="mode-icon">
+                        <ion-icon name="card"></ion-icon>
+                      </div>
+                      <div class="mode-content">
+                        <h4>Paiement immédiat</h4>
+                        <p>Paiement mobile ou carte bancaire</p>
+                      </div>
+                    </div>
+                    <ion-checkbox [(ngModel)]="paymentModes.allow_pay_now" (ionChange)="updatePaymentModes()"></ion-checkbox>
+                  </div>
+                  <div class="mode-description">
+                    Orange Money, Wave (Guinée) ou carte bancaire (France)
+                  </div>
+                </div>
+                
+                <!-- Pay Later -->
+                <div class="delivery-mode-item" [class.active]="paymentModes.allow_pay_later">
+                  <div class="mode-header">
+                    <div class="mode-info">
+                      <div class="mode-icon">
+                        <ion-icon name="cash"></ion-icon>
+                      </div>
+                      <div class="mode-content">
+                        <h4>Paiement différé</h4>
+                        <p>Paiement cash sur place</p>
+                      </div>
+                    </div>
+                    <ion-checkbox [(ngModel)]="paymentModes.allow_pay_later" (ionChange)="updatePaymentModes()"></ion-checkbox>
+                  </div>
+                  <div class="mode-description">
+                    Paiement en espèces à la livraison, récupération ou fin de repas
+                  </div>
+                </div>
               </div>
             </div>
           </div>

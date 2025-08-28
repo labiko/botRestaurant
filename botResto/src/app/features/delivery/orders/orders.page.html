@@ -13,7 +13,7 @@
   <div class="orders-container">
     
     <!-- Filter Segment -->
-    <div class="filter-section">
+    <div class="filter-section" *ngIf="isDriverOnline">
       <ion-segment 
         [(ngModel)]="selectedFilter" 
         (ionChange)="onFilterChange()"
@@ -27,14 +27,27 @@
       </ion-segment>
     </div>
 
+    <!-- Message si livreur offline -->
+    <div class="offline-message" *ngIf="!isDriverOnline">
+      <ion-card>
+        <ion-card-content>
+          <div class="offline-content">
+            <ion-icon name="power" class="offline-icon"></ion-icon>
+            <h3>Statut hors ligne</h3>
+            <p>Activez votre statut en ligne depuis le tableau de bord pour voir vos commandes.</p>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
     <!-- Orders List -->
-    <div *ngIf="filteredOrders.length === 0" class="empty-state">
+    <div *ngIf="isDriverOnline && filteredOrders.length === 0" class="empty-state">
       <ion-icon name="receipt" class="empty-icon"></ion-icon>
       <h3>Aucune commande</h3>
       <p>{{ selectedFilter === 'all' ? 'Aucune commande disponible' : 'Aucune commande avec ce statut' }}</p>
     </div>
 
-    <div class="orders-list" *ngIf="filteredOrders.length > 0">
+    <div class="orders-list" *ngIf="isDriverOnline && filteredOrders.length > 0">
       <div class="order-card" *ngFor="let order of filteredOrders">
         <div class="order-header">
           <div class="order-info">

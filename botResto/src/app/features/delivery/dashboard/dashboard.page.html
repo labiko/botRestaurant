@@ -22,7 +22,7 @@
         </div>
       </div>
       <ion-toggle 
-        [(ngModel)]="isOnline" 
+        [checked]="isOnline" 
         (ionChange)="toggleOnlineStatus()"
         class="status-toggle">
       </ion-toggle>
@@ -56,8 +56,10 @@
 
       <div *ngIf="currentOrders.length === 0" class="empty-state">
         <ion-icon name="bicycle" class="empty-icon"></ion-icon>
-        <h3>Aucune commande active</h3>
-        <p>{{ isOnline ? 'Attendez de nouvelles commandes' : 'Activez votre statut pour recevoir des commandes' }}</p>
+        <h3 *ngIf="selectedTab === 'active'">Aucune commande active</h3>
+        <h3 *ngIf="selectedTab === 'history'">Aucune livraison</h3>
+        <p *ngIf="selectedTab === 'active'">{{ isOnline ? 'Attendez de nouvelles commandes' : 'Activez votre statut pour recevoir des commandes' }}</p>
+        <p *ngIf="selectedTab === 'history'">Vous n'avez pas encore effectué de livraisons</p>
       </div>
 
       <div class="orders-list" *ngIf="currentOrders.length > 0">
@@ -68,9 +70,15 @@
               <p class="order-id">#{{ order.orderNumber }}</p>
             </div>
             <div class="order-status" [attr.data-status]="order.status">
-              {{ order.status === 'assigned' ? 'Assignée' : 
-                 order.status === 'picked_up' ? 'Récupérée' : 
-                 order.status === 'in_transit' ? 'En transit' : order.status }}
+              <span *ngIf="selectedTab === 'active'">
+                {{ order.status === 'assigned' ? 'Assignée' : 
+                   order.status === 'picked_up' ? 'Récupérée' : 
+                   order.status === 'in_transit' ? 'En transit' : order.status }}
+              </span>
+              <span *ngIf="selectedTab === 'history'" class="delivery-date">
+                <ion-icon name="checkmark-circle" color="success"></ion-icon>
+                Livrée le {{ formatDeliveryDate(order.deliveredTime) }}
+              </span>
             </div>
           </div>
 

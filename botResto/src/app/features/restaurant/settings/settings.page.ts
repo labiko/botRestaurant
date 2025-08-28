@@ -27,8 +27,23 @@ export class SettingsPage implements OnInit, OnDestroy {
     { code: 'USD', name: 'Dollar US' }
   ];
   
+  // Delivery modes configuration
+  deliveryModes = {
+    allow_dine_in: true,
+    allow_takeaway: true,
+    allow_delivery: true
+  };
+  deliveryModesUpdateSuccess = false;
+  
+  // Payment modes configuration
+  paymentModes = {
+    allow_pay_now: true,
+    allow_pay_later: true
+  };
+  paymentModesUpdateSuccess = false;
+  
   // Navigation
-  currentTab: 'restaurant' | 'drivers' | 'menus' = 'restaurant';
+  currentTab: 'restaurant' | 'drivers' | 'menus' | 'delivery' = 'restaurant';
   
   // Delivery management
   drivers: DeliveryUser[] = [];
@@ -69,6 +84,8 @@ export class SettingsPage implements OnInit, OnDestroy {
   ) { }
 
   async ngOnInit() {
+    console.log('🏁 ngOnInit - Devise initiale:', this.currentCurrency);
+    
     const user = this.authService.getCurrentUser();
     if (!user || user.type !== 'restaurant') {
       this.router.navigate(['/auth/login'], { queryParams: { userType: 'restaurant' } });
@@ -77,11 +94,7 @@ export class SettingsPage implements OnInit, OnDestroy {
 
     await this.loadRestaurantData(user.restaurantId || 'default-id');
     
-    // Définir la devise du restaurant dans le service menu
-    if (user.restaurant?.currency) {
-      this.currentCurrency = user.restaurant.currency;
-      this.menuService.setCurrency(user.restaurant.currency);
-    }
+    console.log('🏁 ngOnInit - Devise finale:', this.currentCurrency);
     
     // Ne pas charger les livreurs automatiquement, seulement si l'utilisateur clique sur l'onglet
   }
@@ -99,6 +112,15 @@ export class SettingsPage implements OnInit, OnDestroy {
         this.currentStatus = this.restaurantStatus.status;
         this.tempCloseReason = '';
       }
+
+      // Charger la devise depuis la base de données
+      await this.loadRestaurantCurrency(restaurantId);
+
+      // Charger les modes de livraison depuis la base de données
+      await this.loadDeliveryModes(restaurantId);
+
+      // Charger les modes de paiement depuis la base de données
+      await this.loadPaymentModes(restaurantId);
 
       this.ensureCompleteSchedule();
     } catch (error) {
@@ -311,7 +333,7 @@ export class SettingsPage implements OnInit, OnDestroy {
   // NAVIGATION
   // =====================================
 
-  switchTab(tab: 'restaurant' | 'drivers' | 'menus') {
+  switchTab(tab: 'restaurant' | 'drivers' | 'menus' | 'delivery') {
     this.currentTab = tab;
     
     // Si on passe à l'onglet livreurs, charger les données
@@ -322,6 +344,14 @@ export class SettingsPage implements OnInit, OnDestroy {
     // Si on passe à l'onglet menus, charger les données
     if (tab === 'menus' && this.menuItems.length === 0) {
       this.loadMenuItems();
+    }
+    
+    // Si on passe à l'onglet modes de livraison, charger les données
+    if (tab === 'delivery') {
+      const user = this.authService.getCurrentUser();
+      if (user?.restaurantId) {
+        this.loadDeliveryModes(user.restaurantId);
+      }
     }
     
     // Animation subtile
@@ -772,6 +802,11 @@ export class SettingsPage implements OnInit, OnDestroy {
     }
   }
 
+  getCurrentCurrencyName(): string {
+    const currency = this.availableCurrencies.find(c => c.code === this.currentCurrency);
+    return currency ? `${currency.name} (${currency.code})` : this.currentCurrency;
+  }
+
   private get supabase() {
     return (this.scheduleService as any).supabase.client;
   }
@@ -793,5 +828,166 @@ export class SettingsPage implements OnInit, OnDestroy {
       color
     });
     await toast.present();
+  }
+
+  // =====================================
+  // DELIVERY MODES MANAGEMENT
+  // =====================================
+
+  async loadDeliveryModes(restaurantId: string) {
+    try {
+      const { data, error } = await this.supabase
+        .from('restaurants')
+        .select('allow_dine_in, allow_takeaway, allow_delivery')
+        .eq('id', restaurantId)
+        .single();
+
+      if (!error && data) {
+        this.deliveryModes = {
+          allow_dine_in: data.allow_dine_in ?? true,
+          allow_takeaway: data.allow_takeaway ?? true,
+          allow_delivery: data.allow_delivery ?? true
+        };
+        console.log('✅ Modes de livraison chargés:', this.deliveryModes);
+      } else {
+        console.error('❌ Erreur chargement modes de livraison:', error);
+      }
+    } catch (error) {
+      console.error('❌ Erreur chargement modes de livraison:', error);
+    }
+  }
+
+  async loadRestaurantCurrency(restaurantId: string) {
+    try {
+      const { data, error } = await this.supabase
+        .from('restaurants')
+        .select('currency')
+        .eq('id', restaurantId)
+        .single();
+
+      if (data && !error) {
+        if (data.currency) {
+          this.currentCurrency = data.currency;
+          this.menuService.setCurrency(data.currency);
+          console.log('✅ Devise restaurant chargée:', data.currency);
+        }
+      } else {
+        console.error('❌ Erreur chargement devise restaurant:', error);
+      }
+    } catch (error) {
+      console.error('❌ Erreur chargement devise restaurant:', error);
+    }
+  }
+
+  async updateDeliveryModes() {
+    if (!this.restaurantStatus) return;
+
+    // Vérifier qu'au moins un mode est activé
+    if (!this.isAtLeastOneModeActive()) {
+      await this.showToast('⚠️ Au moins un mode doit être activé', 'warning');
+      // Réactiver le dernier mode décoché
+      return;
+    }
+
+    try {
+      const { error } = await this.supabase
+        .from('restaurants')
+        .update({
+          allow_dine_in: this.deliveryModes.allow_dine_in,
+          allow_takeaway: this.deliveryModes.allow_takeaway,
+          allow_delivery: this.deliveryModes.allow_delivery
+        })
+        .eq('id', this.restaurantStatus.id);
+
+      if (error) {
+        console.error('❌ Erreur mise à jour modes de livraison:', error);
+        await this.showToast('Erreur lors de la mise à jour des modes', 'danger');
+        return;
+      }
+
+      console.log('✅ Modes de livraison mis à jour avec succès');
+      
+      // Afficher le message de succès visuel
+      this.deliveryModesUpdateSuccess = true;
+      setTimeout(() => {
+        this.deliveryModesUpdateSuccess = false;
+      }, 3000);
+    } catch (error) {
+      console.error('❌ Erreur mise à jour modes de livraison:', error);
+      await this.showToast('Erreur lors de la mise à jour', 'danger');
+    }
+  }
+
+  isAtLeastOneModeActive(): boolean {
+    return this.deliveryModes.allow_dine_in || 
+           this.deliveryModes.allow_takeaway || 
+           this.deliveryModes.allow_delivery;
+  }
+
+  // =====================================
+  // PAYMENT MODES MANAGEMENT
+  // =====================================
+
+  async loadPaymentModes(restaurantId: string) {
+    try {
+      const { data, error } = await this.supabase
+        .from('restaurants')
+        .select('allow_pay_now, allow_pay_later')
+        .eq('id', restaurantId)
+        .single();
+
+      if (data && !error) {
+        this.paymentModes = {
+          allow_pay_now: data.allow_pay_now ?? true,
+          allow_pay_later: data.allow_pay_later ?? true
+        };
+        console.log('✅ Modes de paiement chargés:', this.paymentModes);
+      } else {
+        console.error('❌ Erreur chargement modes de paiement:', error);
+      }
+    } catch (error) {
+      console.error('❌ Erreur chargement modes de paiement:', error);
+    }
+  }
+
+  async updatePaymentModes() {
+    if (!this.restaurantStatus) return;
+
+    // Vérifier qu'au moins un mode est activé
+    if (!this.isAtLeastOnePaymentModeActive()) {
+      await this.showToast('⚠️ Au moins un mode de paiement doit être activé', 'warning');
+      return;
+    }
+
+    try {
+      const { error } = await this.supabase
+        .from('restaurants')
+        .update({
+          allow_pay_now: this.paymentModes.allow_pay_now,
+          allow_pay_later: this.paymentModes.allow_pay_later
+        })
+        .eq('id', this.restaurantStatus.id);
+
+      if (error) {
+        console.error('❌ Erreur mise à jour modes de paiement:', error);
+        await this.showToast('Erreur lors de la mise à jour des modes de paiement', 'danger');
+        return;
+      }
+
+      console.log('✅ Modes de paiement mis à jour avec succès');
+      
+      // Afficher le message de succès visuel
+      this.paymentModesUpdateSuccess = true;
+      setTimeout(() => {
+        this.paymentModesUpdateSuccess = false;
+      }, 3000);
+    } catch (error) {
+      console.error('❌ Erreur mise à jour modes de paiement:', error);
+      await this.showToast('Erreur lors de la mise à jour', 'danger');
+    }
+  }
+
+  isAtLeastOnePaymentModeActive(): boolean {
+    return this.paymentModes.allow_pay_now || this.paymentModes.allow_pay_later;
   }
 }

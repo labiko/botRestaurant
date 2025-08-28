@@ -24,68 +24,87 @@
 
     <!-- Formulaire Restaurant -->
     <form *ngIf="userType === 'restaurant'" class="login-form">
-      <ion-item>
-        <ion-label position="stacked">Email</ion-label>
+      <ion-item class="modern-input">
+        <ion-label position="stacked">Numéro de téléphone</ion-label>
         <ion-input 
-          type="email" 
-          [(ngModel)]="restaurantEmail" 
-          name="email"
-          placeholder="restaurant@example.com"
+          type="tel" 
+          [(ngModel)]="restaurantPhone" 
+          name="phone"
+          placeholder="33620951645"
+          class="phone-input"
           required>
         </ion-input>
+        <ion-icon name="call-outline" slot="end" class="input-icon"></ion-icon>
       </ion-item>
 
-      <ion-item>
+      <ion-item class="modern-input">
         <ion-label position="stacked">Mot de passe</ion-label>
         <ion-input 
           type="password" 
           [(ngModel)]="restaurantPassword" 
           name="password"
-          placeholder="••••••••"
+          placeholder="••••••••••••"
+          class="password-input"
           required>
         </ion-input>
+        <ion-icon name="lock-closed-outline" slot="end" class="input-icon"></ion-icon>
       </ion-item>
 
       <ion-button 
         expand="block" 
-        class="btn-primary login-button"
+        class="btn-primary login-button modern-button restaurant-button"
         (click)="loginRestaurant()"
-        [disabled]="!restaurantEmail || !restaurantPassword">
-        Se connecter
+        [disabled]="!restaurantPhone || !restaurantPassword">
+        <ion-icon name="restaurant-outline" slot="start"></ion-icon>
+        Accéder au restaurant
       </ion-button>
 
     </form>
 
     <!-- Formulaire Livreur -->
     <form *ngIf="userType === 'delivery'" class="login-form">
-      <ion-item>
-        <ion-label position="stacked">Numéro de téléphone</ion-label>
-        <ion-input 
-          type="tel" 
-          [(ngModel)]="deliveryPhone" 
-          name="phone"
-          placeholder="Ex: 622879890, 667326357, 224622879890"
-          required>
-        </ion-input>
-      </ion-item>
+      <div class="phone-input-container">
+        <ion-item class="phone-item">
+          <div class="country-prefix" slot="start">
+            <div class="guinea-flag">
+              <div class="flag-red"></div>
+              <div class="flag-yellow"></div>
+              <div class="flag-green"></div>
+            </div>
+            <span class="country-code">+224</span>
+          </div>
+          <ion-label position="stacked">Numéro de téléphone</ion-label>
+          <ion-input 
+            type="tel" 
+            [(ngModel)]="deliveryPhone" 
+            name="phone"
+            placeholder="622 879 890"
+            class="phone-input"
+            required>
+          </ion-input>
+        </ion-item>
+      </div>
 
-      <ion-item>
+      <ion-item class="modern-input">
         <ion-label position="stacked">Code d'accès</ion-label>
         <ion-input 
           type="text" 
           [(ngModel)]="deliveryCode" 
           name="code"
-          placeholder="Code à 6 chiffres"
+          placeholder="000000"
           maxlength="6"
+          class="access-code-input"
           required>
         </ion-input>
+        <ion-icon name="key-outline" slot="end" class="input-icon"></ion-icon>
       </ion-item>
 
       <ion-button 
         expand="block" 
-        class="btn-secondary login-button"
+        class="btn-secondary login-button modern-button"
         (click)="loginDelivery()"
         [disabled]="!deliveryPhone || !deliveryCode">
+        <ion-icon name="log-in-outline" slot="start"></ion-icon>
         Se connecter
       </ion-button>
     </form>
@@ -93,7 +112,16 @@
     <!-- Options supplémentaires -->
     <div class="login-footer">
       <p *ngIf="userType === 'restaurant'">
-        <a href="#">Mot de passe oublié ?</a>
+        <a (click)="showRestaurantPasswordRecovery()" class="forgot-password-link">
+          <ion-icon name="key-outline"></ion-icon>
+          Mot de passe oublié ?
+        </a>
+      </p>
+      <p *ngIf="userType === 'delivery'">
+        <a (click)="showPasswordRecovery()" class="forgot-password-link">
+          <ion-icon name="key-outline"></ion-icon>
+          Code d'accès oublié ?
+        </a>
       </p>
       <p>
         <a (click)="goBack()">Changer de profil</a>

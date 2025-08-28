@@ -20,19 +20,28 @@ export interface ChartDataPoint {
   date: string;
 }
 
+export interface OrderStats {
+  pending: number;
+  inProgress: number;
+  completed: number;
+  todayRevenue: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class AnalyticsService {
 
-  constructor(private supabase: SupabaseService) { }
+  constructor(public supabase: SupabaseService) { }
 
   async getRevenueStats(restaurantId: string): Promise<RevenueStats> {
+    console.log(`📊 Calcul des statistiques de revenus pour restaurant ${restaurantId}`);
+    
     const today = new Date().toISOString().split('T')[0];
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
     // Revenus aujourd'hui
-    const { data: todayRevenue } = await this.supabase
+    const { data: todayRevenue, error: todayError } = await this.supabase
       .from('commandes')
       .select('total')
       .eq('restaurant_id', restaurantId)
@@ -40,7 +49,7 @@ export class AnalyticsService {
       .gte('created_at', today);
 
     // Revenus hier
-    const { data: yesterdayRevenue } = await this.supabase
+    const { data: yesterdayRevenue, error: yesterdayError } = await this.supabase
       .from('commandes')
       .select('total')
       .eq('restaurant_id', restaurantId)
@@ -48,9 +57,18 @@ export class AnalyticsService {
       .gte('created_at', yesterday)
       .lt('created_at', today);
 
+    if (todayError) console.error('❌ Erreur revenus aujourd\'hui:', todayError);
+    if (yesterdayError) console.error('❌ Erreur revenus hier:', yesterdayError);
+
+    console.log(`📊 Commandes livrées aujourd'hui: ${todayRevenue?.length || 0}`);
+    console.log(`📊 Commandes livrées hier: ${yesterdayRevenue?.length || 0}`);
+
     // Calculs de croissance et autres stats
     const todayTotal = todayRevenue?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
     const yesterdayTotal = yesterdayRevenue?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+    
+    console.log(`📊 Total aujourd'hui: ${todayTotal} FG`);
+    console.log(`📊 Total hier: ${yesterdayTotal} FG`);
 
     return {
       today: todayTotal,
@@ -70,13 +88,22 @@ export class AnalyticsService {
     const endDate = new Date();
     const startDate = new Date(endDate.getTime() - days * 24 * 60 * 60 * 1000);
 
-    const { data } = await this.supabase
+    console.log(`📊 Recherche des revenus quotidiens pour restaurant ${restaurantId} entre ${startDate.toISOString()} et ${endDate.toISOString()}`);
+
+    const { data, error } = await this.supabase
       .from('commandes')
       .select('total, created_at')
       .eq('restaurant_id', restaurantId)
       .eq('statut', 'livree')
       .gte('created_at', startDate.toISOString())
       .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('❌ Erreur lors de la récupération des revenus quotidiens:', error);
+      return [];
+    }
+
+    console.log(`📊 ${data?.length || 0} commandes livrées trouvées pour les revenus quotidiens`);
 
     // Grouper par jour
     const dailyData = this.groupByDay(data || []);
@@ -214,11 +241,19 @@ export class AnalyticsService {
   }
 
   private formatChartData(dataMap: Map<any, number>, type: string): ChartDataPoint[] {
-    return Array.from(dataMap.entries()).map(([key, value]) => ({
+    const chartPoints = Array.from(dataMap.entries()).map(([key, value]) => ({
       label: this.formatLabel(key, type),
       value: value,
       date: key.toString()
     }));
+    
+    // Si aucune donnée, retourner un tableau vide pour éviter les graphiques avec des valeurs fantômes
+    if (chartPoints.length === 0 || chartPoints.every(point => point.value === 0)) {
+      console.log(`📊 Aucune donnée de revenus trouvée pour le type: ${type}`);
+      return [];
+    }
+    
+    return chartPoints;
   }
 
   private formatLabel(key: any, type: string): string {
@@ -231,6 +266,58 @@ export class AnalyticsService {
         return `${key}h`;
       default:
         return key.toString();
+    }
+  }
+
+  async getOrderStats(restaurantId: string): Promise<OrderStats> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Récupérer les statistiques de revenus pour aujourd'hui
+      const revenueStats = await this.getRevenueStats(restaurantId);
+      
+      // Compter les commandes par statut pour aujourd'hui
+      const [pendingResult, inProgressResult, completedResult] = await Promise.all([
+        // Commandes en attente (confirmées + en préparation)
+        this.supabase
+          .from('commandes')
+          .select('*', { count: 'exact', head: true })
+          .eq('restaurant_id', restaurantId)
+          .in('statut', ['confirmee', 'en_preparation'])
+          .gte('created_at', today),
+        
+        // Commandes en cours de livraison
+        this.supabase
+          .from('commandes')
+          .select('*', { count: 'exact', head: true })
+          .eq('restaurant_id', restaurantId)
+          .eq('statut', 'en_livraison')
+          .gte('created_at', today),
+          
+        // Commandes complétées aujourd'hui
+        this.supabase
+          .from('commandes')
+          .select('*', { count: 'exact', head: true })
+          .eq('restaurant_id', restaurantId)
+          .eq('statut', 'livree')
+          .gte('created_at', today)
+      ]);
+
+      return {
+        pending: pendingResult.count || 0,
+        inProgress: inProgressResult.count || 0,
+        completed: completedResult.count || 0,
+        todayRevenue: revenueStats.today
+      };
+      
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des statistiques de commandes:', error);
+      return {
+        pending: 0,
+        inProgress: 0,
+        completed: 0,
+        todayRevenue: 0
+      };
     }
   }
 }

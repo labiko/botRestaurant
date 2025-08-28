@@ -9,6 +9,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // Configuration
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const SEARCH_RADIUS_KM = 5;
+const PHONE_NUMBER_LENGTH_MIN = 11; // France, Guinée standard
+const PHONE_NUMBER_LENGTH_MAX = 12; // Internationaux complets
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const greenApiInstanceId = Deno.env.get('GREEN_API_INSTANCE_ID')!;
 const greenApiToken = Deno.env.get('GREEN_API_TOKEN')!;
@@ -206,6 +208,231 @@ class SimpleRestaurant {
 // Handlers simplifiés
 const whatsapp = new SimpleWhatsApp();
 
+// ✅ NOUVEAU : Fonction de formatage prix avec currency dynamique
+function formatPrice(amount: number, currency: string = 'GNF'): string {
+  const formatted = new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: 0
+  }).format(amount);
+  
+  // Mapping des devises vers leurs symboles
+  const currencySymbols: Record<string, string> = {
+    'GNF': 'GNF',
+    'EUR': '€',
+    'USD': '$',
+    'XOF': 'FCFA'
+  };
+  
+  const symbol = currencySymbols[currency] || currency;
+  return `${formatted} ${symbol}`;
+}
+
+// ✅ NOUVEAU : Fonction de détection format téléphone restaurant
+function isPhoneNumberFormat(message: string): boolean {
+  // Détecte un numéro de téléphone entre PHONE_NUMBER_LENGTH_MIN et PHONE_NUMBER_LENGTH_MAX
+  const cleanMessage = message.trim();
+  const phoneRegex = new RegExp(`^\\d{${PHONE_NUMBER_LENGTH_MIN},${PHONE_NUMBER_LENGTH_MAX}}$`);
+  return phoneRegex.test(cleanMessage);
+}
+
+// ✅ NOUVEAU : Fonction pour générer le message des modes de livraison disponibles
+async function getDeliveryModeMessage(restaurantId: string): Promise<string> {
+  const restaurant = await SimpleRestaurant.getById(restaurantId);
+  
+  if (!restaurant) {
+    return "❌ Erreur: restaurant non trouvé. Tapez 'resto' pour recommencer.";
+  }
+  
+  // Vérifier qu'au moins un mode est activé
+  if (!restaurant.allow_dine_in && !restaurant.allow_takeaway && !restaurant.allow_delivery) {
+    return "❌ Désolé, ce restaurant n'accepte aucune commande pour le moment.\n\n🔄 Tapez 'resto' pour choisir un autre restaurant.";
+  }
+  
+  let message = "📦 Comment souhaitez-vous récupérer votre commande?\n\n";
+  let options: string[] = [];
+  let optionNumber = 1;
+  
+  if (restaurant.allow_dine_in) {
+    options.push(`${optionNumber}️⃣ Sur place 🍽️ (manger au restaurant)`);
+    optionNumber++;
+  }
+  
+  if (restaurant.allow_takeaway) {
+    options.push(`${optionNumber}️⃣ À emporter 📦 (récupérer et partir)`);
+    optionNumber++;
+  }
+  
+  if (restaurant.allow_delivery) {
+    options.push(`${optionNumber}️⃣ Livraison 🏠 (nous vous livrons)`);
+    optionNumber++;
+  }
+  
+  message += options.join('\n') + '\n\nRépondez avec le numéro de votre choix.';
+  return message;
+}
+
+// ✅ NOUVEAU : Fonction pour générer le message des modes de paiement disponibles
+async function getPaymentModeMessage(restaurantId: string, deliveryMode: string): Promise<string> {
+  const restaurant = await SimpleRestaurant.getById(restaurantId);
+  
+  if (!restaurant) {
+    return "❌ Erreur: restaurant non trouvé. Tapez 'resto' pour recommencer.";
+  }
+  
+  // Vérifier qu'au moins un mode de paiement est activé
+  if (!restaurant.allow_pay_now && !restaurant.allow_pay_later) {
+    return "❌ Désolé, ce restaurant n'accepte aucun paiement pour le moment.\n\n🔄 Tapez 'resto' pour choisir un autre restaurant.";
+  }
+  
+  let message = "💳 Quand souhaitez-vous payer?\n\n";
+  let options: string[] = [];
+  let optionNumber = 1;
+  
+  if (restaurant.allow_pay_now) {
+    // Adapter le texte selon le pays/contexte du restaurant
+    const paymentMethod = restaurant.currency === 'GNF' ? 
+      "(Orange Money, Wave)" : 
+      "(carte bancaire)";
+    options.push(`${optionNumber}️⃣ Maintenant ${paymentMethod}`);
+    optionNumber++;
+  }
+  
+  if (restaurant.allow_pay_later) {
+    // Adapter le texte selon le mode de livraison
+    let laterText = "";
+    switch (deliveryMode) {
+      case 'sur_place':
+        laterText = "À la fin du repas (cash)";
+        break;
+      case 'a_emporter':
+        laterText = "À la récupération (cash)";
+        break;
+      case 'livraison':
+        laterText = "À la livraison (cash)";
+        break;
+      default:
+        laterText = "Plus tard (cash)";
+    }
+    options.push(`${optionNumber}️⃣ ${laterText}`);
+    optionNumber++;
+  }
+  
+  message += options.join('\n') + '\n\nRépondez avec votre choix.';
+  return message;
+}
+
+// ✅ NOUVEAU : Fonction pour mapper le choix utilisateur au mode de paiement réel
+function mapUserChoiceToPaymentMode(choice: string, restaurant: any): string | null {
+  const availableModes: string[] = [];
+  
+  if (restaurant.allow_pay_now) availableModes.push('maintenant');
+  if (restaurant.allow_pay_later) availableModes.push('plus_tard');
+  
+  const choiceIndex = parseInt(choice) - 1;
+  
+  if (choiceIndex >= 0 && choiceIndex < availableModes.length) {
+    return availableModes[choiceIndex];
+  }
+  
+  return null;
+}
+
+// ✅ NOUVEAU : Fonction pour mapper le choix utilisateur au mode de livraison réel
+function mapUserChoiceToDeliveryMode(choice: string, restaurant: any): string | null {
+  const availableModes: string[] = [];
+  
+  if (restaurant.allow_dine_in) availableModes.push('sur_place');
+  if (restaurant.allow_takeaway) availableModes.push('a_emporter');
+  if (restaurant.allow_delivery) availableModes.push('livraison');
+  
+  const choiceIndex = parseInt(choice) - 1;
+  
+  if (choiceIndex >= 0 && choiceIndex < availableModes.length) {
+    return availableModes[choiceIndex];
+  }
+  
+  return null;
+}
+
+// ✅ NOUVEAU : Fonction de recherche restaurant par téléphone
+async function findRestaurantByPhone(phoneNumber: string) {
+  try {
+    console.log('🔍 Recherche restaurant avec numéro:', phoneNumber);
+    
+    // Essayer différents formats de normalisation
+    const formats = [
+      phoneNumber, // Format original (ex: 622987654)
+      `+224${phoneNumber}`, // Format international (ex: +224622987654)
+      `224${phoneNumber}` // Format sans + (ex: 224622987654)
+    ];
+    
+    for (const format of formats) {
+      const { data: restaurant, error } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('telephone', format)
+        .single();
+      
+      if (!error && restaurant) {
+        console.log('✅ Restaurant trouvé:', restaurant.nom, 'statut:', restaurant.statut);
+        return restaurant;
+      }
+    }
+    
+    console.log('❌ Aucun restaurant trouvé avec ce numéro');
+    return null;
+  } catch (error) {
+    console.error('❌ Erreur recherche restaurant:', error);
+    return null;
+  }
+}
+
+// ✅ NOUVEAU : Fonction d'accès direct restaurant (suit le workflow "resto")
+async function handleDirectRestaurantAccess(phoneNumber: string, session: any, restaurant: any) {
+  try {
+    console.log(`🎯 Accès direct restaurant: ${restaurant.nom} - workflow comme "resto"`);
+    
+    // Créer ou récupérer le client (comme dans handleAccueil)
+    const client = await SimpleClient.findOrCreate(phoneNumber);
+    if (!client) {
+      console.error('❌ Impossible de créer/trouver le client');
+      await whatsapp.sendMessage(phoneNumber, 
+        '❌ Erreur de connexion à la base de données. Veuillez réessayer avec "resto".');
+      return;
+    }
+    
+    // Message de bienvenue personnalisé avec le restaurant trouvé
+    const welcomeMessage = `🍽️ Bienvenue chez ${restaurant.nom}!
+    
+Nous avons trouvé votre restaurant 📞 ${restaurant.telephone}
+
+📋 Voici notre menu du jour :`;
+    
+    await whatsapp.sendMessage(phoneNumber, welcomeMessage);
+    
+    // Mettre à jour la session vers VIEWING_MENU (comme dans handleRestaurantSelection)
+    const updatedSession = await SimpleSession.update(session.id, {
+      state: 'VIEWING_MENU',
+      context: {
+        ...session.context,
+        selectedRestaurantId: restaurant.id,
+        selectedRestaurantName: restaurant.nom
+      }
+    });
+    
+    console.log('✅ Session mise à jour avec restaurant ID:', restaurant.id);
+    
+    // Afficher le menu directement (même logique que le workflow normal)
+    await showSimpleMenu(phoneNumber, restaurant, updatedSession);
+    
+    console.log('✅ Menu affiché avec succès pour', restaurant.nom);
+    
+  } catch (error) {
+    console.error('❌ Erreur accès direct restaurant:', error);
+    await whatsapp.sendMessage(phoneNumber,
+      '❌ Erreur lors de l\'accès au restaurant. Tapez "resto" pour recommencer.');
+  }
+}
+
 async function handleAccueil(phoneNumber: string, session: any) {
   console.log('🏠 Gestion accueil pour:', phoneNumber);
 
@@ -218,8 +445,8 @@ async function handleAccueil(phoneNumber: string, session: any) {
     return;
   }
 
-  // Message d'accueil
-  const welcomeMessage = `🍽️ Bienvenue chez Bot Resto Conakry!
+  // Message d'accueil générique
+  const welcomeMessage = `🍽️ Bienvenue!
 
 Comment souhaitez-vous trouver votre restaurant?
 
@@ -228,7 +455,7 @@ Comment souhaitez-vous trouver votre restaurant?
 
 Répondez avec le numéro de votre choix.
 
-💡 Tapez "annuler" à tout moment pour arrêter votre commande.`;
+💡 Tapez "annuler" pour arrêter, "retour" pour changer ou le numéro du resto pour accéder directement.`;
 
   await whatsapp.sendMessage(phoneNumber, welcomeMessage);
   
@@ -570,9 +797,9 @@ async function showSimpleMenu(phoneNumber: string, restaurant: any, session: any
         menuMessage += `${categoryEmojis[category]}\n`;
         
         for (const item of categoryItems) {
-          const formattedPrice = new Intl.NumberFormat('fr-GN').format(item.prix);
+          const formattedPrice = formatPrice(item.prix, restaurant.currency);
           const displayNumber = itemIndex <= 9 ? `${itemIndex}️⃣` : `(${itemIndex})`;
-          menuMessage += `${displayNumber} ${item.nom_plat} - ${formattedPrice} GNF\n`;
+          menuMessage += `${displayNumber} ${item.nom_plat} - ${formattedPrice}\n`;
           
           // Stocker l'ordre exact pour la commande
           orderedMenu.push({
@@ -690,6 +917,10 @@ async function handleOrderCommand(phoneNumber: string, session: any, command: st
     return;
   }
 
+  // Récupérer le restaurant pour la currency
+  const restaurantId = session.context.selectedRestaurantId;
+  const restaurant = await SimpleRestaurant.getById(restaurantId);
+  
   // Calculer le total
   let subtotal = 0;
   let cartMessage = '🛒 Votre panier:\n\n';
@@ -698,12 +929,12 @@ async function handleOrderCommand(phoneNumber: string, session: any, command: st
     const itemTotal = cartItem.item.prix * cartItem.quantity;
     subtotal += itemTotal;
     
-    const formattedPrice = new Intl.NumberFormat('fr-GN').format(itemTotal);
-    cartMessage += `• ${cartItem.quantity}× ${cartItem.item.nom_plat} - ${formattedPrice} GNF\n`;
+    const formattedPrice = formatPrice(itemTotal, restaurant?.currency);
+    cartMessage += `• ${cartItem.quantity}× ${cartItem.item.nom_plat} - ${formattedPrice}\n`;
   }
 
-  const formattedSubtotal = new Intl.NumberFormat('fr-GN').format(subtotal);
-  cartMessage += `\n────────────────────\n💰 Sous-total: ${formattedSubtotal} GNF\n\n✅ Confirmer cette commande? (OUI/NON)`;
+  const formattedSubtotal = formatPrice(subtotal, restaurant?.currency);
+  cartMessage += `\n────────────────────\n💰 Sous-total: ${formattedSubtotal}\n\n✅ Confirmer cette commande? (OUI/NON)`;
 
   await whatsapp.sendMessage(phoneNumber, cartMessage);
 
@@ -799,7 +1030,42 @@ async function showCartItemsForRemoval(phoneNumber: string, session: any) {
 async function handleModeSelection(phoneNumber: string, session: any) {
   console.log('📦 Sélection du mode');
 
-  const modeMessage = `📦 Comment souhaitez-vous récupérer votre commande?\n\n1️⃣ Sur place 🍽️ (manger au restaurant)\n2️⃣ À emporter 📦 (récupérer et partir)\n3️⃣ Livraison 🏠 (nous vous livrons)\n\nRépondez avec le numéro de votre choix.`;
+  // Récupérer le message personnalisé selon les modes disponibles du restaurant
+  const restaurantId = session.context.selectedRestaurantId;
+  const modeMessage = await getDeliveryModeMessage(restaurantId);
+  
+  // Vérifier si le restaurant a des modes disponibles
+  if (modeMessage.startsWith("❌")) {
+    // Aucun mode disponible ou erreur
+    await whatsapp.sendMessage(phoneNumber, modeMessage);
+    return;
+  }
+  
+  // Vérifier s'il n'y a qu'un seul mode disponible
+  const restaurant = await SimpleRestaurant.getById(restaurantId);
+  const activeModes = [restaurant?.allow_dine_in, restaurant?.allow_takeaway, restaurant?.allow_delivery]
+    .filter(Boolean).length;
+  
+  if (activeModes === 1) {
+    // Un seul mode disponible, passer automatiquement
+    const mode = restaurant.allow_dine_in ? 'sur_place' : 
+                 restaurant.allow_takeaway ? 'a_emporter' : 'livraison';
+    
+    console.log(`📦 Un seul mode disponible: ${mode}, passage automatique`);
+    
+    // Mettre à jour le contexte avec le mode
+    session.context.mode = mode;
+    
+    // Appeler directement la fonction appropriée
+    if (mode === 'sur_place') {
+      await handleSurPlaceMode(phoneNumber, session);
+    } else if (mode === 'a_emporter') {
+      await handleEmporterMode(phoneNumber, session);
+    } else {
+      await handleLivraisonMode(phoneNumber, session);
+    }
+    return;
+  }
 
   await whatsapp.sendMessage(phoneNumber, modeMessage);
 
@@ -815,30 +1081,61 @@ async function handleModeSelection(phoneNumber: string, session: any) {
 async function handleModeChoice(phoneNumber: string, session: any, choice: string) {
   console.log('📦 Choix du mode:', choice);
 
-  switch (choice.trim()) {
-    case '1':
-      // Sur place
+  // Récupérer le restaurant pour mapper correctement le choix
+  const restaurantId = session.context.selectedRestaurantId;
+  const restaurant = await SimpleRestaurant.getById(restaurantId);
+  
+  if (!restaurant) {
+    await whatsapp.sendMessage(phoneNumber,
+      '❌ Erreur: restaurant non trouvé. Tapez "resto" pour recommencer.');
+    return;
+  }
+  
+  // Mapper le choix utilisateur au mode réel selon les modes disponibles
+  const mode = mapUserChoiceToDeliveryMode(choice.trim(), restaurant);
+  
+  if (!mode) {
+    // Choix invalide, renvoyer le message approprié
+    const modeMessage = await getDeliveryModeMessage(restaurantId);
+    await whatsapp.sendMessage(phoneNumber,
+      `❓ Choix non reconnu.\n\n${modeMessage}`);
+    return;
+  }
+  
+  // Mettre à jour le contexte avec le mode
+  session.context.mode = mode;
+  
+  // Appeler la fonction appropriée selon le mode mappé
+  switch (mode) {
+    case 'sur_place':
       await handleSurPlaceMode(phoneNumber, session);
       break;
     
-    case '2':
-      // À emporter
+    case 'a_emporter':
       await handleEmporterMode(phoneNumber, session);
       break;
     
-    case '3':
-      // Livraison
+    case 'livraison':
       await handleLivraisonMode(phoneNumber, session);
       break;
     
     default:
       await whatsapp.sendMessage(phoneNumber,
-        '❓ Choix non reconnu. Répondez avec:\n1️⃣ Sur place\n2️⃣ À emporter\n3️⃣ Livraison');
+        '❓ Erreur de configuration. Veuillez réessayer.');
   }
 }
 
 // Fonction pour le mode sur place
 async function handleSurPlaceMode(phoneNumber: string, session: any) {
+  const restaurantId = session.context.selectedRestaurantId;
+  const paymentMessage = await getPaymentModeMessage(restaurantId, 'sur_place');
+  
+  // Vérifier si le restaurant a des modes de paiement disponibles
+  if (paymentMessage.startsWith("❌")) {
+    await whatsapp.sendMessage(phoneNumber, paymentMessage);
+    return;
+  }
+
   const message = `🍽️ Mode: SUR PLACE
 
 Votre commande sera préparée pour être consommée au restaurant.
@@ -846,12 +1143,7 @@ Votre commande sera préparée pour être consommée au restaurant.
 💰 Récapitulatif final:
 ${await formatFinalSummary(session, 'sur_place')}
 
-Quand souhaitez-vous payer?
-
-1️⃣ Maintenant (paiement mobile)
-2️⃣ À la fin du repas (au restaurant)
-
-Répondez avec votre choix.`;
+${paymentMessage}`;
 
   await whatsapp.sendMessage(phoneNumber, message);
 
@@ -867,6 +1159,15 @@ Répondez avec votre choix.`;
 
 // Fonction pour le mode à emporter
 async function handleEmporterMode(phoneNumber: string, session: any) {
+  const restaurantId = session.context.selectedRestaurantId;
+  const paymentMessage = await getPaymentModeMessage(restaurantId, 'a_emporter');
+  
+  // Vérifier si le restaurant a des modes de paiement disponibles
+  if (paymentMessage.startsWith("❌")) {
+    await whatsapp.sendMessage(phoneNumber, paymentMessage);
+    return;
+  }
+
   const message = `📦 Mode: À EMPORTER
 
 Votre commande sera préparée pour récupération.
@@ -875,12 +1176,7 @@ Votre commande sera préparée pour récupération.
 💰 Récapitulatif final:
 ${await formatFinalSummary(session, 'emporter')}
 
-Quand souhaitez-vous payer?
-
-1️⃣ Maintenant (paiement mobile)
-2️⃣ À la récupération (au restaurant)
-
-Répondez avec votre choix.`;
+${paymentMessage}`;
 
   await whatsapp.sendMessage(phoneNumber, message);
 
@@ -1024,30 +1320,35 @@ async function handleDeliveryAddress(phoneNumber: string, session: any, message:
 // Fonction utilitaire pour formater le récapitulatif final
 async function formatFinalSummary(session: any, mode: string): Promise<string> {
   const cart = session.context.cart || {};
+  
+  // Récupérer le restaurant pour la currency
+  const restaurantId = session.context.selectedRestaurantId;
+  const restaurant = await SimpleRestaurant.getById(restaurantId);
+  
   let summary = '';
   
   for (const [itemKey, cartItem] of Object.entries(cart) as [string, any][]) {
     const itemTotal = cartItem.item.prix * cartItem.quantity;
-    const formattedPrice = new Intl.NumberFormat('fr-GN').format(itemTotal);
-    summary += `• ${cartItem.quantity}× ${cartItem.item.nom_plat} - ${formattedPrice} GNF\n`;
+    const formattedPrice = formatPrice(itemTotal, restaurant?.currency);
+    summary += `• ${cartItem.quantity}× ${cartItem.item.nom_plat} - ${formattedPrice}\n`;
   }
   
   const subtotal = session.context.subtotal || 0;
   const fraisLivraison = session.context.frais_livraison || 0;
   const total = subtotal + fraisLivraison;
   
-  const formattedSubtotal = new Intl.NumberFormat('fr-GN').format(subtotal);
-  const formattedTotal = new Intl.NumberFormat('fr-GN').format(total);
+  const formattedSubtotal = formatPrice(subtotal, restaurant?.currency);
+  const formattedTotal = formatPrice(total, restaurant?.currency);
   
   summary += `\n────────────────────`;
-  summary += `\n💰 Sous-total: ${formattedSubtotal} GNF`;
+  summary += `\n💰 Sous-total: ${formattedSubtotal}`;
   
   if (fraisLivraison > 0) {
-    const formattedFrais = new Intl.NumberFormat('fr-GN').format(fraisLivraison);
-    summary += `\n🚛 Frais livraison: ${formattedFrais} GNF`;
+    const formattedFrais = formatPrice(fraisLivraison, restaurant?.currency);
+    summary += `\n🚛 Frais livraison: ${formattedFrais}`;
   }
   
-  summary += `\n💳 TOTAL: ${formattedTotal} GNF`;
+  summary += `\n💳 TOTAL: ${formattedTotal}`;
   
   return summary;
 }
@@ -1135,21 +1436,40 @@ function isRestaurantOpen(restaurant: any): {
 // Fonction pour gérer le timing de paiement
 async function handlePaymentTiming(phoneNumber: string, session: any, choice: string) {
   console.log('💰 Timing de paiement:', choice);
-
-  switch (choice.trim()) {
-    case '1':
-      // Paiement maintenant
+  
+  const restaurantId = session.context.selectedRestaurantId;
+  const restaurant = await SimpleRestaurant.getById(restaurantId);
+  
+  if (!restaurant) {
+    await whatsapp.sendMessage(phoneNumber, 
+      "❌ Erreur: restaurant non trouvé. Tapez 'resto' pour recommencer.");
+    return;
+  }
+  
+  // Mapper le choix utilisateur au mode de paiement réel
+  const paymentMode = mapUserChoiceToPaymentMode(choice.trim(), restaurant);
+  
+  if (!paymentMode) {
+    // Choix invalide, renvoyer le message approprié
+    const paymentMessage = await getPaymentModeMessage(restaurantId, session.context.mode);
+    await whatsapp.sendMessage(phoneNumber,
+      `❓ Choix non reconnu.\n\n${paymentMessage}`);
+    return;
+  }
+  
+  // Appeler la fonction appropriée selon le mode de paiement mappé
+  switch (paymentMode) {
+    case 'maintenant':
       await handlePaymentNow(phoneNumber, session);
       break;
     
-    case '2':
-      // Paiement plus tard
+    case 'plus_tard':
       await handlePaymentLater(phoneNumber, session);
       break;
     
     default:
       await whatsapp.sendMessage(phoneNumber,
-        '❓ Choix non reconnu. Répondez avec:\n1️⃣ Maintenant\n2️⃣ Plus tard');
+        '❓ Mode de paiement non reconnu.');
   }
 }
 
@@ -1226,7 +1546,7 @@ async function handlePaymentLater(phoneNumber: string, session: any) {
 🍽️ Préparez-vous à vous régaler !
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🙏 Merci de votre confiance, Bot Resto Conakry !
+🙏 Merci de votre confiance, ${session.context.selectedRestaurantName} !
 
 🔄 Pour recommander, tapez simplement "resto"
 ❌ Pour annuler cette commande, tapez "annuler"`;
@@ -1239,6 +1559,70 @@ async function handlePaymentLater(phoneNumber: string, session: any) {
   } else {
     await whatsapp.sendMessage(phoneNumber, 
       '❌ Erreur lors de la création de la commande. Veuillez réessayer avec "resto".');
+  }
+}
+
+// Fonction pour notifier le livreur de l'annulation d'une commande
+async function notifyDeliveryDriverOfCancellation(orderId: string): Promise<void> {
+  try {
+    // Récupérer les détails de la commande pour obtenir les infos du livreur et du restaurant
+    const { data: orderData, error } = await supabase
+      .from('commandes')
+      .select('livreur_phone, livreur_nom, client_id, total, adresse_livraison, restaurant_id')
+      .eq('numero_commande', orderId)
+      .single();
+    
+    if (error || !orderData) {
+      console.error('❌ Erreur récupération commande pour notification livreur:', error);
+      return;
+    }
+    
+    // Vérifier si un livreur est assigné
+    if (!orderData.livreur_phone) {
+      console.log('ℹ️ Pas de livreur assigné pour la commande', orderId);
+      return;
+    }
+    
+    // Récupérer les infos du client
+    const { data: clientData } = await supabase
+      .from('clients')
+      .select('nom')
+      .eq('id', orderData.client_id)
+      .single();
+    
+    const clientName = clientData?.nom || 'Client';
+    
+    // Récupérer le restaurant pour la currency
+    const restaurant = await SimpleRestaurant.getById(orderData.restaurant_id);
+    
+    // Créer le message de notification moderne avec emojis
+    const message = `🚨 *COMMANDE ANNULÉE*
+
+📦 *Commande N°${orderId}*
+👤 Client: ${clientName}
+📍 Adresse: ${orderData.adresse_livraison || 'Non spécifiée'}
+💰 Montant: ${formatPrice(orderData.total, restaurant?.currency)}
+
+❌ Cette commande a été annulée par le client.
+
+⚠️ *Ne vous déplacez pas pour cette livraison*
+
+Si vous étiez déjà en route, veuillez retourner au restaurant ou attendre une nouvelle commande.
+
+Merci de votre compréhension.`;
+    
+    // Envoyer la notification via WhatsApp
+    const whatsapp = new SimpleWhatsApp();
+    const sent = await whatsapp.sendMessage(orderData.livreur_phone, message);
+    
+    if (sent) {
+      console.log(`✅ Notification d'annulation envoyée au livreur ${orderData.livreur_nom} (${orderData.livreur_phone})`);
+    } else {
+      console.error(`❌ Échec envoi notification au livreur ${orderData.livreur_nom}`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de la notification du livreur:', error);
   }
 }
 
@@ -1379,6 +1763,34 @@ async function processMessage(phoneNumber: string, message: string) {
         let cancelMessage = '';
         
         if (orderId) {
+          // Vérifier d'abord le statut actuel de la commande
+          const { data: orderCheck, error: checkError } = await supabase
+            .from('commandes')
+            .select('statut')
+            .eq('numero_commande', orderId)
+            .single();
+          
+          if (orderCheck && !checkError) {
+            // Vérifier si la commande peut être annulée
+            const nonCancellableStatuses = ['terminee', 'livree', 'annulee'];
+            if (nonCancellableStatuses.includes(orderCheck.statut)) {
+              cancelMessage = `⚠️ Impossible d'annuler la commande N°${orderId}.\n`;
+              if (orderCheck.statut === 'livree') {
+                cancelMessage += 'Cette commande a déjà été livrée.\n\n';
+              } else if (orderCheck.statut === 'terminee') {
+                cancelMessage += 'Cette commande est déjà terminée.\n\n';
+              } else if (orderCheck.statut === 'annulee') {
+                cancelMessage += 'Cette commande est déjà annulée.\n\n';
+              }
+              await whatsapp.sendMessage(phoneNumber, 
+                cancelMessage + '💡 Tapez "annuler" pour arrêter, "retour" pour changer ou le numéro du resto pour accéder directement.');
+              
+              // Nettoyer la session même si on ne peut pas annuler
+              await SimpleSession.deleteAllForPhone(phoneNumber);
+              return;
+            }
+          }
+          
           // Mettre à jour le statut de la commande en base de données
           const { error } = await supabase
             .from('commandes')
@@ -1386,11 +1798,28 @@ async function processMessage(phoneNumber: string, message: string) {
               statut: 'annulee',
               cancelled_at: new Date().toISOString()
             })
-            .eq('numero_commande', orderId);
+            .eq('numero_commande', orderId)
+            .not('statut', 'in', '(terminee,livree,annulee)'); // Protection supplémentaire
           
           if (!error) {
-            cancelMessage = `❌ Commande N°${orderId} annulée avec succès.\n\n`;
+            // Récupérer les informations du restaurant pour le message
+            const restaurantId = session.context.selectedRestaurantId;
+            const restaurant = await SimpleRestaurant.getById(restaurantId);
+            const restaurantName = restaurant?.nom || 'Restaurant';
+            const restaurantPhone = restaurant?.telephone || '';
+            
+            cancelMessage = `❌ COMMANDE ANNULÉE
+📋 N°${orderId} • ${restaurantName}
+📞 Restaurant: ${restaurantPhone}
+
+🙏 Nous sommes désolés
+
+
+`;
             console.log(`✅ Commande ${orderId} marquée comme annulée en base`);
+            
+            // Notifier le livreur si assigné
+            await notifyDeliveryDriverOfCancellation(orderId);
           } else {
             console.error('⚠️ Erreur lors de la mise à jour du statut:', error);
             cancelMessage = '❌ Commande annulée.\n\n';
@@ -1403,7 +1832,7 @@ async function processMessage(phoneNumber: string, message: string) {
         // Annuler définitivement et nettoyer la session
         await SimpleSession.deleteAllForPhone(phoneNumber);
         await whatsapp.sendMessage(phoneNumber, 
-          cancelMessage + '🔄 Tapez "resto" pour commencer une nouvelle commande.');
+          cancelMessage + '💡 Tapez "annuler" pour arrêter, "retour" pour changer ou le numéro du resto pour accéder directement.');
         return;
       } else if (response === 'non' || response === 'n' || response === 'no') {
         // Reprendre là où on était
@@ -1424,6 +1853,73 @@ async function processMessage(phoneNumber: string, message: string) {
         await whatsapp.sendMessage(phoneNumber, 
           '❓ Réponse non reconnue.\n\n' +
           'Tapez "oui" pour annuler ou "non" pour continuer.');
+        return;
+      }
+    }
+
+    // ✅ NOUVEAU : Détection numéro téléphone restaurant (avant restartKeywords pour priorité)
+    if (isPhoneNumberFormat(message)) {
+      console.log('📱 Format téléphone détecté:', message);
+      const restaurant = await findRestaurantByPhone(message);
+      
+      if (restaurant) {
+        // Vérifier le statut et les horaires du restaurant trouvé
+        console.log(`✅ Restaurant trouvé: ${restaurant.nom}, statut: ${restaurant.statut}`);
+        
+        // Si restaurant fermé définitivement
+        if (restaurant.statut === 'ferme') {
+          await whatsapp.sendMessage(phoneNumber,
+            `😔 ${restaurant.nom} est actuellement fermé.\n\n` +
+            '🔄 Tapez "resto" pour découvrir nos autres restaurants.');
+          return;
+        }
+        
+        // Si restaurant temporairement fermé
+        if (restaurant.statut === 'temporairement_ferme') {
+          await whatsapp.sendMessage(phoneNumber,
+            `⏰ ${restaurant.nom} est temporairement fermé.\n\n` +
+            'Nous rouvrirons bientôt !\n' +
+            '🔄 Tapez "resto" pour voir d\'autres restaurants disponibles.');
+          return;
+        }
+        
+        // Si restaurant ouvert en statut, vérifier les horaires
+        if (restaurant.statut === 'ouvert') {
+          // Vérifier les horaires d'ouverture avec la fonction existante
+          const openStatus = isRestaurantOpen(restaurant);
+          
+          if (!openStatus.isOpen) {
+            // Restaurant fermé selon les horaires
+            let message = `⏰ ${restaurant.nom} est fermé en ce moment.\n\n`;
+            
+            if (openStatus.nextOpenTime) {
+              message += `🕐 Nous ouvrirons ${openStatus.nextOpenTime}\n\n`;
+            }
+            
+            message += '🔄 Tapez "resto" pour voir les restaurants ouverts maintenant.';
+            
+            await whatsapp.sendMessage(phoneNumber, message);
+            return;
+          }
+          
+          // Restaurant ouvert : procéder normalement
+          console.log(`✅ Restaurant ${restaurant.nom} ouvert, workflow comme "resto" mais direct au menu`);
+          
+          // Même démarrage que "resto" - créer session propre
+          await SimpleSession.deleteAllForPhone(phoneNumber);
+          session = await SimpleSession.create(phoneNumber, 'INITIAL');
+          console.log('✅ Nouvelle session créée:', session.id);
+          
+          // Suivre le workflow "resto" mais aller directement au restaurant trouvé
+          await handleDirectRestaurantAccess(phoneNumber, session, restaurant);
+          return;
+        }
+      } else {
+        // Numéro format téléphone mais restaurant vraiment non trouvé
+        console.log('❌ Aucun restaurant trouvé pour ce numéro');
+        await whatsapp.sendMessage(phoneNumber,
+          `❌ Aucun restaurant trouvé avec le numéro ${message}.\n\n` +
+          '🔄 Tapez "resto" pour voir tous nos restaurants disponibles.');
         return;
       }
     }
@@ -1557,9 +2053,11 @@ serve(async (req) => {
       if (webhook.typeWebhook === 'incomingMessageReceived') {
         const phoneNumber = webhook.senderData?.sender.replace(/@.*/, '') || '';
         
-        // Messages texte
-        if (webhook.messageData?.typeMessage === 'textMessage') {
-          const message = webhook.messageData.textMessageData?.textMessage || '';
+        // Messages texte (textMessage et extendedTextMessage)
+        if (webhook.messageData?.typeMessage === 'textMessage' || webhook.messageData?.typeMessage === 'extendedTextMessage') {
+          const message = webhook.messageData.textMessageData?.textMessage || 
+                         webhook.messageData.extendedTextMessageData?.text || '';
+          
           if (phoneNumber && message) {
             await processMessage(phoneNumber, message);
           }
@@ -1586,8 +2084,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Erreur serveur:', error);
+    console.error('❌ Stack trace:', error.stack);
+    console.error('❌ Message:', error.message);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

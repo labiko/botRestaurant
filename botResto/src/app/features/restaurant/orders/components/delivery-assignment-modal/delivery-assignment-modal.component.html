@@ -1,6 +1,8 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title style="font-size: 1rem; font-weight: 600;">Affecter un livreur</ion-title>
+    <ion-title style="font-size: 1rem; font-weight: 600;">
+      {{ isReassignment ? 'Changer de livreur' : 'Affecter un livreur' }}
+    </ion-title>
     <ion-buttons slot="end">
       <ion-button fill="clear" (click)="cancel()" style="--color: #6b7280;">
         <ion-icon name="close" style="font-size: 1.25rem;"></ion-icon>
@@ -11,6 +13,19 @@
 
 <ion-content class="delivery-modal-content">
   
+  <!-- Reassignment Alert -->
+  <ion-card *ngIf="isReassignment" class="reassignment-alert">
+    <ion-card-content>
+      <ion-item lines="none">
+        <ion-icon name="information-circle" slot="start" color="warning"></ion-icon>
+        <ion-label>
+          <h3>Changement de livreur</h3>
+          <p>Le livreur actuel ({{ currentDriver }}) sera notifié du changement</p>
+        </ion-label>
+      </ion-item>
+    </ion-card-content>
+  </ion-card>
+
   <!-- Order Summary -->
   <div class="order-summary">
     <ion-card class="summary-card">

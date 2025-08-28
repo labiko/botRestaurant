@@ -185,18 +185,25 @@ export class RestaurantOrdersService {
   // Load available delivery users for specific restaurant
   async loadAvailableDeliveryUsers(restaurantId?: string): Promise<DeliveryUser[]> {
     try {
+      console.log('🔍 Loading delivery users for restaurant:', restaurantId);
+      
       let query = this.supabase
         .from('delivery_users')
         .select('id, telephone, nom, is_online, rating, total_deliveries, restaurant_id')
         .eq('status', 'actif')
-        .eq('is_online', true);
+        .eq('is_online', true)
+        .eq('is_blocked', false);  // Ajout du filtre is_blocked
 
       // Filter by restaurant if provided
       if (restaurantId) {
         query = query.eq('restaurant_id', restaurantId);
+        console.log('📍 Filtering by restaurant_id:', restaurantId);
       }
 
       const { data: deliveryUsers, error } = await query.order('rating', { ascending: false });
+      
+      console.log('👥 Delivery users found:', deliveryUsers?.length || 0);
+      console.log('📋 Delivery users details:', deliveryUsers);
 
       if (error) {
         console.error('Error loading delivery users:', error);
@@ -232,6 +239,9 @@ export class RestaurantOrdersService {
         updateData.prepared_at = new Date().toISOString();
       } else if (newStatus === 'livree') {
         updateData.delivered_at = new Date().toISOString();
+      } else if (newStatus === 'terminee') {
+        // Quand commande terminée, marquer le paiement comme payé
+        updateData.paiement_statut = 'paye';
       }
 
       if (note) {
@@ -252,7 +262,12 @@ export class RestaurantOrdersService {
       const currentOrders = this.ordersSubject.value;
       const updatedOrders = currentOrders.map(order => 
         order.id === orderId 
-          ? { ...order, statut: newStatus, note_restaurant: note || order.note_restaurant }
+          ? { 
+              ...order, 
+              statut: newStatus, 
+              note_restaurant: note || order.note_restaurant,
+              ...(newStatus === 'terminee' && { paiement_statut: 'paye' as Order['paiement_statut'] })
+            }
           : order
       );
       this.ordersSubject.next(updatedOrders);
@@ -516,6 +531,301 @@ export class RestaurantOrdersService {
     } catch (error) {
       console.error('Error loading restaurant coordinates:', error);
       return null;
+    }
+  }
+
+  // Réassigner une commande à un nouveau livreur
+  async reassignDeliveryDriver(orderId: string, newDriverId: number): Promise<boolean> {
+    try {
+      console.log('🔄 Reassigning order:', { orderId, newDriverId });
+      
+      // Récupérer les détails de la commande actuelle (avec coordonnées GPS et infos paiement)
+      const { data: orderData, error: orderError } = await this.supabase
+        .from('commandes')
+        .select('numero_commande, livreur_phone, livreur_nom, adresse_livraison, latitude_livraison, longitude_livraison, total, paiement_mode, paiement_statut')
+        .eq('id', orderId)
+        .single();
+
+      if (orderError || !orderData) {
+        console.error('❌ Error fetching order details:', {
+          error: orderError,
+          orderId: orderId,
+          message: orderError?.message || 'Unknown error'
+        });
+        return false;
+      }
+
+      console.log('✅ Order data fetched:', orderData);
+      
+      // Récupérer les infos du nouveau livreur (incluant sa position)
+      const { data: newDriver, error: driverError } = await this.supabase
+        .from('delivery_users')
+        .select('nom, telephone, latitude, longitude')
+        .eq('id', newDriverId)
+        .single();
+
+      if (driverError || !newDriver) {
+        console.error('❌ Error fetching new driver details:', {
+          error: driverError,
+          newDriverId: newDriverId,
+          message: driverError?.message || 'Unknown error'
+        });
+        return false;
+      }
+      
+      console.log('✅ New driver data fetched:', newDriver);
+
+      // Sauvegarder l'ancien livreur pour la notification
+      const oldDriverPhone = orderData.livreur_phone;
+      const oldDriverName = orderData.livreur_nom;
+
+      // Mettre à jour la commande avec le nouveau livreur
+      const { error: updateError } = await this.supabase
+        .from('commandes')
+        .update({
+          livreur_nom: newDriver.nom,
+          livreur_phone: newDriver.telephone,
+          assigned_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (updateError) {
+        console.error('Error updating order with new driver:', updateError);
+        return false;
+      }
+
+      // Envoyer les notifications WhatsApp
+      await this.sendReassignmentNotifications(
+        orderData.numero_commande,
+        oldDriverPhone,
+        oldDriverName,
+        newDriver.telephone,
+        newDriver.nom,
+        orderData.adresse_livraison,
+        orderData.latitude_livraison,
+        orderData.longitude_livraison,
+        newDriver.latitude,
+        newDriver.longitude,
+        orderData.total,
+        orderData.paiement_mode,
+        orderData.paiement_statut
+      );
+
+      // Mettre à jour le state local
+      const currentOrders = this.ordersSubject.value;
+      const updatedOrders = currentOrders.map(order => 
+        order.id === orderId 
+          ? { ...order, livreur_nom: newDriver.nom, livreur_phone: newDriver.telephone }
+          : order
+      );
+      this.ordersSubject.next(updatedOrders);
+
+      return true;
+    } catch (error) {
+      console.error('Error reassigning delivery driver:', error);
+      return false;
+    }
+  }
+
+  // Envoyer les notifications de réassignation aux deux livreurs
+  private async sendReassignmentNotifications(
+    orderNumber: string,
+    oldDriverPhone: string | null,
+    oldDriverName: string | null,
+    newDriverPhone: string,
+    newDriverName: string,
+    deliveryAddress: string | null,
+    clientLatitude: number | null,
+    clientLongitude: number | null,
+    driverLatitude: number | null,
+    driverLongitude: number | null,
+    total: number,
+    paymentMode: string,
+    paymentStatus: string
+  ): Promise<void> {
+    try {
+      // Message pour l'ancien livreur (si existant)
+      if (oldDriverPhone) {
+        const oldDriverMessage = `⚠️ *CHANGEMENT DE LIVREUR*
+
+📦 *Commande N°${orderNumber}*
+
+❌ Cette commande a été réassignée à un autre livreur.
+
+⚠️ *Ne vous déplacez pas pour cette livraison*
+
+Si vous étiez déjà en route, veuillez retourner au restaurant.
+
+Merci de votre compréhension.`;
+
+        await this.whatsAppService.sendMessage(oldDriverPhone, oldDriverMessage, orderNumber);
+        console.log(`✅ Notification envoyée à l'ancien livreur ${oldDriverName}`);
+      }
+
+      // Extraire les coordonnées depuis l'adresse si les colonnes lat/lng sont NULL
+      let finalClientLatitude = clientLatitude;
+      let finalClientLongitude = clientLongitude;
+      
+      if (!finalClientLatitude && !finalClientLongitude && deliveryAddress) {
+        const coords = this.extractCoordinatesFromAddress(deliveryAddress);
+        if (coords) {
+          finalClientLatitude = coords.latitude;
+          finalClientLongitude = coords.longitude;
+        }
+      }
+
+      // Debug des coordonnées
+      console.log('🧭 Coordonnées pour calcul temps:', {
+        originalClientLatitude: clientLatitude,
+        originalClientLongitude: clientLongitude,
+        finalClientLatitude,
+        finalClientLongitude,
+        driverLatitude,
+        driverLongitude,
+        deliveryAddress
+      });
+
+      // Calculer le temps de livraison estimé
+      let estimatedTime = '30-40 min'; // Valeur par défaut
+      
+      if (driverLatitude && driverLongitude && finalClientLatitude && finalClientLongitude) {
+        const timeMinutes = this.calculateDeliveryTime(
+          driverLatitude,
+          driverLongitude,
+          finalClientLatitude,
+          finalClientLongitude
+        );
+        
+        // Ajouter une marge de 5-10 minutes pour le temps au restaurant
+        const minTime = timeMinutes + 5;
+        const maxTime = timeMinutes + 10;
+        estimatedTime = `${minTime}-${maxTime} min`;
+      }
+
+      // Message pour le nouveau livreur
+      let newDriverMessage = `🎯 *NOUVELLE COMMANDE ASSIGNÉE*
+
+📦 *Commande N°${orderNumber}*
+💰 Montant: ${new Intl.NumberFormat('fr-GN').format(total)} GNF
+💳 Mode: ${this.formatPaymentMode(paymentMode)}
+📊 Statut: ${this.formatPaymentStatus(paymentStatus)}
+
+✅ Cette commande vous a été assignée.`;
+
+      // Ajouter le lien Google Maps si les coordonnées sont disponibles
+      if (finalClientLatitude && finalClientLongitude) {
+        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${finalClientLatitude},${finalClientLongitude}&travelmode=driving`;
+        newDriverMessage += `
+
+📍 *Itinéraire vers le client:*
+${mapsUrl}`;
+      } else if (deliveryAddress) {
+        newDriverMessage += `
+
+📍 Adresse: ${deliveryAddress}`;
+      }
+
+      newDriverMessage += `
+
+🚀 *Veuillez vous rendre au restaurant pour récupérer la commande*
+
+⏰ Délai de livraison estimé: ${estimatedTime}
+
+Bonne livraison !`;
+
+      await this.whatsAppService.sendMessage(newDriverPhone, newDriverMessage, orderNumber);
+      console.log(`✅ Notification envoyée au nouveau livreur ${newDriverName}`);
+      
+    } catch (error) {
+      console.error('Error sending reassignment notifications:', error);
+    }
+  }
+
+  // Calculer le temps de livraison estimé basé sur la distance
+  private calculateDeliveryTime(
+    driverLat: number,
+    driverLng: number,
+    clientLat: number,
+    clientLng: number
+  ): number {
+    try {
+      // Formule de Haversine pour calculer la distance
+      const R = 6371; // Rayon de la Terre en km
+      const dLat = this.toRadians(clientLat - driverLat);
+      const dLng = this.toRadians(clientLng - driverLng);
+      
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(this.toRadians(driverLat)) * Math.cos(this.toRadians(clientLat)) *
+                Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distanceKm = R * c;
+      
+      // Estimer le temps basé sur la distance
+      // Vitesse moyenne de 20 km/h dans le trafic de Conakry
+      const averageSpeedKmh = 20;
+      const timeHours = distanceKm / averageSpeedKmh;
+      const timeMinutes = Math.round(timeHours * 60);
+      
+      // Ajouter 5 minutes de buffer avec un minimum de 10 minutes
+      const estimatedTime = Math.max(timeMinutes + 5, 10);
+      
+      console.log(`📍 Distance: ${distanceKm.toFixed(2)}km, Temps estimé: ${estimatedTime} minutes`);
+      
+      return estimatedTime;
+    } catch (error) {
+      console.error('Error calculating delivery time:', error);
+      return 25; // Valeur par défaut
+    }
+  }
+
+  // Convertir les degrés en radians
+  private toRadians(degrees: number): number {
+    return degrees * (Math.PI / 180);
+  }
+
+  // Extraire les coordonnées depuis une adresse au format "GPS: lat, lng"
+  private extractCoordinatesFromAddress(address: string): { latitude: number, longitude: number } | null {
+    try {
+      // Pattern pour extraire "GPS: 48.6280292, 2.589282"
+      const gpsMatch = address.match(/GPS:\s*(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
+      
+      if (gpsMatch) {
+        const latitude = parseFloat(gpsMatch[1]);
+        const longitude = parseFloat(gpsMatch[2]);
+        
+        if (!isNaN(latitude) && !isNaN(longitude)) {
+          console.log(`📍 Coordonnées extraites de l'adresse: ${latitude}, ${longitude}`);
+          return { latitude, longitude };
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error extracting coordinates from address:', error);
+      return null;
+    }
+  }
+
+  // Formater le mode de paiement
+  private formatPaymentMode(mode: string): string {
+    switch (mode) {
+      case 'maintenant': return 'Immédiat';
+      case 'fin_repas': return 'Fin de repas';
+      case 'recuperation': return 'À la récupération';
+      case 'livraison': return 'À la livraison (cash)';
+      default: return mode;
+    }
+  }
+
+  // Formater le statut de paiement
+  private formatPaymentStatus(status: string): string {
+    switch (status) {
+      case 'en_attente': return 'En attente';
+      case 'paye': return 'Payé';
+      case 'echoue': return 'Échec';
+      case 'rembourse': return 'Remboursé';
+      default: return status;
     }
   }
 }
