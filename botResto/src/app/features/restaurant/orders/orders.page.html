@@ -109,6 +109,30 @@
           <h4>Informations commande:</h4>
           <p><strong>Créée le:</strong> {{ formatDateTime(order.created_at) }}</p>
           <p *ngIf="getStatusDate(order)"><strong>{{ getStatusDateLabel(order) }}:</strong> {{ formatDateTime(getStatusDate(order)!) }}</p>
+          <p *ngIf="order.paiement_statut"><strong>Statut paiement:</strong> 
+            <ion-badge [color]="order.paiement_statut === 'paye' ? 'success' : order.paiement_statut === 'en_attente' ? 'warning' : 'danger'">
+              {{ order.paiement_statut === 'paye' ? 'Payé' : order.paiement_statut === 'en_attente' ? 'En attente' : order.paiement_statut }}
+            </ion-badge>
+          </p>
+        </div>
+        
+        <!-- Payment information -->
+        <div *ngIf="order.paiement_statut === 'paye'" class="payment-success-info">
+          <h4>Informations paiement:</h4>
+          <p *ngIf="getPaymentSuccessTime(order)">
+            <strong>Payé le:</strong> {{ formatDateTime(getPaymentSuccessTime(order)!) }}
+            <ion-badge color="primary" style="margin-left: 8px;">
+              <ion-icon name="phone-portrait-outline" style="margin-right: 4px;"></ion-icon>
+              Mobile Money
+            </ion-badge>
+          </p>
+          <p *ngIf="!getPaymentSuccessTime(order)">
+            <strong>Mode de paiement:</strong>
+            <ion-badge color="medium" style="margin-left: 8px;">
+              <ion-icon name="cash-outline" style="margin-right: 4px;"></ion-icon>
+              Cash
+            </ion-badge>
+          </p>
         </div>
 
         <!-- Delivery information -->
@@ -120,7 +144,7 @@
               size="small" 
               color="primary"
               class="maps-button"
-              (click)="openDrivingDirections(order.latitude_livraison, order.longitude_livraison)">
+              (click)="openDrivingDirections(order.latitude_livraison, order.longitude_livraison, order.adresse_livraison)">
               <ion-icon name="navigate" slot="start"></ion-icon>
               Itinéraire
             </ion-button>
@@ -154,11 +178,6 @@
           <p class="note-text">{{ order.note_client }}</p>
         </div>
 
-        <!-- Restaurant notes -->
-        <div *ngIf="order.note_restaurant" class="restaurant-note">
-          <h4>Note restaurant:</h4>
-          <p class="note-text">{{ order.note_restaurant }}</p>
-        </div>
 
         <!-- Actions -->
         <div class="order-actions">
@@ -185,6 +204,34 @@
               <ion-icon name="bicycle" slot="start"></ion-icon>
               Affecter un livreur
             </ion-button>
+          </div>
+          
+          <!-- AJOUT: Section paiement -->
+          <div class="payment-section" *ngIf="shouldShowPaymentSection(order)">
+            
+            <ion-button 
+              *ngIf="canTriggerPayment(order)"
+              fill="outline" 
+              color="primary"
+              size="small"
+              (click)="triggerPayment(order)">
+              <ion-icon name="card-outline" slot="start"></ion-icon>
+              Demander le paiement
+            </ion-button>
+            
+            <div *ngIf="isPaymentActive(order)" class="payment-timer">
+              <ion-chip color="warning">
+                <ion-icon name="time-outline"></ion-icon>
+                <ion-label>Expire dans {{ getTimeRemaining(order) }}</ion-label>
+              </ion-chip>
+              <ion-button 
+                fill="clear"
+                size="small"
+                (click)="refreshPaymentStatus(order)">
+                <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+              </ion-button>
+            </div>
+            
           </div>
         </div>
       </ion-card-content>

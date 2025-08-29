@@ -289,10 +289,7 @@ async function getPaymentModeMessage(restaurantId: string, deliveryMode: string)
   
   if (restaurant.allow_pay_now) {
     // Adapter le texte selon le pays/contexte du restaurant
-    const paymentMethod = restaurant.currency === 'GNF' ? 
-      "(Orange Money, Wave)" : 
-      "(carte bancaire)";
-    options.push(`${optionNumber}️⃣ Maintenant ${paymentMethod}`);
+    options.push(`${optionNumber}️⃣ Maintenant (en ligne)`);
     optionNumber++;
   }
   
@@ -480,6 +477,121 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   const distance = R * c;
   return Math.round(distance * 100) / 100; // Arrondir à 2 décimales
+}
+
+// NOUVEAU: Gestion de l'annulation par numéro de commande
+async function handleOrderCancellationByNumber(phoneNumber: string, orderNumber: string) {
+  try {
+    console.log(`🔍 Tentative d'annulation commande N°${orderNumber} pour ${phoneNumber}`);
+    
+    // Étape 1: Vérifier que la commande existe et appartient au client
+    const { data: order, error } = await supabase
+      .from('commandes')
+      .select(`
+        id, 
+        statut, 
+        paiement_statut, 
+        restaurant_id,
+        clients!inner(phone_whatsapp)
+      `)
+      .eq('numero_commande', orderNumber)
+      .single();
+
+    if (error || !order) {
+      console.log(`❌ Commande N°${orderNumber} introuvable`);
+      await whatsapp.sendMessage(phoneNumber, 
+        `❌ Commande N°${orderNumber} introuvable.\n\n💡 Vérifiez le numéro de commande et réessayez.`);
+      return;
+    }
+
+    // SÉCURITÉ: Vérifier que la commande appartient au client
+    if (order.clients.phone_whatsapp !== phoneNumber) {
+      console.log(`🚫 Tentative d'annulation non autorisée pour N°${orderNumber}`);
+      console.log(`🔍 Debug - Téléphone commande: ${order.clients.phone_whatsapp}, Téléphone client: ${phoneNumber}`);
+      await whatsapp.sendMessage(phoneNumber, 
+        `❌ Vous n'êtes pas autorisé à annuler cette commande.\n\n💡 Vérifiez le numéro de commande.`);
+      return;
+    }
+
+    console.log(`✅ Commande N°${orderNumber} trouvée, statut: ${order.statut}, paiement: ${order.paiement_statut}`);
+
+    // Étape 2: Appliquer les protections existantes (payé/livré)
+    if (order.paiement_statut === 'paye' || order.statut === 'livree') {
+      // Récupérer infos restaurant pour contact
+      const restaurant = await SimpleRestaurant.getById(order.restaurant_id);
+      const restaurantName = restaurant?.nom || 'Restaurant';
+      const restaurantPhone = restaurant?.telephone || '';
+      
+      let reason = '';
+      if (order.paiement_statut === 'paye') {
+        reason = '💳 Cette commande a déjà été payée.';
+      } else if (order.statut === 'livree') {
+        reason = '✅ Cette commande a déjà été livrée.';
+      }
+      
+      const blockedMessage = `⚠️ Impossible d'annuler la commande N°${orderNumber}.
+
+${reason}
+
+📞 Pour toute modification, contactez directement le restaurant:
+${restaurantName}
+📱 ${restaurantPhone}
+
+💡 Tapez "resto" pour faire une nouvelle commande.`;
+
+      await whatsapp.sendMessage(phoneNumber, blockedMessage);
+      return;
+    }
+
+    // Étape 3: Vérifier statuts non-annulables
+    const finalStatuses = ['terminee', 'annulee'];
+    if (finalStatuses.includes(order.statut)) {
+      let statusMessage = '';
+      if (order.statut === 'terminee') statusMessage = 'Cette commande est déjà terminée.';
+      else if (order.statut === 'annulee') statusMessage = 'Cette commande est déjà annulée.';
+
+      await whatsapp.sendMessage(phoneNumber, 
+        `⚠️ Impossible d'annuler la commande N°${orderNumber}.\n${statusMessage}\n\n💡 Tapez "resto" pour faire une nouvelle commande.`);
+      return;
+    }
+
+    // Étape 4: Demander confirmation d'annulation
+    await requestOrderCancellationConfirmation(phoneNumber, orderNumber, order);
+
+  } catch (error) {
+    console.error('❌ Erreur annulation par numéro:', error);
+    await whatsapp.sendMessage(phoneNumber, 
+      '❌ Erreur lors de la vérification de la commande. Veuillez réessayer.');
+  }
+}
+
+// NOUVEAU: Demander confirmation d'annulation pour commande spécifique
+async function requestOrderCancellationConfirmation(phoneNumber: string, orderNumber: string, order: any) {
+  try {
+    // Créer une session temporaire pour la confirmation
+    await SimpleSession.deleteAllForPhone(phoneNumber);
+    const tempSession = await SimpleSession.create(phoneNumber, 'CONFIRM_CANCEL');
+    await SimpleSession.update(tempSession.id, {
+      context: {
+        orderToCancel: orderNumber,
+        orderIdToCancel: order.id,
+        restaurantId: order.restaurant_id
+      }
+    });
+
+    const confirmMessage = `⚠️ Voulez-vous vraiment annuler la commande N°${orderNumber} ?
+
+✅ Tapez "oui" pour confirmer l'annulation
+❌ Tapez "non" pour conserver votre commande`;
+
+    await whatsapp.sendMessage(phoneNumber, confirmMessage);
+    console.log(`✅ Demande de confirmation envoyée pour N°${orderNumber}`);
+
+  } catch (error) {
+    console.error('❌ Erreur demande confirmation:', error);
+    await whatsapp.sendMessage(phoneNumber, 
+      '❌ Erreur lors de la demande de confirmation. Veuillez réessayer.');
+  }
 }
 
 async function handleLocationMessage(phoneNumber: string, session: any, message: string) {
@@ -1206,13 +1318,14 @@ async function handleLivraisonMode(phoneNumber: string, session: any) {
   } else {
     console.log('❌ Coordonnées GPS manquantes, demande de géolocalisation');
     // Demander la position seulement si pas déjà stockée
-    const message = `🏠 Mode: LIVRAISON
-
-Pour calculer les frais de livraison, nous avons besoin de votre adresse.
-
-📍 Partagez votre position WhatsApp ou tapez votre adresse complète.
-
-Cliquez sur 📎 → Position → Position actuelle`;
+    const message = `📍 ENVOYEZ VOTRE POSITION GPS PRÉCISE :
+• Cliquez sur l'icône 📎 (trombone)
+• Sélectionnez "Localisation"
+• Attendez que la précision soit ≤ 50 mètres
+• ✅ Choisissez "Envoyer votre localisation actuelle" (position GPS exacte)
+• ❌ NE PAS choisir "Partager position en direct" (ne fonctionne pas)
+• ❌ NE PAS choisir les lieux suggérés (Police, Centre, etc.)
+• ⚠ Si précision > 50m : cliquez ← en haut à gauche et réessayez`;
 
     await whatsapp.sendMessage(phoneNumber, message);
 
@@ -1223,6 +1336,54 @@ Cliquez sur 📎 → Position → Position actuelle`;
         mode: 'livraison'
       }
     });
+  }
+}
+
+// NOUVEAU : Fonction pour calculer les frais avec le nouveau système flexible
+async function calculateDeliveryFeeNew(restaurantId: string, distance: number, subtotal: number) {
+  try {
+    // Récupérer la config du restaurant
+    const { data: config } = await supabase
+      .from('restaurant_delivery_config')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true)
+      .single();
+
+    if (!config) {
+      // Fallback vers l'ancien système si pas de config
+      return { useOldSystem: true };
+    }
+
+    // Vérifier rayon maximum
+    if (distance > config.max_delivery_radius_km) {
+      return { 
+        success: false, 
+        message: `Désolé, nous ne livrons pas à ${distance.toFixed(1)}km de distance.\n\nNotre zone de livraison maximale est de ${config.max_delivery_radius_km}km.\n\nTapez "2" pour choisir le mode "À emporter".`
+      };
+    }
+
+    // Vérifier seuil de gratuité
+    if (subtotal >= config.free_delivery_threshold) {
+      return { success: true, fee: 0, type: 'free' };
+    }
+
+    let deliveryFee = 0;
+
+    if (config.delivery_type === 'fixed') {
+      // Montant fixe pour toutes les commandes
+      deliveryFee = config.fixed_amount;
+    } else if (config.delivery_type === 'distance_based') {
+      // Calcul basé sur la distance
+      const distanceToUse = config.round_up_distance ? Math.ceil(distance) : distance;
+      deliveryFee = distanceToUse * config.price_per_km;
+    }
+
+    return { success: true, fee: deliveryFee, type: config.delivery_type };
+  } catch (error) {
+    console.error('❌ Erreur calcul frais nouveau système:', error);
+    // En cas d'erreur, utiliser l'ancien système
+    return { useOldSystem: true };
   }
 }
 
@@ -1245,22 +1406,34 @@ async function calculateDeliveryFeeWithCoords(phoneNumber: string, session: any,
   // Calculer la distance
   const distance = calculateDistance(latitude, longitude, restaurant.latitude, restaurant.longitude);
   
-  // Calculer les frais de livraison
-  let fraisLivraison = 0;
+  // Calculer les frais de livraison avec le nouveau système (avec fallback)
   const subtotal = session.context.subtotal || 0;
+  const feeResult = await calculateDeliveryFeeNew(restaurantId, distance, subtotal);
   
-  if (distance <= restaurant.rayon_livraison_km) {
-    if (subtotal >= restaurant.seuil_gratuite) {
-      fraisLivraison = 0; // Livraison gratuite
+  let fraisLivraison = 0;
+  
+  if (feeResult.useOldSystem) {
+    // ANCIEN SYSTÈME (fallback) - Code original conservé
+    if (distance <= restaurant.rayon_livraison_km) {
+      if (subtotal >= restaurant.seuil_gratuite) {
+        fraisLivraison = 0; // Livraison gratuite
+      } else {
+        fraisLivraison = Math.ceil(distance) * restaurant.tarif_km;
+      }
     } else {
-      fraisLivraison = Math.ceil(distance) * restaurant.tarif_km;
+      await whatsapp.sendMessage(phoneNumber, 
+        `❌ Désolé, nous ne livrons pas à ${distance.toFixed(1)}km de distance.\n\n` +
+        `Notre zone de livraison maximale est de ${restaurant.rayon_livraison_km}km.\n\n` +
+        'Tapez "2" pour choisir le mode "À emporter".');
+      return;
     }
-  } else {
-    await whatsapp.sendMessage(phoneNumber, 
-      `❌ Désolé, nous ne livrons pas à ${distance.toFixed(1)}km de distance.\n\n` +
-      `Notre zone de livraison maximale est de ${restaurant.rayon_livraison_km}km.\n\n` +
-      'Tapez "2" pour choisir le mode "À emporter".');
+  } else if (!feeResult.success) {
+    // NOUVEAU SYSTÈME - Hors zone
+    await whatsapp.sendMessage(phoneNumber, feeResult.message);
     return;
+  } else {
+    // NOUVEAU SYSTÈME - Calcul réussi
+    fraisLivraison = feeResult.fee;
   }
 
   const total = subtotal + fraisLivraison;
@@ -1280,18 +1453,15 @@ async function calculateDeliveryFeeWithCoords(phoneNumber: string, session: any,
   });
 
   // Afficher le récapitulatif avec frais de livraison
+  const paymentMessage = await getPaymentModeMessage(restaurantId, 'livraison');
+  
   let message = `🏠 Mode: LIVRAISON
 📍 Distance: ${distance.toFixed(1)}km
 
 💰 Récapitulatif final:
 ${await formatFinalSummary({ context: { ...session.context, frais_livraison: fraisLivraison, total: total } }, 'livraison')}
 
-Quand souhaitez-vous payer?
-
-1️⃣ Maintenant (paiement mobile)
-2️⃣ À la livraison (cash)
-
-Répondez avec votre choix.`;
+${paymentMessage}`;
 
   await whatsapp.sendMessage(phoneNumber, message);
 }
@@ -1403,7 +1573,14 @@ function isRestaurantOpen(restaurant: any): {
   console.log(`🕒 Comparaison: ${currentTime} entre ${openTime} et ${closeTime}`);
 
   // Comparer les heures
-  if (currentTime >= openTime && currentTime <= closeTime) {
+  const isNightSchedule = openTime > closeTime;
+  const isOpen = isNightSchedule 
+    ? (currentTime >= openTime || currentTime <= closeTime)
+    : (currentTime >= openTime && currentTime <= closeTime);
+  
+  console.log(`🔍 Debug: isNightSchedule=${isNightSchedule}, isOpen=${isOpen}`);
+  
+  if (isOpen) {
     console.log(`✅ Restaurant ouvert !`);
     return {
       isOpen: true,
@@ -1721,6 +1898,13 @@ async function processMessage(phoneNumber: string, message: string) {
 
     console.log(`📊 État session: ${session.state}`);
 
+    // NOUVEAU: Gestion de l'annulation par numéro de commande (ex: "annuler 2908-0002")
+    if (message.match(/^annuler\s+(\d{4}-\d{4})$/i)) {
+      const orderNumber = message.split(' ')[1];
+      await handleOrderCancellationByNumber(phoneNumber, orderNumber);
+      return;
+    }
+
     // Gestion de l'annulation à tout moment (sauf si déjà en confirmation d'annulation)
     if ((message.toLowerCase() === 'annuler' || message.toLowerCase() === 'stop') && 
         session.state !== 'CONFIRM_CANCEL') {
@@ -1766,11 +1950,43 @@ async function processMessage(phoneNumber: string, message: string) {
           // Vérifier d'abord le statut actuel de la commande
           const { data: orderCheck, error: checkError } = await supabase
             .from('commandes')
-            .select('statut')
+            .select('statut, paiement_statut')
             .eq('numero_commande', orderId)
             .single();
           
           if (orderCheck && !checkError) {
+            // NOUVEAU: Vérifier si la commande est déjà payée ou livrée
+            if (orderCheck.paiement_statut === 'paye' || orderCheck.statut === 'livree') {
+              // Récupérer les informations du restaurant pour le contact
+              const restaurantId = session.context.selectedRestaurantId;
+              const restaurant = await SimpleRestaurant.getById(restaurantId);
+              const restaurantName = restaurant?.nom || 'Restaurant';
+              const restaurantPhone = restaurant?.telephone || '';
+              
+              let reason = '';
+              if (orderCheck.paiement_statut === 'paye') {
+                reason = '💳 Cette commande a déjà été payée.';
+              } else if (orderCheck.statut === 'livree') {
+                reason = '✅ Cette commande a déjà été livrée.';
+              }
+              
+              const blockedOrderMessage = `⚠️ Impossible d'annuler la commande N°${orderId}.
+
+${reason}
+
+📞 Pour toute modification, contactez directement le restaurant:
+${restaurantName}
+📱 ${restaurantPhone}
+
+💡 Tapez "resto" pour faire une nouvelle commande.`;
+
+              await whatsapp.sendMessage(phoneNumber, blockedOrderMessage);
+              
+              // Nettoyer la session
+              await SimpleSession.deleteAllForPhone(phoneNumber);
+              return;
+            }
+            
             // Vérifier si la commande peut être annulée
             const nonCancellableStatuses = ['terminee', 'livree', 'annulee'];
             if (nonCancellableStatuses.includes(orderCheck.statut)) {
@@ -2002,6 +2218,64 @@ async function processMessage(phoneNumber: string, message: string) {
           `✅ Votre commande N°${session.context.orderId} est déjà confirmée.\n\n` +
           '🔄 Tapez "resto" pour une nouvelle commande\n' +
           '❌ Tapez "annuler" pour annuler cette commande');
+        break;
+
+      case 'CONFIRM_CANCEL':
+        // NOUVEAU: Gestion de la confirmation d'annulation par numéro
+        const orderToCancel = session.context.orderToCancel;
+        const orderIdToCancel = session.context.orderIdToCancel;
+        const restaurantIdToCancel = session.context.restaurantId;
+        const response = message.toLowerCase().trim();
+        
+        if (response === 'oui' || response === 'o' || response === 'yes') {
+          // Exécuter l'annulation
+          console.log(`✅ Confirmation reçue, annulation de N°${orderToCancel}`);
+          
+          const { error } = await supabase
+            .from('commandes')
+            .update({
+              statut: 'annulee',
+              cancelled_at: new Date().toISOString()
+            })
+            .eq('numero_commande', orderToCancel)
+            .not('statut', 'in', '(terminee,livree,annulee)');
+
+          if (!error) {
+            // Récupérer infos restaurant pour message
+            const restaurant = await SimpleRestaurant.getById(restaurantIdToCancel);
+            const restaurantName = restaurant?.nom || 'Restaurant';
+            const restaurantPhone = restaurant?.telephone || '';
+            
+            const successMessage = `❌ COMMANDE ANNULÉE
+📋 N°${orderToCancel} • ${restaurantName}
+📞 Restaurant: ${restaurantPhone}
+
+🙏 Nous sommes désolés
+
+💡 Tapez "resto" pour faire une nouvelle commande.`;
+
+            await whatsapp.sendMessage(phoneNumber, successMessage);
+            console.log(`✅ Commande ${orderToCancel} marquée comme annulée en base`);
+            
+            // Notifier le livreur si assigné
+            await notifyDeliveryDriverOfCancellation(orderToCancel);
+          } else {
+            console.error('⚠️ Erreur lors de l\'annulation:', error);
+            await whatsapp.sendMessage(phoneNumber, 
+              `❌ Erreur lors de l'annulation de N°${orderToCancel}. Veuillez contacter le restaurant directement.`);
+          }
+        } else if (response === 'non' || response === 'n' || response === 'no') {
+          await whatsapp.sendMessage(phoneNumber, 
+            `✅ Annulation annulée. Votre commande N°${orderToCancel} est conservée.\n\n💡 Tapez "resto" pour faire une nouvelle commande.`);
+          console.log(`✅ Annulation annulée pour N°${orderToCancel}`);
+        } else {
+          await whatsapp.sendMessage(phoneNumber, 
+            '❓ Réponse non reconnue.\n\nTapez "oui" pour annuler la commande ou "non" pour la conserver.');
+          return; // Rester en CONFIRM_CANCEL
+        }
+        
+        // Nettoyer la session temporaire
+        await SimpleSession.deleteAllForPhone(phoneNumber);
         break;
 
       default:
