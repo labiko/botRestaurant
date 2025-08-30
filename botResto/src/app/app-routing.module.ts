@@ -35,6 +35,10 @@ const routes: Routes = [
     path: 'restaurant',
     loadChildren: () => import('./features/restaurant/tabs/tabs.module').then( m => m.TabsPageModule)
   },
+  {
+    path: 'super-admin',
+    loadChildren: () => import('./features/super-admin/super-admin.module').then( m => m.SuperAdminModule)
+  },
 ];
 
 @NgModule({

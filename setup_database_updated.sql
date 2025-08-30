@@ -1,6 +1,20 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
+CREATE TABLE public.admin_audit_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  admin_id uuid NOT NULL,
+  action character varying NOT NULL,
+  resource_type character varying NOT NULL,
+  resource_id uuid,
+  changes jsonb,
+  ip_address inet,
+  user_agent text,
+  created_at timestamp with time zone DEFAULT now(),
+  severity character varying DEFAULT 'info'::character varying CHECK (severity::text = ANY (ARRAY['info'::character varying, 'warning'::character varying, 'critical'::character varying]::text[])),
+  CONSTRAINT admin_audit_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT admin_audit_logs_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES public.super_admins(id)
+);
 CREATE TABLE public.clients (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   phone_whatsapp character varying NOT NULL UNIQUE,
@@ -47,6 +61,11 @@ CREATE TABLE public.commandes (
   assigned_at timestamp with time zone,
   accepted_by_delivery_at timestamp with time zone,
   validation_code character varying DEFAULT NULL::character varying,
+  versement_otp_code character varying,
+  versement_otp_generated_at timestamp with time zone,
+  versement_otp_validated_at timestamp with time zone,
+  versement_otp_attempts integer DEFAULT 0,
+  versement_confirmed boolean DEFAULT false,
   CONSTRAINT commandes_pkey PRIMARY KEY (id),
   CONSTRAINT commandes_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.clients(id),
   CONSTRAINT commandes_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
@@ -84,6 +103,21 @@ CREATE TABLE public.delivery_users (
   is_blocked boolean NOT NULL DEFAULT false,
   CONSTRAINT delivery_users_pkey PRIMARY KEY (id),
   CONSTRAINT delivery_users_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
+);
+CREATE TABLE public.invoices (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  subscription_id uuid NOT NULL,
+  invoice_number character varying NOT NULL UNIQUE,
+  amount numeric NOT NULL,
+  currency character varying DEFAULT 'GNF'::character varying,
+  status character varying DEFAULT 'pending'::character varying CHECK (status::text = ANY (ARRAY['pending'::character varying, 'paid'::character varying, 'failed'::character varying, 'cancelled'::character varying]::text[])),
+  due_date date NOT NULL,
+  paid_at timestamp with time zone,
+  payment_method character varying,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT invoices_pkey PRIMARY KEY (id),
+  CONSTRAINT invoices_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.restaurant_subscriptions(id)
 );
 CREATE TABLE public.logs_webhook (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -129,6 +163,58 @@ CREATE TABLE public.restaurant_analytics (
   CONSTRAINT restaurant_analytics_pkey PRIMARY KEY (id),
   CONSTRAINT restaurant_analytics_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
 );
+CREATE TABLE public.restaurant_delivery_config (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  restaurant_id uuid NOT NULL UNIQUE,
+  delivery_type character varying NOT NULL CHECK (delivery_type::text = ANY (ARRAY['fixed'::character varying, 'distance_based'::character varying]::text[])),
+  fixed_amount integer DEFAULT 0,
+  price_per_km integer DEFAULT 0,
+  round_up_distance boolean DEFAULT true,
+  free_delivery_threshold integer DEFAULT 0,
+  max_delivery_radius_km numeric DEFAULT 10.00,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT restaurant_delivery_config_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_delivery_config_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
+);
+CREATE TABLE public.restaurant_payment_config (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  restaurant_id uuid NOT NULL,
+  provider_name character varying NOT NULL DEFAULT 'lengopay'::character varying,
+  is_active boolean DEFAULT false,
+  api_url character varying DEFAULT 'https://sandbox.lengopay.com/api/v1/payments'::character varying,
+  license_key text NOT NULL,
+  website_id character varying NOT NULL,
+  callback_url character varying NOT NULL,
+  green_api_instance_id character varying,
+  green_api_token text,
+  green_api_base_url character varying DEFAULT 'https://7105.api.greenapi.com'::character varying,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  telephone_marchand character varying,
+  CONSTRAINT restaurant_payment_config_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_payment_config_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
+);
+CREATE TABLE public.restaurant_payments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  restaurant_id uuid NOT NULL,
+  commande_id uuid,
+  payment_id character varying NOT NULL,
+  status character varying DEFAULT 'PENDING'::character varying CHECK (status::text = ANY (ARRAY['PENDING'::character varying, 'SUCCESS'::character varying, 'FAILED'::character varying, 'CANCELLED'::character varying]::text[])),
+  amount numeric NOT NULL,
+  client_phone character varying NOT NULL,
+  message text,
+  payment_url text,
+  raw_json jsonb,
+  processed_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  client_notified_at timestamp with time zone,
+  CONSTRAINT restaurant_payments_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_payments_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id),
+  CONSTRAINT restaurant_payments_commande_id_fkey FOREIGN KEY (commande_id) REFERENCES public.commandes(id)
+);
 CREATE TABLE public.restaurant_status_logs (
   id bigint NOT NULL DEFAULT nextval('restaurant_status_logs_id_seq'::regclass),
   restaurant_id uuid NOT NULL,
@@ -140,6 +226,22 @@ CREATE TABLE public.restaurant_status_logs (
   CONSTRAINT restaurant_status_logs_pkey PRIMARY KEY (id),
   CONSTRAINT restaurant_status_logs_changed_by_user_id_fkey FOREIGN KEY (changed_by_user_id) REFERENCES public.restaurant_users(id),
   CONSTRAINT restaurant_status_logs_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
+);
+CREATE TABLE public.restaurant_subscriptions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  restaurant_id uuid NOT NULL,
+  plan_id uuid NOT NULL,
+  status character varying DEFAULT 'active'::character varying CHECK (status::text = ANY (ARRAY['active'::character varying, 'trial'::character varying, 'suspended'::character varying, 'cancelled'::character varying, 'expired'::character varying]::text[])),
+  start_date timestamp with time zone NOT NULL,
+  end_date timestamp with time zone,
+  next_billing_date timestamp with time zone,
+  payment_method jsonb,
+  trial_ends_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT restaurant_subscriptions_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_subscriptions_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id),
+  CONSTRAINT restaurant_subscriptions_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.subscription_plans(id)
 );
 CREATE TABLE public.restaurant_users (
   id bigint NOT NULL DEFAULT nextval('restaurant_users_id_seq'::regclass),
@@ -182,6 +284,20 @@ CREATE TABLE public.restaurants (
   is_featured boolean DEFAULT false,
   rating numeric DEFAULT 0.00,
   total_orders integer DEFAULT 0,
+  currency character varying DEFAULT 'GNF'::character varying CHECK (currency::text = ANY (ARRAY['GNF'::character varying, 'XOF'::character varying, 'EUR'::character varying, 'USD'::character varying]::text[])),
+  password character varying,
+  allow_dine_in boolean DEFAULT true,
+  allow_takeaway boolean DEFAULT true,
+  allow_delivery boolean DEFAULT true,
+  allow_pay_now boolean DEFAULT true,
+  allow_pay_later boolean DEFAULT true,
+  status character varying DEFAULT 'pending'::character varying CHECK (status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying, 'pending'::character varying, 'banned'::character varying, 'deleted'::character varying]::text[])),
+  owner_name character varying,
+  last_activity_at timestamp with time zone,
+  suspension_reason text,
+  deleted_at timestamp with time zone,
+  first_login boolean DEFAULT true,
+  is_blocked boolean DEFAULT false,
   CONSTRAINT restaurants_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.sessions (
@@ -193,6 +309,45 @@ CREATE TABLE public.sessions (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT sessions_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.subscription_plans (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL UNIQUE,
+  price numeric NOT NULL,
+  currency character varying DEFAULT 'GNF'::character varying,
+  features jsonb NOT NULL DEFAULT '{}'::jsonb,
+  billing_cycle character varying NOT NULL CHECK (billing_cycle::text = ANY (ARRAY['monthly'::character varying, 'yearly'::character varying]::text[])),
+  max_orders integer,
+  max_drivers integer,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT subscription_plans_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.super_admins (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  email character varying NOT NULL UNIQUE,
+  password_hash character varying NOT NULL,
+  role character varying NOT NULL CHECK (role::text = ANY (ARRAY['super_admin'::character varying, 'admin'::character varying, 'support'::character varying]::text[])),
+  permissions jsonb DEFAULT '[]'::jsonb,
+  mfa_secret character varying,
+  is_active boolean DEFAULT true,
+  last_login timestamp with time zone,
+  login_attempts integer DEFAULT 0,
+  locked_until timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT super_admins_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.system_settings (
+  key character varying NOT NULL,
+  value jsonb NOT NULL,
+  description text,
+  category character varying DEFAULT 'general'::character varying,
+  updated_by uuid,
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT system_settings_pkey PRIMARY KEY (key),
+  CONSTRAINT system_settings_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.super_admins(id)
 );
 CREATE TABLE public.user_sessions (
   id bigint NOT NULL DEFAULT nextval('user_sessions_id_seq'::regclass),

@@ -6,6 +6,8 @@ import { WhatsAppNotificationService } from './whatsapp-notification.service';
 export interface Order {
   id: string;
   numero_commande: string;
+  client_id: string;
+  restaurant_id: string;
   client_nom: string;
   client_phone: string;
   items: OrderItem[];
@@ -83,6 +85,7 @@ export class RestaurantOrdersService {
           id,
           numero_commande,
           client_id,
+          restaurant_id,
           items,
           sous_total,
           frais_livraison,
@@ -144,6 +147,8 @@ export class RestaurantOrdersService {
         return {
           id: order.id,
           numero_commande: order.numero_commande,
+          client_id: order.client_id,
+          restaurant_id: order.restaurant_id,
           client_nom: client.nom || 'Client',
           client_phone: client.phone || '',
           items: this.parseOrderItems(order.items),
@@ -300,8 +305,19 @@ export class RestaurantOrdersService {
         return true; // Status updated but no notification
       }
 
-      // 3. Send WhatsApp notification based on status
-      await this.sendStatusNotification(order, newStatus, restaurantName);
+      // 3. Get restaurant phone for notification
+      let restaurantPhone = '';
+      if (order.restaurant_id) {
+        const { data: restaurant } = await this.supabase
+          .from('restaurants')
+          .select('telephone')
+          .eq('id', order.restaurant_id)
+          .single();
+        restaurantPhone = restaurant?.telephone || '';
+      }
+
+      // 4. Send WhatsApp notification based on status
+      await this.sendStatusNotification(order, newStatus, restaurantName, restaurantPhone);
 
       return true;
     } catch (error) {
@@ -314,7 +330,8 @@ export class RestaurantOrdersService {
   private async sendStatusNotification(
     order: Order, 
     status: Order['statut'], 
-    restaurantName: string
+    restaurantName: string,
+    restaurantPhone?: string
   ): Promise<void> {
     try {
       // Don't send notifications for certain statuses
@@ -339,7 +356,7 @@ export class RestaurantOrdersService {
       const orderData = {
         orderNumber: order.numero_commande,
         restaurantName: restaurantName,
-        restaurantPhone: '623 456 789', // TODO: Get from restaurant data
+        restaurantPhone: restaurantPhone || '',
         total: this.formatPrice(order.total),
         subtotal: this.formatPrice(order.sous_total),
         deliveryFee: this.formatPrice(order.frais_livraison),
@@ -413,7 +430,7 @@ export class RestaurantOrdersService {
       case 'recuperation':
         return 'À LA RÉCUPÉRATION (cash)';
       case 'livraison':
-        return 'À LA LIVRAISON (cash)';
+        return 'À LA LIVRAISON (cash,o-money)';
       default:
         return 'CASH';
     }

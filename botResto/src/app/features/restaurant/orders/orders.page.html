@@ -209,8 +209,9 @@
           <!-- AJOUT: Section paiement -->
           <div class="payment-section" *ngIf="shouldShowPaymentSection(order)">
             
+            <!-- Bouton de demande de paiement (si config active ET statut != SUCCESS) -->
             <ion-button 
-              *ngIf="canTriggerPayment(order)"
+              *ngIf="hasPaymentConfig && canTriggerPayment(order) && shouldShowPaymentSection(order)"
               fill="outline" 
               color="primary"
               size="small"
@@ -219,11 +220,29 @@
               Demander le paiement
             </ion-button>
             
+            <!-- Message contact support (si pas de config active) -->
+            <div *ngIf="!hasPaymentConfig && shouldShowPaymentSection(order)" class="payment-config-warning">
+              <ion-chip color="warning" outline="true">
+                <ion-icon name="warning-outline"></ion-icon>
+                <ion-label>Contacter le support par whatsapp pour activation paiement en ligne au 336 20 95 16 45</ion-label>
+              </ion-chip>
+            </div>
+            
             <div *ngIf="isPaymentActive(order)" class="payment-timer">
               <ion-chip color="warning">
                 <ion-icon name="time-outline"></ion-icon>
                 <ion-label>Expire dans {{ getTimeRemaining(order) }}</ion-label>
               </ion-chip>
+              <ion-button 
+                fill="clear"
+                size="small"
+                (click)="refreshPaymentStatus(order)">
+                <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+              </ion-button>
+            </div>
+            
+            <!-- Bouton refresh visible si config active ET paiement pas SUCCESS -->
+            <div *ngIf="hasPaymentConfig && !isPaymentActive(order) && canTriggerPayment(order) && shouldShowPaymentSection(order)" style="text-align: right;">
               <ion-button 
                 fill="clear"
                 size="small"

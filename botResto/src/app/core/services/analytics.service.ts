@@ -45,7 +45,7 @@ export class AnalyticsService {
       .from('commandes')
       .select('total')
       .eq('restaurant_id', restaurantId)
-      .eq('statut', 'livree')
+      .in('statut', ['livree', 'terminee', 'complete'])
       .gte('created_at', today);
 
     // Revenus hier
@@ -53,7 +53,7 @@ export class AnalyticsService {
       .from('commandes')
       .select('total')
       .eq('restaurant_id', restaurantId)
-      .eq('statut', 'livree')
+      .in('statut', ['livree', 'terminee', 'complete'])
       .gte('created_at', yesterday)
       .lt('created_at', today);
 
@@ -90,11 +90,20 @@ export class AnalyticsService {
 
     console.log(`📊 Recherche des revenus quotidiens pour restaurant ${restaurantId} entre ${startDate.toISOString()} et ${endDate.toISOString()}`);
 
+    // D'abord, vérifier tous les statuts existants
+    const { data: allStatuses } = await this.supabase
+      .from('commandes')
+      .select('statut')
+      .eq('restaurant_id', restaurantId)
+      .gte('created_at', startDate.toISOString());
+
+    console.log('📊 Statuts trouvés:', [...new Set(allStatuses?.map(c => c.statut))]);
+
     const { data, error } = await this.supabase
       .from('commandes')
-      .select('total, created_at')
+      .select('total, created_at, statut')
       .eq('restaurant_id', restaurantId)
-      .eq('statut', 'livree')
+      .in('statut', ['livree', 'terminee', 'complete'])  // Inclure plusieurs statuts possibles
       .gte('created_at', startDate.toISOString())
       .order('created_at', { ascending: true });
 
@@ -103,7 +112,7 @@ export class AnalyticsService {
       return [];
     }
 
-    console.log(`📊 ${data?.length || 0} commandes livrées trouvées pour les revenus quotidiens`);
+    console.log(`📊 ${data?.length || 0} commandes terminées trouvées pour les revenus quotidiens`);
 
     // Grouper par jour
     const dailyData = this.groupByDay(data || []);
@@ -114,13 +123,22 @@ export class AnalyticsService {
     const endDate = new Date();
     const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - months, 1);
 
-    const { data } = await this.supabase
+    console.log(`📊 Recherche des revenus mensuels entre ${startDate.toISOString()} et ${endDate.toISOString()}`);
+
+    const { data, error } = await this.supabase
       .from('commandes')
-      .select('total, created_at')
+      .select('total, created_at, statut')
       .eq('restaurant_id', restaurantId)
-      .eq('statut', 'livree')
+      .in('statut', ['livree', 'terminee', 'complete'])  // Inclure plusieurs statuts possibles
       .gte('created_at', startDate.toISOString())
       .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('❌ Erreur lors de la récupération des revenus mensuels:', error);
+      return [];
+    }
+
+    console.log(`📊 ${data?.length || 0} commandes terminées trouvées pour les revenus mensuels`);
 
     // Grouper par mois
     const monthlyData = this.groupByMonth(data || []);
@@ -130,13 +148,22 @@ export class AnalyticsService {
   async getHourlyRevenue(restaurantId: string): Promise<ChartDataPoint[]> {
     const today = new Date().toISOString().split('T')[0];
 
-    const { data } = await this.supabase
+    console.log(`📊 Recherche des revenus horaires pour aujourd'hui: ${today}`);
+
+    const { data, error } = await this.supabase
       .from('commandes')
-      .select('total, created_at')
+      .select('total, created_at, statut')
       .eq('restaurant_id', restaurantId)
-      .eq('statut', 'livree')
+      .in('statut', ['livree', 'terminee', 'complete'])  // Inclure plusieurs statuts possibles
       .gte('created_at', today)
       .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('❌ Erreur lors de la récupération des revenus horaires:', error);
+      return [];
+    }
+
+    console.log(`📊 ${data?.length || 0} commandes terminées trouvées pour aujourd'hui`);
 
     // Grouper par heure
     const hourlyData = this.groupByHour(data || []);
@@ -152,7 +179,7 @@ export class AnalyticsService {
       .from('commandes')
       .select('total')
       .eq('restaurant_id', restaurantId)
-      .eq('statut', 'livree')
+      .in('statut', ['livree', 'terminee', 'complete'])
       .gte('created_at', startOfWeek.toISOString());
 
     return data?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
@@ -167,7 +194,7 @@ export class AnalyticsService {
       .from('commandes')
       .select('total')
       .eq('restaurant_id', restaurantId)
-      .eq('statut', 'livree')
+      .in('statut', ['livree', 'terminee', 'complete'])
       .gte('created_at', startOfMonth.toISOString());
 
     return data?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
@@ -183,7 +210,7 @@ export class AnalyticsService {
       .from('commandes')
       .select('total')
       .eq('restaurant_id', restaurantId)
-      .eq('statut', 'livree')
+      .in('statut', ['livree', 'terminee', 'complete'])
       .gte('created_at', startOfLastMonth.toISOString())
       .lte('created_at', endOfLastMonth.toISOString());
 
@@ -202,7 +229,7 @@ export class AnalyticsService {
       .from('commandes')
       .select('total')
       .eq('restaurant_id', restaurantId)
-      .eq('statut', 'livree')
+      .in('statut', ['livree', 'terminee', 'complete'])
       .gte('created_at', lastWeekStart.toISOString())
       .lte('created_at', lastWeekEnd.toISOString());
 
@@ -299,7 +326,7 @@ export class AnalyticsService {
           .from('commandes')
           .select('*', { count: 'exact', head: true })
           .eq('restaurant_id', restaurantId)
-          .eq('statut', 'livree')
+          .in('statut', ['livree', 'terminee', 'complete'])
           .gte('created_at', today)
       ]);
 

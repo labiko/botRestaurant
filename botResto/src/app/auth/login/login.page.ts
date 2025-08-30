@@ -46,18 +46,58 @@ export class LoginPage implements OnInit {
 
   async loginRestaurant() {
     try {
-      const success = await this.authService.loginRestaurant(this.restaurantPhone, this.restaurantPassword);
-      if (success) {
+      const result = await this.authService.loginRestaurant(this.restaurantPhone, this.restaurantPassword);
+      
+      if (result.success) {
         this.router.navigate(['/restaurant/dashboard']);
       } else {
-        // TODO: Show error toast
-        console.error('Login failed');
-        this.showModernAlert('❌ Connexion échouée', 'Numéro de téléphone ou mot de passe incorrect');
+        this.showRestaurantError(result.error || 'UNKNOWN_ERROR', result.restaurant);
       }
     } catch (error) {
       console.error('Login error:', error);
       this.showModernAlert('🌐 Erreur réseau', 'Vérifiez votre connexion internet et réessayez');
     }
+  }
+
+  private showRestaurantError(errorCode: string, restaurant?: any) {
+    let message = '';
+    let title = '';
+
+    switch (errorCode) {
+      case 'RESTAURANT_NOT_FOUND':
+        title = '🏪 Restaurant non trouvé';
+        message = 'Ce numéro de téléphone n\'est pas associé à un restaurant actif. Vérifiez votre numéro ou contactez le support.';
+        break;
+      case 'RESTAURANT_BLOCKED':
+        title = '🚫 Compte bloqué';
+        message = 'Votre restaurant a été bloqué par l\'administration. Contactez le support pour plus d\'informations.';
+        break;
+      case 'FIRST_LOGIN_SETUP_REQUIRED':
+        title = '🔐 Premier mot de passe requis';
+        message = `Bienvenue ${restaurant?.nom || 'Restaurant'} ! Pour votre première connexion, veuillez saisir un mot de passe de votre choix (minimum 6 caractères) pour sécuriser votre compte.`;
+        break;
+      case 'PASSWORD_TOO_SHORT':
+        title = '🔐 Mot de passe trop court';
+        message = 'Votre mot de passe doit contenir au moins 6 caractères.';
+        break;
+      case 'INVALID_PASSWORD':
+        title = '❌ Mot de passe incorrect';
+        message = 'Le mot de passe saisi est incorrect. Vérifiez et réessayez.';
+        break;
+      case 'UPDATE_ERROR':
+        title = '⚠️ Erreur technique';
+        message = 'Impossible de mettre à jour votre mot de passe. Veuillez réessayer.';
+        break;
+      case 'NETWORK_ERROR':
+        title = '🌐 Erreur de connexion';
+        message = 'Impossible de se connecter. Vérifiez votre connexion internet et réessayez.';
+        break;
+      default:
+        title = '⚠️ Erreur de connexion';
+        message = 'Une erreur inattendue s\'est produite. Veuillez réessayer.';
+    }
+
+    this.showModernAlert(title, message);
   }
 
   async loginDelivery() {

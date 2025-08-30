@@ -1,0 +1,199 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>
+      <ion-icon name="analytics-outline" style="margin-right: 8px;"></ion-icon>
+      Dashboard Super Admin
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="refresh()">
+        <ion-icon name="refresh" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button (click)="logout()">
+        <ion-icon name="log-out" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="super-admin-dashboard">
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Chargement du dashboard...</p>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="!loading && stats" class="dashboard-content">
+    
+    <!-- Stats Cards Row 1 -->
+    <div class="stats-grid">
+      <!-- Total Restaurants -->
+      <ion-card class="stat-card">
+        <ion-card-content>
+          <div class="stat-header">
+            <ion-icon name="restaurant" class="stat-icon" color="primary"></ion-icon>
+            <span class="stat-label">Restaurants</span>
+          </div>
+          <div class="stat-value">{{ stats.totalRestaurants }}</div>
+          <div class="stat-change" [ngClass]="'trend-' + stats.restaurantsGrowth.trend">
+            <ion-icon [name]="getStatusIcon(stats.restaurantsGrowth.trend)" [color]="getStatusColor(stats.restaurantsGrowth.trend)"></ion-icon>
+            {{ formatPercentage(stats.restaurantsGrowth.value) }}
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Active Orders -->
+      <ion-card class="stat-card">
+        <ion-card-content>
+          <div class="stat-header">
+            <ion-icon name="bag" class="stat-icon" color="secondary"></ion-icon>
+            <span class="stat-label">Commandes Actives</span>
+          </div>
+          <div class="stat-value">{{ stats.activeOrders }}</div>
+          <div class="stat-change" [ngClass]="'trend-' + stats.ordersGrowth.trend">
+            <ion-icon [name]="getStatusIcon(stats.ordersGrowth.trend)" [color]="getStatusColor(stats.ordersGrowth.trend)"></ion-icon>
+            {{ formatPercentage(stats.ordersGrowth.value) }}
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Daily Revenue -->
+      <ion-card class="stat-card">
+        <ion-card-content>
+          <div class="stat-header">
+            <ion-icon name="cash" class="stat-icon" color="success"></ion-icon>
+            <span class="stat-label">Revenus Jour</span>
+          </div>
+          <div class="stat-value">{{ formatCurrency(stats.dailyRevenue) }}</div>
+          <div class="stat-change" [ngClass]="'trend-' + stats.revenueGrowth.trend">
+            <ion-icon [name]="getStatusIcon(stats.revenueGrowth.trend)" [color]="getStatusColor(stats.revenueGrowth.trend)"></ion-icon>
+            {{ formatPercentage(stats.revenueGrowth.value) }}
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Active Drivers -->
+      <ion-card class="stat-card">
+        <ion-card-content>
+          <div class="stat-header">
+            <ion-icon name="bicycle" class="stat-icon" color="tertiary"></ion-icon>
+            <span class="stat-label">Livreurs Actifs</span>
+          </div>
+          <div class="stat-value">{{ stats.activeDrivers }}</div>
+          <div class="stat-change" [ngClass]="'trend-' + stats.driversGrowth.trend">
+            <ion-icon [name]="getStatusIcon(stats.driversGrowth.trend)" [color]="getStatusColor(stats.driversGrowth.trend)"></ion-icon>
+            {{ formatPercentage(stats.driversGrowth.value) }}
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+    <!-- Quick Actions -->
+    <ion-card class="quick-actions-card">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="flash"></ion-icon>
+          Actions Rapides
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="quick-actions-grid">
+          <ion-button 
+            expand="block" 
+            fill="outline" 
+            color="primary"
+            (click)="navigateTo('restaurants')">
+            <ion-icon name="restaurant" slot="start"></ion-icon>
+            Gérer Restaurants
+          </ion-button>
+          <ion-button 
+            expand="block" 
+            fill="outline" 
+            color="secondary"
+            (click)="navigateTo('orders')">
+            <ion-icon name="list" slot="start"></ion-icon>
+            Voir Commandes
+          </ion-button>
+          <ion-button 
+            expand="block" 
+            fill="outline" 
+            color="tertiary"
+            (click)="navigateTo('live-tracking')">
+            <ion-icon name="map" slot="start"></ion-icon>
+            Live Tracking
+          </ion-button>
+          <ion-button 
+            expand="block" 
+            fill="outline" 
+            color="success"
+            (click)="navigateTo('analytics')">
+            <ion-icon name="bar-chart" slot="start"></ion-icon>
+            Analytics
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Restaurant Status Overview -->
+    <ion-card class="status-overview-card">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="pie-chart"></ion-icon>
+          Statut des Restaurants
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="status-items">
+          <div class="status-item">
+            <div class="status-indicator active"></div>
+            <div class="status-info">
+              <span class="status-label">Actifs</span>
+              <span class="status-count">{{ stats.activeRestaurants }}</span>
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="status-indicator pending"></div>
+            <div class="status-info">
+              <span class="status-label">En attente</span>
+              <span class="status-count">{{ stats.pendingRestaurants }}</span>
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="status-indicator suspended"></div>
+            <div class="status-info">
+              <span class="status-label">Suspendus</span>
+              <span class="status-count">{{ stats.suspendedRestaurants }}</span>
+            </div>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Recent Alerts -->
+    <ion-card class="alerts-card" *ngIf="stats && stats.recentAlerts && stats.recentAlerts.length > 0">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="alert-circle"></ion-icon>
+          Alertes Récentes
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let alert of stats.recentAlerts">
+            <ion-icon 
+              [name]="alert.type === 'error' ? 'close-circle' : alert.type === 'warning' ? 'warning' : 'information-circle'" 
+              [color]="alert.type === 'error' ? 'danger' : alert.type === 'warning' ? 'warning' : 'primary'"
+              slot="start">
+            </ion-icon>
+            <ion-label>
+              <h3>{{ alert.title }}</h3>
+              <p>{{ alert.message }}</p>
+              <p class="alert-time">{{ alert.timestamp | date:'short' }}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+  </div>
+</ion-content>

@@ -350,6 +350,7 @@ export class DeliveryService {
           latitude_livraison,
           longitude_livraison,
           client_id,
+          restaurant_id,
           validation_code
         `)
         .eq('id', orderId)
@@ -365,6 +366,13 @@ export class DeliveryService {
         .from('clients')
         .select('phone_whatsapp')
         .eq('id', orderData.client_id)
+        .single();
+
+      // Get restaurant data separately
+      const { data: restaurantData } = await this.supabase
+        .from('restaurants')
+        .select('nom, telephone')
+        .eq('id', orderData.restaurant_id)
         .single();
 
       // Get delivery person coordinates
@@ -416,8 +424,8 @@ export class DeliveryService {
           
           const orderDataForNotification = {
             orderNumber: orderData.numero_commande,
-            restaurantName: 'Restaurant', // TODO: Get actual restaurant name
-            restaurantPhone: '623 456 789', // TODO: Get actual restaurant phone
+            restaurantName: restaurantData?.nom || 'Restaurant',
+            restaurantPhone: restaurantData?.telephone || '',
             total: this.formatPrice(orderData.total || 0),
             subtotal: this.formatPrice(orderData.total || 0),
             deliveryFee: '5000 GNF',
@@ -1092,11 +1100,9 @@ export class DeliveryService {
   }
 
   private generateWelcomeMessage(deliveryUser: DeliveryUser, restaurantName: string, restaurantPhone?: string | null): string {
-    // Convertir le numéro au format local pour l'affichage
-    const displayPhone = this.getLocalPhoneFormat(deliveryUser.telephone);
-    
-    // Formatter le téléphone restaurant si disponible
-    const restaurantPhoneDisplay = restaurantPhone ? this.getLocalPhoneFormat(restaurantPhone) : null;
+    // Utiliser les numéros exactement comme ils sont en base
+    const displayPhone = deliveryUser.telephone;
+    const restaurantPhoneDisplay = restaurantPhone;
     
     let message = `🚴 *Bienvenue chez ${restaurantName} !*
 
@@ -1111,6 +1117,9 @@ Bonjour *${deliveryUser.nom}*,
     if (restaurantPhoneDisplay) {
       message += `\n\n📞 *Restaurant :* ${restaurantPhoneDisplay}`;
     }
+
+    // Ajouter le lien de connexion
+    message += `\n\n🔗 *Lien de connexion :*\nhttps://botresto.vercel.app/`;
 
     message += `\n\nBonne chance dans vos livraisons ! 🚴‍♂️💨`;
     

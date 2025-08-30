@@ -1,0 +1,457 @@
+// Styles globaux pour le modal
+:host {
+  --width: 90vw;
+  --max-width: 1200px;
+  --height: 85vh;
+  --max-height: 800px;
+}
+
+// Styles pour la classe CSS du modal
+::ng-deep .restaurant-orders-modal-class {
+  .modal-wrapper {
+    width: 90vw !important;
+    max-width: 1200px !important;
+    height: 85vh !important;
+    max-height: 800px !important;
+  }
+  
+  ion-modal {
+    --width: 90vw;
+    --max-width: 1200px;
+    --height: 85vh;
+    --max-height: 800px;
+  }
+}
+
+.restaurant-orders-modal {
+  --background: #f8f9fa;
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+
+    p {
+      margin-top: 16px;
+      color: var(--ion-color-medium);
+    }
+  }
+
+  .orders-container {
+    padding: 16px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  // Header
+  .orders-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+
+    .restaurant-info {
+      h2 {
+        margin: 0 0 8px 0;
+        color: var(--ion-color-primary);
+        font-size: 24px;
+        font-weight: bold;
+      }
+
+      p {
+        margin: 0;
+        color: var(--ion-color-medium);
+        font-size: 14px;
+      }
+    }
+
+    .orders-stats {
+      .stat-item {
+        text-align: center;
+
+        .stat-value {
+          display: block;
+          font-size: 32px;
+          font-weight: bold;
+          color: var(--ion-color-primary);
+          line-height: 1;
+        }
+
+        .stat-label {
+          font-size: 12px;
+          color: var(--ion-color-medium);
+          margin-top: 4px;
+        }
+      }
+    }
+  }
+
+  // Tabs
+  .tabs-container {
+    margin-bottom: 20px;
+    
+    ion-segment {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 8px;
+
+      ion-segment-button {
+        margin: 0;
+        min-height: 48px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        font-weight: 500;
+
+        ion-icon {
+          margin-right: 8px;
+          font-size: 18px;
+        }
+
+        ion-label {
+          font-size: 14px;
+        }
+
+        &.segment-button-checked {
+          background: var(--ion-color-primary);
+          color: white;
+
+          ion-icon,
+          ion-label {
+            color: white !important;
+          }
+        }
+
+        &:not(.segment-button-checked) {
+          color: var(--ion-color-medium);
+        }
+      }
+    }
+  }
+
+  // Orders List
+  .orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .order-card {
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      }
+
+      .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+
+        .order-info {
+          ion-card-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 4px;
+          }
+
+          ion-card-subtitle {
+            font-size: 12px;
+            color: var(--ion-color-medium);
+          }
+        }
+
+        .order-status {
+          ion-badge {
+            font-size: 11px;
+            font-weight: 500;
+          }
+        }
+      }
+
+      // Customer Section
+      .customer-section {
+        margin-bottom: 20px;
+
+        h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--ion-color-primary);
+          margin: 0 0 12px 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          ion-icon {
+            font-size: 18px;
+          }
+        }
+
+        .customer-details {
+          .detail-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+
+            ion-icon {
+              margin-right: 8px;
+              color: var(--ion-color-medium);
+              font-size: 16px;
+              width: 20px;
+              flex-shrink: 0;
+            }
+
+            span {
+              color: var(--ion-color-dark);
+              flex: 1;
+            }
+
+            .whatsapp-btn,
+            .maps-btn {
+              margin-left: 8px;
+              height: 28px;
+              width: 28px;
+
+              ion-icon {
+                font-size: 16px;
+                margin: 0;
+              }
+            }
+          }
+        }
+      }
+
+      // Order Section
+      .order-section {
+        h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--ion-color-primary);
+          margin: 0 0 12px 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          ion-icon {
+            font-size: 18px;
+          }
+        }
+
+        .items-list {
+          background: var(--ion-color-light);
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 16px;
+
+          .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--ion-color-step-200);
+
+            &:last-child {
+              border-bottom: none;
+            }
+
+            .item-quantity {
+              font-weight: 600;
+              color: var(--ion-color-primary);
+              min-width: 30px;
+            }
+
+            .item-name {
+              flex: 1;
+              margin-left: 12px;
+              color: var(--ion-color-dark);
+            }
+
+            .item-price {
+              font-weight: 600;
+              color: var(--ion-color-success);
+            }
+          }
+        }
+
+        .order-info-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-bottom: 16px;
+
+          .info-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: var(--ion-color-light);
+            border-radius: 8px;
+
+            ion-icon {
+              margin-right: 12px;
+              color: var(--ion-color-primary);
+              font-size: 20px;
+              min-width: 20px;
+            }
+
+            div {
+              display: flex;
+              flex-direction: column;
+
+              .info-label {
+                font-size: 12px;
+                color: var(--ion-color-medium);
+                margin-bottom: 2px;
+              }
+
+              .info-value {
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--ion-color-dark);
+              }
+            }
+          }
+        }
+
+        .order-total {
+          text-align: center;
+          padding: 16px;
+          background: var(--ion-color-success-tint);
+          border-radius: 8px;
+          margin-bottom: 16px;
+
+          strong {
+            font-size: 18px;
+            color: var(--ion-color-success-shade);
+          }
+        }
+      }
+
+      .gps-actions {
+        margin-top: 16px;
+      }
+    }
+  }
+
+  // No Orders
+  .no-orders {
+    text-align: center;
+    padding: 60px 20px;
+
+    .no-orders-icon {
+      font-size: 64px;
+      color: var(--ion-color-light);
+      margin-bottom: 16px;
+    }
+
+    h3 {
+      color: var(--ion-color-medium);
+      margin-bottom: 8px;
+    }
+
+    p {
+      color: var(--ion-color-step-600);
+      font-size: 14px;
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  ::ng-deep .restaurant-orders-modal-class {
+    .modal-wrapper {
+      width: 95vw !important;
+      height: 90vh !important;
+      max-height: none !important;
+    }
+  }
+
+  .restaurant-orders-modal {
+    .orders-container {
+      padding: 12px;
+      max-width: none;
+    }
+
+    .orders-header {
+      flex-direction: column;
+      gap: 16px;
+      text-align: center;
+    }
+
+    .tabs-container {
+      ion-segment {
+        ion-segment-button {
+          min-height: 42px;
+
+          ion-icon {
+            margin-right: 4px;
+            font-size: 16px;
+          }
+
+          ion-label {
+            font-size: 13px;
+          }
+        }
+      }
+    }
+
+    .order-section .order-info-grid {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .order-card {
+      margin: 8px 0;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .restaurant-orders-modal {
+    .orders-header {
+      padding: 16px;
+
+      .restaurant-info h2 {
+        font-size: 20px;
+      }
+    }
+
+    .tabs-container {
+      margin-bottom: 16px;
+    }
+
+    .order-card {
+      .items-list {
+        .item-row {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 4px;
+
+          .item-price {
+            align-self: flex-end;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .restaurant-orders-modal {
+    --background: #1a1a1a;
+
+    .orders-header,
+    .order-card {
+      --background: var(--ion-color-step-100);
+    }
+  }
+}

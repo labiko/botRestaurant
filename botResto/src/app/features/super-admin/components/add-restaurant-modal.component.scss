@@ -1,0 +1,469 @@
+// Add Restaurant Modal Styles
+
+.add-restaurant-modal {
+  --background: #f5f7fa;
+  
+  // Steps Progress
+  .steps-container {
+    background: white;
+    padding: 20px;
+    border-bottom: 1px solid #e1e8ed;
+    
+    .steps-progress {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      max-width: 600px;
+      margin: 0 auto;
+      
+      .step-item {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        
+        &:hover .step-circle {
+          transform: scale(1.1);
+        }
+        
+        .step-circle {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: #e1e8ed;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          color: #8898aa;
+          transition: all 0.3s ease;
+          z-index: 2;
+          
+          ion-icon {
+            font-size: 20px;
+          }
+        }
+        
+        .step-label {
+          margin-top: 8px;
+          font-size: 0.85rem;
+          color: #8898aa;
+          text-align: center;
+          font-weight: 500;
+        }
+        
+        .step-line {
+          position: absolute;
+          top: 20px;
+          left: 40px;
+          width: calc(100vw / 4 - 40px);
+          height: 2px;
+          background: #e1e8ed;
+          z-index: 1;
+        }
+        
+        &.active {
+          .step-circle {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+          }
+          
+          .step-label {
+            color: #667eea;
+            font-weight: 600;
+          }
+        }
+        
+        &.completed {
+          .step-circle {
+            background: #28a745;
+            color: white;
+          }
+          
+          .step-label {
+            color: #28a745;
+          }
+          
+          & + .step-item .step-line {
+            background: #28a745;
+          }
+        }
+      }
+    }
+  }
+  
+  // Form Steps
+  .restaurant-form {
+    padding: 20px;
+    
+    .form-step {
+      animation: slideIn 0.3s ease;
+      
+      .step-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #14171a;
+        margin-bottom: 20px;
+        
+        ion-icon {
+          font-size: 1.5rem;
+          color: #667eea;
+        }
+      }
+      
+      ion-list {
+        background: transparent;
+        
+        ion-item {
+          --background: white;
+          --border-radius: 12px;
+          margin-bottom: 15px;
+          --padding-start: 16px;
+          --inner-padding-end: 16px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+          
+          ion-label {
+            font-weight: 500;
+            color: #495057;
+            
+            &[position="floating"] {
+              transform: translateY(0) scale(0.85);
+            }
+          }
+          
+          ion-input, ion-textarea {
+            --padding-top: 10px;
+            --padding-bottom: 10px;
+          }
+          
+          ion-note {
+            padding-top: 4px;
+            font-size: 0.85rem;
+          }
+        }
+      }
+    }
+    
+    // Service Modes & Payment
+    .service-modes,
+    .payment-modes {
+      margin-bottom: 20px;
+      
+      h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #14171a;
+        margin-bottom: 15px;
+      }
+      
+      .toggle-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        
+        ion-item {
+          --min-height: 50px;
+        }
+      }
+    }
+    
+    // Location Section
+    .location-section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      
+      .location-header {
+        margin-bottom: 15px;
+        
+        h3 {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #14171a;
+          margin: 0 0 10px 0;
+        }
+        
+        .position-controls {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          flex-wrap: wrap;
+        }
+        
+        .accuracy-display {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          background: rgba(40, 167, 69, 0.1);
+          padding: 6px 12px;
+          border-radius: 20px;
+          border: 1px solid rgba(40, 167, 69, 0.2);
+          
+          ion-icon {
+            font-size: 14px;
+          }
+          
+          .accuracy-text {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #28a745;
+          }
+        }
+      }
+      
+      .coordinates-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+      
+      .map-preview {
+        margin-top: 15px;
+      }
+    }
+    
+    // Delivery Config
+    .delivery-config {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      
+      h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #14171a;
+        margin-bottom: 15px;
+      }
+    }
+    
+    // Schedule Section
+    .schedule-section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      
+      h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #14171a;
+        margin-bottom: 15px;
+      }
+      
+      .schedule-list {
+        .schedule-day {
+          display: grid;
+          grid-template-columns: auto 1fr;
+          gap: 15px;
+          align-items: center;
+          padding: 12px;
+          background: #f5f7fa;
+          border-radius: 8px;
+          margin-bottom: 10px;
+          transition: all 0.3s ease;
+          
+          &.closed {
+            opacity: 0.6;
+            background: #f8f9fa;
+          }
+          
+          .day-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 150px;
+            
+            ion-checkbox {
+              --size: 20px;
+            }
+            
+            .day-name {
+              font-weight: 500;
+              flex: 1;
+            }
+            
+            ion-button {
+              --color: #667eea;
+            }
+          }
+          
+          .time-inputs {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            
+            ion-input {
+              --background: white;
+              --padding-start: 10px;
+              --padding-end: 10px;
+              border-radius: 8px;
+              border: 1px solid #e1e8ed;
+              max-width: 120px;
+            }
+            
+            span {
+              font-weight: 500;
+              color: #8898aa;
+            }
+          }
+          
+          .closed-label {
+            color: #dc3545;
+            font-weight: 500;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Footer Toolbar
+ion-footer {
+  ion-toolbar {
+    --background: white;
+    --border-width: 1px 0 0 0;
+    --border-color: #e1e8ed;
+    
+    ion-button {
+      margin: 0 8px;
+      font-weight: 600;
+    }
+  }
+}
+
+// Styles pour l'alerte d'avertissement
+:root {
+  .warning-alert {
+    .alert-wrapper {
+      --background: #fff8e1;
+      --border-radius: 15px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    }
+    
+    .alert-head {
+      background: linear-gradient(135deg, #ff9800, #f57c00);
+      color: white;
+      padding: 20px;
+      border-radius: 15px 15px 0 0;
+      text-align: center;
+      
+      h2 {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0;
+      }
+      
+      h3 {
+        font-size: 14px;
+        font-weight: 400;
+        margin: 5px 0 0 0;
+        opacity: 0.9;
+      }
+    }
+    
+    .alert-message {
+      padding: 20px;
+      color: #795548;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    
+    .alert-button-group {
+      padding: 0 20px 20px 20px;
+      
+      .alert-button-confirm {
+        background: linear-gradient(135deg, #ff9800, #f57c00);
+        color: white;
+        border-radius: 10px;
+        font-weight: 600;
+        text-transform: none;
+      }
+    }
+  }
+}
+
+// Animations
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// Success Alert Modal
+.success-alert-modal {
+  --width: 90%;
+  --max-width: 500px;
+  --height: auto;
+  --border-radius: 16px;
+}
+
+// Validation Errors
+ion-item.ion-invalid.ion-touched {
+  --border-color: var(--ion-color-danger);
+  
+  ion-label {
+    color: var(--ion-color-danger) !important;
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .add-restaurant-modal {
+    .steps-container {
+      .steps-progress {
+        .step-item {
+          .step-label {
+            font-size: 0.75rem;
+          }
+          
+          .step-line {
+            width: calc(100vw / 4 - 50px);
+          }
+        }
+      }
+    }
+    
+    .restaurant-form {
+      padding: 15px;
+      
+      .form-step {
+        .toggle-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .coordinates-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .schedule-section {
+          .schedule-list {
+            .schedule-day {
+              grid-template-columns: 1fr;
+              
+              .day-header {
+                margin-bottom: 10px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

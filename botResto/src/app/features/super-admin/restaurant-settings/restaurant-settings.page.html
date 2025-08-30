@@ -1,0 +1,864 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>
+      Paramètres Restaurant - {{ selectedRestaurant?.name || selectedRestaurant?.nom || 'Chargement...' }}
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="settings-content">
+  <div class="settings-container">
+      
+      <!-- Navigation Tabs -->
+      <div class="navigation-tabs">
+        <div class="tab-card" 
+             [class.active]="currentTab === 'restaurant'" 
+             (click)="switchTab('restaurant')">
+          <div class="tab-icon">
+            <ion-icon name="settings"></ion-icon>
+          </div>
+          <div class="tab-content">
+            <h3>Paramétrage Restaurant</h3>
+            <p>Statut et horaires d'ouverture</p>
+          </div>
+          <div class="tab-indicator" *ngIf="currentTab === 'restaurant'"></div>
+        </div>
+        
+        <div class="tab-card" 
+             [class.active]="currentTab === 'drivers'" 
+             (click)="switchTab('drivers')">
+          <div class="tab-icon">
+            <ion-icon name="bicycle"></ion-icon>
+          </div>
+          <div class="tab-content">
+            <h3>Gestion Livreurs</h3>
+            <p>Créer, gérer et bloquer les livreurs</p>
+          </div>
+          <div class="tab-indicator" *ngIf="currentTab === 'drivers'"></div>
+        </div>
+        
+        <div class="tab-card" 
+             [class.active]="currentTab === 'menus'" 
+             (click)="switchTab('menus')">
+          <div class="tab-icon">
+            <ion-icon name="restaurant"></ion-icon>
+          </div>
+          <div class="tab-content">
+            <h3>Gestion Menus</h3>
+            <p>Créer et gérer les plats du menu</p>
+          </div>
+          <div class="tab-indicator" *ngIf="currentTab === 'menus'"></div>
+        </div>
+
+        <div class="tab-card" 
+             [class.active]="currentTab === 'delivery'" 
+             (click)="switchTab('delivery')">
+          <div class="tab-icon">
+            <ion-icon name="car"></ion-icon>
+          </div>
+          <div class="tab-content">
+            <h3>Modes de Livraison</h3>
+            <p>Paramétrer les modes de livraison et paiement</p>
+          </div>
+          <div class="tab-indicator" *ngIf="currentTab === 'delivery'"></div>
+        </div>
+      </div>
+
+      <!-- Card 1: Paramétrage Restaurant -->
+      <div *ngIf="currentTab === 'restaurant'">
+      <ion-card class="main-card">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="settings" class="card-icon"></ion-icon>
+            Paramétrage Restaurant
+          </ion-card-title>
+          <ion-card-subtitle>Statut et horaires d'ouverture</ion-card-subtitle>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <!-- Restaurant Status -->
+          <div class="section">
+            <div class="section-header">
+              <ion-icon name="restaurant"></ion-icon>
+              <h3>Statut du Restaurant</h3>
+            </div>
+            
+            <div class="status-card" *ngIf="restaurantStatus">
+              <div class="current-status">
+                <div class="status-info">
+                  <h4>{{ restaurantStatus.name }}</h4>
+                  <ion-chip [color]="getStatusColor(restaurantStatus.status)" class="status-chip">
+                    <ion-icon [name]="restaurantStatus.is_open_now ? 'checkmark-circle' : 'close-circle'"></ion-icon>
+                    <ion-label>{{ getStatusText(restaurantStatus.status) }}</ion-label>
+                    <ion-icon *ngIf="isManuallyOpen()" name="information-circle-outline" color="primary" (click)="showManualOpenInfo()"></ion-icon>
+                  </ion-chip>
+                </div>
+                
+                <div class="status-details" *ngIf="!restaurantStatus.is_open_now && restaurantStatus.next_opening">
+                  <p class="next-opening">
+                    <ion-icon name="time"></ion-icon>
+                    Prochaine ouverture: {{ restaurantStatus.next_opening }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="status-controls">
+                <ion-segment [(ngModel)]="currentStatus" (ionChange)="updateStatus()">
+                  <ion-segment-button value="ouvert">
+                    <ion-label>Ouvert</ion-label>
+                  </ion-segment-button>
+                  <ion-segment-button value="ferme">
+                    <ion-label>Fermé</ion-label>
+                  </ion-segment-button>
+                  <ion-segment-button value="temporairement_ferme">
+                    <ion-label>Temp. Fermé</ion-label>
+                  </ion-segment-button>
+                </ion-segment>
+
+                <ion-item *ngIf="currentStatus === 'temporairement_ferme'" class="reason-input">
+                  <ion-label position="stacked">Raison de la fermeture temporaire</ion-label>
+                  <ion-input 
+                    [(ngModel)]="tempCloseReason" 
+                    placeholder="Ex: Rupture de stock, problème technique..."
+                    (ionBlur)="updateStatus()">
+                  </ion-input>
+                </ion-item>
+              </div>
+            </div>
+          </div>
+
+          <!-- Operating Hours -->
+          <div class="section">
+            <div class="section-header">
+              <div>
+                <ion-icon name="time"></ion-icon>
+                <h3>Horaires d'Ouverture</h3>
+              </div>
+              <div class="global-toggle">
+                <ion-chip [color]="restaurantStatus?.is_open_now ? 'success' : 'danger'" outline>
+                  <ion-icon [name]="restaurantStatus?.is_open_now ? 'restaurant' : 'close'"></ion-icon>
+                  <ion-label>{{ restaurantStatus?.is_open_now ? 'Restaurant ouvert' : 'Restaurant fermé' }}</ion-label>
+                </ion-chip>
+              </div>
+            </div>
+
+            <!-- Quick Templates -->
+            <div class="templates-section">
+              <h4>Templates rapides</h4>
+              <div class="template-buttons">
+                <ion-button fill="outline" size="small" (click)="applyTemplate('classic')">
+                  <ion-icon name="restaurant" slot="start"></ion-icon>
+                  Classique (11h-22h)
+                </ion-button>
+                <ion-button fill="outline" size="small" (click)="applyTemplate('fastfood')">
+                  <ion-icon name="fast-food" slot="start"></ion-icon>
+                  Fast Food (10h-23h)
+                </ion-button>
+                <ion-button fill="outline" size="small" (click)="applyTemplate('evening')">
+                  <ion-icon name="wine" slot="start"></ion-icon>
+                  Soirée (18h-2h)
+                </ion-button>
+              </div>
+            </div>
+
+            <div class="modern-schedule">
+              <div class="schedule-item" *ngFor="let day of schedule; let i = index" 
+                   [class.closed]="day.is_closed"
+                   [class.today]="isToday(day.day_of_week)">
+                
+                <div class="day-card">
+                  <div class="day-header-modern">
+                    <div class="day-info-modern">
+                      <div class="day-badge" [class.today-badge]="isToday(day.day_of_week)">
+                        <span class="day-name">{{ getDayName(day.day_of_week) }}</span>
+                        <span class="day-indicator" *ngIf="isToday(day.day_of_week)">Aujourd'hui</span>
+                      </div>
+                      
+                      <div class="status-toggle">
+                        <ion-toggle 
+                          [checked]="!day.is_closed" 
+                          (ionChange)="toggleDayClosed(i, $event)"
+                          [color]="!day.is_closed ? 'success' : 'medium'">
+                        </ion-toggle>
+                        <span class="toggle-label">{{ !day.is_closed ? 'Ouvert' : 'Fermé' }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="time-controls-simple" *ngIf="!day.is_closed">
+                    <div class="time-inputs-row">
+                      <ion-item class="time-item">
+                        <ion-icon name="sunny" slot="start" color="warning"></ion-icon>
+                        <ion-label position="stacked">Ouverture</ion-label>
+                        <ion-input 
+                          type="time"
+                          [(ngModel)]="day.open_time"
+                          (ionInput)="onTimeChange(i, 'open_time', $event)"
+                          placeholder="09:00">
+                        </ion-input>
+                        <ion-icon name="time" slot="end" color="medium" (click)="focusTimeInput(i, 'open_time')" style="cursor: pointer;"></ion-icon>
+                      </ion-item>
+                      
+                      <ion-item class="time-item">
+                        <ion-icon name="moon" slot="start" color="medium"></ion-icon>
+                        <ion-label position="stacked">Fermeture</ion-label>
+                        <ion-input 
+                          type="time"
+                          [(ngModel)]="day.close_time"
+                          (ionInput)="onTimeChange(i, 'close_time', $event)"
+                          placeholder="22:00">
+                        </ion-input>
+                        <ion-icon name="time" slot="end" color="medium" (click)="focusTimeInput(i, 'close_time')" style="cursor: pointer;"></ion-icon>
+                      </ion-item>
+                    </div>
+
+                    <div class="duration-display" *ngIf="day.open_time && day.close_time">
+                      <ion-chip color="tertiary" fill="outline">
+                        <ion-icon name="time-outline"></ion-icon>
+                        <ion-label>{{ calculateDuration(day.open_time, day.close_time) }} d'ouverture</ion-label>
+                      </ion-chip>
+                    </div>
+                  </div>
+
+                  <div class="closed-indicator-modern" *ngIf="day.is_closed">
+                    <div class="closed-content">
+                      <ion-icon name="bed" class="closed-icon"></ion-icon>
+                      <span class="closed-text">Jour de fermeture</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
+      </div>
+
+      <!-- Card 2: Gestion des Livreurs -->
+      <div *ngIf="currentTab === 'drivers'">
+      <ion-card class="main-card">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="bicycle" class="card-icon"></ion-icon>
+            Gestion des Livreurs
+          </ion-card-title>
+          <ion-card-subtitle>Créer, gérer et bloquer les livreurs</ion-card-subtitle>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <!-- Ajouter Nouveau Livreur -->
+          <div class="section">
+            <div class="section-header">
+              <ion-icon name="person-add"></ion-icon>
+              <h3>Nouveau Livreur</h3>
+            </div>
+            
+            <div class="add-driver-form">
+              <ion-item>
+                <ion-label position="stacked">Nom complet</ion-label>
+                <ion-input 
+                  [(ngModel)]="newDriver.name" 
+                  placeholder="Ex: Amadou Diallo"
+                  maxlength="50">
+                </ion-input>
+              </ion-item>
+              
+              <ion-item>
+                <ion-label position="stacked">Téléphone</ion-label>
+                <ion-input 
+                  [(ngModel)]="newDriver.phone" 
+                  placeholder="Ex: +224623456789, 623456789, +33123456789"
+                  type="tel">
+                </ion-input>
+              </ion-item>
+              
+              <ion-button 
+                expand="block" 
+                (click)="createDriver()" 
+                [disabled]="!newDriver.name || !newDriver.phone"
+                color="success">
+                <ion-icon name="person-add" slot="start"></ion-icon>
+                Créer Livreur
+              </ion-button>
+            </div>
+          </div>
+
+          <!-- Liste des Livreurs -->
+          <div class="section">
+            <div class="section-header">
+              <ion-icon name="people"></ion-icon>
+              <h3>Livreurs Actifs ({{ drivers.length }})</h3>
+              <ion-button fill="clear" size="small" (click)="refreshDrivers()">
+                <ion-icon name="refresh"></ion-icon>
+              </ion-button>
+            </div>
+
+            <div class="drivers-list" *ngIf="drivers.length > 0">
+              <ion-item *ngFor="let driver of drivers" class="driver-item">
+                <ion-avatar slot="start">
+                  <ion-icon name="person" class="driver-avatar"></ion-icon>
+                </ion-avatar>
+                
+                <ion-label>
+                  <h3>{{ driver.nom }}</h3>
+                  <p>{{ driver.telephone }}</p>
+                  <p class="driver-code">Code: {{ driver.code_access }}</p>
+                </ion-label>
+                
+                <div slot="end" class="driver-actions">
+                  <ion-chip 
+                    [color]="driver.is_blocked ? 'danger' : 'success'" 
+                    class="status-chip">
+                    <ion-icon 
+                      [name]="driver.is_blocked ? 'close-circle' : 'checkmark-circle'">
+                    </ion-icon>
+                    <ion-label>{{ driver.is_blocked ? 'Bloqué' : 'Actif' }}</ion-label>
+                  </ion-chip>
+                  
+                  <ion-button 
+                    fill="clear" 
+                    size="small" 
+                    [color]="driver.is_blocked ? 'success' : 'warning'"
+                    (click)="toggleDriverBlock(driver)">
+                    <ion-icon 
+                      [name]="driver.is_blocked ? 'checkmark' : 'ban'">
+                    </ion-icon>
+                  </ion-button>
+                  
+                  <ion-button 
+                    fill="clear" 
+                    size="small" 
+                    color="danger"
+                    (click)="deleteDriver(driver)">
+                    <ion-icon name="trash"></ion-icon>
+                  </ion-button>
+                </div>
+              </ion-item>
+            </div>
+
+            <div *ngIf="drivers.length === 0" class="no-drivers">
+              <ion-icon name="bicycle" class="empty-icon"></ion-icon>
+              <p>Aucun livreur enregistré</p>
+              <small>Commencez par créer votre premier livreur</small>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
+      </div>
+
+      <!-- Card 3: Gestion des Menus -->
+      <div *ngIf="currentTab === 'menus'">
+      <ion-card class="main-card">
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="restaurant" class="card-icon"></ion-icon>
+            Gestion des Menus
+          </ion-card-title>
+          <ion-card-subtitle>Créer et gérer les plats du restaurant</ion-card-subtitle>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <!-- Statistiques du menu -->
+          <div class="menu-stats" *ngIf="menuStats">
+            <div class="stats-grid">
+              <div class="stat-item">
+                <ion-icon name="restaurant" color="primary"></ion-icon>
+                <div>
+                  <span class="stat-number">{{ menuStats.total_items }}</span>
+                  <span class="stat-label">Plats total</span>
+                </div>
+              </div>
+              <div class="stat-item">
+                <ion-icon name="checkmark-circle" color="success"></ion-icon>
+                <div>
+                  <span class="stat-number">{{ menuStats.available_items }}</span>
+                  <span class="stat-label">Disponibles</span>
+                </div>
+              </div>
+              <div class="stat-item">
+                <ion-icon name="cash" color="warning"></ion-icon>
+                <div>
+                  <span class="stat-number">{{ formatPrice(menuStats.average_price) }}</span>
+                  <span class="stat-label">Prix moyen</span>
+                </div>
+              </div>
+              <div class="stat-item">
+                <ion-icon name="albums" color="medium"></ion-icon>
+                <div>
+                  <span class="stat-number">{{ getCategoriesCount() }}</span>
+                  <span class="stat-label">Catégories</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bouton pour ajouter un nouveau plat -->
+          <div class="add-menu-header">
+            <ion-button 
+              expand="block" 
+              fill="outline" 
+              color="success"
+              (click)="toggleNewMenuItemForm()">
+              <ion-icon [name]="showNewMenuItemForm ? 'remove' : 'add'" slot="start"></ion-icon>
+              {{ showNewMenuItemForm ? 'Fermer le formulaire' : 'Ajouter un nouveau plat' }}
+            </ion-button>
+          </div>
+
+          <!-- Formulaire d'ajout de plat -->
+          <div class="add-menu-form" *ngIf="showNewMenuItemForm">
+            <h3>
+              <ion-icon name="restaurant" color="success"></ion-icon>
+              Nouveau plat
+            </h3>
+            
+            <ion-item>
+              <ion-label position="stacked">Nom du plat *</ion-label>
+              <ion-input 
+                [(ngModel)]="newMenuItem.nom_plat" 
+                placeholder="Ex: Riz sauce arachide"
+                maxlength="100">
+              </ion-input>
+            </ion-item>
+            
+            <ion-item>
+              <ion-label position="stacked">Description</ion-label>
+              <ion-textarea 
+                [(ngModel)]="newMenuItem.description" 
+                placeholder="Description du plat..."
+                rows="2"
+                maxlength="500">
+              </ion-textarea>
+            </ion-item>
+            
+            <div class="form-row">
+              <ion-item class="form-item">
+                <ion-label position="stacked">Prix ({{ getCurrencySymbol() }}) *</ion-label>
+                <ion-input 
+                  type="number"
+                  [(ngModel)]="newMenuItem.prix_display" 
+                  placeholder="220000"
+                  min="0">
+                </ion-input>
+              </ion-item>
+              
+              <ion-item class="form-item">
+                <ion-label position="stacked">Catégorie *</ion-label>
+                <ion-select 
+                  [(ngModel)]="newMenuItem.categorie" 
+                  placeholder="Choisir une catégorie">
+                  <ion-select-option 
+                    *ngFor="let cat of availableCategories" 
+                    [value]="cat.value">
+                    {{ cat.label }}
+                  </ion-select-option>
+                </ion-select>
+              </ion-item>
+            </div>
+            
+            <!-- Image URL field temporarily hidden -->
+            <!--
+            <ion-item>
+              <ion-label position="stacked">URL de l'image (optionnel)</ion-label>
+              <ion-input 
+                [(ngModel)]="newMenuItem.photo_url" 
+                placeholder="https://example.com/image.jpg"
+                type="url">
+              </ion-input>
+            </ion-item>
+            -->
+            
+            <div class="form-actions">
+              <ion-button 
+                expand="block" 
+                (click)="createMenuItem()" 
+                [disabled]="!newMenuItem.nom_plat || !newMenuItem.categorie || !newMenuItem.prix_display"
+                color="success">
+                <ion-icon name="add" slot="start"></ion-icon>
+                Créer le plat
+              </ion-button>
+            </div>
+          </div>
+
+          <!-- Filtres par catégorie -->
+          <div class="category-filters" *ngIf="menuItems.length > 0">
+            <h3>
+              <ion-icon name="filter"></ion-icon>
+              Filtrer par catégorie
+            </h3>
+            <div class="filter-chips">
+              <ion-chip 
+                [color]="selectedCategory === 'all' ? 'primary' : 'medium'"
+                (click)="filterByCategory('all')">
+                <ion-label>Tous ({{ menuItems.length }})</ion-label>
+              </ion-chip>
+              <ion-chip 
+                *ngFor="let cat of availableCategories" 
+                [color]="selectedCategory === cat.value ? 'primary' : 'medium'"
+                (click)="filterByCategory(cat.value)">
+                <ion-icon [name]="cat.icon"></ion-icon>
+                <ion-label>{{ cat.label }} ({{ getCategoryCount(cat.value) }})</ion-label>
+              </ion-chip>
+            </div>
+          </div>
+
+          <!-- Liste des plats -->
+          <div class="menu-items-list">
+            <h3 *ngIf="filteredMenuItems.length > 0">
+              <ion-icon name="list"></ion-icon>
+              {{ getFilterTitle() }} ({{ filteredMenuItems.length }})
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                (click)="refreshMenuItems()"
+                color="primary">
+                <ion-icon name="refresh"></ion-icon>
+              </ion-button>
+            </h3>
+            
+            <div *ngFor="let item of filteredMenuItems" class="menu-item-card">
+              <div class="menu-item-info">
+                <!-- Image display temporarily hidden -->
+                <!--
+                <div class="menu-item-image" *ngIf="item.photo_url">
+                  <img [src]="item.photo_url" [alt]="item.nom_plat" />
+                </div>
+                -->
+                <div class="menu-item-details">
+                  <h4>{{ item.nom_plat }}</h4>
+                  <p class="item-description" *ngIf="item.description">{{ item.description }}</p>
+                  <div class="item-meta">
+                    <ion-chip [color]="getCategoryColor(item.categorie)" size="small">
+                      <ion-icon [name]="getCategoryIcon(item.categorie)"></ion-icon>
+                      <ion-label>{{ getCategoryLabel(item.categorie) }}</ion-label>
+                    </ion-chip>
+                    <span class="item-price">{{ formatPrice(item.prix) }}</span>
+                  </div>
+                  
+                  <div class="menu-item-dates" *ngIf="item.updated_at">
+                    <ion-text color="medium">
+                      <small>
+                        <ion-icon name="time" class="date-icon"></ion-icon>
+                        Modifié le {{ formatDate(item.updated_at) }}
+                      </small>
+                    </ion-text>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="menu-item-actions">
+                <ion-chip 
+                  [color]="item.disponible ? 'success' : 'danger'"
+                  class="availability-chip">
+                  <ion-icon 
+                    [name]="item.disponible ? 'checkmark-circle' : 'close-circle'">
+                  </ion-icon>
+                  <ion-label>{{ item.disponible ? 'Disponible' : 'Indisponible' }}</ion-label>
+                </ion-chip>
+                
+                <div class="action-buttons">
+                  <ion-button 
+                    fill="clear" 
+                    size="small" 
+                    [color]="item.disponible ? 'warning' : 'success'"
+                    (click)="toggleMenuItemAvailability(item)">
+                    <ion-icon 
+                      [name]="item.disponible ? 'eye-off' : 'eye'">
+                    </ion-icon>
+                  </ion-button>
+                  
+                  <ion-button 
+                    fill="clear" 
+                    size="small" 
+                    color="primary"
+                    (click)="editMenuItem(item)">
+                    <ion-icon name="create"></ion-icon>
+                  </ion-button>
+                  
+                  <ion-button 
+                    fill="clear" 
+                    size="small" 
+                    color="danger"
+                    (click)="deleteMenuItem(item)">
+                    <ion-icon name="trash"></ion-icon>
+                  </ion-button>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="filteredMenuItems.length === 0 && menuItems.length === 0" class="no-menu-items">
+              <ion-icon name="restaurant" class="empty-icon"></ion-icon>
+              <p>Aucun plat dans votre menu</p>
+              <small>Commencez par créer votre premier plat</small>
+            </div>
+            
+            <div *ngIf="filteredMenuItems.length === 0 && menuItems.length > 0" class="no-filtered-items">
+              <ion-icon name="filter" class="empty-icon"></ion-icon>
+              <p>Aucun plat dans cette catégorie</p>
+              <small>Essayez une autre catégorie</small>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
+      </div>
+
+      <!-- Information -->
+      <div class="info-section">
+        <ion-card class="info-card">
+          <ion-card-content>
+            <div class="info-item">
+              <ion-icon name="information-circle"></ion-icon>
+              <div>
+                <h4>À propos des horaires</h4>
+                <p>Les horaires définis ici s'appliquent aux commandes WhatsApp. Les clients ne pourront commander que pendant les heures d'ouverture.</p>
+              </div>
+            </div>
+            
+            <div class="info-item">
+              <ion-icon name="time"></ion-icon>
+              <div>
+                <h4>Fermeture temporaire</h4>
+                <p>Utilisez la fermeture temporaire pour des pauses courtes, ruptures de stock ou problèmes techniques.</p>
+              </div>
+            </div>
+
+
+          </ion-card-content>
+        </ion-card>
+
+        <!-- Card 2: Configuration Devise -->
+        <ion-card class="main-card">
+          <ion-card-header>
+            <ion-card-title>
+              <ion-icon name="cash" class="card-icon"></ion-icon>
+              Configuration Devise
+            </ion-card-title>
+            <ion-card-subtitle>Paramétrer la devise utilisée par le restaurant</ion-card-subtitle>
+          </ion-card-header>
+          
+          <ion-card-content>
+            <div class="currency-configuration">
+              <div class="current-currency-info">
+                <h3>Devise Actuelle</h3>
+                <ion-chip color="primary">
+                  <ion-icon name="cash"></ion-icon>
+                  <ion-label>{{ getCurrentCurrencyName() }}</ion-label>
+                </ion-chip>
+              </div>
+              
+              <div class="currency-selector">
+                <h4>Changer la Devise</h4>
+                <ion-item>
+                  <ion-label>Nouvelle devise</ion-label>
+                  <ion-select [(ngModel)]="currentCurrency" (ionChange)="updateCurrency()" placeholder="Sélectionner une devise">
+                    <ion-select-option *ngFor="let currency of availableCurrencies" [value]="currency.code">
+                      {{ currency.name }} ({{ currency.code }})
+                    </ion-select-option>
+                  </ion-select>
+                </ion-item>
+                <ion-text color="medium">
+                  <p>Cette devise sera utilisée pour l'affichage de tous les prix dans l'application et le bot WhatsApp.</p>
+                </ion-text>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- Card 4: Modes de Livraison -->
+      <div *ngIf="currentTab === 'delivery'">
+        <ion-card class="main-card">
+          <ion-card-header>
+            <ion-card-title>
+              <ion-icon name="car" class="card-icon"></ion-icon>
+              Modes de Livraison & Paiement
+            </ion-card-title>
+            <ion-card-subtitle>Paramétrer les modes de récupération et de paiement disponibles</ion-card-subtitle>
+          </ion-card-header>
+          
+          <ion-card-content>
+            <div class="delivery-modes-section">
+              <p class="section-description">Configurez les modes de récupération disponibles pour vos clients</p>
+              
+              <!-- Warning Message -->
+              <div class="warning-message" *ngIf="!isAtLeastOneModeActive()">
+                <div class="warning-content">
+                  <ion-icon name="warning"></ion-icon>
+                  <div>
+                    <h4>Attention</h4>
+                    <p>Au moins un mode doit être activé pour accepter des commandes</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Success Message -->
+              <div class="success-message" *ngIf="deliveryModesUpdateSuccess">
+                <div class="success-content">
+                  <ion-icon name="checkmark-circle"></ion-icon>
+                  <p>Modes de livraison mis à jour avec succès</p>
+                </div>
+              </div>
+              
+              <!-- Delivery Modes Grid -->
+              <div class="delivery-modes-grid">
+                <!-- Sur place -->
+                <div class="delivery-mode-item" [class.active]="deliveryModes.allow_dine_in">
+                  <div class="mode-header">
+                    <div class="mode-info">
+                      <div class="mode-icon">
+                        <ion-icon name="restaurant"></ion-icon>
+                      </div>
+                      <div class="mode-content">
+                        <h4>Sur place</h4>
+                        <p>Les clients peuvent manger au restaurant</p>
+                      </div>
+                    </div>
+                    <ion-checkbox [(ngModel)]="deliveryModes.allow_dine_in" (ionChange)="updateDeliveryModes()"></ion-checkbox>
+                  </div>
+                  <div class="mode-description">
+                    Parfait pour les clients qui souhaitent profiter de l'ambiance du restaurant
+                  </div>
+                </div>
+                
+                <!-- À emporter -->
+                <div class="delivery-mode-item" [class.active]="deliveryModes.allow_takeaway">
+                  <div class="mode-header">
+                    <div class="mode-info">
+                      <div class="mode-icon">
+                        <ion-icon name="bag-handle"></ion-icon>
+                      </div>
+                      <div class="mode-content">
+                        <h4>À emporter</h4>
+                        <p>Les clients viennent récupérer leur commande</p>
+                      </div>
+                    </div>
+                    <ion-checkbox [(ngModel)]="deliveryModes.allow_takeaway" (ionChange)="updateDeliveryModes()"></ion-checkbox>
+                  </div>
+                  <div class="mode-description">
+                    Commande préparée à l'avance, récupération rapide au comptoir
+                  </div>
+                </div>
+                
+                <!-- Livraison -->
+                <div class="delivery-mode-item" [class.active]="deliveryModes.allow_delivery">
+                  <div class="mode-header">
+                    <div class="mode-info">
+                      <div class="mode-icon">
+                        <ion-icon name="bicycle"></ion-icon>
+                      </div>
+                      <div class="mode-content">
+                        <h4>Livraison</h4>
+                        <p>Livraison à domicile disponible</p>
+                      </div>
+                    </div>
+                    <ion-checkbox [(ngModel)]="deliveryModes.allow_delivery" (ionChange)="updateDeliveryModes()"></ion-checkbox>
+                  </div>
+                  <div class="mode-description">
+                    Service de livraison à domicile via nos livreurs partenaires
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Delivery Fee Configuration -->
+              <div class="delivery-fee-section">
+                <h4>
+                  <ion-icon name="calculator"></ion-icon>
+                  Configuration des Frais de Livraison
+                </h4>
+                <p class="section-description">Configurez comment les frais de livraison sont calculés pour vos clients</p>
+                
+                <div class="delivery-config-card">
+                  <div class="config-info">
+                    <div class="config-icon">
+                      <ion-icon name="settings"></ion-icon>
+                    </div>
+                    <div class="config-content">
+                      <h5>Paramètres avancés</h5>
+                      <p>Montant fixe ou calcul par distance</p>
+                    </div>
+                  </div>
+                  <ion-button 
+                    fill="outline" 
+                    color="primary"
+                    (click)="openDeliveryConfig()">
+                    <ion-icon name="settings" slot="start"></ion-icon>
+                    Configurer
+                  </ion-button>
+                </div>
+              </div>
+
+              <!-- Payment Modes Configuration -->
+              <div class="payment-modes-section">
+                <h4>💳 Modes de Paiement</h4>
+                <p class="section-description">Configurez les modes de paiement acceptés par votre restaurant</p>
+                
+                <!-- Payment Warning Message -->
+                <div class="warning-message" *ngIf="!isAtLeastOnePaymentModeActive()">
+                  <div class="warning-content">
+                    <ion-icon name="warning"></ion-icon>
+                    <div>
+                      <h4>Attention</h4>
+                      <p>Au moins un mode de paiement doit être activé</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Payment Success Message -->
+                <div class="success-message" *ngIf="paymentModesUpdateSuccess">
+                  <div class="success-content">
+                    <ion-icon name="checkmark-circle"></ion-icon>
+                    <p>Modes de paiement mis à jour avec succès</p>
+                  </div>
+                </div>
+                
+                <!-- Payment Modes Grid -->
+                <div class="delivery-modes-grid">
+                  <!-- Pay Now -->
+                  <div class="delivery-mode-item" [class.active]="paymentModes.allow_pay_now">
+                    <div class="mode-header">
+                      <div class="mode-info">
+                        <div class="mode-icon">
+                          <ion-icon name="card"></ion-icon>
+                        </div>
+                        <div class="mode-content">
+                          <h4>Paiement immédiat</h4>
+                          <p>Paiement mobile ou carte bancaire</p>
+                        </div>
+                      </div>
+                      <ion-checkbox [(ngModel)]="paymentModes.allow_pay_now" (ionChange)="updatePaymentModes()"></ion-checkbox>
+                    </div>
+                    <div class="mode-description">
+                      Orange Money, Wave (Guinée) ou carte bancaire (France)
+                    </div>
+                  </div>
+                  
+                  <!-- Pay Later -->
+                  <div class="delivery-mode-item" [class.active]="paymentModes.allow_pay_later">
+                    <div class="mode-header">
+                      <div class="mode-info">
+                        <div class="mode-icon">
+                          <ion-icon name="cash"></ion-icon>
+                        </div>
+                        <div class="mode-content">
+                          <h4>Paiement différé</h4>
+                          <p>Paiement cash sur place</p>
+                        </div>
+                      </div>
+                      <ion-checkbox [(ngModel)]="paymentModes.allow_pay_later" (ionChange)="updatePaymentModes()"></ion-checkbox>
+                    </div>
+                    <div class="mode-description">
+                      Paiement en espèces à la livraison, récupération ou fin de repas
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+  </div>
+</ion-content>

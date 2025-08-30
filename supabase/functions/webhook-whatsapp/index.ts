@@ -304,7 +304,7 @@ async function getPaymentModeMessage(restaurantId: string, deliveryMode: string)
         laterText = "À la récupération (cash)";
         break;
       case 'livraison':
-        laterText = "À la livraison (cash)";
+        laterText = "À la livraison (cash,o-money)";
         break;
       default:
         laterText = "Plus tard (cash)";

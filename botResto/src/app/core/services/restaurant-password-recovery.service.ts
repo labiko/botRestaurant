@@ -115,7 +115,7 @@ Votre mot de passe: *${password}*
 
 Connectez-vous maintenant sur l'app !
 
-Bot Resto Conakry`;
+${restaurantName}`;
   }
 
   /**

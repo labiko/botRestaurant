@@ -2,6 +2,74 @@
   --background: var(--background-gray);
 }
 
+// Delivery Fee Configuration
+.delivery-fee-section {
+  margin: 24px 0;
+
+  h4 {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    color: var(--ion-color-primary);
+
+    ion-icon {
+      margin-right: 8px;
+      font-size: 1.2em;
+    }
+  }
+
+  .section-description {
+    margin-bottom: 16px;
+    color: var(--ion-color-medium);
+    font-size: 0.9em;
+  }
+
+  .delivery-config-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background: var(--ion-color-light);
+    border-radius: 8px;
+    border-left: 4px solid var(--ion-color-primary);
+
+    .config-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .config-icon {
+        background: var(--ion-color-primary);
+        color: white;
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        ion-icon {
+          font-size: 1.2em;
+        }
+      }
+
+      .config-content {
+        h5 {
+          margin: 0 0 4px 0;
+          font-weight: 600;
+          color: var(--ion-color-dark);
+        }
+
+        p {
+          margin: 0;
+          color: var(--ion-color-medium);
+          font-size: 0.9em;
+        }
+      }
+    }
+  }
+}
+
 .settings-container {
   max-width: 800px;
   margin: 0 auto;
@@ -1306,6 +1374,31 @@
       &:hover {
         border-color: var(--primary-purple);
         box-shadow: 0 2px 10px rgba(139, 69, 19, 0.1);
+      }
+      
+      &.disabled-mode {
+        opacity: 0.6;
+        background: #f5f5f5;
+        border-color: #e0e0e0;
+        cursor: pointer;
+        
+        &:hover {
+          box-shadow: none;
+          border-color: #e0e0e0;
+        }
+        
+        .mode-icon ion-icon {
+          color: var(--ion-color-medium);
+        }
+        
+        h4, p {
+          color: var(--ion-color-medium);
+        }
+        
+        ion-checkbox {
+          --background-checked: var(--ion-color-medium);
+          --border-color-checked: var(--ion-color-medium);
+        }
       }
       
       &.active {

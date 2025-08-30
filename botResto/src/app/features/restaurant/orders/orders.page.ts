@@ -1,13 +1,14 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { ModalController } from '@ionic/angular';
+import { ModalController, LoadingController, ToastController } from '@ionic/angular';
 import { AuthService } from '../../../core/services/auth.service';
 import { RestaurantOrdersService, Order, DeliveryUser, Restaurant } from '../../../core/services/restaurant-orders.service';
 import { AutoRefreshService } from '../../../core/services/auto-refresh.service';
 import { REFRESH_CONFIG } from '../../../core/config/refresh.config';
 import { DeliveryAssignmentModalComponent } from './components/delivery-assignment-modal/delivery-assignment-modal.component';
 import { WhatsAppNotificationService } from '../../../core/services/whatsapp-notification.service';
+import { RestaurantPaymentService } from '../../../core/services/restaurant-payment.service';
 
 @Component({
   selector: 'app-orders',
@@ -32,6 +33,13 @@ export class OrdersPage implements OnInit, OnDestroy {
   })[] = [];
   
   private subscriptions: Subscription[] = [];
+  
+  // AJOUT: Cache des paiements
+  private paymentStatusCache = new Map<string, any>();
+  
+  // AJOUT: État de configuration de paiement
+  hasPaymentConfig: boolean = false;
+  private paymentTimers = new Map<string, any>();
 
   constructor(
     private authService: AuthService,
@@ -39,7 +47,10 @@ export class OrdersPage implements OnInit, OnDestroy {
     private autoRefreshService: AutoRefreshService,
     private router: Router,
     private modalController: ModalController,
-    private whatsappService: WhatsAppNotificationService
+    private whatsappService: WhatsAppNotificationService,
+    private paymentService: RestaurantPaymentService,  // AJOUT
+    private loadingController: LoadingController,      // AJOUT
+    private toastController: ToastController           // AJOUT
   ) { }
 
   async ngOnInit() {
@@ -94,7 +105,8 @@ export class OrdersPage implements OnInit, OnDestroy {
     // Load initial data
     await Promise.all([
       this.ordersService.loadRestaurantOrders(user.restaurantId),
-      this.ordersService.loadAvailableDeliveryUsers(user.restaurantId)
+      this.ordersService.loadAvailableDeliveryUsers(user.restaurantId),
+      this.checkPaymentConfiguration(user.restaurantId)
     ]);
 
     // Start auto-refresh using centralized config
@@ -106,6 +118,9 @@ export class OrdersPage implements OnInit, OnDestroy {
         }
       });
     this.subscriptions.push(autoRefreshSubscription);
+    
+    // AJOUT: Charger statuts paiement
+    this.loadPaymentStatuses();
   }
 
   ngOnDestroy() {
@@ -114,6 +129,9 @@ export class OrdersPage implements OnInit, OnDestroy {
     
     // Unsubscribe from all subscriptions
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    
+    // AJOUT: Clear timers
+    this.paymentTimers.forEach(timer => clearInterval(timer));
   }
 
 
@@ -305,7 +323,6 @@ export class OrdersPage implements OnInit, OnDestroy {
     switch (order.statut) {
       case 'en_attente':
         actions.push({ label: 'Confirmer', status: 'confirmee', color: 'primary' });
-        actions.push({ label: 'Annuler', status: 'annulee', color: 'danger' });
         break;
       case 'confirmee':
         actions.push({ label: 'En préparation', status: 'preparation', color: 'secondary' });
@@ -331,6 +348,12 @@ export class OrdersPage implements OnInit, OnDestroy {
         break;
     }
     
+    // Ajouter le bouton Annuler pour tous les statuts actifs (sauf les états finaux)
+    const finalStatuses = ['terminee', 'livree', 'annulee'];
+    if (!finalStatuses.includes(order.statut)) {
+      actions.push({ label: 'Annuler', status: 'annulee', color: 'danger' });
+    }
+    
     return actions;
   }
 
@@ -343,7 +366,7 @@ export class OrdersPage implements OnInit, OnDestroy {
   }
 
   // Open driving directions from restaurant to client
-  openDrivingDirections(clientLatitude?: number, clientLongitude?: number) {
+  openDrivingDirections(clientLatitude?: number, clientLongitude?: number, adresse_livraison?: string) {
     if (!this.restaurant) {
       console.error('Coordonnées restaurant non disponibles');
       return;
@@ -352,9 +375,22 @@ export class OrdersPage implements OnInit, OnDestroy {
     const restaurantLat = this.restaurant.latitude;
     const restaurantLng = this.restaurant.longitude;
     
-    if (clientLatitude && clientLongitude) {
-      // URL Google Maps avec itinéraire en mode conduite
-      const url = `https://www.google.com/maps/dir/${restaurantLat},${restaurantLng}/${clientLatitude},${clientLongitude}/@${clientLatitude},${clientLongitude},15z/data=!3m1!4b1!4m2!4m1!3e0`;
+    let finalClientLat = clientLatitude;
+    let finalClientLng = clientLongitude;
+
+    // Si pas de coordonnées directes, essayer d'extraire depuis adresse_livraison
+    if ((!finalClientLat || !finalClientLng) && adresse_livraison && adresse_livraison.startsWith('GPS: ')) {
+      const coordsText = adresse_livraison.replace('GPS: ', '').trim();
+      const [lat, lng] = coordsText.split(',').map(coord => parseFloat(coord.trim()));
+      if (!isNaN(lat) && !isNaN(lng)) {
+        finalClientLat = lat;
+        finalClientLng = lng;
+      }
+    }
+    
+    if (finalClientLat && finalClientLng) {
+      // URL Google Maps simplifiée avec itinéraire en mode conduite
+      const url = `https://www.google.com/maps/dir/${restaurantLat},${restaurantLng}/${finalClientLat},${finalClientLng}`;
       window.open(url, '_blank');
     } else {
       // Si pas de coordonnées client, ouvrir Google Maps sur la position du restaurant
@@ -520,5 +556,175 @@ export class OrdersPage implements OnInit, OnDestroy {
     } else {
       console.error('❌ Test message failed');
     }
+  }
+  
+  // AJOUT: Nouvelles méthodes pour paiement
+  async loadPaymentStatuses() {
+    for (const order of this.orders) {
+      // Charger pour toutes les commandes non "maintenant" (pour afficher le mode de paiement)
+      if (order.paiement_mode !== 'maintenant') {
+        const payment = await this.paymentService.getLastPaymentStatus(order.id);
+        if (payment) {
+          this.paymentStatusCache.set(order.id, payment);
+          // Démarrer timer seulement si PENDING et pas encore payé
+          if (payment.status === 'PENDING' && order.paiement_statut !== 'paye') {
+            this.startPaymentTimer(order.id, payment.created_at);
+          }
+        }
+      }
+    }
+  }
+  
+  startPaymentTimer(orderId: string, createdAt: string) {
+    if (this.paymentTimers.has(orderId)) {
+      clearInterval(this.paymentTimers.get(orderId));
+    }
+    
+    const timer = setInterval(() => {
+      if (this.paymentService.isPaymentExpired(createdAt)) {
+        clearInterval(timer);
+        this.paymentTimers.delete(orderId);
+        this.paymentStatusCache.delete(orderId);
+      }
+    }, 1000);
+    
+    this.paymentTimers.set(orderId, timer);
+  }
+  
+  shouldShowPaymentSection(order: Order): boolean {
+    // Afficher la section paiement pour les statuts PRETE et EN_LIVRAISON même avec paiement_mode 'maintenant'
+    if ((order.statut === 'prete' || order.statut === 'en_livraison') && 
+        order.paiement_statut !== 'paye') {
+      return true;
+    }
+    
+    // Logique existante pour les autres cas
+    return order.paiement_mode !== 'maintenant' && 
+           order.paiement_statut !== 'paye' &&
+           order.statut !== 'annulee' &&
+           order.statut !== 'livree';
+  }
+  
+  canTriggerPayment(order: Order): boolean {
+    const payment = this.paymentStatusCache.get(order.id);
+    
+    // Afficher le bouton tant que le statut n'est pas SUCCESS
+    if (!payment) return true;
+    if (payment.status === 'SUCCESS') return false;
+    
+    // Pour tous les autres statuts (PENDING, FAILED, etc.), afficher le bouton
+    return true;
+  }
+  
+  isPaymentActive(order: Order): boolean {
+    const payment = this.paymentStatusCache.get(order.id);
+    return payment && 
+           payment.status === 'PENDING' && 
+           !this.paymentService.isPaymentExpired(payment.created_at);
+  }
+  
+  async triggerPayment(order: Order) {
+    const loading = await this.loadingController.create({
+      message: 'Création du paiement...'
+    });
+    await loading.present();
+    
+    try {
+      // Utiliser le restaurantId de la session
+      const user = this.authService.getCurrentUser();
+      const restaurantId = user?.restaurantId;
+      
+      if (!restaurantId) {
+        throw new Error('Restaurant ID non trouvé');
+      }
+      
+      const result: any = await this.paymentService.triggerPayment(
+        restaurantId,
+        order.id
+      );
+      
+      if (result.success) {
+        await this.loadPaymentStatuses();
+        
+        const toast = await this.toastController.create({
+          message: 'Demande de paiement envoyée au client',
+          duration: 3000,
+          color: 'success'
+        });
+        await toast.present();
+      } else {
+        const toast = await this.toastController.create({
+          message: result.message || 'Erreur lors de la création du paiement',
+          duration: 3000,
+          color: 'danger'
+        });
+        await toast.present();
+      }
+    } catch (error: any) {
+      console.error('Erreur paiement:', error);
+      
+      // Message d'erreur plus détaillé
+      let errorMessage = 'Erreur de connexion';
+      
+      if (error?.error?.message) {
+        errorMessage = error.error.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.status === 0) {
+        errorMessage = 'Impossible de contacter le serveur';
+      } else if (error?.status === 404) {
+        errorMessage = 'Service de paiement non trouvé';
+      } else if (error?.status === 500) {
+        errorMessage = 'Erreur serveur';
+      }
+      
+      const toast = await this.toastController.create({
+        message: errorMessage,
+        duration: 4000,
+        color: 'danger'
+      });
+      await toast.present();
+    } finally {
+      await loading.dismiss();
+    }
+  }
+  
+  getTimeRemaining(order: Order): string {
+    const payment = this.paymentStatusCache.get(order.id);
+    if (!payment) return '';
+    return this.paymentService.getTimeRemaining(payment.created_at);
+  }
+  
+  async refreshPaymentStatus(order: Order) {
+    const payment = await this.paymentService.getLastPaymentStatus(order.id);
+    if (payment) {
+      this.paymentStatusCache.set(order.id, payment);
+      if (payment.status === 'SUCCESS') {
+        await this.refreshOrders();
+      }
+    }
+  }
+  
+  // AJOUT: Vérifier l'existence de la configuration de paiement
+  async checkPaymentConfiguration(restaurantId: string): Promise<void> {
+    try {
+      console.log('🔍 Vérification config paiement pour restaurant ID:', restaurantId);
+      // Créer une méthode dans le service de paiement pour cette vérification
+      const hasConfig = await this.paymentService.hasPaymentConfiguration(restaurantId);
+      console.log('✅ Résultat hasPaymentConfiguration:', hasConfig);
+      this.hasPaymentConfig = hasConfig;
+    } catch (error) {
+      console.error('❌ Erreur lors de la vérification de la config paiement:', error);
+      this.hasPaymentConfig = false;
+    }
+  }
+
+  // AJOUT: Récupérer l'heure de paiement SUCCESS
+  getPaymentSuccessTime(order: Order): string | null {
+    const payment = this.paymentStatusCache.get(order.id);
+    if (payment && payment.status === 'SUCCESS' && payment.processed_at) {
+      return payment.processed_at;
+    }
+    return null;
   }
 }

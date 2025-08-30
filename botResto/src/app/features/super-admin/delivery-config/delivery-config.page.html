@@ -1,0 +1,247 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>
+      <ion-icon name="bicycle-outline" style="margin-right: 8px; vertical-align: middle;"></ion-icon>
+      Configuration Livraison - Super Admin
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="container">
+    
+    <!-- Restaurant Selector - Only show if no restaurant was pre-selected -->
+    <ion-card class="restaurant-selector-card" *ngIf="!selectedRestaurant && !loading">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="business" class="card-icon"></ion-icon>
+          Sélectionner un Restaurant
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-searchbar
+          [(ngModel)]="searchTerm"
+          (ionInput)="filterRestaurants()"
+          placeholder="Rechercher un restaurant..."
+          animated
+        ></ion-searchbar>
+        
+        <ion-list>
+          <ion-item *ngFor="let restaurant of filteredRestaurants" 
+                    button 
+                    (click)="selectRestaurant(restaurant)">
+            <ion-avatar slot="start">
+              <img [src]="restaurant.logo_url || 'assets/icon/restaurant-default.png'" />
+            </ion-avatar>
+            <ion-label>
+              <h2>{{ restaurant.name || restaurant.nom }}</h2>
+              <p>{{ restaurant.address }}</p>
+            </ion-label>
+            <ion-chip [color]="restaurant.is_active ? 'success' : 'danger'" slot="end">
+              {{ restaurant.is_active ? 'Actif' : 'Inactif' }}
+            </ion-chip>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Selected Restaurant Display -->
+    <ion-card class="selected-restaurant-card" *ngIf="selectedRestaurant">
+      <ion-card-content>
+        <ion-item lines="none">
+          <div class="restaurant-avatar" slot="start">
+            {{ getRestaurantInitials() }}
+          </div>
+          <ion-label>
+            <h2>{{ selectedRestaurant.name || selectedRestaurant.nom }}</h2>
+            <p>{{ selectedRestaurant.address }}</p>
+          </ion-label>
+          <ion-button fill="clear" slot="end" (click)="clearSelection()" *ngIf="!cameFromRestaurantSettings">
+            <ion-icon name="close-circle"></ion-icon>
+          </ion-button>
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+    
+    <!-- Loading state -->
+    <div *ngIf="loading && selectedRestaurant" class="loading-container">
+      <ion-spinner name="crescent"></ion-spinner>
+      <p>Chargement de la configuration...</p>
+    </div>
+
+    <!-- Configuration form -->
+    <div *ngIf="!loading && selectedRestaurant">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>
+            <ion-icon name="bicycle"></ion-icon>
+            Configuration des Frais de Livraison
+          </ion-card-title>
+          <ion-card-subtitle>
+            Choisissez comment calculer vos frais de livraison
+          </ion-card-subtitle>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <!-- Type de tarification -->
+          <ion-list>
+            <ion-radio-group [(ngModel)]="config.deliveryType" (ngModelChange)="onDeliveryTypeChange()">
+              <ion-item>
+                <ion-radio slot="start" value="fixed"></ion-radio>
+                <ion-label>
+                  <h2><ion-icon name="cash"></ion-icon> Montant fixe</h2>
+                  <p>Même prix pour toutes les commandes dans la zone de livraison</p>
+                </ion-label>
+              </ion-item>
+              <ion-item>
+                <ion-radio slot="start" value="distance_based"></ion-radio>
+                <ion-label>
+                  <h2><ion-icon name="location"></ion-icon> Basé sur la distance</h2>
+                  <p>Prix calculé selon la distance entre le restaurant et le client</p>
+                </ion-label>
+              </ion-item>
+            </ion-radio-group>
+          </ion-list>
+
+          <!-- Configuration montant fixe -->
+          <div *ngIf="config.deliveryType === 'fixed'" class="config-section">
+            <ion-item>
+              <ion-label position="stacked">
+                <ion-icon name="cash"></ion-icon>
+                Montant fixe pour toutes les livraisons ({{ getCurrencySymbol() }})
+              </ion-label>
+              <ion-input 
+                type="number" 
+                [(ngModel)]="config.fixedAmount" 
+                placeholder="Ex: 5000"
+                (ngModelChange)="updateSimulation()">
+              </ion-input>
+            </ion-item>
+          </div>
+
+          <!-- Configuration par distance -->
+          <div *ngIf="config.deliveryType === 'distance_based'" class="config-section">
+            <ion-item>
+              <ion-label position="stacked">
+                <ion-icon name="speedometer"></ion-icon>
+                Prix par kilomètre ({{ getCurrencySymbol() }})
+              </ion-label>
+              <ion-input 
+                type="number" 
+                [(ngModel)]="config.pricePerKm" 
+                placeholder="Ex: 3000"
+                (ngModelChange)="updateSimulation()">
+              </ion-input>
+            </ion-item>
+            <ion-item>
+              <ion-checkbox [(ngModel)]="config.roundUpDistance" (ngModelChange)="updateSimulation()"></ion-checkbox>
+              <ion-label>
+                <h2>Arrondir à l'entier supérieur</h2>
+                <p>2.3km sera facturé comme 3km</p>
+              </ion-label>
+            </ion-item>
+          </div>
+
+          <!-- Paramètres communs -->
+          <div class="config-section">
+            <ion-item>
+              <ion-label position="stacked">
+                <ion-icon name="gift"></ion-icon>
+                Seuil livraison gratuite ({{ getCurrencySymbol() }})
+              </ion-label>
+              <ion-input 
+                type="number" 
+                [(ngModel)]="config.freeDeliveryThreshold" 
+                placeholder="Ex: 800000"
+                (ngModelChange)="updateSimulation()">
+              </ion-input>
+              <ion-note slot="helper">Montant minimum de commande pour bénéficier de la livraison gratuite</ion-note>
+            </ion-item>
+            
+            <ion-item>
+              <ion-label position="stacked">
+                <ion-icon name="radio-button-on"></ion-icon>
+                Rayon maximum de livraison (km)
+              </ion-label>
+              <ion-input 
+                type="number" 
+                [(ngModel)]="config.maxDeliveryRadius" 
+                placeholder="Ex: 25"
+                (ngModelChange)="updateSimulation()">
+              </ion-input>
+              <ion-note slot="helper">Distance maximale pour accepter les livraisons</ion-note>
+            </ion-item>
+          </div>
+
+          <!-- Simulation des calculs -->
+          <ion-card class="simulation-card">
+            <ion-card-header>
+              <ion-card-title>
+                <ion-icon name="calculator"></ion-icon>
+                Simulation
+              </ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <div *ngIf="config.deliveryType === 'fixed'" class="simulation-results">
+                <div class="simulation-item">
+                  <strong>Distance 2km, Commande 400 000 {{ getCurrencySymbol() }}:</strong>
+                  <span class="price">{{(config.fixedAmount || 0) | number}} {{ getCurrencySymbol() }}</span>
+                </div>
+                <div class="simulation-item">
+                  <strong>Distance 5km, Commande 400 000 {{ getCurrencySymbol() }}:</strong>
+                  <span class="price">{{(config.fixedAmount || 0) | number}} {{ getCurrencySymbol() }}</span>
+                </div>
+                <div class="simulation-item">
+                  <strong>Distance 2km, Commande 900 000 {{ getCurrencySymbol() }}:</strong>
+                  <span class="price free">Gratuit</span>
+                </div>
+              </div>
+              <div *ngIf="config.deliveryType === 'distance_based'" class="simulation-results">
+                <div class="simulation-item">
+                  <strong>Distance 2.3km, Commande 400 000 {{ getCurrencySymbol() }}:</strong>
+                  <span class="price">{{simulateDistanceFee(2.3, 400000) | number}} {{ getCurrencySymbol() }}</span>
+                </div>
+                <div class="simulation-item">
+                  <strong>Distance 5.7km, Commande 400 000 {{ getCurrencySymbol() }}:</strong>
+                  <span class="price">{{simulateDistanceFee(5.7, 400000) | number}} {{ getCurrencySymbol() }}</span>
+                </div>
+                <div class="simulation-item">
+                  <strong>Distance 2km, Commande 900 000 {{ getCurrencySymbol() }}:</strong>
+                  <span class="price free">Gratuit</span>
+                </div>
+              </div>
+              <ion-note *ngIf="!config.deliveryType">
+                Sélectionnez un mode de calcul pour voir la simulation
+              </ion-note>
+            </ion-card-content>
+          </ion-card>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Action buttons -->
+      <div class="action-buttons">
+        <ion-button 
+          expand="block" 
+          (click)="saveConfig()" 
+          [disabled]="!isConfigValid() || saving">
+          <ion-icon name="save" slot="start"></ion-icon>
+          <span *ngIf="!saving">Sauvegarder la configuration</span>
+          <span *ngIf="saving">Sauvegarde en cours...</span>
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Status message -->
+    <ion-card *ngIf="statusMessage" [color]="statusMessage.type === 'success' ? 'success' : 'danger'">
+      <ion-card-content>
+        <ion-icon [name]="statusMessage.type === 'success' ? 'checkmark-circle' : 'alert-circle'"></ion-icon>
+        {{statusMessage.text}}
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

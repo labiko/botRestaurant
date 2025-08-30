@@ -41,6 +41,22 @@
  * -----------------------------------------------------
  */
 
+// Modal des commandes Super Admin - AGRANDIR LE MODAL
+.restaurant-orders-modal-class {
+  --width: 95vw !important;
+  --max-width: 1400px !important;
+  --height: 90vh !important;
+  --max-height: 900px !important;
+  
+  .modal-wrapper {
+    width: 95vw !important;
+    max-width: 1400px !important;
+    height: 90vh !important;
+    max-height: 900px !important;
+    border-radius: 16px !important;
+  }
+}
+
 // Boutons personnalisés
 .btn-primary {
   --background: linear-gradient(135deg, var(--primary-purple) 0%, #9333EA 100%);
@@ -126,4 +142,20 @@ p {
     font-size: var(--text-sm);
     color: var(--text-secondary);
   }
+}
+
+// CSS global pour forcer la taille de la modale des commandes
+.restaurant-orders-modal-class {
+  --width: 95vw !important;
+  --max-width: 1400px !important;
+  --height: 90vh !important;
+  --max-height: 900px !important;
+}
+
+// CSS pour la modale d'ajout de restaurant
+.add-restaurant-modal-class {
+  --width: 95vw !important;
+  --max-width: 900px !important;
+  --height: 95vh !important;
+  --max-height: 900px !important;
 }

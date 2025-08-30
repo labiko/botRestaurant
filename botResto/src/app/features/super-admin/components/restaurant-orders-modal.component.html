@@ -1,0 +1,174 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>
+      <ion-icon name="receipt-outline" style="margin-right: 8px;"></ion-icon>
+      Commandes - {{ restaurant.nom }}
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="loadOrders()">
+        <ion-icon name="refresh" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button (click)="dismiss()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="restaurant-orders-modal">
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Chargement des commandes...</p>
+  </div>
+
+  <!-- Orders List -->
+  <div *ngIf="!loading" class="orders-container">
+    <!-- Header Stats -->
+    <div class="orders-header">
+      <div class="restaurant-info">
+        <h2>{{ restaurant.nom }}</h2>
+        <p>{{ restaurant.owner }} • {{ restaurant.phone }}</p>
+      </div>
+      <div class="orders-stats">
+        <div class="stat-item">
+          <span class="stat-value">{{ selectedTab === 'active' ? orders.length : historyOrders.length }}</span>
+          <span class="stat-label">{{ selectedTab === 'active' ? 'Commandes actives' : 'Commandes total' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-container">
+      <ion-segment [(ngModel)]="selectedTab" (ionChange)="selectTab($event.detail.value)">
+        <ion-segment-button value="active">
+          <ion-icon name="time-outline"></ion-icon>
+          <ion-label>Actives</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="history">
+          <ion-icon name="archive-outline"></ion-icon>
+          <ion-label>Historique</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <!-- Orders -->
+    <div *ngIf="getCurrentOrders().length > 0; else noOrders" class="orders-list">
+      <ion-card *ngFor="let order of getCurrentOrders()" class="order-card">
+        <ion-card-header>
+          <div class="order-header">
+            <div class="order-info">
+              <ion-card-title>Commande #{{ order.orderNumber }}</ion-card-title>
+              <ion-card-subtitle>{{ formatDate(order.createdAt) }}</ion-card-subtitle>
+            </div>
+            <div class="order-status">
+              <ion-badge [color]="getStatusColor(order.status)">
+                {{ getStatusText(order.status) }}
+              </ion-badge>
+            </div>
+          </div>
+        </ion-card-header>
+
+        <ion-card-content>
+          <!-- Customer Info -->
+          <div class="customer-section">
+            <h3>
+              <ion-icon name="person"></ion-icon>
+              Client
+            </h3>
+            <div class="customer-details">
+              <div class="detail-row">
+                <ion-icon name="person-circle"></ion-icon>
+                <span>{{ order.customer.name }}</span>
+              </div>
+              <div class="detail-row" *ngIf="order.customer.phone">
+                <ion-icon name="call"></ion-icon>
+                <span>{{ order.customer.phone }}</span>
+                <ion-button 
+                  fill="clear" 
+                  size="small" 
+                  (click)="openWhatsApp(order.customer.phone)"
+                  class="whatsapp-btn">
+                  <ion-icon name="logo-whatsapp" color="success"></ion-icon>
+                </ion-button>
+              </div>
+              <div class="detail-row" *ngIf="order.customer.address">
+                <ion-icon name="location"></ion-icon>
+                <span>{{ order.customer.address }}</span>
+                <ion-button 
+                  *ngIf="order.customer.latitude && order.customer.longitude"
+                  fill="clear" 
+                  size="small" 
+                  (click)="openGoogleMaps(order.customer.latitude!, order.customer.longitude!, order.customer.name)"
+                  class="maps-btn">
+                  <ion-icon name="map" color="primary"></ion-icon>
+                </ion-button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order Details -->
+          <div class="order-section">
+            <h3>
+              <ion-icon name="restaurant"></ion-icon>
+              Détails de la commande
+            </h3>
+            
+            <!-- Order Items -->
+            <div class="items-list" *ngIf="order.items && order.items.length > 0">
+              <div *ngFor="let item of order.items" class="item-row">
+                <span class="item-quantity">{{ item.quantite }}x</span>
+                <span class="item-name">{{ item.nom_plat }}</span>
+                <span class="item-price">{{ formatPrice(item.prix_total) }}</span>
+              </div>
+            </div>
+
+            <!-- Order Info -->
+            <div class="order-info-grid">
+              <div class="info-item">
+                <ion-icon name="bag"></ion-icon>
+                <div>
+                  <span class="info-label">Mode</span>
+                  <span class="info-value">{{ getDeliveryModeText(order.deliveryMode) }}</span>
+                </div>
+              </div>
+              <div class="info-item">
+                <ion-icon name="card"></ion-icon>
+                <div>
+                  <span class="info-label">Paiement</span>
+                  <span class="info-value">{{ getPaymentModeText(order.paymentMode) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Total -->
+            <div class="order-total">
+              <strong>Total: {{ formatPrice(order.total) }}</strong>
+            </div>
+          </div>
+
+          <!-- GPS Actions -->
+          <div class="gps-actions" *ngIf="order.customer.latitude && order.customer.longitude && order.deliveryMode === 'livraison'">
+            <ion-button 
+              expand="block" 
+              fill="outline" 
+              color="primary"
+              (click)="openGoogleMaps(order.customer.latitude!, order.customer.longitude!, order.customer.name)">
+              <ion-icon name="navigate" slot="start"></ion-icon>
+              Voir sur Google Maps
+            </ion-button>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+    <!-- No Orders -->
+    <ng-template #noOrders>
+      <div class="no-orders">
+        <ion-icon name="receipt-outline" class="no-orders-icon"></ion-icon>
+        <h3>{{ selectedTab === 'active' ? 'Aucune commande active' : 'Aucun historique' }}</h3>
+        <p>{{ selectedTab === 'active' ? 'Ce restaurant n\'a pas de commandes en cours actuellement.' : 'Ce restaurant n\'a pas encore d\'historique de commandes.' }}</p>
+      </div>
+    </ng-template>
+  </div>
+</ion-content>

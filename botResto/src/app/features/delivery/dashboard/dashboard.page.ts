@@ -191,6 +191,19 @@ export class DashboardPage implements OnInit, OnDestroy {
       
       // For other statuses, update directly
       await this.deliveryService.updateOrderStatus(orderId, status);
+      
+      // Mettre à jour l'état local de la commande
+      const order = this.allOrders.find(o => o.id === orderId);
+      if (order) {
+        order.status = status;
+      }
+      
+      // Mettre à jour aussi dans currentOrders si présent
+      const currentOrder = this.currentOrders.find(o => o.id === orderId);
+      if (currentOrder) {
+        currentOrder.status = status;
+      }
+      
     } catch (error) {
       console.error('Error updating order status:', error);
     }

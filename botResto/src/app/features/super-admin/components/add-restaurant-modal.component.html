@@ -1,0 +1,372 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>
+      <ion-icon [name]="getStepIcon()" style="margin-right: 8px;"></ion-icon>
+      Nouveau Restaurant
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="add-restaurant-modal">
+  <!-- Progress Steps -->
+  <div class="steps-container">
+    <div class="steps-progress">
+      <div 
+        *ngFor="let step of [1,2,3,4]; let i = index" 
+        class="step-item"
+        [class.active]="currentStep === step"
+        [class.completed]="isStepCompleted(step) && currentStep > step"
+        (click)="goToStep(step)">
+        <div class="step-circle">
+          <ion-icon *ngIf="isStepCompleted(step) && currentStep > step" name="checkmark"></ion-icon>
+          <span *ngIf="!(isStepCompleted(step) && currentStep > step)">{{ step }}</span>
+        </div>
+        <div class="step-label">
+          <span [ngSwitch]="step">
+            <span *ngSwitchCase="1">Informations</span>
+            <span *ngSwitchCase="2">Localisation</span>
+            <span *ngSwitchCase="3">Livraison</span>
+            <span *ngSwitchCase="4">Horaires</span>
+          </span>
+        </div>
+        <div class="step-line" *ngIf="i < 3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form Content -->
+  <form [formGroup]="restaurantForm" class="restaurant-form">
+    
+    <!-- Étape 1: Informations de base -->
+    <div *ngIf="currentStep === 1" class="form-step">
+      <h2 class="step-title">
+        <ion-icon name="information-circle"></ion-icon>
+        Informations de base
+      </h2>
+      
+      <ion-list>
+        <ion-item>
+          <ion-label position="floating">Nom du restaurant *</ion-label>
+          <ion-input 
+            formControlName="nom" 
+            type="text"
+            placeholder="Ex: La Terrasse Gourmande">
+          </ion-input>
+        </ion-item>
+        
+        <ion-item>
+          <ion-label position="floating">Nom du propriétaire *</ion-label>
+          <ion-input 
+            formControlName="owner_name" 
+            type="text"
+            placeholder="Ex: Mamadou Diallo">
+          </ion-input>
+        </ion-item>
+        
+        <ion-item>
+          <ion-label position="floating">Téléphone principal *</ion-label>
+          <ion-input 
+            formControlName="telephone" 
+            type="tel"
+            placeholder="Ex: 623456789">
+          </ion-input>
+          <ion-note slot="helper">Numéro pour la connexion</ion-note>
+        </ion-item>
+        
+        <ion-item>
+          <ion-label position="floating">WhatsApp (optionnel)</ion-label>
+          <ion-input 
+            formControlName="phone_whatsapp" 
+            type="tel"
+            placeholder="Ex: 623456789">
+          </ion-input>
+          <ion-note slot="helper">Pour recevoir les notifications</ion-note>
+        </ion-item>
+        
+        <ion-item>
+          <ion-label position="floating">Email (optionnel)</ion-label>
+          <ion-input 
+            formControlName="email" 
+            type="email"
+            placeholder="Ex: contact@restaurant.com">
+          </ion-input>
+        </ion-item>
+        
+        <ion-item>
+          <ion-label position="floating">Description</ion-label>
+          <ion-textarea 
+            formControlName="description"
+            rows="3"
+            placeholder="Décrivez brièvement votre restaurant...">
+          </ion-textarea>
+        </ion-item>
+      </ion-list>
+    </div>
+
+    <!-- Étape 2: Adresse et localisation -->
+    <div *ngIf="currentStep === 2" class="form-step">
+      <h2 class="step-title">
+        <ion-icon name="location"></ion-icon>
+        Adresse et localisation
+      </h2>
+      
+      <ion-list>
+        <ion-item>
+          <ion-label position="floating">Adresse complète *</ion-label>
+          <ion-textarea 
+            formControlName="adresse"
+            rows="2"
+            placeholder="Ex: Quartier Taouyah, Commune de Ratoma, Conakry">
+          </ion-textarea>
+        </ion-item>
+        
+        <div class="location-section">
+          <div class="location-header">
+            <h3>Coordonnées GPS</h3>
+            <div class="position-controls">
+              <ion-button 
+                fill="outline" 
+                size="small"
+                (click)="getCurrentPosition()">
+                <ion-icon name="locate" slot="start"></ion-icon>
+                Ma position
+              </ion-button>
+              
+              <!-- Affichage de l'accuracy -->
+              <div *ngIf="locationAccuracy !== null" class="accuracy-display">
+                <ion-icon name="radio-button-on" color="success"></ion-icon>
+                <span class="accuracy-text">Précision: {{ Math.round(locationAccuracy) }}m</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="coordinates-grid">
+            <ion-item>
+              <ion-label position="floating">Latitude *</ion-label>
+              <ion-input 
+                formControlName="latitude" 
+                type="number"
+                step="0.000001"
+                placeholder="Ex: 9.5092">
+              </ion-input>
+            </ion-item>
+            
+            <ion-item>
+              <ion-label position="floating">Longitude *</ion-label>
+              <ion-input 
+                formControlName="longitude" 
+                type="number"
+                step="0.000001"
+                placeholder="Ex: -13.7122">
+              </ion-input>
+            </ion-item>
+          </div>
+          
+          <div class="map-preview">
+            <ion-button 
+              expand="block" 
+              fill="outline"
+              [disabled]="!restaurantForm.get('latitude')?.value || !restaurantForm.get('longitude')?.value"
+              (click)="openMapPreview()">
+              <ion-icon name="map" slot="start"></ion-icon>
+              Voir sur la carte
+            </ion-button>
+          </div>
+        </div>
+      </ion-list>
+    </div>
+
+    <!-- Étape 3: Configuration de livraison -->
+    <div *ngIf="currentStep === 3" class="form-step">
+      <h2 class="step-title">
+        <ion-icon name="bicycle"></ion-icon>
+        Configuration de livraison
+      </h2>
+      
+      <ion-list>
+        <!-- Modes de service -->
+        <div class="service-modes">
+          <h3>Modes de service</h3>
+          <div class="toggle-grid">
+            <ion-item>
+              <ion-label>Sur place</ion-label>
+              <ion-toggle formControlName="allow_dine_in"></ion-toggle>
+            </ion-item>
+            
+            <ion-item>
+              <ion-label>À emporter</ion-label>
+              <ion-toggle formControlName="allow_takeaway"></ion-toggle>
+            </ion-item>
+            
+            <ion-item>
+              <ion-label>Livraison</ion-label>
+              <ion-toggle formControlName="allow_delivery"></ion-toggle>
+            </ion-item>
+          </div>
+        </div>
+        
+        <!-- Configuration livraison -->
+        <div class="delivery-config" *ngIf="restaurantForm.get('allow_delivery')?.value">
+          <h3>Paramètres de livraison</h3>
+          
+          <ion-item>
+            <ion-label position="floating">Tarif par km (GNF)</ion-label>
+            <ion-input 
+              formControlName="tarif_km" 
+              type="number"
+              placeholder="Ex: 5000">
+            </ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Seuil livraison gratuite (GNF)</ion-label>
+            <ion-input 
+              formControlName="seuil_gratuite" 
+              type="number"
+              placeholder="Ex: 100000">
+            </ion-input>
+            <ion-note slot="helper">Montant minimum pour livraison gratuite</ion-note>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Commande minimum (GNF) *</ion-label>
+            <ion-input 
+              formControlName="minimum_livraison" 
+              type="number"
+              placeholder="Ex: 50000">
+            </ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Rayon de livraison (km) *</ion-label>
+            <ion-input 
+              formControlName="rayon_livraison_km" 
+              type="number"
+              placeholder="Ex: 10">
+            </ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="floating">Temps de préparation (minutes)</ion-label>
+            <ion-input 
+              formControlName="preparation_time" 
+              type="number"
+              placeholder="Ex: 30">
+            </ion-input>
+          </ion-item>
+        </div>
+      </ion-list>
+    </div>
+
+    <!-- Étape 4: Paiement et horaires -->
+    <div *ngIf="currentStep === 4" class="form-step">
+      <h2 class="step-title">
+        <ion-icon name="time"></ion-icon>
+        Paiement et horaires
+      </h2>
+      
+      <ion-list>
+        <!-- Modes de paiement -->
+        <div class="payment-modes">
+          <h3>Modes de paiement acceptés</h3>
+          <div class="toggle-grid">
+            <!-- Paiement immédiat masqué -->
+            <!-- <ion-item>
+              <ion-label>Paiement immédiat</ion-label>
+              <ion-toggle formControlName="allow_pay_now"></ion-toggle>
+            </ion-item> -->
+            
+            <ion-item>
+              <ion-label>Paiement différé</ion-label>
+              <ion-toggle formControlName="allow_pay_later"></ion-toggle>
+            </ion-item>
+          </div>
+        </div>
+        
+        <!-- Horaires d'ouverture -->
+        <div class="schedule-section">
+          <h3>Horaires d'ouverture</h3>
+          
+          <div class="schedule-list">
+            <div 
+              *ngFor="let day of ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']" 
+              class="schedule-day"
+              [class.closed]="restaurantForm.get('horaires')?.value[day].ferme">
+              
+              <div class="day-header">
+                <ion-checkbox 
+                  [checked]="!restaurantForm.get('horaires')?.value[day].ferme"
+                  (ionChange)="toggleDay(day)">
+                </ion-checkbox>
+                <span class="day-name">{{ day | titlecase }}</span>
+                <ion-button 
+                  fill="clear" 
+                  size="small"
+                  (click)="applyToAllDays(day)"
+                  [disabled]="restaurantForm.get('horaires')?.value[day].ferme">
+                  <ion-icon name="copy" slot="icon-only"></ion-icon>
+                </ion-button>
+              </div>
+              
+              <div class="time-inputs" *ngIf="!restaurantForm.get('horaires')?.value[day].ferme">
+                <ion-input 
+                  type="time"
+                  [value]="restaurantForm.get('horaires')?.value[day].ouverture"
+                  (ionChange)="updateSchedule(day, 'ouverture', $event.detail.value!)">
+                </ion-input>
+                <span>-</span>
+                <ion-input 
+                  type="time"
+                  [value]="restaurantForm.get('horaires')?.value[day].fermeture"
+                  (ionChange)="updateSchedule(day, 'fermeture', $event.detail.value!)">
+                </ion-input>
+              </div>
+              
+              <div class="closed-label" *ngIf="restaurantForm.get('horaires')?.value[day].ferme">
+                Fermé
+              </div>
+            </div>
+          </div>
+        </div>
+      </ion-list>
+    </div>
+  </form>
+</ion-content>
+
+<!-- Footer avec boutons de navigation -->
+<ion-footer>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button 
+        (click)="previousStep()"
+        [disabled]="currentStep === 1">
+        <ion-icon name="arrow-back" slot="start"></ion-icon>
+        Précédent
+      </ion-button>
+    </ion-buttons>
+    
+    <ion-buttons slot="end">
+      <ion-button 
+        *ngIf="currentStep < totalSteps"
+        (click)="nextStep()"
+        color="primary">
+        Suivant
+        <ion-icon name="arrow-forward" slot="end"></ion-icon>
+      </ion-button>
+      
+      <ion-button 
+        *ngIf="currentStep === totalSteps"
+        (click)="onSubmit()"
+        color="success"
+        [disabled]="!restaurantForm.valid">
+        <ion-icon name="checkmark" slot="start"></ion-icon>
+        Créer le restaurant
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-footer>

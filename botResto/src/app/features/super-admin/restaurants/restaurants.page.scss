@@ -1,0 +1,700 @@
+// Restaurant Management Page Styles
+
+.modern-header {
+  ion-toolbar {
+    ion-title {
+      font-weight: 600;
+      font-size: 1.2rem;
+    }
+  }
+}
+
+.modern-restaurants-page {
+  --background: var(--ion-color-light);
+}
+
+// Global Stats Container
+.global-stats-container {
+  padding: 20px;
+  background: var(--ion-color-light);
+  border-bottom: 1px solid var(--ion-color-medium);
+  
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    
+    .stat-card {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      border-radius: 12px;
+      background: white;
+      border: 1px solid var(--ion-color-light);
+      transition: transform 0.2s;
+      
+      &:hover {
+        transform: translateY(-2px);
+        border-color: var(--ion-color-medium);
+      }
+      
+      .stat-icon {
+        font-size: 2.5rem;
+        margin-right: 15px;
+        
+        ion-icon {
+          display: block;
+        }
+      }
+      
+      .stat-content {
+        h3 {
+          font-size: 1.8rem;
+          font-weight: 700;
+          margin: 0;
+          line-height: 1;
+          color: var(--ion-color-dark);
+        }
+        
+        p {
+          margin: 5px 0 0;
+          color: var(--ion-color-medium);
+          font-size: 0.9rem;
+        }
+      }
+      
+      &.primary {
+        background: var(--ion-color-primary-tint);
+        border-color: var(--ion-color-primary-shade);
+        
+        .stat-icon {
+          color: var(--ion-color-primary);
+        }
+      }
+      
+      &.success {
+        background: var(--ion-color-success-tint);
+        border-color: var(--ion-color-success-shade);
+        
+        .stat-icon {
+          color: var(--ion-color-success);
+        }
+      }
+      
+      &.warning {
+        background: var(--ion-color-warning-tint);
+        border-color: var(--ion-color-warning-shade);
+        
+        .stat-icon {
+          color: var(--ion-color-warning);
+        }
+      }
+      
+      &.danger {
+        background: var(--ion-color-danger-tint);
+        border-color: var(--ion-color-danger-shade);
+        
+        .stat-icon {
+          color: var(--ion-color-danger);
+        }
+      }
+    }
+  }
+}
+
+// Modern Filters Section
+.modern-filters-section {
+  background: white;
+  padding: 20px;
+  margin: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--ion-color-light);
+  
+  .filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    
+    h2 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      ion-icon {
+        font-size: 1.4rem;
+        color: var(--ion-color-primary);
+      }
+    }
+    
+    ion-button {
+      --color: var(--ion-color-primary);
+    }
+  }
+  
+  .filters-grid {
+    display: grid;
+    gap: 20px;
+    
+    .filter-item {
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--ion-color-dark);
+      }
+      
+      &.search-filter {
+        grid-column: 1 / -1;
+      }
+      
+      .modern-searchbar {
+        --background: var(--ion-color-light);
+        --border-radius: 12px;
+        --box-shadow: none;
+        --placeholder-color: var(--ion-color-medium);
+        
+        &.searchbar-has-value {
+          --background: white;
+          border: 2px solid var(--ion-color-primary);
+        }
+      }
+      
+      ion-segment {
+        background: var(--ion-color-light);
+        border-radius: 12px;
+        padding: 4px;
+        
+        ion-segment-button {
+          --indicator-color: white;
+          --indicator-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+          --color: var(--ion-color-medium);
+          --color-checked: var(--ion-color-primary);
+          font-weight: 500;
+          min-height: 36px;
+        }
+      }
+      
+      ion-range {
+        --bar-height: 4px;
+        --bar-background: var(--ion-color-light);
+        --bar-background-active: var(--ion-color-primary);
+        --knob-size: 20px;
+        --knob-background: var(--ion-color-primary);
+        --pin-background: var(--ion-color-primary);
+        --pin-color: white;
+        padding: 10px 0;
+      }
+      
+      .date-filters {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        
+        ion-datetime {
+          --background: var(--ion-color-light);
+          --border-radius: 12px;
+          padding: 10px;
+        }
+      }
+      
+      .sort-controls {
+        display: flex;
+        gap: 10px;
+        
+        .modern-select {
+          flex: 1;
+          --background: var(--ion-color-light);
+          --border-radius: 12px;
+          --padding-start: 12px;
+          --padding-end: 12px;
+          min-height: 44px;
+        }
+        
+        .sort-direction-btn {
+          --border-radius: 12px;
+          --background: var(--ion-color-light);
+          --color: var(--ion-color-primary);
+          
+          &:hover {
+            --background: var(--ion-color-primary);
+            --color: var(--ion-color-primary-contrast);
+          }
+        }
+      }
+    }
+  }
+  
+  .active-filters-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--ion-color-medium);
+    
+    .filter-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--ion-color-primary);
+      color: var(--ion-color-primary-contrast);
+      border-radius: 20px;
+      font-size: 0.85rem;
+      
+      ion-icon {
+        font-size: 1rem;
+        cursor: pointer;
+        
+        &:hover {
+          opacity: 0.8;
+        }
+      }
+    }
+  }
+}
+
+// Loading State
+.modern-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  
+  ion-spinner {
+    transform: scale(1.5);
+  }
+  
+  p {
+    margin-top: 20px;
+    color: var(--ion-color-medium);
+  }
+}
+
+// Restaurants Container
+.restaurants-container {
+  padding: 20px;
+  
+  .results-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--ion-color-light);
+    
+    .results-count {
+      font-weight: 500;
+      color: var(--ion-color-dark);
+    }
+    
+    .view-options {
+      display: flex;
+      gap: 4px;
+      
+      ion-button {
+        --color: var(--ion-color-medium);
+        
+        &.active {
+          --color: var(--ion-color-primary);
+        }
+      }
+    }
+  }
+  
+  // Grid View
+  .restaurants-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+  
+  // List View
+  .restaurants-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    
+    .modern-restaurant-card {
+      max-width: 100%;
+    }
+  }
+  
+  // Restaurant Card
+  .modern-restaurant-card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--ion-color-light);
+    overflow: hidden;
+    position: relative;
+    transition: all 0.3s ease;
+    animation: fadeIn 0.3s ease backwards;
+    
+    &:hover {
+      transform: translateY(-4px);
+      border-color: var(--ion-color-medium);
+    }
+    
+    &.blocked {
+      opacity: 0.7;
+      background: var(--ion-color-light);
+      
+      .status-badge {
+        background: var(--ion-color-danger) !important;
+      }
+    }
+    
+    .status-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      z-index: 10;
+      
+      &.active {
+        background: var(--ion-color-success);
+        color: var(--ion-color-success-contrast);
+      }
+      
+      &.pending {
+        background: var(--ion-color-warning);
+        color: var(--ion-color-warning-contrast);
+      }
+      
+      &.suspended {
+        background: var(--ion-color-danger);
+        color: var(--ion-color-danger-contrast);
+      }
+      
+      &.blocked {
+        background: var(--ion-color-dark);
+        color: var(--ion-color-dark-contrast);
+      }
+    }
+    
+    .restaurant-header {
+      display: flex;
+      align-items: center;
+      padding: 20px;
+      gap: 15px;
+      
+      .restaurant-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: white;
+        flex-shrink: 0;
+      }
+      
+      .restaurant-main-info {
+        flex: 1;
+        min-width: 0;
+        
+        h3 {
+          margin: 0 0 4px;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: var(--ion-color-dark);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        .owner {
+          margin: 0 0 4px;
+          color: var(--ion-color-medium);
+          font-size: 0.9rem;
+        }
+        
+        .rating {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          
+          ion-icon {
+            font-size: 1rem;
+          }
+          
+          span {
+            font-weight: 500;
+            font-size: 0.9rem;
+          }
+        }
+      }
+    }
+    
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 0 20px 15px;
+      
+      .metric {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        background: var(--ion-color-light);
+        border-radius: 10px;
+        
+        ion-icon {
+          font-size: 1.4rem;
+          color: var(--ion-color-primary);
+        }
+        
+        div {
+          display: flex;
+          flex-direction: column;
+          
+          .value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--ion-color-dark);
+          }
+          
+          .label {
+            font-size: 0.75rem;
+            color: var(--ion-color-medium);
+            text-transform: uppercase;
+          }
+        }
+      }
+    }
+    
+    .contact-info {
+      padding: 0 20px 15px;
+      
+      .info-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        color: var(--ion-color-dark);
+        
+        ion-icon {
+          font-size: 1rem;
+          color: var(--ion-color-medium);
+          flex-shrink: 0;
+        }
+        
+        .truncate {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+    }
+    
+    .quick-actions {
+      display: flex;
+      justify-content: space-around;
+      padding: 12px;
+      background: var(--ion-color-light);
+      border-top: 1px solid var(--ion-color-medium);
+      
+      ion-button {
+        --color: var(--ion-color-medium);
+        
+        &:hover {
+          --color: var(--ion-color-primary);
+        }
+      }
+    }
+    
+    .last-activity {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 20px;
+      background: var(--ion-color-light);
+      border-top: 1px solid var(--ion-color-medium);
+      font-size: 0.85rem;
+      color: var(--ion-color-medium);
+      
+      ion-icon {
+        font-size: 1rem;
+      }
+    }
+  }
+  
+  // No Results
+  .no-results-modern {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    text-align: center;
+    
+    img {
+      width: 200px;
+      opacity: 0.5;
+      margin-bottom: 20px;
+    }
+    
+    h3 {
+      font-size: 1.4rem;
+      color: var(--ion-color-dark);
+      margin: 0 0 8px;
+    }
+    
+    p {
+      color: var(--ion-color-medium);
+      margin: 0 0 20px;
+    }
+    
+    ion-button {
+      --background: var(--ion-color-primary);
+    }
+  }
+  
+  // Modern Pagination
+  .modern-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 30px;
+    padding: 20px;
+    
+    ion-button {
+      --padding-start: 8px;
+      --padding-end: 8px;
+      --color: var(--ion-color-primary);
+      
+      &:disabled {
+        --color: var(--ion-color-medium);
+      }
+    }
+    
+    .page-numbers {
+      display: flex;
+      gap: 4px;
+      
+      button {
+        min-width: 36px;
+        height: 36px;
+        border: none;
+        background: transparent;
+        color: var(--ion-color-primary);
+        font-weight: 500;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        
+        &:hover:not(:disabled):not(.active) {
+          background: var(--ion-color-light);
+        }
+        
+        &.active {
+          background: var(--ion-color-primary);
+          color: var(--ion-color-primary-contrast);
+        }
+        
+        &:disabled {
+          cursor: default;
+          color: var(--ion-color-medium);
+        }
+      }
+    }
+  }
+}
+
+// FAB Styling
+ion-fab-button {
+  --background: var(--ion-color-primary);
+  --box-shadow: 0 4px 16px rgba(var(--ion-color-primary-rgb), 0.4);
+  
+  &:hover {
+    --box-shadow: 0 6px 20px rgba(var(--ion-color-primary-rgb), 0.5);
+  }
+}
+
+// Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Modern Action Sheet
+.modern-action-sheet {
+  .action-sheet-button {
+    font-weight: 500;
+    
+    &.action-sheet-destructive {
+      color: var(--ion-color-danger);
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .global-stats-container {
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
+  .modern-filters-section {
+    margin: 10px;
+    
+    .filters-grid {
+      .date-filters {
+        grid-template-columns: 1fr;
+      }
+    }
+  }
+  
+  .restaurants-container {
+    padding: 10px;
+    
+    .restaurants-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+@media (min-width: 1200px) {
+  .restaurants-container {
+    .restaurants-grid {
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    }
+  }
+}
+
+// CSS pour la classe de modale des commandes (conservé de l'ancien fichier)
+.restaurant-orders-modal-class {
+  --width: 90%;
+  --max-width: 900px;
+  --height: 90%;
+  --max-height: 800px;
+}
+
+// Boutons d'action danger (conservé de l'ancien fichier)
+.danger-button {
+  --color: var(--ion-color-danger) !important;
+}

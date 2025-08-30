@@ -1,0 +1,140 @@
+.container {
+  padding: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  text-align: center;
+  
+  ion-spinner {
+    margin-bottom: 16px;
+  }
+  
+  p {
+    color: var(--ion-color-medium);
+  }
+}
+
+.config-section {
+  margin-top: 24px;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+.simulation-card {
+  margin-top: 24px;
+  
+  .simulation-results {
+    .simulation-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--ion-color-light);
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      .price {
+        font-weight: 600;
+        color: var(--ion-color-primary);
+        
+        &.free {
+          color: var(--ion-color-success);
+        }
+      }
+    }
+  }
+}
+
+.action-buttons {
+  margin-top: 24px;
+  
+  ion-button {
+    margin-bottom: 12px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+ion-card-header {
+  ion-card-title {
+    display: flex;
+    align-items: center;
+    
+    ion-icon {
+      margin-right: 8px;
+      font-size: 1.2em;
+    }
+  }
+}
+
+ion-item {
+  ion-label h2 {
+    display: flex;
+    align-items: center;
+    
+    ion-icon {
+      margin-right: 8px;
+      font-size: 1.1em;
+    }
+  }
+}
+
+// Status message styling
+ion-card[color="success"] {
+  --background: var(--ion-color-success-tint);
+  --color: var(--ion-color-success-contrast);
+  
+  ion-card-content {
+    display: flex;
+    align-items: center;
+    
+    ion-icon {
+      margin-right: 8px;
+      font-size: 1.2em;
+    }
+  }
+}
+
+ion-card[color="danger"] {
+  --background: var(--ion-color-danger-tint);
+  --color: var(--ion-color-danger-contrast);
+  
+  ion-card-content {
+    display: flex;
+    align-items: center;
+    
+    ion-icon {
+      margin-right: 8px;
+      font-size: 1.2em;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .container {
+    padding: 12px;
+  }
+  
+  .simulation-item {
+    flex-direction: column;
+    align-items: flex-start;
+    
+    .price {
+      margin-top: 4px;
+    }
+  }
+}

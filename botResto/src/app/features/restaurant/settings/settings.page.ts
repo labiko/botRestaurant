@@ -990,4 +990,18 @@ export class SettingsPage implements OnInit, OnDestroy {
   isAtLeastOnePaymentModeActive(): boolean {
     return this.paymentModes.allow_pay_now || this.paymentModes.allow_pay_later;
   }
+
+  async showPaymentModeDisabledMessage() {
+    const alert = await this.alertController.create({
+      header: 'Paiement immédiat',
+      message: 'Le paiement immédiat n\'est plus automatique. Vous pouvez maintenant envoyer directement le lien de paiement au client depuis la gestion des commandes pour plus de flexibilité.',
+      buttons: [
+        {
+          text: 'Compris',
+          role: 'confirm'
+        }
+      ]
+    });
+    await alert.present();
+  }
 }

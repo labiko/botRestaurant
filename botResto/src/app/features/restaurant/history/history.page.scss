@@ -71,6 +71,41 @@
       margin-bottom: 0;
     }
   }
+
+  .payment-details {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--ion-color-step-200);
+
+    .payment-detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--ion-color-medium);
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      strong {
+        color: var(--ion-color-dark);
+        margin-right: 0.5rem;
+        flex-shrink: 0;
+      }
+
+      // Responsive text wrapping for long values
+      @media (max-width: 480px) {
+        flex-direction: column;
+        align-items: flex-start;
+        
+        strong {
+          margin-bottom: 0.25rem;
+        }
+      }
+    }
+  }
 }
 
 // Responsive design

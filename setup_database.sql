@@ -1,479 +1,271 @@
--- ========================================
--- SCRIPT COMPLET DE CRÉATION ET INITIALISATION
--- Bot Restaurant WhatsApp - Base de données
--- ========================================
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 
--- Extension pour UUID
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- ========================================
--- TABLE: restaurants
--- ========================================
-DROP TABLE IF EXISTS public.restaurants CASCADE;
-CREATE TABLE public.restaurants (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  nom VARCHAR(255) NOT NULL,
-  adresse TEXT NOT NULL,
-  latitude DECIMAL(10, 8) NOT NULL,
-  longitude DECIMAL(11, 8) NOT NULL,
-  phone_whatsapp VARCHAR(20) NOT NULL UNIQUE,
-  
-  -- Paramètres de livraison
-  tarif_km INTEGER DEFAULT 3000,
-  seuil_gratuite INTEGER DEFAULT 100000,
-  minimum_livraison INTEGER DEFAULT 25000,
-  rayon_livraison_km INTEGER DEFAULT 10,
-  
-  -- Horaires et statut
-  horaires JSONB DEFAULT '{
-    "lundi": {"ouverture": "11:00", "fermeture": "22:00"},
-    "mardi": {"ouverture": "11:00", "fermeture": "22:00"},
-    "mercredi": {"ouverture": "11:00", "fermeture": "22:00"},
-    "jeudi": {"ouverture": "11:00", "fermeture": "22:00"},
-    "vendredi": {"ouverture": "11:00", "fermeture": "23:00"},
-    "samedi": {"ouverture": "12:00", "fermeture": "23:00"},
-    "dimanche": {"ouverture": "12:00", "fermeture": "22:00"}
-  }'::jsonb,
-  statut VARCHAR(20) DEFAULT 'ouvert' CHECK (statut IN ('ouvert', 'ferme', 'pause')),
-  
-  -- Métadonnées
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ========================================
--- TABLE: menus
--- ========================================
-DROP TABLE IF EXISTS public.menus CASCADE;
-CREATE TABLE public.menus (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  restaurant_id UUID NOT NULL REFERENCES public.restaurants(id) ON DELETE CASCADE,
-  nom_plat VARCHAR(255) NOT NULL,
-  description TEXT,
-  prix INTEGER NOT NULL CHECK (prix > 0),
-  categorie VARCHAR(100) DEFAULT 'plat' CHECK (categorie IN ('entree', 'plat', 'dessert', 'boisson', 'accompagnement')),
-  disponible BOOLEAN DEFAULT true,
-  photo_url TEXT,
-  ordre_affichage INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ========================================
--- TABLE: clients
--- ========================================
-DROP TABLE IF EXISTS public.clients CASCADE;
 CREATE TABLE public.clients (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  phone_whatsapp VARCHAR(20) UNIQUE NOT NULL,
-  nom VARCHAR(255),
-  restaurant_favori_id UUID REFERENCES public.restaurants(id) ON DELETE SET NULL,
-  adresse_default TEXT,
-  latitude_default DECIMAL(10, 8),
-  longitude_default DECIMAL(11, 8),
-  nombre_commandes INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  last_order_at TIMESTAMPTZ
+  phone_whatsapp character varying NOT NULL UNIQUE,
+  nom character varying,
+  restaurant_favori_id uuid,
+  adresse_default text,
+  latitude_default numeric,
+  longitude_default numeric,
+  last_order_at timestamp with time zone,
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  nombre_commandes integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT clients_pkey PRIMARY KEY (id),
+  CONSTRAINT clients_restaurant_favori_id_fkey FOREIGN KEY (restaurant_favori_id) REFERENCES public.restaurants(id)
 );
-
--- ========================================
--- TABLE: commandes
--- ========================================
-DROP TABLE IF EXISTS public.commandes CASCADE;
 CREATE TABLE public.commandes (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  numero_commande VARCHAR(20) UNIQUE NOT NULL,
-  client_id UUID NOT NULL REFERENCES public.clients(id),
-  restaurant_id UUID NOT NULL REFERENCES public.restaurants(id),
-  
-  -- Détails commande
-  items JSONB NOT NULL DEFAULT '[]'::jsonb,
-  sous_total INTEGER NOT NULL CHECK (sous_total >= 0),
-  frais_livraison INTEGER DEFAULT 0 CHECK (frais_livraison >= 0),
-  total INTEGER NOT NULL CHECK (total >= 0),
-  
-  -- Mode et livraison
-  mode VARCHAR(20) NOT NULL CHECK (mode IN ('sur_place', 'emporter', 'livraison')),
-  adresse_livraison TEXT,
-  latitude_livraison DECIMAL(10, 8),
-  longitude_livraison DECIMAL(11, 8),
-  distance_km DECIMAL(5, 2),
-  
-  -- Statut et paiement
-  statut VARCHAR(30) DEFAULT 'en_attente' CHECK (statut IN (
-    'en_attente', 'confirmee', 'preparation', 'prete', 
-    'en_livraison', 'livree', 'terminee', 'annulee'
-  )),
-  paiement_mode VARCHAR(30) CHECK (paiement_mode IN (
-    'maintenant', 'fin_repas', 'recuperation', 'livraison'
-  )),
-  paiement_statut VARCHAR(20) DEFAULT 'en_attente' CHECK (paiement_statut IN (
-    'en_attente', 'paye', 'echoue', 'rembourse'
-  )),
-  paiement_methode VARCHAR(30) CHECK (paiement_methode IN (
-    'orange_money', 'wave', 'cash', 'carte'
-  )),
-  
-  -- Livreur
-  livreur_nom VARCHAR(255),
-  livreur_phone VARCHAR(20),
-  
-  -- Notes
-  note_client TEXT,
-  note_restaurant TEXT,
-  
-  -- Timestamps
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  confirmed_at TIMESTAMPTZ,
-  prepared_at TIMESTAMPTZ,
-  delivered_at TIMESTAMPTZ,
-  cancelled_at TIMESTAMPTZ,
-  estimated_time TIMESTAMPTZ
+  numero_commande character varying NOT NULL UNIQUE,
+  client_id uuid NOT NULL,
+  restaurant_id uuid NOT NULL,
+  sous_total integer NOT NULL CHECK (sous_total >= 0),
+  total integer NOT NULL CHECK (total >= 0),
+  mode character varying NOT NULL CHECK (mode::text = ANY (ARRAY['sur_place'::character varying, 'emporter'::character varying, 'livraison'::character varying]::text[])),
+  adresse_livraison text,
+  latitude_livraison numeric,
+  longitude_livraison numeric,
+  distance_km numeric,
+  paiement_mode character varying CHECK (paiement_mode::text = ANY (ARRAY['maintenant'::character varying, 'fin_repas'::character varying, 'recuperation'::character varying, 'livraison'::character varying]::text[])),
+  paiement_methode character varying CHECK (paiement_methode::text = ANY (ARRAY['orange_money'::character varying, 'wave'::character varying, 'cash'::character varying, 'carte'::character varying]::text[])),
+  livreur_nom character varying,
+  livreur_phone character varying,
+  note_client text,
+  note_restaurant text,
+  confirmed_at timestamp with time zone,
+  prepared_at timestamp with time zone,
+  delivered_at timestamp with time zone,
+  cancelled_at timestamp with time zone,
+  estimated_time timestamp with time zone,
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  items jsonb NOT NULL DEFAULT '[]'::jsonb,
+  frais_livraison integer DEFAULT 0 CHECK (frais_livraison >= 0),
+  statut character varying DEFAULT 'en_attente'::character varying CHECK (statut::text = ANY (ARRAY['en_attente'::character varying, 'confirmee'::character varying, 'preparation'::character varying, 'prete'::character varying, 'en_livraison'::character varying, 'livree'::character varying, 'terminee'::character varying, 'annulee'::character varying]::text[])),
+  paiement_statut character varying DEFAULT 'en_attente'::character varying CHECK (paiement_statut::text = ANY (ARRAY['en_attente'::character varying, 'paye'::character varying, 'echoue'::character varying, 'rembourse'::character varying]::text[])),
+  created_at timestamp with time zone DEFAULT now(),
+  assigned_at timestamp with time zone,
+  accepted_by_delivery_at timestamp with time zone,
+  validation_code character varying DEFAULT NULL::character varying,
+  versement_otp_code character varying,
+  versement_otp_generated_at timestamp with time zone,
+  versement_otp_validated_at timestamp with time zone,
+  versement_otp_attempts integer DEFAULT 0,
+  versement_confirmed boolean DEFAULT false,
+  CONSTRAINT commandes_pkey PRIMARY KEY (id),
+  CONSTRAINT commandes_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.clients(id),
+  CONSTRAINT commandes_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
 );
-
--- ========================================
--- TABLE: sessions
--- ========================================
-DROP TABLE IF EXISTS public.sessions CASCADE;
-CREATE TABLE public.sessions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  phone_whatsapp VARCHAR(20) NOT NULL,
-  state VARCHAR(50) NOT NULL DEFAULT 'INITIAL',
-  context JSONB DEFAULT '{}'::jsonb,
-  expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 minutes'),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE public.delivery_stats (
+  delivery_user_id bigint NOT NULL,
+  date_record date NOT NULL,
+  id bigint NOT NULL DEFAULT nextval('delivery_stats_id_seq'::regclass),
+  total_deliveries integer DEFAULT 0,
+  total_earnings bigint DEFAULT 0,
+  average_delivery_time integer DEFAULT 0,
+  total_distance numeric DEFAULT 0,
+  rating_average numeric DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT delivery_stats_pkey PRIMARY KEY (id),
+  CONSTRAINT delivery_stats_delivery_user_id_fkey FOREIGN KEY (delivery_user_id) REFERENCES public.delivery_users(id)
 );
-
--- ========================================
--- TABLE: logs_webhook
--- ========================================
-DROP TABLE IF EXISTS public.logs_webhook CASCADE;
+CREATE TABLE public.delivery_users (
+  id bigint NOT NULL DEFAULT nextval('delivery_users_id_seq'::regclass),
+  status character varying DEFAULT 'actif'::character varying CHECK (status::text = ANY (ARRAY['actif'::character varying, 'inactif'::character varying, 'suspendu'::character varying]::text[])),
+  is_online boolean DEFAULT false,
+  rating numeric DEFAULT 0.00,
+  total_deliveries integer DEFAULT 0,
+  total_earnings bigint DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  telephone character varying NOT NULL UNIQUE,
+  nom character varying NOT NULL,
+  code_acces character varying NOT NULL,
+  restaurant_id uuid,
+  latitude numeric,
+  longitude numeric,
+  coordinates_updated_at timestamp with time zone,
+  accuracy numeric,
+  is_blocked boolean NOT NULL DEFAULT false,
+  CONSTRAINT delivery_users_pkey PRIMARY KEY (id),
+  CONSTRAINT delivery_users_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
+);
 CREATE TABLE public.logs_webhook (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  phone_whatsapp VARCHAR(20),
-  message_in TEXT,
-  message_out TEXT,
-  state_before VARCHAR(50),
-  state_after VARCHAR(50),
-  error TEXT,
-  processing_time_ms INTEGER,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  phone_whatsapp character varying,
+  message_in text,
+  message_out text,
+  state_before character varying,
+  state_after character varying,
+  error text,
+  processing_time_ms integer,
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT logs_webhook_pkey PRIMARY KEY (id)
 );
-
--- ========================================
--- INDEX POUR PERFORMANCE
--- ========================================
-
--- Index pour les recherches géographiques
-CREATE INDEX idx_restaurants_location ON public.restaurants (latitude, longitude);
-
--- Index pour les requêtes fréquentes
-CREATE INDEX idx_menus_restaurant ON public.menus(restaurant_id);
-CREATE INDEX idx_menus_disponible ON public.menus(disponible) WHERE disponible = true;
-CREATE INDEX idx_menus_categorie ON public.menus(categorie);
-
-CREATE INDEX idx_clients_phone ON public.clients(phone_whatsapp);
-CREATE INDEX idx_clients_favori ON public.clients(restaurant_favori_id);
-
-CREATE INDEX idx_commandes_client ON public.commandes(client_id);
-CREATE INDEX idx_commandes_restaurant ON public.commandes(restaurant_id);
-CREATE INDEX idx_commandes_statut ON public.commandes(statut);
-CREATE INDEX idx_commandes_created ON public.commandes(created_at DESC);
-CREATE INDEX idx_commandes_numero ON public.commandes(numero_commande);
-
-CREATE INDEX idx_sessions_phone ON public.sessions(phone_whatsapp);
-CREATE INDEX idx_sessions_expires ON public.sessions(expires_at);
-CREATE INDEX idx_sessions_state ON public.sessions(state);
-
-CREATE INDEX idx_logs_phone ON public.logs_webhook(phone_whatsapp);
-CREATE INDEX idx_logs_created ON public.logs_webhook(created_at DESC);
-
--- ========================================
--- FONCTIONS UTILITAIRES
--- ========================================
-
--- Fonction pour calculer la distance Haversine (compatible Supabase)
-CREATE OR REPLACE FUNCTION calculate_distance(
-  lat1 DECIMAL,
-  lon1 DECIMAL,
-  lat2 DECIMAL,
-  lon2 DECIMAL
-) RETURNS DECIMAL AS $$
-DECLARE
-  R CONSTANT DECIMAL := 6371; -- Rayon de la Terre en km
-  dLat DECIMAL;
-  dLon DECIMAL;
-  a DECIMAL;
-  c DECIMAL;
-  lat1_rad DECIMAL;
-  lat2_rad DECIMAL;
-BEGIN
-  -- Conversion en radians
-  lat1_rad := lat1 * pi() / 180;
-  lat2_rad := lat2 * pi() / 180;
-  dLat := (lat2 - lat1) * pi() / 180;
-  dLon := (lon2 - lon1) * pi() / 180;
-  
-  -- Formule de Haversine
-  a := power(sin(dLat/2), 2) +
-       cos(lat1_rad) * cos(lat2_rad) *
-       power(sin(dLon/2), 2);
-  
-  c := 2 * atan2(sqrt(a), sqrt(1-a));
-  
-  RETURN R * c;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
-
--- Fonction pour générer un numéro de commande
-CREATE OR REPLACE FUNCTION generate_order_number() RETURNS VARCHAR AS $$
-DECLARE
-  year_month VARCHAR;
-  daily_count INTEGER;
-  order_number VARCHAR;
-BEGIN
-  year_month := TO_CHAR(NOW(), 'YYMM');
-  
-  SELECT COUNT(*) + 1 INTO daily_count
-  FROM public.commandes
-  WHERE DATE(created_at) = CURRENT_DATE;
-  
-  order_number := year_month || '-' || LPAD(daily_count::TEXT, 4, '0');
-  
-  RETURN order_number;
-END;
-$$ LANGUAGE plpgsql;
-
--- Fonction pour vérifier si un restaurant est ouvert
-CREATE OR REPLACE FUNCTION is_restaurant_open(restaurant_id UUID) RETURNS BOOLEAN AS $$
-DECLARE
-  resto RECORD;
-  current_day VARCHAR;
-  current_time_val TIME;
-  opening_time TIME;
-  closing_time TIME;
-BEGIN
-  SELECT * INTO resto FROM public.restaurants WHERE id = restaurant_id;
-  
-  IF resto.statut != 'ouvert' THEN
-    RETURN FALSE;
-  END IF;
-  
-  current_day := LOWER(TO_CHAR(NOW(), 'day'));
-  current_day := TRIM(current_day);
-  current_time_val := LOCALTIME;
-  
-  -- Mapper les jours français
-  CASE current_day
-    WHEN 'monday' THEN current_day := 'lundi';
-    WHEN 'tuesday' THEN current_day := 'mardi';
-    WHEN 'wednesday' THEN current_day := 'mercredi';
-    WHEN 'thursday' THEN current_day := 'jeudi';
-    WHEN 'friday' THEN current_day := 'vendredi';
-    WHEN 'saturday' THEN current_day := 'samedi';
-    WHEN 'sunday' THEN current_day := 'dimanche';
-    ELSE current_day := 'lundi';
-  END CASE;
-  
-  IF resto.horaires ? current_day THEN
-    opening_time := (resto.horaires->current_day->>'ouverture')::TIME;
-    closing_time := (resto.horaires->current_day->>'fermeture')::TIME;
-    
-    RETURN current_time_val BETWEEN opening_time AND closing_time;
-  END IF;
-  
-  RETURN FALSE;
-END;
-$$ LANGUAGE plpgsql;
-
--- ========================================
--- TRIGGERS
--- ========================================
-
--- Trigger pour mettre à jour updated_at
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_restaurants_updated_at BEFORE UPDATE ON public.restaurants
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_menus_updated_at BEFORE UPDATE ON public.menus
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_clients_updated_at BEFORE UPDATE ON public.clients
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_sessions_updated_at BEFORE UPDATE ON public.sessions
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Trigger pour générer automatiquement le numéro de commande
-CREATE OR REPLACE FUNCTION set_order_number()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.numero_commande IS NULL OR NEW.numero_commande = '' THEN
-    NEW.numero_commande := generate_order_number();
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER set_order_number_trigger BEFORE INSERT ON public.commandes
-  FOR EACH ROW EXECUTE FUNCTION set_order_number();
-
--- Trigger pour mettre à jour le compteur de commandes client
-CREATE OR REPLACE FUNCTION update_client_orders_count()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.statut = 'terminee' AND (OLD IS NULL OR OLD.statut != 'terminee') THEN
-    UPDATE public.clients 
-    SET nombre_commandes = nombre_commandes + 1,
-        last_order_at = NOW()
-    WHERE id = NEW.client_id;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_client_orders_trigger AFTER INSERT OR UPDATE ON public.commandes
-  FOR EACH ROW EXECUTE FUNCTION update_client_orders_count();
-
--- ========================================
--- ROW LEVEL SECURITY (RLS)
--- ========================================
-
--- Activer RLS sur toutes les tables
-ALTER TABLE public.restaurants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.menus ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.commandes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.logs_webhook ENABLE ROW LEVEL SECURITY;
-
--- Policies pour les Edge Functions (service role)
-CREATE POLICY "Service role has full access to restaurants" ON public.restaurants
-  FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role has full access to menus" ON public.menus
-  FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role has full access to clients" ON public.clients
-  FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role has full access to commandes" ON public.commandes
-  FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role has full access to sessions" ON public.sessions
-  FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role has full access to logs" ON public.logs_webhook
-  FOR ALL USING (auth.role() = 'service_role');
-
--- ========================================
--- DONNÉES DE TEST - RESTAURANTS CONAKRY
--- ========================================
-
-INSERT INTO public.restaurants (nom, adresse, latitude, longitude, phone_whatsapp, tarif_km, seuil_gratuite, minimum_livraison, rayon_livraison_km) VALUES
-('Restaurant Le Damier', 'Quartier Taouyah, Commune de Kaloum, Conakry', 9.535747, -13.677290, '224625000001', 3000, 100000, 25000, 15),
-('Le Petit Bistro', 'Kipé, Commune de Ratoma, Conakry', 9.554123, -13.661234, '224625000002', 2500, 80000, 20000, 12),
-('Chez Mariama', 'Cosa, Commune de Ratoma, Conakry', 9.562890, -13.645678, '224625000003', 3500, 120000, 30000, 18),
-('La Terrasse Moderne', 'Minière, Commune de Dixinn, Conakry', 9.541234, -13.654321, '224625000004', 4000, 150000, 35000, 20),
-('Le Bambou Doré', 'Hamdallaye, Commune de Ratoma, Conakry', 9.571234, -13.652890, '224625000005', 2800, 90000, 22000, 14),
-('Restaurant Almamya', 'Almamya, Commune de Kaloum, Conakry', 9.509876, -13.712345, '224625000006', 3200, 110000, 28000, 16),
-('Chez Fatoumata', 'Coléah, Commune de Matam, Conakry', 9.525678, -13.645123, '224625000007', 3800, 140000, 32000, 17);
-
--- ========================================
--- DONNÉES DE TEST - MENUS
--- ========================================
-
--- Menu Restaurant Le Damier
-INSERT INTO public.menus (restaurant_id, nom_plat, description, prix, categorie, ordre_affichage) VALUES
-((SELECT id FROM restaurants WHERE nom = 'Restaurant Le Damier'), 'Salade César', 'Salade verte, croûtons, parmesan, sauce césar', 35000, 'entree', 1),
-((SELECT id FROM restaurants WHERE nom = 'Restaurant Le Damier'), 'Avocat aux crevettes', 'Avocat farci aux crevettes, sauce cocktail', 45000, 'entree', 2),
-((SELECT id FROM restaurants WHERE nom = 'Restaurant Le Damier'), 'Poulet Yassa', 'Poulet mariné à la sauce yassa, riz blanc', 65000, 'plat', 3),
-((SELECT id FROM restaurants WHERE nom = 'Restaurant Le Damier'), 'Poisson Braisé', 'Poisson frais braisé, légumes, attiéké', 75000, 'plat', 4),
-((SELECT id FROM restaurants WHERE nom = 'Restaurant Le Damier'), 'Riz Gras', 'Riz gras traditionnel guinéen, viande', 55000, 'plat', 5),
-((SELECT id FROM restaurants WHERE nom = 'Restaurant Le Damier'), 'Tarte aux fruits', 'Tarte maison aux fruits de saison', 25000, 'dessert', 6),
-((SELECT id FROM restaurants WHERE nom = 'Restaurant Le Damier'), 'Jus d''orange frais', 'Jus d''orange pressé minute', 15000, 'boisson', 7),
-((SELECT id FROM restaurants WHERE nom = 'Restaurant Le Damier'), 'Café expresso', 'Café italien, servi avec petit four', 12000, 'boisson', 8);
-
--- Menu Le Petit Bistro
-INSERT INTO public.menus (restaurant_id, nom_plat, description, prix, categorie, ordre_affichage) VALUES
-((SELECT id FROM restaurants WHERE nom = 'Le Petit Bistro'), 'Soupe de poisson', 'Soupe traditionnelle aux épices', 30000, 'entree', 1),
-((SELECT id FROM restaurants WHERE nom = 'Le Petit Bistro'), 'Salade mixte', 'Salade de légumes frais de saison', 28000, 'entree', 2),
-((SELECT id FROM restaurants WHERE nom = 'Le Petit Bistro'), 'Capitaine sauce', 'Poisson capitaine, sauce tomate', 70000, 'plat', 3),
-((SELECT id FROM restaurants WHERE nom = 'Le Petit Bistro'), 'Poulet rôti', 'Poulet fermier rôti aux herbes', 60000, 'plat', 4),
-((SELECT id FROM restaurants WHERE nom = 'Le Petit Bistro'), 'Fonio aux légumes', 'Fonio traditionnel, légumes frais', 45000, 'plat', 5),
-((SELECT id FROM restaurants WHERE nom = 'Le Petit Bistro'), 'Banane plantain frite', 'Accompagnement de bananes frites', 18000, 'accompagnement', 6),
-((SELECT id FROM restaurants WHERE nom = 'Le Petit Bistro'), 'Bissap frais', 'Jus de bissap maison, glacé', 12000, 'boisson', 7);
-
--- Menu Chez Mariama
-INSERT INTO public.menus (restaurant_id, nom_plat, description, prix, categorie, ordre_affichage) VALUES
-((SELECT id FROM restaurants WHERE nom = 'Chez Mariama'), 'Salade de fruits de mer', 'Salade fraîche aux fruits de mer', 50000, 'entree', 1),
-((SELECT id FROM restaurants WHERE nom = 'Chez Mariama'), 'Crevettes grillées', 'Crevettes fraîches grillées, riz', 85000, 'plat', 2),
-((SELECT id FROM restaurants WHERE nom = 'Chez Mariama'), 'Thiéboudienne', 'Riz au poisson, légumes traditionnels', 80000, 'plat', 3),
-((SELECT id FROM restaurants WHERE nom = 'Chez Mariama'), 'Langouste grillée', 'Langouste locale grillée, beurre à l''ail', 120000, 'plat', 4),
-((SELECT id FROM restaurants WHERE nom = 'Chez Mariama'), 'Sorbet coco', 'Sorbet maison à la noix de coco', 22000, 'dessert', 5),
-((SELECT id FROM restaurants WHERE nom = 'Chez Mariama'), 'Jus de gingembre', 'Jus de gingembre frais, miel', 18000, 'boisson', 6);
-
--- ========================================
--- FONCTION DE NETTOYAGE AUTOMATIQUE
--- ========================================
-
--- Nettoyer les sessions expirées
-CREATE OR REPLACE FUNCTION clean_expired_sessions()
-RETURNS INTEGER AS $$
-DECLARE
-  deleted_count INTEGER;
-BEGIN
-  DELETE FROM public.sessions WHERE expires_at < NOW();
-  GET DIAGNOSTICS deleted_count = ROW_COUNT;
-  RETURN deleted_count;
-END;
-$$ LANGUAGE plpgsql;
-
--- ========================================
--- VUES UTILES
--- ========================================
-
--- Vue des restaurants avec menus disponibles
-CREATE OR REPLACE VIEW restaurants_with_menus AS
-SELECT 
-  r.*,
-  COUNT(m.id) as nombre_plats,
-  MIN(m.prix) as prix_min,
-  MAX(m.prix) as prix_max,
-  is_restaurant_open(r.id) as est_ouvert
-FROM restaurants r
-LEFT JOIN menus m ON r.id = m.restaurant_id AND m.disponible = true
-GROUP BY r.id;
-
--- Vue des commandes avec détails
-CREATE OR REPLACE VIEW commandes_details AS
-SELECT 
-  c.*,
-  r.nom as restaurant_nom,
-  r.adresse as restaurant_adresse,
-  cl.nom as client_nom,
-  cl.phone_whatsapp as client_phone
-FROM commandes c
-JOIN restaurants r ON c.restaurant_id = r.id
-JOIN clients cl ON c.client_id = cl.id;
-
--- ========================================
--- NOTIFICATION
--- ========================================
-
-DO $$
-BEGIN
-  RAISE NOTICE '✅ Base de données Bot Restaurant initialisée avec succès!';
-  RAISE NOTICE '📊 Restaurants créés: %', (SELECT COUNT(*) FROM restaurants);
-  RAISE NOTICE '🍽️ Plats au menu: %', (SELECT COUNT(*) FROM menus);
-  RAISE NOTICE '🚀 Système prêt pour déploiement!';
-END $$;
+CREATE TABLE public.menus (
+  restaurant_id uuid NOT NULL,
+  nom_plat character varying NOT NULL,
+  description text,
+  prix integer NOT NULL CHECK (prix > 0),
+  photo_url text,
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  categorie character varying DEFAULT 'plat'::character varying CHECK (categorie::text = ANY (ARRAY['entree'::character varying, 'plat'::character varying, 'dessert'::character varying, 'boisson'::character varying, 'accompagnement'::character varying]::text[])),
+  disponible boolean DEFAULT true,
+  ordre_affichage integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT menus_pkey PRIMARY KEY (id),
+  CONSTRAINT menus_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
+);
+CREATE TABLE public.restaurant_analytics (
+  restaurant_id uuid NOT NULL,
+  date_record date NOT NULL,
+  peak_hour integer,
+  most_popular_item character varying,
+  id bigint NOT NULL DEFAULT nextval('restaurant_analytics_id_seq'::regclass),
+  total_orders integer DEFAULT 0,
+  total_revenue bigint DEFAULT 0,
+  average_order_value integer DEFAULT 0,
+  new_customers integer DEFAULT 0,
+  delivery_orders integer DEFAULT 0,
+  takeaway_orders integer DEFAULT 0,
+  dine_in_orders integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT restaurant_analytics_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_analytics_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
+);
+CREATE TABLE public.restaurant_delivery_config (
+  restaurant_id uuid NOT NULL UNIQUE,
+  delivery_type character varying NOT NULL CHECK (delivery_type::text = ANY (ARRAY['fixed'::character varying, 'distance_based'::character varying]::text[])),
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  fixed_amount integer DEFAULT 0,
+  price_per_km integer DEFAULT 0,
+  round_up_distance boolean DEFAULT true,
+  free_delivery_threshold integer DEFAULT 0,
+  max_delivery_radius_km numeric DEFAULT 10.00,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT restaurant_delivery_config_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_delivery_config_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
+);
+CREATE TABLE public.restaurant_payment_config (
+  restaurant_id uuid NOT NULL,
+  license_key text NOT NULL,
+  website_id character varying NOT NULL,
+  callback_url character varying NOT NULL,
+  green_api_instance_id character varying,
+  green_api_token text,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  provider_name character varying NOT NULL DEFAULT 'lengopay'::character varying,
+  is_active boolean DEFAULT false,
+  api_url character varying DEFAULT 'https://sandbox.lengopay.com/api/v1/payments'::character varying,
+  green_api_base_url character varying DEFAULT 'https://7105.api.greenapi.com'::character varying,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  telephone_marchand character varying,
+  CONSTRAINT restaurant_payment_config_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_payment_config_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
+);
+CREATE TABLE public.restaurant_payments (
+  restaurant_id uuid NOT NULL,
+  commande_id uuid,
+  payment_id character varying NOT NULL,
+  amount numeric NOT NULL,
+  client_phone character varying NOT NULL,
+  message text,
+  payment_url text,
+  raw_json jsonb,
+  processed_at timestamp with time zone,
+  client_notified_at timestamp with time zone,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  status character varying DEFAULT 'PENDING'::character varying CHECK (status::text = ANY (ARRAY['PENDING'::character varying, 'SUCCESS'::character varying, 'FAILED'::character varying, 'CANCELLED'::character varying]::text[])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT restaurant_payments_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_payments_commande_id_fkey FOREIGN KEY (commande_id) REFERENCES public.commandes(id),
+  CONSTRAINT restaurant_payments_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
+);
+CREATE TABLE public.restaurant_status_logs (
+  restaurant_id uuid NOT NULL,
+  old_status character varying,
+  new_status character varying NOT NULL,
+  reason character varying,
+  changed_by_user_id bigint,
+  id bigint NOT NULL DEFAULT nextval('restaurant_status_logs_id_seq'::regclass),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT restaurant_status_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_status_logs_changed_by_user_id_fkey FOREIGN KEY (changed_by_user_id) REFERENCES public.restaurant_users(id),
+  CONSTRAINT restaurant_status_logs_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
+);
+CREATE TABLE public.restaurant_users (
+  restaurant_id uuid NOT NULL,
+  email character varying NOT NULL UNIQUE,
+  password_hash character varying NOT NULL,
+  nom character varying NOT NULL,
+  last_login timestamp with time zone,
+  id bigint NOT NULL DEFAULT nextval('restaurant_users_id_seq'::regclass),
+  role character varying DEFAULT 'admin'::character varying CHECK (role::text = ANY (ARRAY['admin'::character varying, 'manager'::character varying, 'staff'::character varying]::text[])),
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT restaurant_users_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_users_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
+);
+CREATE TABLE public.restaurants (
+  allow_dine_in boolean DEFAULT true,
+  allow_takeaway boolean DEFAULT true,
+  allow_delivery boolean DEFAULT true,
+  allow_pay_now boolean DEFAULT true,
+  allow_pay_later boolean DEFAULT true,
+  email character varying,
+  telephone character varying,
+  description text,
+  logo_url character varying,
+  banner_url character varying,
+  delivery_fee integer DEFAULT 0,
+  min_order_amount integer DEFAULT 0,
+  max_delivery_distance numeric DEFAULT 10.0,
+  preparation_time integer DEFAULT 30,
+  is_featured boolean DEFAULT false,
+  rating numeric DEFAULT 0.00,
+  total_orders integer DEFAULT 0,
+  nom character varying NOT NULL,
+  adresse text NOT NULL,
+  latitude numeric NOT NULL,
+  longitude numeric NOT NULL,
+  phone_whatsapp character varying NOT NULL UNIQUE,
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  tarif_km integer DEFAULT 3000,
+  seuil_gratuite integer DEFAULT 100000,
+  minimum_livraison integer DEFAULT 25000,
+  rayon_livraison_km integer DEFAULT 10,
+  horaires jsonb DEFAULT '{"jeudi": {"fermeture": "22:00", "ouverture": "11:00"}, "lundi": {"fermeture": "22:00", "ouverture": "11:00"}, "mardi": {"fermeture": "22:00", "ouverture": "11:00"}, "samedi": {"fermeture": "23:00", "ouverture": "12:00"}, "dimanche": {"fermeture": "22:00", "ouverture": "12:00"}, "mercredi": {"fermeture": "22:00", "ouverture": "11:00"}, "vendredi": {"fermeture": "23:00", "ouverture": "11:00"}}'::jsonb,
+  statut character varying DEFAULT 'ouvert'::character varying CHECK (statut::text = ANY (ARRAY['ouvert'::character varying, 'ferme'::character varying, 'temporairement_ferme'::character varying]::text[])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  currency character varying DEFAULT 'GNF'::character varying CHECK (currency::text = ANY (ARRAY['GNF'::character varying, 'XOF'::character varying, 'EUR'::character varying, 'USD'::character varying]::text[])),
+  password character varying,
+  CONSTRAINT restaurants_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.sessions (
+  phone_whatsapp character varying NOT NULL,
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  state character varying NOT NULL DEFAULT 'INITIAL'::character varying,
+  context jsonb DEFAULT '{}'::jsonb,
+  expires_at timestamp with time zone NOT NULL DEFAULT (now() + '00:30:00'::interval),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT sessions_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.user_sessions (
+  id bigint NOT NULL DEFAULT nextval('user_sessions_id_seq'::regclass),
+  created_at timestamp with time zone DEFAULT now(),
+  user_id bigint NOT NULL,
+  user_type character varying NOT NULL CHECK (user_type::text = ANY (ARRAY['restaurant'::character varying, 'delivery'::character varying]::text[])),
+  session_token character varying NOT NULL,
+  ip_address inet,
+  user_agent text,
+  expires_at timestamp with time zone NOT NULL,
+  CONSTRAINT user_sessions_pkey PRIMARY KEY (id)
+);

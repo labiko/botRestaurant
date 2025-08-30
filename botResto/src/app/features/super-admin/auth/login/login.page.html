@@ -1,0 +1,105 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>
+      <ion-icon name="shield-checkmark-outline" style="margin-right: 8px;"></ion-icon>
+      Super Admin
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="super-admin-login">
+  <div class="login-container">
+    <ion-card class="login-card">
+      <ion-card-header>
+        <div class="logo-container">
+          <ion-icon name="shield-checkmark" class="admin-logo"></ion-icon>
+        </div>
+        <ion-card-title>Espace Super Admin</ion-card-title>
+        <ion-card-subtitle>Connexion sécurisée</ion-card-subtitle>
+      </ion-card-header>
+
+      <ion-card-content>
+        <form (ngSubmit)="login()">
+          <!-- Email -->
+          <ion-item *ngIf="!showMfaInput">
+            <ion-label position="stacked">
+              <ion-icon name="mail-outline"></ion-icon>
+              Email
+            </ion-label>
+            <ion-input 
+              type="email" 
+              [(ngModel)]="credentials.email" 
+              name="email"
+              placeholder="admin@example.com"
+              required>
+            </ion-input>
+          </ion-item>
+
+          <!-- Password -->
+          <ion-item *ngIf="!showMfaInput">
+            <ion-label position="stacked">
+              <ion-icon name="lock-closed-outline"></ion-icon>
+              Mot de passe
+            </ion-label>
+            <ion-input 
+              [type]="showPassword ? 'text' : 'password'"
+              [(ngModel)]="credentials.password" 
+              name="password"
+              placeholder="••••••••"
+              required>
+            </ion-input>
+            <ion-button 
+              fill="clear" 
+              slot="end" 
+              (click)="togglePasswordVisibility()">
+              <ion-icon [name]="showPassword ? 'eye-off' : 'eye'"></ion-icon>
+            </ion-button>
+          </ion-item>
+
+          <!-- MFA Code -->
+          <ion-item *ngIf="showMfaInput">
+            <ion-label position="stacked">
+              <ion-icon name="key-outline"></ion-icon>
+              Code 2FA
+            </ion-label>
+            <ion-input 
+              type="text" 
+              [(ngModel)]="credentials.mfaCode" 
+              name="mfaCode"
+              placeholder="123456"
+              maxlength="6"
+              required>
+            </ion-input>
+          </ion-item>
+
+          <!-- Submit Button -->
+          <ion-button 
+            expand="block" 
+            type="submit" 
+            color="primary"
+            class="login-button"
+            *ngIf="!showMfaInput">
+            <ion-icon name="log-in" slot="start"></ion-icon>
+            Se connecter
+          </ion-button>
+
+          <ion-button 
+            expand="block" 
+            (click)="verifyMfa()"
+            color="primary"
+            class="login-button"
+            *ngIf="showMfaInput">
+            <ion-icon name="checkmark-circle" slot="start"></ion-icon>
+            Vérifier le code
+          </ion-button>
+        </form>
+
+        <!-- Security Notice -->
+        <div class="security-notice">
+          <ion-icon name="information-circle" color="warning"></ion-icon>
+          <span>Connexion sécurisée avec authentification à deux facteurs</span>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

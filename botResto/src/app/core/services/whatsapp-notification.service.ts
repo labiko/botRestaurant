@@ -47,7 +47,7 @@ export class WhatsAppNotificationService {
 ⏱️ Temps de préparation: 15-25 min
 📱 Nous vous contactons sous peu
 
-Bot Resto Conakry`,
+{restaurantName}`,
 
     preparation: `👨‍🍳 *EN PRÉPARATION*
 📋 N°{orderNumber} • {restaurantName}
@@ -65,7 +65,7 @@ Bot Resto Conakry`,
 ⏱️ Plus que 10-15 minutes
 🔥 Nos chefs s'activent !
 
-Bot Resto Conakry`,
+{restaurantName}`,
 
     prete: `🍽️ *COMMANDE PRÊTE !*
 📋 N°{orderNumber} • {restaurantName}
@@ -81,7 +81,7 @@ Bot Resto Conakry`,
 🔐 *Code validation: {validationCode}*
 ⏱️ Livraison estimée: 30-40 min
 
-Bot Resto Conakry`,
+{restaurantName}`,
 
     en_livraison: `🚚 *EN ROUTE VERS VOUS !*
 📋 N°{orderNumber} • {restaurantName}
@@ -95,7 +95,7 @@ Bot Resto Conakry`,
 
 📍 Temps estimé: {tempsEstime}
 
-Bot Resto Conakry`,
+{restaurantName}`,
 
     livree: `✅ *COMMANDE LIVRÉE !*
 📋 N°{orderNumber}
@@ -106,9 +106,9 @@ Votre avis nous intéresse.
 ⭐ Notez votre expérience
 🔄 Commander à nouveau
 
-Tapez *"resto"* pour une nouvelle commande
+💡 Tapez *"resto"* pour une nouvelle commande ou le numéro du resto pour accéder directement.
 
-Bot Resto Conakry`,
+{restaurantName}`,
 
     annulee: `❌ *COMMANDE ANNULÉE*
 📋 N°{orderNumber} • {restaurantName}
@@ -118,9 +118,8 @@ Bot Resto Conakry`,
 {reason}
 
 🔄 Nouvelle commande : tapez *"resto"*
-📞 Service client : 620 951 645
 
-Bot Resto Conakry`
+{restaurantName}`
   };
 
   constructor(private http: HttpClient) {}

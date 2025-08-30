@@ -128,12 +128,40 @@
         <!-- Payment info -->
         <div class="payment-info" *ngIf="order.paiement_statut">
           <h4>Paiement:</h4>
-          <p><strong>Mode:</strong> {{ getPaymentModeText(order.paiement_mode) }}</p>
+          <p><strong>Mode réel:</strong> 
+            <ion-badge [color]="getActualPaymentMode(order) === 'Mobile Money' ? 'success' : 'warning'">
+              <ion-icon [name]="getActualPaymentMode(order) === 'Mobile Money' ? 'phone-portrait-outline' : 'cash-outline'" style="margin-right: 4px;"></ion-icon>
+              {{ getActualPaymentMode(order) }}
+            </ion-badge>
+          </p>
+          <p><strong>Mode initial:</strong> {{ getPaymentModeText(order.paiement_mode) }}</p>
           <p><strong>Statut:</strong> 
             <ion-badge [color]="getPaymentStatusColor(order.paiement_statut)">
               {{ getPaymentStatusText(order.paiement_statut) }}
             </ion-badge>
           </p>
+          
+          <!-- Detailed payment status from service -->
+          <div *ngIf="getPaymentStatus(order.id) as paymentDetails" class="payment-details">
+            <div *ngIf="paymentDetails.transaction_id" class="payment-detail-row">
+              <strong>ID Transaction:</strong> {{ paymentDetails.transaction_id }}
+            </div>
+            <div *ngIf="paymentDetails.payment_method" class="payment-detail-row">
+              <strong>Méthode:</strong> {{ paymentDetails.payment_method }}
+            </div>
+            <div *ngIf="paymentDetails.provider_response" class="payment-detail-row">
+              <strong>Réponse:</strong> {{ paymentDetails.provider_response }}
+            </div>
+            <div *ngIf="paymentDetails.amount" class="payment-detail-row">
+              <strong>Montant:</strong> {{ formatPrice(paymentDetails.amount) }}
+            </div>
+            <div *ngIf="paymentDetails.created_at" class="payment-detail-row">
+              <strong>Créé le:</strong> {{ formatDateTime(paymentDetails.created_at) }}
+            </div>
+            <div *ngIf="paymentDetails.updated_at" class="payment-detail-row">
+              <strong>Mis à jour le:</strong> {{ formatDateTime(paymentDetails.updated_at) }}
+            </div>
+          </div>
         </div>
       </ion-card-content>
     </ion-card>

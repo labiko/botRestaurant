@@ -111,7 +111,7 @@ Votre code: *${accessCode}*
 
 Connectez-vous maintenant sur l'app !
 
-Bot Resto Conakry`;
+🚴‍♂️ Service Livraison`;
   }
 
   /**

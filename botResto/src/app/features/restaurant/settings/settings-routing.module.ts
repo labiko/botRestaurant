@@ -7,6 +7,10 @@ const routes: Routes = [
   {
     path: '',
     component: SettingsPage
+  },
+  {
+    path: 'delivery-config',
+    loadChildren: () => import('../delivery-config/delivery-config.module').then(m => m.DeliveryConfigPageModule)
   }
 ];
 

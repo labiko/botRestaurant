@@ -1,0 +1,365 @@
+<ion-header class="modern-header">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/super-admin/dashboard"></ion-back-button>
+    </ion-buttons>
+    <ion-title>
+      <ion-icon name="restaurant-outline" style="margin-right: 8px; vertical-align: middle;"></ion-icon>
+      Gestion des Restaurants
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="addNewRestaurant()" class="add-btn">
+        <ion-icon name="add-circle" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button (click)="sendBulkNotification()">
+        <ion-icon name="chatbubbles" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button (click)="loadRestaurants()">
+        <ion-icon name="refresh" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="modern-restaurants-page">
+  <!-- Statistiques générales -->
+  <div class="global-stats-container">
+    <div class="stats-grid">
+      <div class="stat-card primary">
+        <div class="stat-icon">
+          <ion-icon name="business"></ion-icon>
+        </div>
+        <div class="stat-content">
+          <h3>{{ restaurants.length }}</h3>
+          <p>Restaurants Total</p>
+        </div>
+      </div>
+      
+      <div class="stat-card success">
+        <div class="stat-icon">
+          <ion-icon name="checkmark-circle"></ion-icon>
+        </div>
+        <div class="stat-content">
+          <h3>{{ getActiveRestaurantsCount() }}</h3>
+          <p>Restaurants Actifs</p>
+        </div>
+      </div>
+      
+      <div class="stat-card warning">
+        <div class="stat-icon">
+          <ion-icon name="time"></ion-icon>
+        </div>
+        <div class="stat-content">
+          <h3>{{ getPendingRestaurantsCount() }}</h3>
+          <p>En Attente</p>
+        </div>
+      </div>
+      
+      <div class="stat-card danger">
+        <div class="stat-icon">
+          <ion-icon name="ban"></ion-icon>
+        </div>
+        <div class="stat-content">
+          <h3>{{ getBlockedRestaurantsCount() }}</h3>
+          <p>Bloqués</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section des filtres modernes -->
+  <div class="modern-filters-section">
+    <div class="filters-header">
+      <h2>
+        <ion-icon name="filter"></ion-icon>
+        Filtres Avancés
+      </h2>
+      <ion-button fill="clear" size="small" (click)="resetFilters()">
+        <ion-icon name="refresh" slot="start"></ion-icon>
+        Réinitialiser
+      </ion-button>
+    </div>
+    
+    <div class="filters-grid">
+      <!-- Recherche -->
+      <div class="filter-item search-filter">
+        <ion-searchbar
+          [(ngModel)]="searchQuery"
+          (ionInput)="onSearchChange()"
+          placeholder="Rechercher par nom, téléphone, email..."
+          class="modern-searchbar"
+          animated="true"
+          showClearButton="always">
+        </ion-searchbar>
+      </div>
+      
+      <!-- Filtre par statut -->
+      <div class="filter-item">
+        <label>Statut</label>
+        <ion-segment [(ngModel)]="statusFilter" (ionChange)="onStatusFilterChange()" scrollable>
+          <ion-segment-button value="all">
+            <ion-label>Tous</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="active">
+            <ion-label>Actifs</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="pending">
+            <ion-label>En attente</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="suspended">
+            <ion-label>Suspendus</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="blocked">
+            <ion-label>Bloqués</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+      
+      <!-- Tri -->
+      <div class="filter-item sort-filter">
+        <label>Trier par</label>
+        <div class="sort-controls">
+          <ion-select 
+            [(ngModel)]="sortBy" 
+            (ionChange)="onSortChange()"
+            interface="popover"
+            class="modern-select">
+            <ion-select-option value="name">Nom</ion-select-option>
+            <ion-select-option value="created">Date création</ion-select-option>
+            <ion-select-option value="orders">Nombre commandes</ion-select-option>
+            <ion-select-option value="revenue">Revenus</ion-select-option>
+            <ion-select-option value="rating">Note</ion-select-option>
+            <ion-select-option value="lastActivity">Dernière activité</ion-select-option>
+          </ion-select>
+          
+          <ion-button 
+            fill="outline" 
+            (click)="changeSortDirection()"
+            class="sort-direction-btn">
+            <ion-icon [name]="sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'"></ion-icon>
+          </ion-button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tags des filtres actifs -->
+    <div class="active-filters-tags" *ngIf="hasActiveFilters()">
+      <div class="filter-tag" *ngIf="searchQuery">
+        <span>Recherche: {{ searchQuery }}</span>
+        <ion-icon name="close" (click)="clearSearch()"></ion-icon>
+      </div>
+      <div class="filter-tag" *ngIf="statusFilter !== 'all'">
+        <span>Statut: {{ getStatusText(statusFilter) }}</span>
+        <ion-icon name="close" (click)="clearStatusFilter()"></ion-icon>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="modern-loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>Chargement des restaurants...</p>
+  </div>
+
+  <!-- Liste des restaurants avec design moderne -->
+  <div *ngIf="!loading" class="restaurants-container">
+    <!-- Barre de résultats -->
+    <div class="results-bar">
+      <span class="results-count">
+        {{ filteredRestaurants.length }} restaurant(s) trouvé(s)
+      </span>
+      <div class="view-options">
+        <ion-button fill="clear" size="small" [class.active]="viewMode === 'grid'" (click)="setViewMode('grid')">
+          <ion-icon name="grid"></ion-icon>
+        </ion-button>
+        <ion-button fill="clear" size="small" [class.active]="viewMode === 'list'" (click)="setViewMode('list')">
+          <ion-icon name="list"></ion-icon>
+        </ion-button>
+      </div>
+    </div>
+    
+    <!-- Grille de restaurants -->
+    <div [class]="'restaurants-' + viewMode" *ngIf="filteredRestaurants.length > 0">
+      <div 
+        *ngFor="let restaurant of getPaginatedRestaurants(); let i = index" 
+        class="modern-restaurant-card"
+        [class.blocked]="restaurant.isBlocked"
+        [@fadeIn]="'in'"
+        [style.animation-delay]="i * 0.05 + 's'">
+        
+        <!-- Badge de statut -->
+        <div class="status-badge" [class]="restaurant.status">
+          {{ getStatusText(restaurant.status) }}
+        </div>
+        
+        <!-- En-tête avec avatar -->
+        <div class="restaurant-header">
+          <div class="restaurant-avatar" [style.background-color]="getAvatarColor(restaurant.nom)">
+            {{ getInitials(restaurant.nom) }}
+          </div>
+          <div class="restaurant-main-info">
+            <h3>{{ restaurant.nom }}</h3>
+            <p class="owner">{{ restaurant.owner || 'Propriétaire' }}</p>
+            <div class="rating">
+              <ion-icon name="star" [style.color]="getRatingColor(restaurant.rating)"></ion-icon>
+              <span>{{ restaurant.rating.toFixed(1) }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Métriques principales -->
+        <div class="metrics-grid">
+          <div class="metric">
+            <ion-icon name="receipt"></ion-icon>
+            <div>
+              <span class="value">{{ restaurant.orderCount }}</span>
+              <span class="label">Commandes</span>
+            </div>
+          </div>
+          <div class="metric">
+            <ion-icon name="cash"></ion-icon>
+            <div>
+              <span class="value">{{ formatShortCurrency(restaurant.revenue) }}</span>
+              <span class="label">Revenus</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Informations de contact -->
+        <div class="contact-info">
+          <div class="info-item">
+            <ion-icon name="call"></ion-icon>
+            <span>{{ restaurant.phone }}</span>
+          </div>
+          <div class="info-item" *ngIf="restaurant.email">
+            <ion-icon name="mail"></ion-icon>
+            <span class="truncate">{{ restaurant.email }}</span>
+          </div>
+          <div class="info-item">
+            <ion-icon name="location"></ion-icon>
+            <span class="truncate">{{ restaurant.address }}</span>
+          </div>
+        </div>
+        
+        <!-- Actions rapides -->
+        <div class="quick-actions">
+          <ion-button 
+            fill="clear" 
+            size="small"
+            (click)="viewRestaurantOrders(restaurant)"
+            [title]="'Voir les commandes'">
+            <ion-icon name="eye" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <ion-button 
+            fill="clear" 
+            size="small"
+            (click)="editRestaurant(restaurant)"
+            [title]="'Modifier'">
+            <ion-icon name="create" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <ion-button 
+            fill="clear" 
+            size="small"
+            color="primary"
+            (click)="openRestaurantSettings(restaurant)"
+            [title]="'Paramètres complets'">
+            <ion-icon name="settings" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <ion-button 
+            fill="clear" 
+            size="small"
+            color="secondary"
+            (click)="openPaymentConfig(restaurant)"
+            [title]="'Configuration Paiement'">
+            <ion-icon name="card" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <ion-button 
+            fill="clear" 
+            size="small"
+            [color]="restaurant.isBlocked ? 'success' : 'danger'"
+            (click)="restaurant.isBlocked ? unblockRestaurant(restaurant) : blockRestaurant(restaurant)"
+            [title]="restaurant.isBlocked ? 'Débloquer' : 'Bloquer'">
+            <ion-icon [name]="restaurant.isBlocked ? 'lock-open' : 'lock-closed'" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <ion-button 
+            fill="clear" 
+            size="small"
+            (click)="showMoreActions(restaurant)"
+            [title]="'Plus d\'actions'">
+            <ion-icon name="ellipsis-vertical" slot="icon-only"></ion-icon>
+          </ion-button>
+        </div>
+        
+        <!-- Dernière activité -->
+        <div class="last-activity">
+          <ion-icon name="time-outline"></ion-icon>
+          <span>{{ getLastActivityText(restaurant.lastActivity) }}</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Aucun résultat -->
+    <div *ngIf="filteredRestaurants.length === 0" class="no-results-modern">
+      <img src="assets/img/no-restaurants.svg" alt="Aucun restaurant" />
+      <h3>Aucun restaurant trouvé</h3>
+      <p>Essayez de modifier vos critères de recherche</p>
+      <ion-button (click)="resetFilters()">
+        <ion-icon name="refresh" slot="start"></ion-icon>
+        Réinitialiser les filtres
+      </ion-button>
+    </div>
+    
+    <!-- Pagination moderne -->
+    <div class="modern-pagination" *ngIf="totalPages > 1">
+      <ion-button 
+        fill="clear" 
+        [disabled]="currentPage <= 1"
+        (click)="goToPage(1)">
+        <ion-icon name="play-skip-back" slot="icon-only"></ion-icon>
+      </ion-button>
+      
+      <ion-button 
+        fill="clear" 
+        [disabled]="currentPage <= 1"
+        (click)="prevPage()">
+        <ion-icon name="chevron-back" slot="icon-only"></ion-icon>
+      </ion-button>
+      
+      <div class="page-numbers">
+        <button 
+          *ngFor="let page of getPageNumbers()" 
+          [class.active]="page === currentPage"
+          [disabled]="page === '...'"
+          (click)="page !== '...' && goToPage(page)">
+          {{ page }}
+        </button>
+      </div>
+      
+      <ion-button 
+        fill="clear" 
+        [disabled]="currentPage >= totalPages"
+        (click)="nextPage()">
+        <ion-icon name="chevron-forward" slot="icon-only"></ion-icon>
+      </ion-button>
+      
+      <ion-button 
+        fill="clear" 
+        [disabled]="currentPage >= totalPages"
+        (click)="goToPage(totalPages)">
+        <ion-icon name="play-skip-forward" slot="icon-only"></ion-icon>
+      </ion-button>
+    </div>
+  </div>
+</ion-content>
+
+<!-- FAB pour ajouter un restaurant -->
+<ion-fab vertical="bottom" horizontal="end" slot="fixed">
+  <ion-fab-button (click)="addNewRestaurant()">
+    <ion-icon name="add"></ion-icon>
+  </ion-fab-button>
+</ion-fab>

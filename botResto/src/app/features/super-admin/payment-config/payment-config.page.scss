@@ -1,0 +1,552 @@
+// Modern Payment Config Styles
+
+:root {
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --text-xl: 1.25rem;
+  --text-sm: 0.875rem;
+  --font-bold: 700;
+  --font-semibold: 600;
+  --primary-purple: #6366f1;
+}
+
+.modern-payment-config {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  min-height: 100vh;
+}
+
+// Restaurant Header
+.restaurant-header {
+  padding: 24px;
+  background: white;
+  border-bottom: 1px solid var(--ion-color-light);
+  margin-bottom: 24px;
+  
+  .restaurant-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    
+    .restaurant-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-secondary));
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .restaurant-details {
+      flex: 1;
+      
+      h2 {
+        margin: 0 0 4px 0;
+        color: var(--text-primary);
+        font-size: var(--text-xl);
+        font-weight: var(--font-bold);
+      }
+      
+      p {
+        margin: 0 0 8px 0;
+        color: var(--text-secondary);
+        font-size: var(--text-sm);
+      }
+      
+      ion-chip {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+}
+
+// Loading Container
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  text-align: center;
+  
+  ion-spinner {
+    margin-bottom: 16px;
+    --color: var(--ion-color-primary);
+  }
+  
+  p {
+    color: var(--ion-color-medium);
+    font-size: var(--text-sm);
+  }
+}
+
+// Configuration Sections
+.config-sections {
+  padding: 0 24px 24px;
+}
+
+.config-section {
+  margin-bottom: 32px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+  
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      
+      ion-icon {
+        font-size: 1.5rem;
+      }
+      
+      img {
+        width: 174px;
+        height: auto;
+        object-fit: contain;
+        flex-shrink: 0;
+      }
+      
+      h3 {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: 1.125rem;
+        font-weight: var(--font-bold);
+      }
+    }
+    
+    .section-status {
+      ion-chip {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+}
+
+// Configuration Cards
+.lengopay-config-card, .greenapi-config-card {
+  margin: 0;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: white;
+  
+  ion-card-content {
+    padding: 24px;
+  }
+}
+
+.config-grid {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.config-field {
+  label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .field-value {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--ion-color-light-tint);
+    border-radius: 12px;
+    border: 1px solid var(--ion-color-light-shade);
+    
+    ion-icon {
+      color: var(--ion-color-medium);
+      font-size: 1.125rem;
+      flex-shrink: 0;
+    }
+    
+    span {
+      flex: 1;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+      
+      &.license-key, &.api-token {
+        letter-spacing: 1px;
+      }
+    }
+    
+    ion-button {
+      --padding-start: 8px;
+      --padding-end: 8px;
+      margin: 0;
+      
+      ion-icon {
+        color: var(--ion-color-primary);
+      }
+    }
+  }
+  
+  .field-edit {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--ion-color-light);
+    border-radius: 12px;
+    border: 2px solid var(--ion-color-primary);
+    
+    ion-icon {
+      color: var(--ion-color-medium);
+      font-size: 1.125rem;
+      flex-shrink: 0;
+    }
+    
+    ion-input, ion-textarea {
+      flex: 1;
+      --background: white;
+      --color: var(--text-primary);
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+      font-size: 0.9rem;
+    }
+    
+    ion-button {
+      --padding-start: 8px;
+      --padding-end: 8px;
+      margin: 0;
+      
+      &[color="success"] ion-icon {
+        color: var(--ion-color-success);
+      }
+      
+      &[color="danger"] ion-icon {
+        color: var(--ion-color-danger);
+      }
+    }
+  }
+}
+
+.config-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  
+  ion-button {
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0.25px;
+    
+    ion-icon {
+      margin-right: 8px;
+    }
+  }
+}
+
+// No Configuration State
+.no-config {
+  text-align: center;
+  padding: 48px 24px;
+  background: white;
+  border-radius: 16px;
+  border: 2px dashed var(--ion-color-light);
+  
+  ion-icon {
+    font-size: 3rem;
+    color: var(--ion-color-medium);
+    margin-bottom: 16px;
+  }
+  
+  h4 {
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+    font-size: 1.125rem;
+    font-weight: var(--font-bold);
+  }
+  
+  p {
+    margin: 0 0 24px 0;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  
+  ion-button {
+    border-radius: 12px;
+    font-weight: 600;
+    padding: 0 24px;
+    
+    ion-icon {
+      margin-right: 8px;
+    }
+  }
+}
+
+// Add Configuration Card
+.add-config-card {
+  margin: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  background: white;
+  
+  ion-card-header {
+    padding: 24px 24px 0;
+    
+    ion-card-title {
+      display: flex;
+      align-items: center;
+      color: var(--text-primary);
+      font-size: 1.25rem;
+      font-weight: var(--font-bold);
+      margin: 0;
+      
+      ion-icon {
+        color: var(--ion-color-primary);
+        margin-right: 8px;
+      }
+      
+      img {
+        width: 174px;
+        height: auto;
+        object-fit: contain;
+        flex-shrink: 0;
+        margin-right: 8px;
+      }
+    }
+    
+    ion-card-subtitle {
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+      margin: 8px 0 0 0;
+    }
+  }
+  
+  ion-card-content {
+    padding: 24px;
+    
+    .form-section {
+      margin-bottom: 32px;
+      
+      &:last-child {
+        margin-bottom: 24px;
+      }
+      
+      h4 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 20px 0;
+        color: var(--text-primary);
+        font-size: 1rem;
+        font-weight: var(--font-semibold);
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--ion-color-light);
+        
+        ion-icon {
+          color: var(--ion-color-primary);
+        }
+      }
+      
+      ion-item {
+        --background: var(--ion-color-light-tint);
+        --border-radius: 12px;
+        margin-bottom: 16px;
+        --padding-start: 16px;
+        --padding-end: 16px;
+        --min-height: 56px;
+        
+        ion-label {
+          font-weight: 600;
+          color: var(--text-secondary);
+        }
+        
+        ion-input, ion-textarea {
+          --color: var(--text-primary);
+          font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+        }
+        
+        ion-note {
+          font-size: 0.75rem;
+          color: var(--ion-color-medium);
+          margin-top: 4px;
+        }
+      }
+    }
+    
+    .form-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 32px;
+      
+      ion-button {
+        border-radius: 12px;
+        font-weight: 600;
+        text-transform: none;
+        
+        ion-icon {
+          margin-right: 8px;
+        }
+      }
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .restaurant-header {
+    padding: 16px;
+    margin-bottom: 16px;
+    
+    .restaurant-info {
+      .restaurant-avatar {
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
+      }
+      
+      .restaurant-details {
+        h2 {
+          font-size: 1.125rem;
+        }
+      }
+    }
+  }
+  
+  .config-sections {
+    padding: 0 16px 16px;
+  }
+  
+  .config-section {
+    margin-bottom: 24px;
+    
+    .section-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      
+      .section-title {
+        h3 {
+          font-size: 1rem;
+        }
+      }
+    }
+  }
+  
+  .lengopay-config-card, .greenapi-config-card {
+    ion-card-content {
+      padding: 16px;
+    }
+  }
+  
+  .config-actions {
+    flex-direction: column;
+    
+    ion-button {
+      width: 100%;
+    }
+  }
+  
+  .add-config-card {
+    margin: 16px;
+    
+    ion-card-header, ion-card-content {
+      padding: 16px;
+    }
+    
+    .form-buttons {
+      flex-direction: column;
+      
+      ion-button {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa;
+  }
+  
+  .modern-payment-config {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  }
+  
+  .restaurant-header {
+    background: #1e293b;
+    border-bottom-color: #334155;
+  }
+  
+  .lengopay-config-card, .greenapi-config-card, .add-config-card {
+    background: #1e293b;
+    border-color: #334155;
+  }
+  
+  .config-field .field-value {
+    background: #334155;
+    border-color: #475569;
+  }
+  
+  .no-config {
+    background: #1e293b;
+    border-color: #475569;
+  }
+}
+
+// Styles pour section désactivée (Green API)
+.disabled-section {
+  opacity: 0.6;
+  pointer-events: none;
+  position: relative;
+  
+  .disabled-card {
+    background: #f8f9fa !important;
+    border: 1px solid #e9ecef;
+    
+    * {
+      color: #6c757d !important;
+    }
+    
+    .disabled-message {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: rgba(108, 117, 125, 0.1);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: #6c757d;
+      
+      ion-icon {
+        font-size: 16px;
+      }
+    }
+  }
+  
+  h3 {
+    color: #6c757d !important;
+  }
+}

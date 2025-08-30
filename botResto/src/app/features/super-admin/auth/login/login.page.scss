@@ -1,0 +1,107 @@
+.super-admin-login {
+  --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  .login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+
+    .login-card {
+      width: 100%;
+      max-width: 400px;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+
+      ion-card-header {
+        text-align: center;
+        padding-bottom: 0;
+
+        .logo-container {
+          margin-bottom: 20px;
+
+          .admin-logo {
+            font-size: 64px;
+            color: var(--ion-color-primary);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+          }
+        }
+
+        ion-card-title {
+          font-size: 24px;
+          font-weight: bold;
+          color: var(--ion-color-dark);
+        }
+
+        ion-card-subtitle {
+          font-size: 14px;
+          color: var(--ion-color-medium);
+          margin-top: 8px;
+        }
+      }
+
+      ion-card-content {
+        padding: 20px;
+
+        ion-item {
+          --background: transparent;
+          --border-color: var(--ion-color-light);
+          margin-bottom: 16px;
+          border-radius: 8px;
+          border: 1px solid var(--ion-color-light);
+
+          ion-label {
+            font-weight: 500;
+            margin-bottom: 8px;
+
+            ion-icon {
+              margin-right: 8px;
+              vertical-align: middle;
+            }
+          }
+
+          ion-input {
+            --padding-top: 8px;
+            --padding-bottom: 8px;
+          }
+        }
+
+        .login-button {
+          margin-top: 24px;
+          height: 48px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .security-notice {
+          display: flex;
+          align-items: center;
+          margin-top: 20px;
+          padding: 12px;
+          background: var(--ion-color-warning-tint);
+          border-radius: 8px;
+          font-size: 12px;
+          color: var(--ion-color-warning-shade);
+
+          ion-icon {
+            margin-right: 8px;
+            font-size: 20px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .super-admin-login {
+    .login-card {
+      --ion-card-background: var(--ion-color-step-100);
+    }
+  }
+}

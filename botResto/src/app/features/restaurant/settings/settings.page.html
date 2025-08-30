@@ -759,6 +759,33 @@
               </div>
             </div>
             
+            <!-- Delivery Fee Configuration -->
+            <div class="delivery-fee-section">
+              <h4>
+                <ion-icon name="calculator"></ion-icon>
+                Configuration des Frais de Livraison
+              </h4>
+              <p class="section-description">Configurez comment les frais de livraison sont calculés pour vos clients</p>
+              
+              <div class="delivery-config-card">
+                <div class="config-info">
+                  <div class="config-icon">
+                    <ion-icon name="settings"></ion-icon>
+                  </div>
+                  <div class="config-content">
+                    <h5>Paramètres avancés</h5>
+                    <p>Montant fixe ou calcul par distance</p>
+                  </div>
+                </div>
+                <ion-button 
+                  fill="outline" 
+                  color="primary"
+                  [routerLink]="['/restaurant/settings/delivery-config']">
+                  <ion-icon name="settings" slot="start"></ion-icon>
+                  Configurer
+                </ion-button>
+              </div>
+            </div>
 
             <!-- Payment Modes Configuration -->
             <div class="payment-modes-section">
@@ -786,8 +813,8 @@
               
               <!-- Payment Modes Grid -->
               <div class="delivery-modes-grid">
-                <!-- Pay Now -->
-                <div class="delivery-mode-item" [class.active]="paymentModes.allow_pay_now">
+                <!-- Pay Now - Disabled -->
+                <div class="delivery-mode-item disabled-mode" [class.active]="paymentModes.allow_pay_now" (click)="showPaymentModeDisabledMessage()">
                   <div class="mode-header">
                     <div class="mode-info">
                       <div class="mode-icon">
@@ -798,10 +825,10 @@
                         <p>Paiement mobile ou carte bancaire</p>
                       </div>
                     </div>
-                    <ion-checkbox [(ngModel)]="paymentModes.allow_pay_now" (ionChange)="updatePaymentModes()"></ion-checkbox>
+                    <ion-checkbox [(ngModel)]="paymentModes.allow_pay_now" disabled="true"></ion-checkbox>
                   </div>
                   <div class="mode-description">
-                    Orange Money, Wave (Guinée) ou carte bancaire (France)
+                    Le lien de paiement sera envoyé directement dans la gestion des commandes
                   </div>
                 </div>
                 
