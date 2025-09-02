@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
+import { Location } from '@angular/common';
 
 import { AuthFranceService, FranceUser } from '../auth-france/services/auth-france.service';
 import { FranceOrdersService, FranceOrder } from '../../../core/services/france-orders.service';
@@ -32,10 +33,13 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
     private franceOrdersService: FranceOrdersService,
     private driversFranceService: DriversFranceService,
     private router: Router,
-    private alertController: AlertController
+    private alertController: AlertController,
+    private location: Location
   ) { }
 
   ngOnInit() {
+    // Remplacer l'état de l'historique pour empêcher le retour vers Guinée
+    this.location.replaceState('/restaurant-france/dashboard-france');
     this.initializeDashboard();
   }
 

@@ -7,7 +7,7 @@ import { DeliveryFranceGuard } from './auth-france/guards/delivery-france.guard'
 const routes: Routes = [
   {
     path: '',
-    redirectTo: 'auth-france',
+    redirectTo: 'dashboard-france',
     pathMatch: 'full'
   },
   {

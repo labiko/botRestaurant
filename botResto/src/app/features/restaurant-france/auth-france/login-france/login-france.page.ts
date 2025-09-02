@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LoadingController, ToastController } from '@ionic/angular';
 import { AuthFranceService } from '../services/auth-france.service';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-login-france',
@@ -23,7 +24,8 @@ export class LoginFrancePage implements OnInit {
     private authFranceService: AuthFranceService,
     private router: Router,
     private loadingController: LoadingController,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private location: Location
   ) {
     this.loginForm = this.formBuilder.group({
       phone: ['', [Validators.required, Validators.pattern(/^[0-9+\s-()]+$/)]],
@@ -32,6 +34,9 @@ export class LoginFrancePage implements OnInit {
   }
 
   ngOnInit() {
+    // Remplacer l'état de l'historique pour empêcher le retour vers Guinée
+    this.location.replaceState('/restaurant-france/auth-france/login-france');
+    
     // Vérifier si déjà connecté
     if (this.authFranceService.isAuthenticated()) {
       this.redirectToDashboard();
