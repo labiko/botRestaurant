@@ -38,12 +38,34 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    // Remplacer l'état de l'historique pour empêcher le retour vers Guinée
-    this.location.replaceState('/restaurant-france/dashboard-france');
+    // Bloquer complètement la navigation arrière
+    this.preventBackNavigation();
     this.initializeDashboard();
   }
 
+  /**
+   * Empêcher la navigation arrière
+   */
+  private preventBackNavigation() {
+    // Ajouter une entrée dans l'historique
+    history.pushState(null, '', window.location.href);
+    
+    // Écouter l'événement popstate (navigation arrière/avant)
+    window.addEventListener('popstate', this.onPopState);
+  }
+
+  /**
+   * Gestionnaire pour l'événement popstate
+   */
+  private onPopState = (event: PopStateEvent) => {
+    // Remettre l'utilisateur sur la page actuelle
+    history.pushState(null, '', window.location.href);
+  }
+
   ngOnDestroy() {
+    // Nettoyer l'écouteur d'événement
+    window.removeEventListener('popstate', this.onPopState);
+    
     if (this.userSubscription) {
       this.userSubscription.unsubscribe();
     }

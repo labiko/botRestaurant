@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LoadingController, ToastController } from '@ionic/angular';
@@ -11,7 +11,7 @@ import { Location } from '@angular/common';
   styleUrls: ['./login-france.page.scss'],
   standalone: false
 })
-export class LoginFrancePage implements OnInit {
+export class LoginFrancePage implements OnInit, OnDestroy {
   loginForm: FormGroup;
   showLoginForm = false;
   selectedProfileType: 'restaurant' | 'driver' = 'restaurant';
@@ -34,13 +34,37 @@ export class LoginFrancePage implements OnInit {
   }
 
   ngOnInit() {
-    // Remplacer l'état de l'historique pour empêcher le retour vers Guinée
-    this.location.replaceState('/restaurant-france/auth-france/login-france');
+    // Bloquer complètement la navigation arrière
+    this.preventBackNavigation();
     
     // Vérifier si déjà connecté
     if (this.authFranceService.isAuthenticated()) {
       this.redirectToDashboard();
     }
+  }
+
+  /**
+   * Empêcher la navigation arrière
+   */
+  private preventBackNavigation() {
+    // Ajouter une entrée dans l'historique
+    history.pushState(null, '', window.location.href);
+    
+    // Écouter l'événement popstate (navigation arrière/avant)
+    window.addEventListener('popstate', this.onPopState);
+  }
+
+  /**
+   * Gestionnaire pour l'événement popstate
+   */
+  private onPopState = (event: PopStateEvent) => {
+    // Remettre l'utilisateur sur la page actuelle
+    history.pushState(null, '', window.location.href);
+  }
+
+  ngOnDestroy() {
+    // Nettoyer l'écouteur d'événement
+    window.removeEventListener('popstate', this.onPopState);
   }
 
   /**
