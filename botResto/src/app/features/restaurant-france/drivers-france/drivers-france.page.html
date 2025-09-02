@@ -1,0 +1,154 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Gestion des livreurs</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="addDriver()">
+        <ion-icon name="person-add" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- Header Info -->
+  <div class="header-section">
+    <div class="header-info">
+      <ion-icon name="bicycle" class="header-icon"></ion-icon>
+      <div class="info-text">
+        <h2>Équipe de livraison</h2>
+        <p>{{ currentUser?.name || 'Restaurant France' }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques rapides -->
+  <div class="stats-section" *ngIf="drivers.length > 0">
+    <ion-grid>
+      <ion-row>
+        <ion-col size="4">
+          <div class="stat-item">
+            <div class="stat-number">{{ drivers.length }}</div>
+            <div class="stat-label">Total</div>
+          </div>
+        </ion-col>
+        <ion-col size="4">
+          <div class="stat-item">
+            <div class="stat-number success">{{ getActiveDriversCount() }}</div>
+            <div class="stat-label">Actifs</div>
+          </div>
+        </ion-col>
+        <ion-col size="4">
+          <div class="stat-item">
+            <div class="stat-number warning">{{ getInactiveDriversCount() }}</div>
+            <div class="stat-label">Inactifs</div>
+          </div>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+
+  <!-- Liste des livreurs -->
+  <div class="drivers-section">
+    <h3 *ngIf="drivers.length > 0">Équipe de livraison</h3>
+    
+    <ion-card *ngFor="let driver of drivers" class="driver-card">
+      <ion-card-content>
+        <div class="driver-header">
+          <div class="driver-info">
+            <h4>{{ getDriverFullName(driver) }}</h4>
+            <p>
+              <ion-icon name="call" class="contact-icon"></ion-icon>
+              {{ formatPhone(driver.phone_number) }}
+            </p>
+            <p *ngIf="driver.email">
+              <ion-icon name="mail" class="contact-icon"></ion-icon>
+              {{ driver.email }}
+            </p>
+          </div>
+          <div class="driver-status">
+            <ion-badge [color]="getStatusColor(driver.is_active)">
+              {{ getStatusText(driver.is_active) }}
+            </ion-badge>
+          </div>
+        </div>
+
+        <div class="driver-stats" *ngIf="driver.total_deliveries !== undefined">
+          <div class="stat-group">
+            <ion-icon name="checkmark-circle" class="stat-icon success"></ion-icon>
+            <span class="stat-value">{{ driver.total_deliveries || 0 }}</span>
+            <span class="stat-text">livraisons</span>
+          </div>
+          <div class="stat-group">
+            <ion-icon name="time" class="stat-icon primary"></ion-icon>
+            <span class="stat-value">{{ driver.today_deliveries || 0 }}</span>
+            <span class="stat-text">aujourd'hui</span>
+          </div>
+          <div class="stat-group">
+            <ion-icon name="bicycle" class="stat-icon warning"></ion-icon>
+            <span class="stat-value">{{ driver.active_orders || 0 }}</span>
+            <span class="stat-text">en cours</span>
+          </div>
+        </div>
+
+        <div class="driver-actions">
+          <ion-button 
+            size="small" 
+            fill="clear" 
+            [color]="driver.is_active ? 'warning' : 'success'"
+            (click)="toggleDriverStatus(driver)">
+            <ion-icon [name]="driver.is_active ? 'pause' : 'play'" slot="start"></ion-icon>
+            {{ driver.is_active ? 'Désactiver' : 'Activer' }}
+          </ion-button>
+          
+          <ion-button 
+            size="small" 
+            fill="clear" 
+            color="danger"
+            (click)="deleteDriver(driver)">
+            <ion-icon name="trash" slot="start"></ion-icon>
+            Supprimer
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Message si aucun livreur -->
+    <ion-card *ngIf="drivers.length === 0 && !isLoading" class="empty-state">
+      <ion-card-content class="text-center">
+        <ion-icon name="bicycle-outline" class="empty-icon"></ion-icon>
+        <h3>Aucun livreur</h3>
+        <p>Commencez par ajouter votre première équipe de livraison</p>
+        <ion-button 
+          expand="block" 
+          color="primary" 
+          (click)="addDriver()"
+          class="add-first-driver">
+          <ion-icon name="person-add" slot="start"></ion-icon>
+          Ajouter un livreur
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-section" *ngIf="isLoading">
+    <ion-card>
+      <ion-card-content class="text-center">
+        <ion-spinner name="crescent"></ion-spinner>
+        <p>Chargement des livreurs...</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Bouton flottant d'ajout -->
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed" *ngIf="drivers.length > 0">
+    <ion-fab-button color="primary" (click)="addDriver()">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

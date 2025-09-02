@@ -1,0 +1,115 @@
+<ion-content>
+  <!-- Header avec logo simple -->
+  <div class="header-section">
+    <div class="logo-container">
+      <img src="assets/images/botlogo.png" alt="Bot Resto France" class="app-logo" />
+    </div>
+    <h1 class="app-title">Bot Resto France</h1>
+    <p class="app-subtitle">Gestion des commandes et livraisons</p>
+  </div>
+  
+  <!-- Profile Selection -->
+  <div class="profile-selection" *ngIf="!showLoginForm">
+    <h2>Choisissez votre profil</h2>
+    
+    <div class="profile-cards-container">
+      <div class="profile-card" (click)="selectProfile('restaurant')">
+        <ion-icon name="restaurant" class="profile-icon"></ion-icon>
+        <h3>Restaurant</h3>
+        <p>Gérer les commandes et votre établissement</p>
+      </div>
+      
+      <div class="profile-card" (click)="selectProfile('driver')">
+        <ion-icon name="bicycle" class="profile-icon"></ion-icon>
+        <h3>Livreur</h3>
+        <p>Effectuer les livraisons</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Form -->
+  <div class="login-section" *ngIf="showLoginForm">
+    <div class="login-header">
+      <ion-button fill="clear" (click)="goBack()" class="back-button">
+        <ion-icon name="arrow-back" slot="start"></ion-icon>
+        Retour
+      </ion-button>
+      
+      <h2 class="login-title">
+        <ion-icon [name]="selectedProfileType === 'restaurant' ? 'restaurant' : 'bicycle'" class="login-icon"></ion-icon>
+        Connexion {{ selectedProfileType === 'restaurant' ? 'Restaurant' : 'Livreur' }}
+      </h2>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onLogin()" class="login-form">
+      <div class="input-container">
+        <ion-item class="modern-input" lines="none">
+          <div class="input-prefix" *ngIf="selectedProfileType === 'restaurant'">
+            <span class="flag-icon">🇫🇷</span>
+            <span class="country-code">+33</span>
+          </div>
+          <div class="input-prefix" *ngIf="selectedProfileType === 'driver'">
+            <ion-icon name="call" class="phone-icon"></ion-icon>
+          </div>
+          <div class="input-content">
+            <ion-label position="floating">
+              {{ selectedProfileType === 'restaurant' ? 'Numéro restaurant' : 'Numéro de téléphone' }}
+            </ion-label>
+            <ion-input 
+              formControlName="phone" 
+              type="tel" 
+              [placeholder]="selectedProfileType === 'restaurant' ? '1 23 45 67 89' : '6 12 34 56 78'"
+              clearInput="true">
+            </ion-input>
+          </div>
+        </ion-item>
+      </div>
+
+      <div class="input-container">
+        <ion-item class="modern-input" lines="none">
+          <div class="input-prefix">
+            <ion-icon name="lock-closed" class="password-icon"></ion-icon>
+          </div>
+          <div class="input-content">
+            <ion-label position="floating">Mot de passe</ion-label>
+            <ion-input 
+              formControlName="password" 
+              [type]="showPassword ? 'text' : 'password'"
+              placeholder="Entrez votre mot de passe"
+              clearInput="true">
+            </ion-input>
+          </div>
+          <ion-button 
+            fill="clear" 
+            slot="end" 
+            (click)="togglePassword()"
+            class="password-toggle">
+            <ion-icon [name]="showPassword ? 'eye-off' : 'eye'"></ion-icon>
+          </ion-button>
+        </ion-item>
+      </div>
+
+      <div class="form-actions">
+        <ion-button 
+          expand="block" 
+          type="submit" 
+          [disabled]="!loginForm.valid || isLoading"
+          class="login-button">
+          <ion-spinner name="crescent" *ngIf="isLoading"></ion-spinner>
+          <span *ngIf="!isLoading">Se connecter</span>
+        </ion-button>
+      </div>
+
+      <!-- Message d'erreur -->
+      <div class="error-message" *ngIf="errorMessage">
+        <ion-icon name="alert-circle"></ion-icon>
+        {{ errorMessage }}
+      </div>
+    </form>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer-section">
+    <p>Version 1.0.0 | © 2024 Bot Resto France</p>
+  </div>
+</ion-content>

@@ -1,0 +1,200 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Tableau de bord livreur</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="logout()">
+        <ion-icon name="log-out" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- Accueil Livreur -->
+  <div class="welcome-section">
+    <div class="driver-info">
+      <ion-icon name="bicycle" class="driver-icon"></ion-icon>
+      <div class="info-text">
+        <h2>Salut {{ currentDriver?.firstName }} {{ currentDriver?.lastName }}</h2>
+        <p>Dashboard livreur France</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques rapides -->
+  <div class="stats-section">
+    <ion-grid>
+      <ion-row>
+        <ion-col size="6">
+          <ion-card class="stat-card">
+            <ion-card-content>
+              <div class="stat-content">
+                <ion-icon name="bicycle" class="stat-icon"></ion-icon>
+                <div class="stat-text">
+                  <h3>{{ todayDeliveries }}</h3>
+                  <p>Livraisons aujourd'hui</p>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+        
+        <ion-col size="6">
+          <ion-card class="stat-card">
+            <ion-card-content>
+              <div class="stat-content">
+                <ion-icon name="time" class="stat-icon pending"></ion-icon>
+                <div class="stat-text">
+                  <h3>{{ pendingDeliveries }}</h3>
+                  <p>En cours</p>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+      
+      <ion-row>
+        <ion-col size="6">
+          <ion-card class="stat-card">
+            <ion-card-content>
+              <div class="stat-content">
+                <ion-icon name="checkmark-circle" class="stat-icon success"></ion-icon>
+                <div class="stat-text">
+                  <h3>{{ completedDeliveries }}</h3>
+                  <p>Terminées</p>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+        
+        <ion-col size="6">
+          <ion-card class="stat-card">
+            <ion-card-content>
+              <div class="stat-content">
+                <ion-icon name="wallet" class="stat-icon tertiary"></ion-icon>
+                <div class="stat-text">
+                  <h3>{{ todayEarnings }}€</h3>
+                  <p>Gains du jour</p>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+
+  <!-- Onglets -->
+  <div class="tabs-section">
+    <ion-segment [(ngModel)]="activeTab" (ionChange)="switchTab($event.detail.value)">
+      <ion-segment-button value="my-orders">
+        <ion-label>Mes commandes</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="available">
+        <ion-label>Disponibles</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </div>
+
+  <!-- Mes commandes -->
+  <div class="orders-section" *ngIf="activeTab === 'my-orders'">
+    <h3>Mes commandes</h3>
+    
+    <ion-card *ngFor="let order of myOrders" class="order-card">
+      <ion-card-content>
+        <div class="order-header">
+          <div class="order-info">
+            <h4>#{{ order.order_number }}</h4>
+            <p>{{ order.phone_number }} • {{ formatTime(order.created_at) }}</p>
+          </div>
+          <ion-badge [color]="getStatusColor(order.status)">
+            {{ getStatusText(order.status) }}
+          </ion-badge>
+        </div>
+        
+        <div class="order-details">
+          <p><strong>Montant:</strong> {{ formatPrice(order.total_amount) }}</p>
+          <p><strong>Adresse:</strong> {{ order.delivery_address || 'Non spécifiée' }}</p>
+          <p *ngIf="order.notes"><strong>Notes:</strong> {{ order.notes }}</p>
+        </div>
+
+        <div class="order-actions" *ngIf="order.availableActions && order.availableActions.length > 0">
+          <ion-button 
+            *ngFor="let action of order.availableActions"
+            size="small" 
+            fill="solid" 
+            [color]="action.color"
+            (click)="updateOrderStatus(order, action.key)">
+            {{ action.label }}
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Message si pas de commandes -->
+    <ion-card *ngIf="myOrders.length === 0 && !isLoading">
+      <ion-card-content class="text-center">
+        <ion-icon name="bicycle-outline" class="no-orders-icon"></ion-icon>
+        <h3>Aucune commande assignée</h3>
+        <p>Les nouvelles commandes apparaîtront ici</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Commandes disponibles -->
+  <div class="orders-section" *ngIf="activeTab === 'available'">
+    <h3>Commandes disponibles</h3>
+    
+    <ion-card *ngFor="let order of availableOrders" class="order-card">
+      <ion-card-content>
+        <div class="order-header">
+          <div class="order-info">
+            <h4>#{{ order.order_number }}</h4>
+            <p>{{ order.phone_number }} • {{ formatTime(order.created_at) }}</p>
+          </div>
+          <ion-badge color="success">
+            Prête pour livraison
+          </ion-badge>
+        </div>
+        
+        <div class="order-details">
+          <p><strong>Montant:</strong> {{ formatPrice(order.total_amount) }}</p>
+          <p><strong>Adresse:</strong> {{ order.delivery_address || 'Non spécifiée' }}</p>
+          <p *ngIf="order.notes"><strong>Notes:</strong> {{ order.notes }}</p>
+        </div>
+
+        <div class="order-actions">
+          <ion-button 
+            size="small" 
+            fill="solid" 
+            color="success"
+            (click)="acceptOrder(order)">
+            <ion-icon name="checkmark" slot="start"></ion-icon>
+            Accepter
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Message si pas de commandes disponibles -->
+    <ion-card *ngIf="availableOrders.length === 0 && !isLoading">
+      <ion-card-content class="text-center">
+        <ion-icon name="hourglass-outline" class="no-orders-icon"></ion-icon>
+        <h3>Aucune commande disponible</h3>
+        <p>Les nouvelles commandes à livrer apparaîtront ici</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-section" *ngIf="isLoading">
+    <ion-card>
+      <ion-card-content class="text-center">
+        <ion-spinner name="crescent"></ion-spinner>
+        <p>Chargement des commandes...</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

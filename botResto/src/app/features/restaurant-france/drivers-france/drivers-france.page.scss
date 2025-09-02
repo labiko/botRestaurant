@@ -1,0 +1,321 @@
+// Drivers France styles - Clean design sans dégradés
+.header-section {
+  padding: 20px;
+  margin-bottom: 20px;
+
+  .header-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+
+    .header-icon {
+      font-size: 3rem;
+      color: var(--ion-color-primary);
+    }
+
+    .info-text {
+      h2 {
+        margin: 0 0 5px 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--ion-color-medium);
+      }
+    }
+  }
+}
+
+.stats-section {
+  padding: 0 16px;
+  margin-bottom: 20px;
+
+  .stat-item {
+    text-align: center;
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--ion-color-primary);
+      margin-bottom: 5px;
+
+      &.success {
+        color: var(--ion-color-success);
+      }
+
+      &.warning {
+        color: var(--ion-color-warning);
+      }
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--ion-color-medium);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+  }
+}
+
+.drivers-section {
+  padding: 0 16px;
+  margin-bottom: 20px;
+
+  h3 {
+    margin-bottom: 15px;
+    color: var(--ion-color-dark);
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .driver-card {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
+    transition: transform 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+
+    .driver-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 15px;
+
+      .driver-info {
+        flex: 1;
+
+        h4 {
+          margin: 0 0 8px 0;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: var(--ion-color-dark);
+        }
+
+        p {
+          margin: 4px 0;
+          font-size: 0.9rem;
+          color: var(--ion-color-medium);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          .contact-icon {
+            font-size: 0.9rem;
+            color: var(--ion-color-primary);
+          }
+        }
+      }
+
+      .driver-status {
+        ion-badge {
+          font-size: 0.75rem;
+          font-weight: 600;
+          padding: 6px 12px;
+          border-radius: 16px;
+        }
+      }
+    }
+
+    .driver-stats {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      padding: 12px;
+      background: var(--ion-color-light);
+      border-radius: 8px;
+
+      .stat-group {
+        text-align: center;
+        flex: 1;
+
+        .stat-icon {
+          font-size: 1.2rem;
+          margin-bottom: 4px;
+
+          &.success {
+            color: var(--ion-color-success);
+          }
+
+          &.primary {
+            color: var(--ion-color-primary);
+          }
+
+          &.warning {
+            color: var(--ion-color-warning);
+          }
+        }
+
+        .stat-value {
+          display: block;
+          font-size: 1.1rem;
+          font-weight: bold;
+          color: var(--ion-color-dark);
+          margin-bottom: 2px;
+        }
+
+        .stat-text {
+          font-size: 0.75rem;
+          color: var(--ion-color-medium);
+          text-transform: uppercase;
+          font-weight: 500;
+        }
+      }
+    }
+
+    .driver-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+
+      ion-button {
+        --border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        flex: 1;
+        height: 36px;
+      }
+    }
+  }
+
+  .empty-state {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    .text-center {
+      text-align: center;
+      padding: 40px 20px;
+
+      .empty-icon {
+        font-size: 4rem;
+        color: var(--ion-color-medium);
+        margin-bottom: 15px;
+      }
+
+      h3 {
+        margin-bottom: 10px;
+        color: var(--ion-color-dark);
+        font-size: 1.2rem;
+      }
+
+      p {
+        margin: 0 0 20px 0;
+        color: var(--ion-color-medium);
+        font-size: 0.9rem;
+      }
+
+      .add-first-driver {
+        --border-radius: 8px;
+        font-weight: 600;
+        margin-top: 15px;
+      }
+    }
+  }
+}
+
+.loading-section {
+  padding: 0 16px;
+
+  .text-center {
+    text-align: center;
+    padding: 40px 20px;
+
+    ion-spinner {
+      margin-bottom: 15px;
+      --color: var(--ion-color-primary);
+    }
+
+    p {
+      margin: 0;
+      color: var(--ion-color-medium);
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// FAB Button
+ion-fab-button {
+  --box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --border-radius: 16px;
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .driver-card {
+    .driver-header {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .driver-stats {
+      .stat-group {
+        .stat-text {
+          font-size: 0.7rem;
+        }
+      }
+    }
+
+    .driver-actions {
+      flex-direction: column;
+      gap: 8px;
+
+      ion-button {
+        flex: none;
+      }
+    }
+  }
+
+  .stats-section {
+    .stat-item {
+      padding: 12px;
+
+      .stat-number {
+        font-size: 1.5rem;
+      }
+
+      .stat-label {
+        font-size: 0.75rem;
+      }
+    }
+  }
+}
+
+// Animations
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.driver-card {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+// Color variants pour les badges
+ion-badge {
+  &[color="success"] {
+    --background: var(--ion-color-success);
+    --color: white;
+  }
+
+  &[color="medium"] {
+    --background: var(--ion-color-medium);
+    --color: white;
+  }
+}

@@ -54,6 +54,19 @@
       </div>
 
       <div class="tab-card" 
+           [class.active]="currentTab === 'categories'" 
+           (click)="switchTab('categories')">
+        <div class="tab-icon">
+          <ion-icon name="pricetags"></ion-icon>
+        </div>
+        <div class="tab-content">
+          <h3>Gestion Catégories</h3>
+          <p>Créer et organiser les catégories du menu</p>
+        </div>
+        <div class="tab-indicator" *ngIf="currentTab === 'categories'"></div>
+      </div>
+
+      <div class="tab-card" 
            [class.active]="currentTab === 'delivery'" 
            (click)="switchTab('delivery')">
         <div class="tab-icon">
@@ -494,10 +507,14 @@
             </ion-chip>
             <ion-chip 
               *ngFor="let cat of availableCategories" 
-              [color]="selectedCategory === cat.value ? 'primary' : 'medium'"
-              (click)="filterByCategory(cat.value)">
+              [color]="selectedCategory === cat.value ? 'primary' : (cat.active === false ? 'danger' : 'medium')"
+              (click)="filterByCategory(cat.value)"
+              [class.disabled-category]="cat.active === false">
               <ion-icon [name]="cat.icon"></ion-icon>
-              <ion-label>{{ cat.label }} ({{ getCategoryCount(cat.value) }})</ion-label>
+              <ion-label>
+                {{ cat.label }} ({{ getCategoryCount(cat.value) }})
+                <span *ngIf="cat.active === false" class="inactive-label"> - Désactivée</span>
+              </ion-label>
             </ion-chip>
           </div>
         </div>
@@ -598,6 +615,290 @@
             <small>Essayez une autre catégorie</small>
           </div>
         </div>
+      </ion-card-content>
+    </ion-card>
+    </div>
+
+    <!-- Card 4: Gestion des Catégories -->
+    <div *ngIf="currentTab === 'categories'">
+    <ion-card class="main-card">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="pricetags" class="card-icon"></ion-icon>
+          Gestion des Catégories
+        </ion-card-title>
+        <ion-card-subtitle>Créer et organiser les catégories de votre menu</ion-card-subtitle>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <!-- Statistiques des catégories dans un accordéon -->
+        <ion-accordion-group *ngIf="categoryStats">
+          <ion-accordion>
+            <ion-item slot="header" color="light">
+              <ion-icon name="analytics" slot="start" color="primary"></ion-icon>
+              <ion-label>
+                <h3>Statistiques des catégories</h3>
+                <p>{{ categoryStats.total_categories }} catégories • {{ categoryStats.total_products }} produits</p>
+              </ion-label>
+            </ion-item>
+            <div class="ion-padding" slot="content">
+              <div class="stats-grid">
+                <div class="stat-item">
+                  <ion-icon name="pricetags" color="primary"></ion-icon>
+                  <div>
+                    <span class="stat-number">{{ categoryStats.total_categories }}</span>
+                    <span class="stat-label">Catégories actives</span>
+                  </div>
+                </div>
+                <div class="stat-item">
+                  <ion-icon name="restaurant" color="success"></ion-icon>
+                  <div>
+                    <span class="stat-number">{{ categoryStats.total_products }}</span>
+                    <span class="stat-label">Produits total</span>
+                  </div>
+                </div>
+                <div class="stat-item">
+                  <ion-icon name="analytics" color="warning"></ion-icon>
+                  <div>
+                    <span class="stat-number">{{ categoryStats.avg_products_per_category }}</span>
+                    <span class="stat-label">Moyenne par catégorie</span>
+                  </div>
+                </div>
+                <div class="stat-item">
+                  <ion-icon name="time" color="medium"></ion-icon>
+                  <div>
+                    <span class="stat-number stat-time">{{ getShortDateFormat() }}</span>
+                    <span class="stat-label">Dernière MAJ</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ion-accordion>
+        </ion-accordion-group>
+
+        <!-- Bouton pour ajouter une nouvelle catégorie -->
+        <div class="add-menu-header">
+          <ion-button 
+            expand="block" 
+            fill="outline" 
+            color="tertiary"
+            (click)="toggleNewCategoryForm()">
+            <ion-icon [name]="showNewCategoryForm ? 'remove' : 'add'" slot="start"></ion-icon>
+            {{ showNewCategoryForm ? 'Fermer le formulaire' : 'Ajouter une nouvelle catégorie' }}
+          </ion-button>
+        </div>
+
+        <!-- Formulaire d'ajout de catégorie -->
+        <div class="add-menu-form" *ngIf="showNewCategoryForm">
+          <h3>
+            <ion-icon name="pricetags" color="tertiary"></ion-icon>
+            Nouvelle catégorie
+          </h3>
+          
+          <ion-item>
+            <ion-label position="stacked">Clé de la catégorie *</ion-label>
+            <ion-input 
+              [(ngModel)]="newCategory.category_key" 
+              placeholder="ex: pizza, burger..."
+              maxlength="50"
+              (ionInput)="onCategoryKeyInput($event)">
+            </ion-input>
+            <ion-note slot="helper">Utilisé en interne, pas d'espaces ni caractères spéciaux</ion-note>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="stacked">Nom d'affichage *</ion-label>
+            <ion-input 
+              [(ngModel)]="newCategory.category_name" 
+              placeholder="ex: PIZZAS, BURGERS..."
+              maxlength="100">
+            </ion-input>
+          </ion-item>
+          
+          <ion-item>
+            <ion-label position="stacked">Emoji *</ion-label>
+            <ion-input 
+              [(ngModel)]="newCategory.emoji" 
+              placeholder="🍕"
+              maxlength="2"
+              readonly="true"
+              (click)="openEmojiPicker()">
+            </ion-input>
+            <ion-button slot="end" fill="clear" (click)="openEmojiPicker()">
+              <ion-icon name="happy"></ion-icon>
+            </ion-button>
+          </ion-item>
+
+          <!-- Emoji Picker -->
+          <div class="emoji-picker" *ngIf="showEmojiPicker">
+            <h4>Choisir un emoji</h4>
+            <div class="emoji-grid">
+              <button 
+                *ngFor="let emoji of availableEmojis" 
+                class="emoji-btn"
+                [class.selected]="newCategory.emoji === emoji"
+                (click)="selectEmoji(emoji)">
+                {{ emoji }}
+              </button>
+            </div>
+          </div>
+          
+          <ion-item>
+            <ion-label position="stacked">Ordre d'affichage</ion-label>
+            <ion-input 
+              type="number"
+              [(ngModel)]="newCategory.ordre" 
+              [placeholder]="getNextCategoryOrder().toString()"
+              min="1">
+            </ion-input>
+          </ion-item>
+          
+          <div class="form-actions">
+            <ion-button 
+              expand="block" 
+              (click)="createCategory()" 
+              [disabled]="!newCategory.category_key || !newCategory.category_name || !newCategory.emoji"
+              color="tertiary">
+              <ion-icon name="add" slot="start"></ion-icon>
+              Créer la catégorie
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Liste des catégories dans un accordéon -->
+        <ion-accordion-group>
+          <ion-accordion>
+            <ion-item slot="header" color="light">
+              <ion-icon name="list" slot="start" color="primary"></ion-icon>
+              <ion-label>
+                <h3>Catégories du restaurant ({{ restaurantCategories.length }})</h3>
+                <p *ngIf="restaurantCategories.length > 0">{{ categoriesStats.active }} actives • {{ categoriesStats.inactive }} inactives</p>
+                <p *ngIf="restaurantCategories.length === 0">Aucune catégorie personnalisée</p>
+              </ion-label>
+              <ion-button 
+                fill="clear" 
+                size="small" 
+                slot="end"
+                (click)="refreshCategories(); $event.stopPropagation()"
+                color="primary">
+                <ion-icon name="refresh"></ion-icon>
+              </ion-button>
+            </ion-item>
+            <div class="ion-padding" slot="content">
+              <div class="categories-list">
+                <div *ngFor="let category of restaurantCategories" class="category-card">
+                  <!-- Mode affichage normal -->
+                  <div *ngIf="editingCategory?.id !== category.id" class="category-info">
+                    <div class="category-visual">
+                      <span class="category-emoji">{{ category.emoji }}</span>
+                      <div class="category-details">
+                        <h4>{{ category.category_name }}</h4>
+                        <p class="category-key">{{ category.category_key }}</p>
+                      </div>
+                    </div>
+                    
+                    <div class="category-meta">
+                      <ion-chip color="medium" size="small">
+                        <ion-icon name="swap-vertical"></ion-icon>
+                        <ion-label>Ordre: {{ category.ordre }}</ion-label>
+                      </ion-chip>
+                      <ion-chip [color]="category.active ? 'success' : 'danger'" size="small">
+                        <ion-icon [name]="category.active ? 'checkmark-circle' : 'close-circle'"></ion-icon>
+                        <ion-label>{{ category.active ? 'Active' : 'Inactive' }}</ion-label>
+                      </ion-chip>
+                    </div>
+                  </div>
+                  
+                  <!-- Mode édition inline -->
+                  <div *ngIf="editingCategory?.id === category.id" class="category-edit-form">
+                    <div class="edit-fields">
+                      <ion-item>
+                        <ion-input 
+                          [(ngModel)]="editingCategory!.category_name"
+                          placeholder="Nom de la catégorie"
+                          required>
+                        </ion-input>
+                      </ion-item>
+                      
+                      <ion-item>
+                        <ion-input 
+                          [(ngModel)]="editingCategory!.emoji"
+                          placeholder="🍕"
+                          maxlength="2"
+                          class="emoji-input">
+                        </ion-input>
+                      </ion-item>
+                      
+                      <ion-item>
+                        <ion-input 
+                          [(ngModel)]="editingCategory!.ordre"
+                          type="number"
+                          placeholder="Ordre"
+                          min="1">
+                        </ion-input>
+                      </ion-item>
+                    </div>
+                  </div>
+                  
+                  <!-- Actions normales -->
+                  <div *ngIf="editingCategory?.id !== category.id" class="category-actions">
+                    <ion-button 
+                      fill="clear" 
+                      size="small" 
+                      [color]="category.active ? 'warning' : 'success'"
+                      (click)="toggleCategoryStatus(category)">
+                      <ion-icon 
+                        [name]="category.active ? 'eye-off' : 'eye'">
+                      </ion-icon>
+                    </ion-button>
+                    
+                    <ion-button 
+                      fill="clear" 
+                      size="small" 
+                      color="primary"
+                      (click)="editCategory(category)">
+                      <ion-icon name="create"></ion-icon>
+                    </ion-button>
+                    
+                    <ion-button 
+                      fill="clear" 
+                      size="small" 
+                      color="danger"
+                      (click)="deleteCategory(category)">
+                      <ion-icon name="trash"></ion-icon>
+                    </ion-button>
+                  </div>
+                  
+                  <!-- Actions édition -->
+                  <div *ngIf="editingCategory?.id === category.id" class="category-edit-actions">
+                    <ion-button 
+                      fill="clear" 
+                      size="small" 
+                      color="success"
+                      (click)="updateCategory(editingCategory!)"
+                      [disabled]="!editingCategory!.category_name || !editingCategory!.emoji">
+                      <ion-icon name="checkmark"></ion-icon>
+                    </ion-button>
+                    
+                    <ion-button 
+                      fill="clear" 
+                      size="small" 
+                      color="medium"
+                      (click)="cancelEdit()">
+                      <ion-icon name="close"></ion-icon>
+                    </ion-button>
+                  </div>
+                </div>
+
+                <div *ngIf="restaurantCategories.length === 0" class="no-menu-items">
+                  <ion-icon name="pricetags" class="empty-icon"></ion-icon>
+                  <p>Aucune catégorie personnalisée</p>
+                  <small>Créez vos premières catégories pour organiser votre menu</small>
+                </div>
+              </div>
+            </div>
+          </ion-accordion>
+        </ion-accordion-group>
       </ion-card-content>
     </ion-card>
     </div>

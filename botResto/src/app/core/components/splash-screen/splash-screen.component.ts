@@ -21,7 +21,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
         <!-- Logo avec animation -->
         <div class="logo-container">
           <div class="logo-wrapper">
-            <img src="assets/images/botlogo.png" alt="Bot Resto Conakry" class="splash-logo" />
+            <img src="assets/images/botlogo.png" alt="Bot Manager" class="splash-logo" />
             <div class="logo-glow"></div>
           </div>
         </div>
@@ -30,16 +30,15 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
         <div class="title-container">
           <h1 class="app-title">
             <span class="word word-1">Bot</span>
-            <span class="word word-2">Resto</span>
-            <span class="word word-3">Conakry</span>
+            <span class="word word-2">Manager</span>
           </h1>
           <div class="title-underline"></div>
         </div>
         
         <!-- Tagline -->
         <p class="tagline">
-          <span class="tagline-text">Système moderne de gestion</span>
-          <span class="tagline-highlight">de commandes et livraisons</span>
+          <span class="tagline-text">Gestion automatisée</span>
+          <span class="tagline-highlight">multi-services</span>
         </p>
         
         <!-- Loading animation -->
@@ -220,14 +219,6 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
             -webkit-text-fill-color: transparent;
             background-clip: text;
             margin: 0 0.2em;
-          }
-          
-          &.word-3 {
-            animation-delay: 1.1s;
-            background: linear-gradient(45deg, #ffffff, #f1f5f9);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
           }
         }
       }

@@ -36,5 +36,8 @@ file_size_limit = "50MiB"
 [functions.webhook-whatsapp]
 verify_jwt = false
 
+[functions.bot-whatsapp-france]
+verify_jwt = false
+
 [analytics]
 enabled = false

@@ -47,6 +47,37 @@ Bot Restaurant WhatsApp - Un système de commande multi-restaurants pour Conakry
 - **Database**: Supabase PostgreSQL
 - **Architecture**: Architecture simplifiée (single file)
 
+## 📋 RÈGLES DE GESTION DES MENUS
+
+**⚠️ IMPORTANT**: Lors de la création de fichiers de menus pour les restaurants :
+
+### Règles strictes :
+1. **NE JAMAIS MODIFIER** le contenu fourni par l'utilisateur
+2. **PRENDRE EXACTEMENT** ce qui est donné (texte, ordre, format)
+3. **AJOUTER UNIQUEMENT** les icônes modernes appropriées
+4. **RESPECTER L'ORDRE** de présentation original
+5. **NE PAS RÉORGANISER** par prix ou catégorie
+6. **NE PAS CORRIGER** les éventuelles erreurs ou manques (ex: prix manquant)
+7. **⚠️ PRIX SUR PLACE UNIQUEMENT** - TOUJOURS prendre les prix sur place, JAMAIS les prix livraison (règle absolue)
+8. **INCLURE TOUS LES DÉTAILS** - Compositions complètes des plats (ingrédients, poids, etc.)
+
+### Format standard :
+- Reprendre le texte tel quel avec TOUS les détails
+- Ajouter une icône moderne en début de ligne
+- Garder la mise en forme originale
+- Préserver les espaces et la ponctuation
+- Inclure la composition complète du plat
+
+### Exemples :
+```
+Utilisateur donne: "LE CHICKEN — galette de poulet panné,fromage,cornichon — 6,50 €"
+Fichier résultat: "🍗 LE CHICKEN — galette de poulet panné,fromage,cornichon — 6,50 €"
+
+Avec détails complets:
+"L'AMÉRICAIN — pain brioche, 2 steaks façon bouchère 150g, bacon, œufs, cornichons — 13,50 €"
+Fichier résultat: "🇺🇸 L'AMÉRICAIN — pain brioche, 2 steaks façon bouchère 150g, bacon, œufs, cornichons — 13,50 €"
+```
+
 ## Development Commands
 
 ```bash
@@ -123,7 +154,7 @@ Avant chaque déploiement:
 - Projet Supabase avec Edge Functions activées
 - Variables d'environnement configurées
 - Green API Instance: 8101819298
-- Numéro test: 224623542219
+- Numéro test: 33753058254
 
 ## Fichiers de référence base de données
 

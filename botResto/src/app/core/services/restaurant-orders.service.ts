@@ -305,19 +305,21 @@ export class RestaurantOrdersService {
         return true; // Status updated but no notification
       }
 
-      // 3. Get restaurant phone for notification
+      // 3. Get restaurant info for notification
       let restaurantPhone = '';
+      let restaurantCurrency = 'GNF';
       if (order.restaurant_id) {
         const { data: restaurant } = await this.supabase
           .from('restaurants')
-          .select('telephone')
+          .select('telephone, currency')
           .eq('id', order.restaurant_id)
           .single();
         restaurantPhone = restaurant?.telephone || '';
+        restaurantCurrency = restaurant?.currency || 'GNF';
       }
 
       // 4. Send WhatsApp notification based on status
-      await this.sendStatusNotification(order, newStatus, restaurantName, restaurantPhone);
+      await this.sendStatusNotification(order, newStatus, restaurantName, restaurantPhone, restaurantCurrency);
 
       return true;
     } catch (error) {
@@ -331,7 +333,8 @@ export class RestaurantOrdersService {
     order: Order, 
     status: Order['statut'], 
     restaurantName: string,
-    restaurantPhone?: string
+    restaurantPhone?: string,
+    restaurantCurrency?: string
   ): Promise<void> {
     try {
       // Don't send notifications for certain statuses
@@ -342,8 +345,9 @@ export class RestaurantOrdersService {
       }
 
       // Format order items for message
+      const currency = restaurantCurrency || 'GNF';
       const orderItemsText = order.items
-        .map(item => `• ${item.quantite}× ${item.nom_plat} - ${this.formatPrice(item.prix_total)}`)
+        .map(item => `• ${item.quantite}× ${item.nom_plat} - ${this.formatPrice(item.prix_total, currency)}`)
         .join('\n');
 
       // Get delivery mode text
@@ -351,15 +355,15 @@ export class RestaurantOrdersService {
                               order.mode === 'emporter' ? 'À EMPORTER' : 'LIVRAISON';
 
       // Get payment method text  
-      const paymentMethodText = this.getPaymentMethodText(order.paiement_mode, order.paiement_statut);
+      const paymentMethodText = this.getPaymentMethodText(order.paiement_mode, order.paiement_statut, currency);
 
       const orderData = {
         orderNumber: order.numero_commande,
         restaurantName: restaurantName,
         restaurantPhone: restaurantPhone || '',
-        total: this.formatPrice(order.total),
-        subtotal: this.formatPrice(order.sous_total),
-        deliveryFee: this.formatPrice(order.frais_livraison),
+        total: this.formatPrice(order.total, currency),
+        subtotal: this.formatPrice(order.sous_total, currency),
+        deliveryFee: this.formatPrice(order.frais_livraison, currency),
         deliveryMode: deliveryModeText,
         paymentMethod: paymentMethodText,
         distance: order.distance_km ? `${order.distance_km}km` : '',
@@ -409,28 +413,43 @@ export class RestaurantOrdersService {
     }
   }
 
-  // Format price for messages
-  private formatPrice(amount: number): string {
-    return new Intl.NumberFormat('fr-GN', {
+  // Format price for messages with dynamic currency
+  private formatPrice(amount: number, currency: string = 'GNF'): string {
+    const formatted = new Intl.NumberFormat('fr-FR', {
       minimumFractionDigits: 0
-    }).format(amount) + ' GNF';
+    }).format(amount);
+    
+    // Mapping des devises vers leurs symboles
+    const currencySymbols: Record<string, string> = {
+      'GNF': 'GNF',
+      'EUR': '€',
+      'USD': '$',
+      'XOF': 'FCFA'
+    };
+    
+    const symbol = currencySymbols[currency] || currency;
+    return `${formatted} ${symbol}`;
   }
 
-  // Get payment method text
-  private getPaymentMethodText(paymentMode: string, paymentStatus: string): string {
+  // Get payment method text adapted by currency
+  private getPaymentMethodText(paymentMode: string, paymentStatus: string, currency?: string): string {
     if (paymentStatus === 'paye') {
       return '✅ PAYÉ';
     }
+    
+    // Determine payment methods based on currency
+    const isEUR = currency === 'EUR';
+    const paymentMethods = isEUR ? 'cash, carte' : 'cash, o-money';
     
     switch (paymentMode) {
       case 'maintenant':
         return 'PAIEMENT MOBILE';
       case 'fin_repas':
-        return 'À LA FIN DU REPAS (cash)';
+        return `À LA FIN DU REPAS (${paymentMethods})`;
       case 'recuperation':
-        return 'À LA RÉCUPÉRATION (cash)';
+        return `À LA RÉCUPÉRATION (${paymentMethods})`;
       case 'livraison':
-        return 'À LA LIVRAISON (cash,o-money)';
+        return `À LA LIVRAISON (${paymentMethods})`;
       default:
         return 'CASH';
     }

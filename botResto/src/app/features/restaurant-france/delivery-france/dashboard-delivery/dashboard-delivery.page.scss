@@ -1,0 +1,272 @@
+// Dashboard Delivery styles - Clean design sans dégradés
+.welcome-section {
+  padding: 20px;
+  margin-bottom: 20px;
+
+  .driver-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+
+    .driver-icon {
+      font-size: 3rem;
+      color: var(--ion-color-primary);
+    }
+
+    .info-text {
+      h2 {
+        margin: 0 0 5px 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--ion-color-medium);
+      }
+    }
+  }
+}
+
+.stats-section {
+  padding: 0 16px;
+  margin-bottom: 20px;
+
+  .stat-card {
+    margin-bottom: 0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    .stat-content {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 10px 0;
+
+      .stat-icon {
+        font-size: 2rem;
+        color: var(--ion-color-primary);
+
+        &.pending {
+          color: var(--ion-color-warning);
+        }
+
+        &.success {
+          color: var(--ion-color-success);
+        }
+
+        &.tertiary {
+          color: var(--ion-color-tertiary);
+        }
+      }
+
+      .stat-text {
+        h3 {
+          margin: 0 0 2px 0;
+          font-size: 1.8rem;
+          font-weight: bold;
+          color: var(--ion-color-dark);
+        }
+
+        p {
+          margin: 0;
+          font-size: 0.85rem;
+          color: var(--ion-color-medium);
+        }
+      }
+    }
+  }
+}
+
+.tabs-section {
+  padding: 0 16px;
+  margin-bottom: 20px;
+
+  ion-segment {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  ion-segment-button {
+    --indicator-color: var(--ion-color-primary);
+    --color-checked: var(--ion-color-primary);
+    --color: var(--ion-color-medium);
+    border-radius: 8px;
+    margin: 4px;
+  }
+}
+
+.orders-section {
+  padding: 0 16px;
+  margin-bottom: 20px;
+
+  h3 {
+    margin-bottom: 15px;
+    color: var(--ion-color-dark);
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .order-card {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+
+      .order-info {
+        h4 {
+          margin: 0 0 2px 0;
+          font-size: 1rem;
+          font-weight: 600;
+          color: var(--ion-color-dark);
+        }
+
+        p {
+          margin: 0;
+          font-size: 0.85rem;
+          color: var(--ion-color-medium);
+        }
+      }
+    }
+
+    .order-details {
+      margin-bottom: 15px;
+
+      p {
+        margin: 5px 0;
+        font-size: 0.9rem;
+        color: var(--ion-color-dark);
+
+        strong {
+          color: var(--ion-color-dark);
+          font-weight: 600;
+        }
+      }
+    }
+
+    .order-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+
+      ion-button {
+        --border-radius: 8px;
+        height: 36px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        min-width: 120px;
+      }
+    }
+  }
+}
+
+.loading-section {
+  padding: 0 16px;
+
+  .text-center {
+    text-align: center;
+    padding: 40px 20px;
+
+    .no-orders-icon {
+      font-size: 4rem;
+      color: var(--ion-color-medium);
+      margin-bottom: 15px;
+    }
+
+    h3 {
+      margin-bottom: 10px;
+      color: var(--ion-color-dark);
+      font-size: 1.2rem;
+    }
+
+    p {
+      margin: 0;
+      color: var(--ion-color-medium);
+      font-size: 0.9rem;
+    }
+
+    ion-spinner {
+      margin-bottom: 15px;
+      --color: var(--ion-color-primary);
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .stats-section {
+    ion-col {
+      padding: 4px;
+    }
+
+    .stat-card .stat-content {
+      gap: 10px;
+
+      .stat-icon {
+        font-size: 1.5rem;
+      }
+
+      .stat-text h3 {
+        font-size: 1.5rem;
+      }
+    }
+  }
+
+  .orders-section {
+    .order-card {
+      .order-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .order-actions {
+        ion-button {
+          flex: 1;
+          min-width: auto;
+        }
+      }
+    }
+  }
+
+  .welcome-section .driver-info {
+    .driver-icon {
+      font-size: 2.5rem;
+    }
+
+    .info-text h2 {
+      font-size: 1.3rem;
+    }
+  }
+}
+
+// Style sp�cifique pour les badges de statut
+ion-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 16px;
+}
+
+// Animation pour les cartes
+.order-card {
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+// Style pour les segments
+ion-segment-button.segment-button-checked {
+  --color: white !important;
+  --background: var(--ion-color-primary) !important;
+}

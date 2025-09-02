@@ -6,6 +6,16 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// Services pour gestion des adresses de livraison
+import { GooglePlacesService } from './services/google-places.service.ts';
+import { AddressManagementService } from './services/address-management.service.ts';
+import type { 
+  CustomerAddress, 
+  GooglePlaceResult, 
+  AddressValidationResponse,
+  AddressSessionState 
+} from './types/address.types.ts';
+
 // Configuration
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -13,6 +23,10 @@ const greenApiInstanceId = Deno.env.get('GREEN_API_INSTANCE_ID')!;
 const greenApiToken = Deno.env.get('GREEN_API_TOKEN')!;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Initialisation des services d'adresses
+const googlePlaces = new GooglePlacesService();
+const addressManager = new AddressManagementService(supabase);
 
 // Configuration délai d'expiration des sessions
 const SESSION_EXPIRE_MINUTES = 240; // 4 heures (240 minutes) - était 30 minutes
@@ -61,6 +75,42 @@ class WhatsAppService {
 }
 
 const whatsapp = new WhatsAppService();
+
+// Fonction helper pour suggérer des commandes valides
+function getSuggestionMessage(invalidInput: string, context: string = 'general'): string {
+  const baseMessage = `❌ **Choix invalide : "${invalidInput}"**\n\n`;
+  
+  // Suggestions spécifiques basées sur l'entrée invalide
+  let suggestions = '';
+  
+  if (invalidInput === '9' || invalidInput === '99' || invalidInput.includes('99')) {
+    suggestions += '💡 **Peut-être vouliez-vous dire :**\n   • **99** = Finaliser la commande\n\n';
+  } else if (invalidInput === '0' && context !== 'menu_selection') {
+    suggestions += '💡 **Peut-être vouliez-vous dire :**\n   • **00** = Voir le panier complet\n   • **0** = Retour au menu\n\n';
+  } else if (invalidInput.startsWith('0') && invalidInput.length > 1 && invalidInput !== '00') {
+    suggestions += '💡 **Peut-être vouliez-vous dire :**\n   • **00** = Voir le panier complet\n\n';
+  }
+  
+  // Actions valides selon le contexte
+  let actions = '';
+  
+  switch (context) {
+    case 'cart':
+      actions = '🎯 **Actions valides :**\n⚡ **99** - Finaliser la commande\n🛒 **00** - Voir panier complet\n🍕 **0** - Retour au menu\n🔢 **1-X** - Sélectionner un article\n\n✨ Retapez votre choix';
+      break;
+    case 'address_selection':
+      actions = '📍 **Votre adresse de livraison ?**\n\n🏠 Tapez **1** ou **2** pour vos adresses\n➕ Tapez **3** pour une nouvelle adresse\n📝 Ou saisissez directement votre adresse\n\n*Votre choix :*';
+      break;
+    case 'address_confirmation':
+      actions = '🎯 **Actions valides :**\n✅ **1** - Confirmer l\'adresse\n🔄 **2** - Modifier l\'adresse\n❌ **annuler** - Retour\n\n✨ Retapez votre choix';
+      break;
+    default:
+      actions = '🎯 **Actions disponibles :**\n🛒 **00** - Voir panier\n🍕 **0** - Retour au menu\n🔢 Ou tapez un numéro de produit\n\n✨ Retapez votre choix';
+      break;
+  }
+    
+  return baseMessage + suggestions + actions;
+}
 
 // Gestion des sessions simplifiée (inspirée du bot Conakry)
 class SimpleSession {
@@ -527,7 +577,7 @@ async function handleMultipleOrderCommand(phoneNumber: string, session: any, ord
   for (const [itemNumber, quantity] of itemCounts) {
     if (itemNumber > menuOrder.length) {
       await whatsapp.sendMessage(phoneNumber, 
-        `❌ Numéro invalide: ${itemNumber}\nLe menu contient ${menuOrder.length} articles.`);
+        getSuggestionMessage(itemNumber.toString(), 'cart') + `\n\n📋 Le menu contient ${menuOrder.length} articles.`);
       return;
     }
     
@@ -646,7 +696,7 @@ async function handleOrderCommand(phoneNumber: string, session: any, command: st
   // Vérifier que le numéro est valide
   if (itemNumber > menuOrder.length) {
     await whatsapp.sendMessage(phoneNumber, 
-      `❌ Numéro invalide: ${itemNumber}\nLe menu contient ${menuOrder.length} articles.`);
+      getSuggestionMessage(itemNumber.toString(), 'cart') + `\n\n📋 Le menu contient ${menuOrder.length} articles.`);
     return;
   }
 
@@ -865,7 +915,7 @@ async function handleOptionSelection(phoneNumber: string, session: any, choice: 
     const invalidChoices = choiceNumbers.filter(n => n < 1 || n > options.length);
     if (invalidChoices.length > 0) {
       await whatsapp.sendMessage(phoneNumber, 
-        `❌ Choix invalide: ${invalidChoices.join(', ')}. Tapez un numéro entre 1 et ${options.length}.`);
+        getSuggestionMessage(invalidChoices.join(', '), 'options') + `\n\n🔧 Tapez un numéro entre 1 et ${options.length}.`);
       return;
     }
     
@@ -1370,7 +1420,7 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
         }
       } else {
         await whatsapp.sendMessage(phoneNumber, 
-          `❓ Numéro invalide. Choisissez entre 1 et ${categories.length}.`);
+          getSuggestionMessage(message, 'menu') + `\n\n📋 Choisissez entre 1 et ${categories.length}.`);
       }
       break;
 
@@ -1386,7 +1436,7 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
       if (isNaN(drinkChoice) || drinkChoice < 1 || drinkChoice > availableDrinks.length) {
         console.log('❌ Choix boisson invalide');
         await whatsapp.sendMessage(phoneNumber, 
-          `❌ Choix invalide. Tapez un numéro entre 1 et ${availableDrinks.length}`);
+          getSuggestionMessage(message, 'drinks') + `\n\n🥤 Choisissez entre 1 et ${availableDrinks.length}.`);
         return;
       }
       
@@ -1479,7 +1529,7 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
         });
         
         console.log('💾 Session mise à jour avec totalPrice:', updatedSession?.context?.totalPrice);
-        await handleOrderConfirmation(phoneNumber, updatedSession || session, '00');
+        await handleOrderFinalization(phoneNumber, updatedSession || session);
       } else if (normalizedMessage === '0') {
         // Retour au menu principal (préserver le mode de livraison)
         console.log('🔙 [ORDERING] Retour menu demandé - Mode livraison:', session.context.deliveryMode);
@@ -1501,15 +1551,9 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
           console.log('⚠️ [ORDERING] Fallback handleDirectRestaurantAccess - panier peut être perdu!');
           await handleDirectRestaurantAccess(phoneNumber, restaurant.data);
         }
-      } else if (/^\d+$/.test(normalizedMessage)) {
-        // Sélection de produit par numéro - retour à VIEWING_CATEGORY
-        await SimpleSession.update(session.id, { state: 'VIEWING_CATEGORY' });
-        // Déléguer à VIEWING_CATEGORY
-        await handleMessage(phoneNumber, session, message);
-        return;
       } else {
-        await whatsapp.sendMessage(phoneNumber, 
-          `❌ Commande non reconnue.\n\nOptions disponibles :\n00 - Voir le panier\n0 - Retour au menu\nOU tapez un numéro de produit`);
+        // Entrée invalide - afficher suggestions
+        await whatsapp.sendMessage(phoneNumber, getSuggestionMessage(message, 'cart'));
       }
       break;
 
@@ -1581,8 +1625,8 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
             }
           });
           
-          // Afficher les options de mode de livraison
-          await handleOrderConfirmation(phoneNumber, session, '99');
+          // Vérifier si une adresse de livraison est requise
+          await handleOrderFinalization(phoneNumber, session);
         }
       } else if (normalizedMessage === '00') {
         // Voir le panier
@@ -1637,6 +1681,30 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
 
     case 'CONFIRMING_CONFIGURATION':
       await handleConfigurationConfirmation(phoneNumber, session, message);
+      break;
+
+    // ========================================
+    // NOUVEAUX ÉTATS - SYSTÈME D'ADRESSES
+    // ========================================
+    
+    case 'CHOOSING_DELIVERY_ADDRESS':
+      await handleDeliveryAddressChoice(phoneNumber, session, message);
+      break;
+
+    case 'REQUESTING_NEW_ADDRESS':
+      await handleNewAddressInput(phoneNumber, session, message);
+      break;
+
+    case 'VALIDATING_ADDRESS':
+      await handleAddressValidation(phoneNumber, session, message);
+      break;
+
+    case 'CONFIRMING_ADDRESS':
+      await handleAddressConfirmation(phoneNumber, session, message);
+      break;
+
+    case 'REQUESTING_ADDRESS_LABEL':
+      await handleAddressLabelInput(phoneNumber, session, message);
       break;
 
     default:
@@ -1760,10 +1828,39 @@ async function buildOrderConfirmationMessage(session: any, orderNumber: string |
     confirmationMessage += '\n';
   });
   
-  confirmationMessage += `💎 **Total: ${formatPrice(session.context.totalPrice, 'EUR')}**
+  confirmationMessage += `💎 **Total: ${formatPrice(session.context.totalPrice, 'EUR')}**`;
 
-🔔 **Restaurant notifié automatiquement**
-⚡ **Préparation va commencer**`;
+  // Afficher les informations selon le mode de livraison
+  if (session.context.deliveryMode === 'livraison') {
+    // Mode livraison : afficher l'adresse et le code de validation
+    if (session.context.selectedDeliveryAddress) {
+      const deliveryAddress = session.context.selectedDeliveryAddress;
+      confirmationMessage += `\n\n🚚 **Livraison à :**\n📍 ${deliveryAddress.address_label}\n${deliveryAddress.full_address}`;
+    }
+    
+    // Afficher le code de validation si disponible
+    if (session.context.savedOrder?.delivery_validation_code) {
+      confirmationMessage += `\n\n🔒 **Code validation livraison : ${session.context.savedOrder.delivery_validation_code}**`;
+      confirmationMessage += `\n📱 *Communiquez ce code au livreur à la réception*`;
+    }
+    
+    confirmationMessage += `\n\n⏱️ **Temps estimé : 30-45 minutes**`;
+    
+  } else if (session.context.deliveryMode === 'a_emporter') {
+    // Mode à emporter
+    confirmationMessage += `\n\n📦 **Mode : À emporter**`;
+    confirmationMessage += `\n\n⏱️ **Récupération dans : 20-30 minutes**`;
+    confirmationMessage += `\n📱 *Donnez ce numéro : #${orderNumber}*`;
+    
+  } else if (session.context.deliveryMode === 'sur_place') {
+    // Mode sur place
+    confirmationMessage += `\n\n📍 **Mode : Sur place**`;
+    confirmationMessage += `\n\n🪑 **Présentez-vous au restaurant**`;
+    confirmationMessage += `\n📱 *Montrez ce numéro : #${orderNumber}*`;
+    confirmationMessage += `\n⏱️ **Temps de préparation : 15-20 minutes**`;
+  }
+
+  confirmationMessage += `\n\n🔔 **Restaurant notifié automatiquement**`;
 
   // Vérifier si on a déjà les infos restaurant dans la session
   const restaurantPhone = session.context.selectedRestaurant?.whatsapp_number || 
@@ -1794,9 +1891,20 @@ async function buildOrderConfirmationMessage(session: any, orderNumber: string |
   return confirmationMessage;
 }
 
+// Fonction simple pour générer un code de validation à 4 chiffres
+function generateDeliveryCode(): string {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
 // Fonction pour sauvegarder la commande en base de données
 async function saveOrderToDatabase(phoneNumber: string, session: any): Promise<string | null> {
   try {
+    console.log('💾 [SaveOrder] DÉBUT - Sauvegarde en base');
+    console.log('🛒 [SaveOrder] DÉBUT - Panier cartItems:', JSON.stringify(session.context?.cartItems || []));
+    console.log('💰 [SaveOrder] DÉBUT - Total cartTotal:', session.context?.cartTotal);
+    console.log('🏪 [SaveOrder] DÉBUT - Restaurant ID:', session.context?.selectedRestaurantId);
+    console.log('📋 [SaveOrder] DÉBUT - Context complet:', JSON.stringify(session.context, null, 2));
+    
     // Générer le numéro de commande au format DDMM-XXXX
     const today = new Date();
     const dayMonth = today.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }).replace('/', '');
@@ -1815,7 +1923,7 @@ async function saveOrderToDatabase(phoneNumber: string, session: any): Promise<s
     const orderNumber = `${dayMonth}-${String((count || 0) + 1).padStart(4, '0')}`;
     
     // Préparer les données de la commande
-    const orderData = {
+    const orderData: any = {
       restaurant_id: session.context.selectedRestaurantId,
       phone_number: phoneNumber.replace('@c.us', ''),
       items: session.context.cart || {},
@@ -1825,6 +1933,21 @@ async function saveOrderToDatabase(phoneNumber: string, session: any): Promise<s
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
+
+    // Ajouter les informations d'adresse de livraison si applicable
+    if (session.context.deliveryMode === 'livraison' && session.context.selectedDeliveryAddress) {
+      const deliveryAddress = session.context.selectedDeliveryAddress;
+      orderData.delivery_address_id = deliveryAddress.id || null;
+      orderData.delivery_address = deliveryAddress.full_address;
+      console.log('📍 [SaveOrder] Adresse de livraison incluse:', deliveryAddress.full_address);
+    }
+    
+    // Générer le code de validation UNIQUEMENT pour les livraisons
+    if (session.context.deliveryMode === 'livraison') {
+      const deliveryCode = generateDeliveryCode();
+      orderData.delivery_validation_code = deliveryCode;
+      console.log('🔒 [SaveOrder] Code de validation généré:', deliveryCode);
+    }
     
     console.log('💾 Sauvegarde commande:', JSON.stringify(orderData, null, 2));
     
@@ -1841,6 +1964,10 @@ async function saveOrderToDatabase(phoneNumber: string, session: any): Promise<s
     }
     
     console.log('✅ Commande sauvegardée avec succès:', order.id);
+    
+    // Stocker l'ordre sauvegardé dans la session pour utilisation dans le message
+    session.context.savedOrder = order;
+    
     return orderNumber;
     
   } catch (error) {
@@ -1853,10 +1980,13 @@ async function saveOrderToDatabase(phoneNumber: string, session: any): Promise<s
 async function handleOrderConfirmation(phoneNumber: string, session: any, response: string) {
   console.log('✅ Confirmation commande:', response);
   console.log('💰 TotalPrice dans session:', session.context.totalPrice);
+  console.log('🛒 [OrderConfirmation] RÉCEPTION - Panier cartItems:', JSON.stringify(session.context?.cartItems || []));
+  console.log('💰 [OrderConfirmation] RÉCEPTION - Total cartTotal:', session.context?.cartTotal);
+  console.log('🏪 [OrderConfirmation] RÉCEPTION - Restaurant ID:', session.context?.selectedRestaurantId);
   console.log('🔍 Context complet session:', JSON.stringify(session.context, null, 2));
   const normalizedResponse = response.toLowerCase().trim();
   
-  if (normalizedResponse === '1' || normalizedResponse === '00') {
+  if (normalizedResponse === '1' || normalizedResponse === '00' || normalizedResponse === '99') {
     // Sauvegarder la commande en base de données
     const orderNumber = await saveOrderToDatabase(phoneNumber, session);
     
@@ -1940,3 +2070,415 @@ serve(async (req) => {
     });
   }
 });
+
+// ========================================
+// NOUVELLES FONCTIONS - SYSTÈME D'ADRESSES
+// ========================================
+
+/**
+ * Point d'entrée pour finaliser une commande
+ * Vérifie si une adresse est nécessaire (mode livraison) ou passe directement à la confirmation
+ */
+async function handleOrderFinalization(phoneNumber: string, session: any) {
+  try {
+    console.log('🎯 [OrderFinalization] Vérification mode livraison:', session.context.deliveryMode);
+    
+    // Si c'est une livraison, demander l'adresse
+    if (session.context.deliveryMode === 'livraison') {
+      console.log('🚚 [OrderFinalization] Mode livraison détecté - demande d\'adresse');
+      await initiateDeliveryAddressProcess(phoneNumber, session);
+    } else {
+      // Pour sur_place et a_emporter, passer directement à la confirmation
+      console.log('📍 [OrderFinalization] Mode sur place/à emporter - confirmation directe');
+      await handleOrderConfirmation(phoneNumber, session, '99');
+    }
+  } catch (error) {
+    console.error('❌ [OrderFinalization] Erreur:', error);
+    await whatsapp.sendMessage(phoneNumber, 'Erreur lors de la finalisation. Veuillez réessayer.');
+  }
+}
+
+/**
+ * Initier le processus de sélection d'adresse de livraison
+ */
+async function initiateDeliveryAddressProcess(phoneNumber: string, session: any) {
+  try {
+    console.log('🏠 [DeliveryAddress] Début processus sélection adresse');
+    
+    // Récupérer les adresses existantes du client
+    const addressSelection = await addressManager.buildAddressSelectionMessage(phoneNumber);
+    
+    if (addressSelection.hasAddresses) {
+      // Le client a des adresses existantes - afficher le menu de sélection
+      console.log(`📋 [DeliveryAddress] ${addressSelection.addresses.length} adresses trouvées`);
+      
+      await SimpleSession.update(session.id, {
+        state: 'CHOOSING_DELIVERY_ADDRESS',
+        context: {
+          ...session.context,
+          addresses: addressSelection.addresses
+        }
+      });
+      
+      await whatsapp.sendMessage(phoneNumber, addressSelection.message);
+    } else {
+      // Première livraison - demander directement la nouvelle adresse
+      console.log('🆕 [DeliveryAddress] Première livraison - demande nouvelle adresse');
+      
+      await SimpleSession.update(session.id, {
+        state: 'REQUESTING_NEW_ADDRESS'
+      });
+      
+      await whatsapp.sendMessage(phoneNumber, addressSelection.message);
+    }
+  } catch (error) {
+    console.error('❌ [DeliveryAddress] Erreur initiation processus:', error);
+    await whatsapp.sendMessage(phoneNumber, 'Erreur lors de la demande d\'adresse. Veuillez réessayer.');
+  }
+}
+
+/**
+ * Gérer le choix d'adresse de livraison parmi les adresses existantes
+ */
+async function handleDeliveryAddressChoice(phoneNumber: string, session: any, message: string) {
+  try {
+    const normalizedMessage = message.toLowerCase().trim();
+    console.log(`🏠 [AddressChoice] Choix: "${normalizedMessage}"`);
+    
+    if (normalizedMessage === 'annuler') {
+      await handleDirectRestaurantAccess(phoneNumber, session.context.selectedRestaurantData);
+      return;
+    }
+    
+    // Vérifier si c'est un numéro valide
+    const choice = parseInt(normalizedMessage);
+    const addresses = session.context.addresses || [];
+    const isExactNumber = normalizedMessage === choice.toString();
+    
+    if (isNaN(choice) || choice < 1 || !isExactNumber) {
+      await whatsapp.sendMessage(phoneNumber, getSuggestionMessage(message, 'address_selection'));
+      return;
+    }
+    
+    // Si c'est le dernier numéro, c'est "Nouvelle adresse"
+    if (choice === addresses.length + 1) {
+      console.log('➕ [AddressChoice] Nouvelle adresse demandée');
+      
+      await SimpleSession.update(session.id, {
+        state: 'REQUESTING_NEW_ADDRESS'
+      });
+      
+      await whatsapp.sendMessage(phoneNumber, '📍 **Nouvelle adresse de livraison**\n\nVeuillez saisir votre adresse complète:\n\n*Exemple: 15 rue de la Paix, Paris*');
+      return;
+    }
+    
+    // Vérifier si le choix est dans la plage valide
+    if (choice > addresses.length) {
+      await whatsapp.sendMessage(phoneNumber, getSuggestionMessage(message, 'address_selection'));
+      return;
+    }
+    
+    // Adresse sélectionnée
+    const selectedAddress = addresses[choice - 1];
+    console.log(`✅ [AddressChoice] Adresse sélectionnée: ${selectedAddress.address_label}`);
+    
+    // Sauvegarder l'adresse dans la session et procéder à la confirmation de commande
+    const updatedSession = await SimpleSession.update(session.id, {
+      state: 'CONFIRMING_ORDER',
+      context: {
+        ...session.context,
+        selectedDeliveryAddress: selectedAddress
+      }
+    });
+    
+    await handleOrderConfirmation(phoneNumber, updatedSession || session, '99');
+    
+  } catch (error) {
+    console.error('❌ [AddressChoice] Erreur:', error);
+    await whatsapp.sendMessage(phoneNumber, 'Erreur lors de la sélection d\'adresse. Veuillez réessayer.');
+  }
+}
+
+/**
+ * Gérer la saisie d'une nouvelle adresse
+ */
+async function handleNewAddressInput(phoneNumber: string, session: any, message: string) {
+  try {
+    const address = message.trim();
+    console.log(`📝 [NewAddress] Saisie adresse: "${address}"`);
+    
+    if (!address || address.toLowerCase() === 'annuler') {
+      await initiateDeliveryAddressProcess(phoneNumber, session);
+      return;
+    }
+    
+    if (address.length < 10) {
+      await whatsapp.sendMessage(phoneNumber, '⚠️ **Adresse trop courte**\n\nVeuillez saisir une adresse complète avec le nom de la rue et la ville.\n\n*Exemple: 15 rue de la Paix, Paris*');
+      return;
+    }
+    
+    // Valider l'adresse avec Google Places API directement
+    await SimpleSession.update(session.id, {
+      state: 'VALIDATING_ADDRESS',
+      context: {
+        ...session.context,
+        pendingAddressInput: address
+      }
+    });
+    
+    // Déclencher la validation
+    await validateAddressWithGoogle(phoneNumber, session, address);
+    
+  } catch (error) {
+    console.error('❌ [NewAddress] Erreur:', error);
+    await whatsapp.sendMessage(phoneNumber, 'Erreur lors de la saisie d\'adresse. Veuillez réessayer.');
+  }
+}
+
+/**
+ * Valider une adresse avec Google Places API
+ */
+async function validateAddressWithGoogle(phoneNumber: string, session: any, address: string) {
+  try {
+    console.log(`🔍 [AddressValidation] Validation Google: "${address}"`);
+    
+    if (!googlePlaces.isConfigured()) {
+      console.warn('⚠️ [AddressValidation] Google Places API non configurée - mode dégradé');
+      // Mode dégradé : accepter l'adresse sans validation
+      await handleAddressValidated(phoneNumber, session, {
+        formatted_address: address,
+        place_id: '',
+        geometry: { location: { lat: 0, lng: 0 } }
+      });
+      return;
+    }
+    
+    const validation = await googlePlaces.validateAddress(address);
+    
+    if (validation.isValid && validation.selectedAddress) {
+      // Adresse trouvée - proposer la suggestion
+      const suggestion = validation.selectedAddress;
+      console.log(`✅ [AddressValidation] Adresse validée: ${suggestion.formatted_address}`);
+      
+      await SimpleSession.update(session.id, {
+        state: 'CONFIRMING_ADDRESS',
+        context: {
+          ...session.context,
+          addressSuggestion: suggestion,
+          addressSuggestions: validation.suggestions
+        }
+      });
+      
+      const confirmMessage = `🎯 **Adresse trouvée !**\n\n📍 ${googlePlaces.formatAddressForWhatsApp(suggestion)}\n\n**1** ✅ Oui, livrer ici\n**2** 🔄 Corriger l'adresse\n\n*Tapez 1 ou 2*`;
+      
+      await whatsapp.sendMessage(phoneNumber, confirmMessage);
+    } else {
+      // Aucune adresse trouvée
+      console.log('❌ [AddressValidation] Aucune adresse trouvée');
+      
+      await SimpleSession.update(session.id, {
+        state: 'REQUESTING_NEW_ADDRESS'
+      });
+      
+      await whatsapp.sendMessage(phoneNumber, `❌ **Adresse non trouvée**\n\nNous n'avons pas pu localiser "${address}".\n\nVeuillez vérifier l'orthographe et saisir une adresse plus précise:\n\n*Exemple: 15 rue de la Paix, 75001 Paris*`);
+    }
+  } catch (error) {
+    console.error('❌ [AddressValidation] Erreur validation Google:', error);
+    
+    // Mode dégradé en cas d'erreur API
+    await handleAddressValidated(phoneNumber, session, {
+      formatted_address: address,
+      place_id: '',
+      geometry: { location: { lat: 0, lng: 0 } }
+    });
+  }
+}
+
+/**
+ * Gérer la validation d'adresse
+ */
+async function handleAddressValidation(phoneNumber: string, session: any, message: string) {
+  // Cet état n'attend pas de message utilisateur - la validation se fait automatiquement
+  // Si on arrive ici, rediriger vers la demande d'adresse
+  await handleNewAddressInput(phoneNumber, session, session.context.pendingAddressInput || '');
+}
+
+/**
+ * Gérer la confirmation d'adresse suggérée par Google
+ */
+async function handleAddressConfirmation(phoneNumber: string, session: any, message: string) {
+  try {
+    const normalizedMessage = message.toLowerCase().trim();
+    console.log(`✅ [AddressConfirmation] Choix: "${normalizedMessage}"`);
+    
+    if (normalizedMessage === 'annuler') {
+      await initiateDeliveryAddressProcess(phoneNumber, session);
+      return;
+    }
+    
+    const choice = parseInt(normalizedMessage);
+    
+    if (choice === 1) {
+      // Confirmer l'adresse suggérée
+      const suggestion = session.context.addressSuggestion;
+      console.log('✅ [AddressConfirmation] Adresse confirmée');
+      
+      await handleAddressValidated(phoneNumber, session, suggestion);
+    } else if (choice === 2) {
+      // Modifier l'adresse
+      console.log('🔄 [AddressConfirmation] Modification demandée');
+      
+      await SimpleSession.update(session.id, {
+        state: 'REQUESTING_NEW_ADDRESS'
+      });
+      
+      await whatsapp.sendMessage(phoneNumber, '📝 **Saisir une nouvelle adresse**\n\nVeuillez saisir votre adresse de livraison:\n\n*Exemple: 25 boulevard Saint-Germain, Paris*');
+    } else {
+      await whatsapp.sendMessage(phoneNumber, getSuggestionMessage(message, 'address_confirmation'));
+    }
+  } catch (error) {
+    console.error('❌ [AddressConfirmation] Erreur:', error);
+    await whatsapp.sendMessage(phoneNumber, 'Erreur lors de la confirmation d\'adresse. Veuillez réessayer.');
+  }
+}
+
+/**
+ * Adresse validée - sauvegarder directement et procéder à l'enregistrement commande
+ */
+async function handleAddressValidated(phoneNumber: string, session: any, validatedAddress: GooglePlaceResult) {
+  try {
+    console.log('💾 [AddressValidated] Sauvegarde directe et finalisation commande');
+    console.log('🛒 [AddressValidated] AVANT sauvegarde - Panier session:', JSON.stringify(session.context?.cartItems || []));
+    console.log('💰 [AddressValidated] AVANT sauvegarde - Total session:', session.context?.cartTotal);
+    console.log('🏪 [AddressValidated] AVANT sauvegarde - Restaurant ID:', session.context?.selectedRestaurantId);
+    console.log('📋 [AddressValidated] AVANT sauvegarde - Context complet:', JSON.stringify(session.context, null, 2));
+    
+    // Générer un label automatique basé sur l'adresse
+    const addressParts = validatedAddress.formatted_address.split(',');
+    const autoLabel = `Adresse ${addressParts[0]?.trim() || 'Livraison'}`;
+    
+    // Sauvegarder l'adresse en base avec le label automatique (SANS message)
+    console.log('💾 [AddressValidated] Sauvegarde en base...');
+    const savedAddress = await addressManager.saveCustomerAddress(
+      phoneNumber,
+      validatedAddress,
+      autoLabel
+    );
+    
+    if (savedAddress) {
+      console.log(`✅ [AddressValidated] Adresse sauvegardée avec ID: ${savedAddress.id}`);
+      
+      // Mettre à jour la session avec l'adresse sauvegardée et procéder à la confirmation de commande
+      const updatedSession = await SimpleSession.update(session.id, {
+        state: 'CONFIRMING_ORDER',
+        context: {
+          ...session.context,
+          selectedDeliveryAddress: savedAddress
+        }
+      });
+      console.log('🛒 [AddressValidated] APRÈS update session - Panier:', JSON.stringify(updatedSession?.context?.cartItems || []));
+      console.log('💰 [AddressValidated] APRÈS update session - Total:', updatedSession?.context?.cartTotal);
+      
+      // PAS de message intermédiaire - on passe directement à la confirmation
+    } else {
+      console.error('❌ [AddressValidated] Erreur sauvegarde adresse');
+      
+      // Procéder quand même à la confirmation avec l'adresse non sauvegardée
+      const updatedSession = await SimpleSession.update(session.id, {
+        state: 'CONFIRMING_ORDER',
+        context: {
+          ...session.context,
+          selectedDeliveryAddress: {
+            id: null,
+            full_address: validatedAddress.formatted_address,
+            latitude: validatedAddress.geometry?.location?.lat || null,
+            longitude: validatedAddress.geometry?.location?.lng || null,
+            google_place_id: validatedAddress.place_id || null,
+            address_label: autoLabel
+          }
+        }
+      });
+      console.log('🛒 [AddressValidated] APRÈS update session (non sauvegardée) - Panier:', JSON.stringify(updatedSession?.context?.cartItems || []));
+      console.log('💰 [AddressValidated] APRÈS update session (non sauvegardée) - Total:', updatedSession?.context?.cartTotal);
+      
+    }
+    
+    // Procéder directement à la confirmation/enregistrement de commande
+    console.log('🚀 [AddressValidated] Appel handleOrderConfirmation avec session...');
+    console.log('🛒 [AddressValidated] Session pour handleOrderConfirmation - Panier:', JSON.stringify(session.context?.cartItems || []));
+    console.log('💰 [AddressValidated] Session pour handleOrderConfirmation - Total:', session.context?.cartTotal);
+    await handleOrderConfirmation(phoneNumber, session, '99');
+  } catch (error) {
+    console.error('❌ [AddressValidated] Erreur:', error);
+    await whatsapp.sendMessage(phoneNumber, 'Erreur lors de la validation d\'adresse. Veuillez réessayer.');
+  }
+}
+
+/**
+ * Gérer la saisie du label de l'adresse
+ */
+async function handleAddressLabelInput(phoneNumber: string, session: any, message: string) {
+  try {
+    const label = message.trim();
+    console.log(`🏷️ [AddressLabel] Label saisi: "${label}"`);
+    
+    if (!label || label.toLowerCase() === 'annuler') {
+      await initiateDeliveryAddressProcess(phoneNumber, session);
+      return;
+    }
+    
+    if (label.length < 2 || label.length > 50) {
+      await whatsapp.sendMessage(phoneNumber, '⚠️ **Nom invalide**\n\nLe nom doit contenir entre 2 et 50 caractères.\n\n*Exemples: Maison, Bureau, Chez Paul*\n\nTapez le nom pour cette adresse:');
+      return;
+    }
+    
+    // Sauvegarder l'adresse en base
+    const validatedAddress = session.context.validatedAddress;
+    console.log('💾 [AddressLabel] Sauvegarde en base...');
+    
+    const savedAddress = await addressManager.saveCustomerAddress(
+      phoneNumber,
+      validatedAddress,
+      label
+    );
+    
+    if (savedAddress) {
+      console.log(`✅ [AddressLabel] Adresse sauvegardée avec ID: ${savedAddress.id}`);
+      
+      // Mettre à jour la session avec l'adresse sauvegardée et procéder à la confirmation de commande
+      await SimpleSession.update(session.id, {
+        state: 'CONFIRMING_ORDER',
+        context: {
+          ...session.context,
+          selectedDeliveryAddress: savedAddress
+        }
+      });
+      
+      await whatsapp.sendMessage(phoneNumber, `💾 **Adresse "${label}" sauvegardée !**\n\n🚀 Finalisation de votre commande...`);
+      
+      // Procéder à la confirmation de commande
+      await handleOrderConfirmation(phoneNumber, session, '99');
+    } else {
+      console.error('❌ [AddressLabel] Erreur sauvegarde adresse');
+      await whatsapp.sendMessage(phoneNumber, 'Erreur lors de la sauvegarde. Votre commande sera finalisée avec l\'adresse saisie.');
+      
+      // Procéder quand même à la confirmation avec l'adresse non sauvegardée
+      await SimpleSession.update(session.id, {
+        state: 'CONFIRMING_ORDER',
+        context: {
+          ...session.context,
+          selectedDeliveryAddress: {
+            id: null,
+            full_address: validatedAddress.formatted_address,
+            address_label: label
+          }
+        }
+      });
+      
+      await handleOrderConfirmation(phoneNumber, session, '99');
+    }
+  } catch (error) {
+    console.error('❌ [AddressLabel] Erreur:', error);
+    await whatsapp.sendMessage(phoneNumber, 'Erreur lors de la saisie du nom. Veuillez réessayer.');
+  }
+}

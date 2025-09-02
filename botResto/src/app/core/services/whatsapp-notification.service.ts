@@ -33,7 +33,7 @@ export class WhatsAppNotificationService {
 📞 Restaurant: {restaurantPhone}
 
 🏠 Mode: {deliveryMode}
-📍 Distance: {distance}
+{conditionalDeliveryInfo}
 💳 Paiement: {paymentMethod}
 
 💰 *Votre commande:*
@@ -41,7 +41,7 @@ export class WhatsAppNotificationService {
 
 ────────────────────
 💰 Sous-total: {subtotal}
-🚛 Frais livraison: {deliveryFee}
+{conditionalDeliveryFee}
 💳 *TOTAL À PAYER: {total}*
 
 ⏱️ Temps de préparation: 15-25 min
@@ -77,9 +77,7 @@ export class WhatsAppNotificationService {
 💰 *TOTAL À PAYER: {total}*
 💡 Préparez l'appoint si possible
 
-🏍️ Recherche de livreur en cours...
-🔐 *Code validation: {validationCode}*
-⏱️ Livraison estimée: 30-40 min
+{conditionalReadyInfo}
 
 {restaurantName}`,
 
@@ -320,6 +318,39 @@ Votre avis nous intéresse.
   }
 
   /**
+   * Génère le contenu conditionnel selon le mode de livraison
+   * @param deliveryMode Mode de livraison
+   * @param validationCode Code de validation
+   * @returns Objet avec les contenus conditionnels
+   */
+  private generateConditionalContent(deliveryMode?: string, validationCode?: string): {
+    conditionalDeliveryInfo: string;
+    conditionalDeliveryFee: string;
+    conditionalReadyInfo: string;
+  } {
+    const isDelivery = deliveryMode?.toLowerCase() === 'livraison';
+    const isPickup = deliveryMode?.toLowerCase() === 'à emporter';
+    const isDineIn = deliveryMode?.toLowerCase() === 'sur place';
+    
+    return {
+      conditionalDeliveryInfo: isDelivery ? '📍 Distance: {distance}' : '',
+      conditionalDeliveryFee: isDelivery ? '🚛 Frais livraison: {deliveryFee}' : '',
+      conditionalReadyInfo: isDelivery ? 
+        `🏍️ Recherche de livreur en cours...
+🔐 *Code validation: ${validationCode || '{validationCode}'}*
+⏱️ Livraison estimée: 30-40 min` :
+        isPickup ? 
+        `🏃‍♂️ *Votre commande vous attend !*
+🔐 *Code validation: ${validationCode || '{validationCode}'}*
+📍 À récupérer au comptoir` :
+        isDineIn ?
+        `🍽️ *Votre table sera servie sous peu*
+📍 Service à table` :
+        `🔐 *Code validation: ${validationCode || '{validationCode}'}*`
+    };
+  }
+
+  /**
    * Remplit un template avec les données fournies
    * @param template Template avec placeholders {variable}
    * @param data Données à injecter
@@ -328,16 +359,26 @@ Votre avis nous intéresse.
   private fillTemplate(template: string, data: any): string {
     let filled = template;
     
-    Object.keys(data).forEach(key => {
-      const value = data[key];
+    // Générer le contenu conditionnel
+    const conditionalContent = this.generateConditionalContent(data.deliveryMode, data.validationCode);
+    
+    // Ajouter le contenu conditionnel aux données
+    const enrichedData = {
+      ...data,
+      ...conditionalContent
+    };
+    
+    Object.keys(enrichedData).forEach(key => {
+      const value = enrichedData[key];
       if (value !== undefined && value !== null) {
         const regex = new RegExp(`{${key}}`, 'g');
         filled = filled.replace(regex, value.toString());
       }
     });
     
-    // Nettoyer les placeholders non remplis (optionnel)
+    // Nettoyer les placeholders non remplis et les lignes vides
     filled = filled.replace(/{[^}]+}/g, '');
+    filled = filled.replace(/\n\s*\n/g, '\n'); // Supprimer les lignes vides multiples
     
     return filled;
   }
@@ -363,13 +404,25 @@ Votre avis nous intéresse.
   }
 
   /**
-   * Formate un prix en GNF
+   * Formate un prix avec currency dynamique
    * @param amount Montant numérique
+   * @param currency Devise (EUR, GNF, etc.)
    * @returns Prix formaté
    */
-  private formatPrice(amount: number): string {
-    return new Intl.NumberFormat('fr-GN', {
+  private formatPrice(amount: number, currency: string = 'GNF'): string {
+    const formatted = new Intl.NumberFormat('fr-FR', {
       minimumFractionDigits: 0
-    }).format(amount) + ' GNF';
+    }).format(amount);
+    
+    // Mapping des devises vers leurs symboles
+    const currencySymbols: Record<string, string> = {
+      'GNF': 'GNF',
+      'EUR': '€',
+      'USD': '$',
+      'XOF': 'FCFA'
+    };
+    
+    const symbol = currencySymbols[currency] || currency;
+    return `${formatted} ${symbol}`;
   }
 }

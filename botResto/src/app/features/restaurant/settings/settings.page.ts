@@ -7,6 +7,17 @@ import { DeliveryService, DeliveryUser, CreateDeliveryUserRequest, WhatsAppRespo
 import { MenuService, MenuItem, CreateMenuItemRequest, MenuItemsStats } from '../../../core/services/menu.service';
 import { ModalController, ToastController, AlertController } from '@ionic/angular';
 
+interface RestaurantCategory {
+  id?: string;
+  restaurant_id: string;
+  category_key: string;
+  category_name: string;
+  emoji: string;
+  ordre: number;
+  active: boolean;
+  created_at?: string;
+}
+
 @Component({
   selector: 'app-settings',
   templateUrl: './settings.page.html',
@@ -43,7 +54,7 @@ export class SettingsPage implements OnInit, OnDestroy {
   paymentModesUpdateSuccess = false;
   
   // Navigation
-  currentTab: 'restaurant' | 'drivers' | 'menus' | 'delivery' = 'restaurant';
+  currentTab: 'restaurant' | 'drivers' | 'menus' | 'delivery' | 'categories' = 'restaurant';
   
   // Delivery management
   drivers: DeliveryUser[] = [];
@@ -58,7 +69,7 @@ export class SettingsPage implements OnInit, OnDestroy {
   filteredMenuItems: MenuItem[] = [];
   menuStats: MenuItemsStats | null = null;
   selectedCategory: string = 'all';
-  availableCategories = this.menuService.getAvailableCategories();
+  availableCategories: Array<{value: string, label: string, icon: string, active: boolean}> = [];
   newMenuItem = {
     nom_plat: '',
     description: '',
@@ -69,6 +80,25 @@ export class SettingsPage implements OnInit, OnDestroy {
   };
   isLoadingMenuItems = false;
   showNewMenuItemForm = false;
+
+  // Categories management
+  restaurantCategories: RestaurantCategory[] = [];
+  categoriesStats = {
+    total: 0,
+    active: 0,
+    inactive: 0
+  };
+  newCategory = {
+    category_key: '',
+    category_name: '',
+    emoji: '',
+    ordre: 1
+  };
+  isLoadingCategories = false;
+  showNewCategoryForm = false;
+  editingCategory: RestaurantCategory | null = null;
+  showEmojiPicker = false;
+  availableEmojis = ['🍕', '🍔', '🥪', '🌮', '🍝', '🥗', '🍽️', '🫓', '🍟', '🥤', '🍰', '🥘', '🍜', '🌯', '🥙', '🍛', '🍱', '🍣', '🍤', '🥟'];
   
   private subscriptions: Subscription[] = [];
 
@@ -121,6 +151,9 @@ export class SettingsPage implements OnInit, OnDestroy {
 
       // Charger les modes de paiement depuis la base de données
       await this.loadPaymentModes(restaurantId);
+
+      // Charger les catégories pour les formulaires de menu ET pour l'affichage
+      await this.loadCategoriesForMenus();
 
       this.ensureCompleteSchedule();
     } catch (error) {
@@ -333,7 +366,7 @@ export class SettingsPage implements OnInit, OnDestroy {
   // NAVIGATION
   // =====================================
 
-  switchTab(tab: 'restaurant' | 'drivers' | 'menus' | 'delivery') {
+  async switchTab(tab: 'restaurant' | 'drivers' | 'menus' | 'delivery' | 'categories') {
     this.currentTab = tab;
     
     // Si on passe à l'onglet livreurs, charger les données
@@ -342,8 +375,13 @@ export class SettingsPage implements OnInit, OnDestroy {
     }
     
     // Si on passe à l'onglet menus, charger les données
-    if (tab === 'menus' && this.menuItems.length === 0) {
-      this.loadMenuItems();
+    if (tab === 'menus') {
+      if (this.availableCategories.length === 0) {
+        await this.loadCategoriesForMenus();
+      }
+      if (this.menuItems.length === 0) {
+        this.loadMenuItems();
+      }
     }
     
     // Si on passe à l'onglet modes de livraison, charger les données
@@ -352,6 +390,11 @@ export class SettingsPage implements OnInit, OnDestroy {
       if (user?.restaurantId) {
         this.loadDeliveryModes(user.restaurantId);
       }
+    }
+    
+    // Si on passe à l'onglet catégories, charger les données
+    if (tab === 'categories' && this.restaurantCategories.length === 0) {
+      this.loadCategories();
     }
     
     // Animation subtile
@@ -654,7 +697,8 @@ export class SettingsPage implements OnInit, OnDestroy {
     const modal = await this.modalController.create({
       component: EditMenuItemModalComponent,
       componentProps: {
-        menuItem: item
+        menuItem: item,
+        availableCategories: this.availableCategories.filter(cat => cat.value !== 'all')
       },
       cssClass: 'edit-menu-modal'
     });
@@ -718,7 +762,19 @@ export class SettingsPage implements OnInit, OnDestroy {
   }
 
   getCategoryCount(category: string): number {
-    return this.menuItems.filter(item => item.categorie === category).length;
+    const count = this.menuItems.filter(item => item.categorie === category).length;
+    console.log(`🔍 getCategoryCount("${category}"): ${count} items found`);
+    console.log(`📋 Total menuItems: ${this.menuItems.length}`);
+    
+    // Debug: afficher tous les items de cette catégorie
+    const itemsInCategory = this.menuItems.filter(item => item.categorie === category);
+    console.log(`🍽️ Items in category "${category}":`, itemsInCategory.map(item => ({
+      id: item.id,
+      nom_plat: item.nom_plat,
+      categorie: item.categorie
+    })));
+    
+    return count;
   }
 
   getFilterTitle(): string {
@@ -1003,5 +1059,324 @@ export class SettingsPage implements OnInit, OnDestroy {
       ]
     });
     await alert.present();
+  }
+
+  // =====================================
+  // CATEGORIES MANAGEMENT
+  // =====================================
+
+  async loadCategories() {
+    if (!this.restaurantStatus) return;
+    
+    console.log(`🏷️ Loading categories for restaurant ${this.restaurantStatus.id}`);
+    this.isLoadingCategories = true;
+    try {
+      const { data, error } = await this.supabase
+        .from('restaurant_categories')
+        .select('*')
+        .eq('restaurant_id', this.restaurantStatus.id)
+        .order('ordre');
+
+      if (error) {
+        console.error('Error loading categories:', error);
+        this.showToast('Erreur lors du chargement des catégories', 'danger');
+        this.loadFallbackCategories();
+        return;
+      }
+
+      this.restaurantCategories = data || [];
+      this.updateCategoriesStats();
+      this.updateAvailableCategories();
+      console.log(`✅ Loaded ${this.restaurantCategories.length} categories`);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      this.showToast('Erreur lors du chargement des catégories', 'danger');
+      this.loadFallbackCategories();
+    } finally {
+      this.isLoadingCategories = false;
+    }
+  }
+
+  private updateCategoriesStats() {
+    this.categoriesStats = {
+      total: this.restaurantCategories.length,
+      active: this.restaurantCategories.filter(c => c.active).length,
+      inactive: this.restaurantCategories.filter(c => !c.active).length
+    };
+  }
+
+  async createCategory() {
+    if (!this.restaurantStatus || !this.newCategory.category_key || !this.newCategory.category_name || !this.newCategory.emoji) {
+      this.showToast('Veuillez remplir tous les champs obligatoires', 'warning');
+      return;
+    }
+
+    // Vérifier si la clé existe déjà
+    if (this.restaurantCategories.some(c => c.category_key === this.newCategory.category_key)) {
+      this.showToast('Cette clé de catégorie existe déjà', 'danger');
+      return;
+    }
+
+    try {
+      const { data, error } = await this.supabase
+        .from('restaurant_categories')
+        .insert({
+          restaurant_id: this.restaurantStatus.id,
+          category_key: this.newCategory.category_key,
+          category_name: this.newCategory.category_name,
+          emoji: this.newCategory.emoji,
+          ordre: this.newCategory.ordre,
+          active: true
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating category:', error);
+        this.showToast('Erreur lors de la création de la catégorie', 'danger');
+        return;
+      }
+
+      this.showToast(`✅ Catégorie "${data.category_name}" créée avec succès`, 'success');
+      
+      // Reset form
+      this.newCategory = {
+        category_key: '',
+        category_name: '',
+        emoji: '',
+        ordre: this.restaurantCategories.length + 1
+      };
+      
+      this.showNewCategoryForm = false;
+      await this.loadCategories();
+      
+      // Reload menu items to update category filtering
+      if (this.menuItems.length > 0) {
+        await this.loadMenuItems();
+      }
+
+    } catch (error) {
+      console.error('Error creating category:', error);
+      this.showToast('Erreur lors de la création de la catégorie', 'danger');
+    }
+  }
+
+  async updateCategory(category: RestaurantCategory) {
+    try {
+      const { error } = await this.supabase
+        .from('restaurant_categories')
+        .update({
+          category_name: category.category_name,
+          emoji: category.emoji,
+          ordre: category.ordre,
+          active: category.active
+        })
+        .eq('id', category.id);
+
+      if (error) {
+        console.error('Error updating category:', error);
+        this.showToast('Erreur lors de la mise à jour', 'danger');
+        return;
+      }
+
+      this.showToast(`✅ Catégorie "${category.category_name}" mise à jour`, 'success');
+      this.editingCategory = null;
+      await this.loadCategories();
+
+    } catch (error) {
+      console.error('Error updating category:', error);
+      this.showToast('Erreur lors de la mise à jour', 'danger');
+    }
+  }
+
+  async toggleCategoryStatus(category: RestaurantCategory) {
+    try {
+      const newStatus = !category.active;
+      const { error } = await this.supabase
+        .from('restaurant_categories')
+        .update({ active: newStatus })
+        .eq('id', category.id);
+
+      if (error) {
+        console.error('Error toggling category status:', error);
+        this.showToast('Erreur lors de la mise à jour du statut', 'danger');
+        return;
+      }
+
+      const statusText = newStatus ? 'activée' : 'désactivée';
+      this.showToast(`✅ Catégorie "${category.category_name}" ${statusText}`, 'success');
+      await this.loadCategories();
+
+    } catch (error) {
+      console.error('Error toggling category status:', error);
+      this.showToast('Erreur lors de la mise à jour', 'danger');
+    }
+  }
+
+  async deleteCategory(category: RestaurantCategory) {
+    const alert = await this.alertController.create({
+      header: 'Supprimer la catégorie',
+      message: `Êtes-vous sûr de vouloir supprimer la catégorie "${category.category_name}" ? Cette action est irréversible.`,
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        },
+        {
+          text: 'Supprimer',
+          role: 'destructive',
+          handler: async () => {
+            try {
+              const { error } = await this.supabase
+                .from('restaurant_categories')
+                .delete()
+                .eq('id', category.id);
+
+              if (error) {
+                console.error('Error deleting category:', error);
+                this.showToast('Erreur lors de la suppression', 'danger');
+                return;
+              }
+
+              this.showToast(`🗑️ Catégorie "${category.category_name}" supprimée`, 'success');
+              await this.loadCategories();
+
+            } catch (error) {
+              console.error('Error deleting category:', error);
+              this.showToast('Erreur lors de la suppression', 'danger');
+            }
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  editCategory(category: RestaurantCategory) {
+    this.editingCategory = { ...category };
+  }
+
+  cancelEdit() {
+    this.editingCategory = null;
+  }
+
+  toggleNewCategoryForm() {
+    this.showNewCategoryForm = !this.showNewCategoryForm;
+    if (this.showNewCategoryForm) {
+      this.newCategory.ordre = this.restaurantCategories.length + 1;
+    }
+  }
+
+  async refreshCategories() {
+    await this.loadCategories();
+    this.showToast('✅ Catégories actualisées', 'success', 1000);
+  }
+
+  getCategoryStatusColor(active: boolean): string {
+    return active ? 'success' : 'medium';
+  }
+
+  getCategoryStatusText(active: boolean): string {
+    return active ? 'Active' : 'Inactive';
+  }
+
+  openEmojiPicker() {
+    this.showEmojiPicker = !this.showEmojiPicker;
+  }
+
+  selectEmoji(emoji: string) {
+    this.newCategory.emoji = emoji;
+    this.showEmojiPicker = false;
+  }
+
+  onCategoryKeyInput(event: any) {
+    let value = event.target.value;
+    // Convert to lowercase and replace spaces with underscores
+    value = value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    this.newCategory.category_key = value;
+  }
+
+  getNextCategoryOrder(): number {
+    return this.restaurantCategories.length + 1;
+  }
+
+  // Computed property for stats compatibility with template
+  get categoryStats() {
+    return {
+      total_categories: this.categoriesStats.total,
+      total_products: this.menuStats?.total_items || 0,
+      avg_products_per_category: this.categoriesStats.total > 0 ? Math.round((this.menuStats?.total_items || 0) / this.categoriesStats.total) : 0,
+      last_updated: this.formatDate(new Date().toISOString())
+    };
+  }
+
+  getShortDateFormat(): string {
+    const now = new Date();
+    return now.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  private updateAvailableCategories() {
+    // Convert restaurant categories to the format expected by the menu forms
+    this.availableCategories = this.restaurantCategories
+      .map(cat => ({
+        value: cat.category_key,
+        label: cat.category_name,
+        icon: 'pricetag', // Default icon, could be enhanced later
+        active: cat.active
+      }));
+    
+    // Add 'all' option for filtering
+    this.availableCategories.unshift({
+      value: 'all',
+      label: 'Toutes les catégories',
+      icon: 'list',
+      active: true
+    });
+  }
+
+  private loadFallbackCategories() {
+    // Fallback to hardcoded categories if database fails
+    const fallbackCategories = this.menuService.getAvailableCategories();
+    this.availableCategories = fallbackCategories.map(cat => ({
+      ...cat,
+      active: true // Fallback categories are considered active by default
+    }));
+  }
+
+  async loadCategoriesForMenus() {
+    if (!this.restaurantStatus) return;
+    
+    console.log(`🏷️ Loading categories for menus for restaurant ${this.restaurantStatus.id}`);
+    try {
+      const { data, error } = await this.supabase
+        .from('restaurant_categories')
+        .select('*')
+        .eq('restaurant_id', this.restaurantStatus.id)
+        .order('ordre');
+
+      if (error) {
+        console.error('Error loading categories for menus:', error);
+        this.loadFallbackCategories();
+        return;
+      }
+
+      console.log(`📊 Raw restaurant_categories data:`, data);
+      
+      // Mettre à jour availableCategories pour les menus
+      this.restaurantCategories = data || [];
+      this.updateAvailableCategories();
+      
+      console.log(`✅ Loaded ${this.restaurantCategories.length} categories for menus`);
+      console.log(`🏷️ Final availableCategories:`, this.availableCategories);
+    } catch (error) {
+      console.error('Error loading categories for menus:', error);
+      this.loadFallbackCategories();
+    }
   }
 }

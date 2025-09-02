@@ -10,6 +10,7 @@ import { MenuItem, MenuService, UpdateMenuItemRequest } from '../../../../../cor
 })
 export class EditMenuItemModalComponent implements OnInit {
   @Input() menuItem!: MenuItem;
+  @Input() availableCategories: Array<{value: string, label: string, icon: string}> = [];
 
   editForm = {
     nom_plat: '',
@@ -19,8 +20,6 @@ export class EditMenuItemModalComponent implements OnInit {
     photo_url: '',
     disponible: true
   };
-
-  availableCategories = this.menuService.getAvailableCategories();
   isLoading = false;
 
   constructor(
@@ -30,6 +29,11 @@ export class EditMenuItemModalComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    // Use fallback categories if none provided
+    if (this.availableCategories.length === 0) {
+      this.availableCategories = this.menuService.getAvailableCategories();
+    }
+
     if (this.menuItem) {
       this.editForm = {
         nom_plat: this.menuItem.nom_plat || '',

@@ -1,0 +1,260 @@
+// Orders France page styles - Clean design sans dégradés
+.welcome-section {
+  padding: 20px;
+  margin-bottom: 20px;
+
+  .restaurant-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+
+    .restaurant-icon {
+      font-size: 3rem;
+      color: var(--ion-color-primary);
+    }
+
+    .info-text {
+      h2 {
+        margin: 0 0 5px 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--ion-color-medium);
+      }
+    }
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  height: 50vh;
+
+  ion-spinner {
+    margin-bottom: 1rem;
+  }
+
+  p {
+    color: var(--ion-color-medium);
+    text-align: center;
+  }
+}
+
+.no-orders-card {
+  margin: 1rem;
+  text-align: center;
+
+  .no-orders-content {
+    padding: 2rem;
+
+    .no-orders-icon {
+      font-size: 4rem;
+      color: var(--ion-color-medium);
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      color: var(--ion-color-dark);
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: var(--ion-color-medium);
+    }
+  }
+}
+
+.order-card {
+  margin: 0.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    .order-info {
+      flex: 1;
+
+      ion-card-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+
+      ion-card-subtitle {
+        font-size: 0.875rem;
+        opacity: 0.7;
+      }
+    }
+
+    .order-badges {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      align-items: flex-end;
+
+      .status-badge {
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+.order-items {
+  margin-bottom: 1rem;
+
+  h4 {
+    margin-bottom: 0.5rem;
+    color: var(--ion-color-dark);
+    font-size: 1rem;
+  }
+
+  .item-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+
+    .item-name {
+      flex: 1;
+    }
+
+    .item-price {
+      font-weight: 600;
+      color: var(--ion-color-primary);
+    }
+  }
+}
+
+.order-totals {
+  border-top: 1px solid var(--ion-color-light);
+  padding-top: 0.5rem;
+  margin-bottom: 1rem;
+
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+
+    &.total-final {
+      border-top: 1px solid var(--ion-color-light);
+      padding-top: 0.5rem;
+      margin-top: 0.5rem;
+      font-size: 1.1rem;
+
+      span {
+        color: var(--ion-color-primary);
+      }
+    }
+  }
+}
+
+.delivery-info {
+  margin-bottom: 1rem;
+
+  .delivery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+
+    h4 {
+      margin: 0;
+      color: var(--ion-color-dark);
+      font-size: 1rem;
+    }
+
+    .maps-button {
+      --padding-start: 8px;
+      --padding-end: 8px;
+      height: 32px;
+    }
+  }
+
+  h4 {
+    margin-bottom: 0.5rem;
+    color: var(--ion-color-dark);
+    font-size: 1rem;
+  }
+
+  p {
+    margin: 0.25rem 0;
+    font-size: 0.875rem;
+
+    strong {
+      color: var(--ion-color-dark);
+    }
+  }
+
+  // Styles spécifiques pour le code de validation (FRANCE)
+  .validation-code {
+    background: var(--ion-color-light);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+
+    .validation-code-badge {
+      font-family: monospace;
+      font-size: 1.1rem;
+      font-weight: bold;
+      padding: 0.5rem 1rem;
+      margin-left: 0.5rem;
+    }
+
+    .validation-status {
+      margin-top: 0.5rem;
+      
+      ion-badge {
+        font-size: 0.75rem;
+        
+        ion-icon {
+          margin-right: 4px;
+        }
+      }
+    }
+  }
+}
+
+.client-note {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+
+  h4 {
+    margin-bottom: 0.5rem;
+    color: var(--ion-color-dark);
+    font-size: 1rem;
+  }
+
+  .note-text {
+    font-style: italic;
+    color: var(--ion-color-medium-shade);
+    margin: 0;
+  }
+}
+
+.order-actions {
+  .status-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+
+    ion-button {
+      --padding-start: 12px;
+      --padding-end: 12px;
+      height: 32px;
+      font-size: 0.875rem;
+    }
+  }
+}

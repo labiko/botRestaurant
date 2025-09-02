@@ -2,6 +2,17 @@
   --background: var(--background-gray);
 }
 
+// Categories désactivées
+.disabled-category {
+  opacity: 0.7;
+  
+  .inactive-label {
+    font-size: 0.85em;
+    font-style: italic;
+    color: var(--ion-color-medium);
+  }
+}
+
 // Delivery Fee Configuration
 .delivery-fee-section {
   margin: 24px 0;
@@ -1080,6 +1091,14 @@
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          
+          &.stat-time {
+            font-size: 0.8rem;
+            font-weight: var(--font-medium);
+            width: 100%;
+            max-width: 80px;
+            text-align: center;
+          }
         }
         
         .stat-label {
@@ -1638,6 +1657,104 @@
         }
       }
     }
+  }
+}
+
+// =====================================
+// CATEGORIES INLINE EDITING
+// =====================================
+
+.category-card {
+  margin-bottom: 16px;
+  background: var(--ion-color-light);
+  border-radius: 12px;
+  padding: 16px;
+  border-left: 4px solid var(--ion-color-tertiary);
+
+  .category-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .category-visual {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .category-emoji {
+      font-size: 24px;
+      width: 32px;
+      text-align: center;
+    }
+
+    .category-details {
+      h4 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+      }
+
+      .category-key {
+        margin: 0;
+        font-size: 0.8rem;
+        color: var(--ion-color-medium);
+        font-family: monospace;
+      }
+    }
+  }
+
+  .category-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .category-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+  }
+
+  // Inline editing styles
+  .category-edit-form {
+    margin-bottom: 12px;
+
+    .edit-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      ion-item {
+        --padding-start: 0;
+        --padding-end: 0;
+        --inner-padding-start: 12px;
+        --inner-padding-end: 12px;
+        --background: var(--ion-color-white);
+        border-radius: 8px;
+        margin-bottom: 8px;
+
+        ion-input {
+          --padding-start: 0;
+          --padding-end: 0;
+        }
+
+        .emoji-input {
+          text-align: center;
+          font-size: 1.2rem;
+        }
+      }
+    }
+  }
+
+  .category-edit-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid var(--ion-color-light-shade);
   }
 }
 

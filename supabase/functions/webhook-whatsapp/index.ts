@@ -44,6 +44,17 @@ interface WebhookData {
   idMessage?: string;
 }
 
+// ÉTAPE 3 : Interface TypeScript pour les catégories de restaurant
+interface RestaurantCategory {
+  id?: string;
+  restaurant_id: string;
+  category_key: string;
+  category_name: string;
+  emoji: string;
+  ordre: number;
+  active: boolean;
+}
+
 // Service WhatsApp simplifié
 class SimpleWhatsApp {
   private baseUrl = `https://api.green-api.com/waInstance${greenApiInstanceId}`;
@@ -226,11 +237,98 @@ function formatPrice(amount: number, currency: string = 'GNF'): string {
   return `${formatted} ${symbol}`;
 }
 
+// ÉTAPE 3 : Nouvelles fonctions (SANS toucher l'existant)
+
+// NOUVELLE fonction - n'affecte pas l'ancien code
+async function getRestaurantCategories(restaurantId: string): Promise<RestaurantCategory[]> {
+  const { data, error } = await supabase
+    .from('restaurant_categories')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .eq('active', true)
+    .order('ordre');
+    
+  if (error) {
+    console.error('Erreur récupération catégories:', error);
+    // FALLBACK : Retourner les catégories par défaut (0 régression)
+    return getDefaultCategories();
+  }
+  
+  return data || getDefaultCategories();
+}
+
+// NOUVELLE fonction de fallback
+function getDefaultCategories(): RestaurantCategory[] {
+  return [
+    { restaurant_id: '', category_key: 'pizza', category_name: 'PIZZAS', emoji: '🍕', ordre: 1, active: true },
+    { restaurant_id: '', category_key: 'burger', category_name: 'BURGERS', emoji: '🍔', ordre: 2, active: true },
+    { restaurant_id: '', category_key: 'sandwich', category_name: 'SANDWICHS', emoji: '🥪', ordre: 3, active: true },
+    { restaurant_id: '', category_key: 'taco', category_name: 'TACOS', emoji: '🌮', ordre: 4, active: true },
+    { restaurant_id: '', category_key: 'pates', category_name: 'PÂTES', emoji: '🍝', ordre: 5, active: true },
+    { restaurant_id: '', category_key: 'salade', category_name: 'SALADES', emoji: '🥗', ordre: 6, active: true },
+    { restaurant_id: '', category_key: 'assiette', category_name: 'ASSIETTES', emoji: '🍽️', ordre: 7, active: true },
+    { restaurant_id: '', category_key: 'naan', category_name: 'NAANS', emoji: '🫓', ordre: 8, active: true },
+    { restaurant_id: '', category_key: 'accompagnement', category_name: 'ACCOMPAGNEMENTS', emoji: '🍟', ordre: 9, active: true },
+    { restaurant_id: '', category_key: 'entree', category_name: 'ENTRÉES', emoji: '🥗', ordre: 10, active: true },
+    { restaurant_id: '', category_key: 'dessert', category_name: 'DESSERTS', emoji: '🍰', ordre: 11, active: true },
+    { restaurant_id: '', category_key: 'boisson', category_name: 'BOISSONS', emoji: '🥤', ordre: 12, active: true }
+  ];
+}
+
+// NOUVELLE fonction centralisée pour les emojis (INCLUT les catégories inactives)
+async function getCategoryEmojis(restaurantId: string): Promise<Record<string, string>> {
+  try {
+    // Récupérer TOUTES les catégories (actives ET inactives) pour les emojis
+    const { data: allCategories, error } = await supabase
+      .from('restaurant_categories')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('ordre');
+      
+    if (error) throw error;
+    
+    const emojiMap: Record<string, string> = {};
+    
+    if (allCategories && allCategories.length > 0) {
+      allCategories.forEach(cat => {
+        emojiMap[cat.category_key] = `${cat.emoji} ${cat.category_name}`;
+      });
+      return emojiMap;
+    }
+    
+    // Si pas de catégories personnalisées, fallback vers les défauts
+    return getDefaultEmojiMap();
+  } catch (error) {
+    // FALLBACK AUTOMATIQUE - Pas de régression !
+    console.warn('Fallback vers catégories par défaut');
+    return getDefaultEmojiMap();
+  }
+}
+
+// Fonction helper pour le fallback des emojis
+function getDefaultEmojiMap(): Record<string, string> {
+  return {
+    'pizza': '🍕 PIZZAS',
+    'burger': '🍔 BURGERS',
+    'sandwich': '🥪 SANDWICHS',
+    'taco': '🌮 TACOS',
+    'pates': '🍝 PÂTES',
+    'salade': '🥗 SALADES',
+    'assiette': '🍽️ ASSIETTES',
+    'naan': '🫓 NAANS',
+    'accompagnement': '🍟 ACCOMPAGNEMENTS',
+    'entree': '🥗 ENTRÉES',
+    'dessert': '🍰 DESSERTS',
+    'boisson': '🥤 BOISSONS'
+  };
+}
+
+
 // ✅ NOUVEAU : Fonction de détection format téléphone restaurant
 function isPhoneNumberFormat(message: string): boolean {
-  // Détecte un numéro de téléphone entre PHONE_NUMBER_LENGTH_MIN et PHONE_NUMBER_LENGTH_MAX
+  // Détecte un numéro de téléphone avec plus de 6 chiffres
   const cleanMessage = message.trim();
-  const phoneRegex = new RegExp(`^\\d{${PHONE_NUMBER_LENGTH_MIN},${PHONE_NUMBER_LENGTH_MAX}}$`);
+  const phoneRegex = /^\d{7,}$/; // Au moins 7 chiffres, que des chiffres
   return phoneRegex.test(cleanMessage);
 }
 
@@ -267,6 +365,7 @@ async function getDeliveryModeMessage(restaurantId: string): Promise<string> {
   }
   
   message += options.join('\n') + '\n\nRépondez avec le numéro de votre choix.';
+  message += '\n❌ Tapez "annuler" pour recommencer';
   return message;
 }
 
@@ -294,20 +393,23 @@ async function getPaymentModeMessage(restaurantId: string, deliveryMode: string)
   }
   
   if (restaurant.allow_pay_later) {
-    // Adapter le texte selon le mode de livraison
+    // Adapter le texte selon le mode de livraison et la currency
+    const isEUR = restaurant.currency === 'EUR';
+    const paymentMethods = isEUR ? 'cash, carte' : 'cash, o-money';
+    
     let laterText = "";
     switch (deliveryMode) {
       case 'sur_place':
-        laterText = "À la fin du repas (cash)";
+        laterText = `À la fin du repas (${paymentMethods})`;
         break;
       case 'a_emporter':
-        laterText = "À la récupération (cash)";
+        laterText = `À la récupération (${paymentMethods})`;
         break;
       case 'livraison':
-        laterText = "À la livraison (cash,o-money)";
+        laterText = `À la livraison (${paymentMethods})`;
         break;
       default:
-        laterText = "Plus tard (cash)";
+        laterText = `Plus tard (${paymentMethods})`;
     }
     options.push(`${optionNumber}️⃣ ${laterText}`);
     optionNumber++;
@@ -877,28 +979,36 @@ async function handleRestaurantSelection(phoneNumber: string, session: any, sele
 }
 
 async function showSimpleMenu(phoneNumber: string, restaurant: any, session: any) {
-  // Récupérer le vrai menu depuis la base de données avec un ordre déterministe
-  const { data: menuItems } = await supabase
+  // Récupérer tous les menus puis filtrer par catégories actives
+  const { data: allMenuItems } = await supabase
     .from('menus')
     .select('*')
     .eq('restaurant_id', restaurant.id)
     .eq('disponible', true)
     .order('categorie')
-    .order('ordre_affichage')
-    .order('id'); // Ajout d'un tri par ID pour garantir l'ordre déterministe
+    .order('ordre_affichage');
+
+  // Récupérer les catégories actives
+  const activeCategories = await getRestaurantCategories(restaurant.id);
+  const activeCategoryKeys = activeCategories.map(cat => cat.category_key);
+  
+  // Filtrer les menus par catégories actives
+  const menuItems = (allMenuItems || []).filter(item => 
+    activeCategoryKeys.includes(item.categorie)
+  );
+
+  // NOUVEAU: Tous les restaurants utilisent le système catégories
+  await showCategoryMenu(phoneNumber, restaurant, session, menuItems || []);
+  return;
 
   let menuMessage = `📋 Menu du jour - ${restaurant.nom}\n\n`;
   let orderedMenu = [];
   
   if (menuItems && menuItems.length > 0) {
-    const categories = ['entree', 'plat', 'dessert', 'boisson', 'accompagnement'];
-    const categoryEmojis: Record<string, string> = {
-      'entree': '🥗 ENTRÉES',
-      'plat': '🍖 PLATS PRINCIPAUX',
-      'dessert': '🍰 DESSERTS',
-      'boisson': '🥤 BOISSONS',
-      'accompagnement': '🍟 ACCOMPAGNEMENTS'
-    };
+    // ÉTAPE 4.1 - REMPLACER ligne 981 : Utiliser les nouvelles fonctions
+    const restaurantCategories = await getRestaurantCategories(restaurant.id);
+    const categoryEmojis = await getCategoryEmojis(restaurant.id);
+    const categories = restaurantCategories.map(cat => cat.category_key);
 
     let itemIndex = 1;
     
@@ -964,6 +1074,112 @@ Ou tapez "retour" pour changer de restaurant.
   console.log('✅ Menu affiché et session mise à jour');
 }
 
+// NOUVEAU: Fonction pour afficher le menu par catégories
+async function showCategoryMenu(phoneNumber: string, restaurant: any, session: any, menuItems: any[]) {
+  console.log('📂 Affichage menu par catégories pour:', restaurant.nom);
+  
+  // ÉTAPE 5.3 - REMPLACER ligne 1056 : Utiliser la nouvelle fonction
+  const categoriesData: Record<string, any[]> = {};
+  const restaurantCategories = await getRestaurantCategories(restaurant.id);
+  const categoryEmojis = await getCategoryEmojis(restaurant.id);
+
+  // Regrouper les produits par catégorie
+  menuItems.forEach(item => {
+    if (!categoriesData[item.categorie]) {
+      categoriesData[item.categorie] = [];
+    }
+    categoriesData[item.categorie].push(item);
+  });
+
+  // Construire le message des catégories disponibles
+  let categoryMessage = `📋 Menu ${restaurant.nom} - Choisissez une catégorie :\n\n`;
+  const availableCategories: string[] = [];
+  let categoryIndex = 1;
+
+  Object.keys(categoriesData).forEach(categoryKey => {
+    const items = categoriesData[categoryKey];
+    if (items.length > 0) {
+      const categoryName = categoryEmojis[categoryKey] || categoryKey.toUpperCase();
+      categoryMessage += `${categoryIndex}️⃣ ${categoryName} (${items.length} produits)\n`;
+      availableCategories.push(categoryKey);
+      categoryIndex++;
+    }
+  });
+
+  categoryMessage += `\n💡 Tapez le n° de catégorie (ex: 1 pour ${availableCategories[0] || 'première catégorie'})`;
+  categoryMessage += `\n🔄 Tapez "menu" pour voir toutes les catégories`;
+  categoryMessage += `\n❌ Tapez "annuler" pour arrêter`;
+  categoryMessage += `\n💡 ou taper le numéro du resto pour accéder directement.`;
+
+  // Sauvegarder les catégories disponibles dans la session
+  await SimpleSession.update(session.id, {
+    state: 'SELECTING_CATEGORY',
+    context: {
+      ...session.context,
+      selectedRestaurantId: restaurant.id,
+      selectedRestaurantName: restaurant.nom,
+      availableCategories: availableCategories,
+      categoriesData: categoriesData
+    }
+  });
+
+  await whatsapp.sendMessage(phoneNumber, categoryMessage);
+  console.log('✅ Menu catégories affiché');
+}
+
+// NOUVEAU: Fonction pour afficher les produits d'une catégorie
+async function showProductsInCategory(phoneNumber: string, restaurant: any, session: any, categoryKey: string) {
+  console.log('🍕 Affichage produits catégorie:', categoryKey);
+  
+  const categoriesData = session.context.categoriesData || {};
+  const categoryItems = categoriesData[categoryKey] || [];
+  
+  if (categoryItems.length === 0) {
+    await whatsapp.sendMessage(phoneNumber, '❌ Aucun produit disponible dans cette catégorie.');
+    return;
+  }
+
+  // ÉTAPE 5.2 - REMPLACER ligne 1127 : Utiliser la nouvelle fonction
+  const categoryEmojis = await getCategoryEmojis(restaurant.id);
+
+  const categoryName = categoryEmojis[categoryKey] || categoryKey.toUpperCase();
+  let productMessage = `${categoryName} - ${restaurant.nom} (${categoryItems.length} produits)\n\n`;
+  
+  // Créer un menu ordonné pour cette catégorie seulement
+  let orderedMenu: any[] = [];
+  
+  categoryItems.forEach((item, index) => {
+    const displayNumber = (index + 1) <= 9 ? `${index + 1}️⃣` : `(${index + 1})`;
+    const formattedPrice = formatPrice(item.prix, restaurant.currency);
+    productMessage += `${displayNumber} ${item.nom_plat} - ${formattedPrice}\n`;
+    
+    orderedMenu.push({
+      index: index + 1,
+      item: item
+    });
+  });
+
+  productMessage += `\n💡 Pour commander: tapez les numéros`;
+  productMessage += `\nEx: 1,2,2 = 1× ${categoryItems[0]?.nom_plat} + 2× ${categoryItems[1]?.nom_plat}`;
+  productMessage += `\n\n🔙 Tapez "0" pour les catégories`;
+  productMessage += `\n🛒 Tapez "00" pour voir votre commande`;
+  productMessage += `\n💡 Tapez "annuler" pour arrêter, "retour" pour changer ou le numéro du resto pour accéder directement.`;
+
+  // Mettre à jour la session avec l'état VIEWING_CATEGORY
+  await SimpleSession.update(session.id, {
+    state: 'VIEWING_CATEGORY',
+    context: {
+      ...session.context,
+      currentCategory: categoryKey,
+      currentCategoryProducts: categoryItems,
+      menuOrder: orderedMenu  // Compatible avec le système existant
+    }
+  });
+
+  await whatsapp.sendMessage(phoneNumber, productMessage);
+  console.log('✅ Produits de catégorie affichés');
+}
+
 // Fonction pour analyser une commande au format "1,2,3,3"
 function parseOrderCommand(command: string): number[] {
   const numbers = command.split(',')
@@ -994,8 +1210,8 @@ async function handleOrderCommand(phoneNumber: string, session: any, command: st
     return;
   }
 
-  // Créer un objet pour compter les quantités
-  const cart: Record<string, { item: any; quantity: number; displayNumber: number }> = {};
+  // Récupérer le panier existant ou créer un nouveau
+  const cart: Record<string, { item: any; quantity: number; displayNumber: number }> = session.context.cart || {};
 
   // Traiter chaque numéro de la commande en utilisant l'ordre sauvegardé
   for (const itemNumber of orderNumbers) {
@@ -1033,9 +1249,12 @@ async function handleOrderCommand(phoneNumber: string, session: any, command: st
   const restaurantId = session.context.selectedRestaurantId;
   const restaurant = await SimpleRestaurant.getById(restaurantId);
   
-  // Calculer le total
+  // Calculer le total et détecter s'il y avait déjà des articles
+  const previousCartSize = Object.keys(session.context.cart || {}).length;
+  const hasExistingItems = previousCartSize > 0;
+  
   let subtotal = 0;
-  let cartMessage = '🛒 Votre panier:\n\n';
+  let cartMessage = hasExistingItems ? '🛒 Panier mis à jour:\n\n' : '🛒 Votre panier:\n\n';
 
   for (const [itemKey, cartItem] of Object.entries(cart)) {
     const itemTotal = cartItem.item.prix * cartItem.quantity;
@@ -1046,7 +1265,16 @@ async function handleOrderCommand(phoneNumber: string, session: any, command: st
   }
 
   const formattedSubtotal = formatPrice(subtotal, restaurant?.currency);
-  cartMessage += `\n────────────────────\n💰 Sous-total: ${formattedSubtotal}\n\n✅ Confirmer cette commande? (OUI/NON)`;
+  const totalItems = Object.values(cart).reduce((sum: number, item: any) => sum + item.quantity, 0);
+  
+  cartMessage += `\n────────────────────`;
+  cartMessage += `\n💰 Sous-total: ${formattedSubtotal}`;
+  cartMessage += `\n📦 Total: ${totalItems} article${totalItems > 1 ? 's' : ''}`;
+  cartMessage += `\n\nQue voulez-vous faire ?\n`;
+  cartMessage += `\n1️⃣ Finaliser la commande`;
+  cartMessage += `\n2️⃣ Continuer vos achats (garder le panier)`;
+  cartMessage += `\n3️⃣ Recommencer (vider le panier)`;
+  cartMessage += `\n\nTapez votre choix (1, 2 ou 3)`;
 
   await whatsapp.sendMessage(phoneNumber, cartMessage);
 
@@ -1069,22 +1297,58 @@ async function handleOrderConfirmation(phoneNumber: string, session: any, respon
 
   const normalizedResponse = response.toLowerCase().trim();
 
-  if (normalizedResponse === 'oui' || normalizedResponse === 'o' || normalizedResponse === 'yes') {
-    // Commande confirmée, passer au choix du mode
+  if (normalizedResponse === '1') {
+    // 1 = Finaliser la commande (aller aux modes de récupération)
     await handleModeSelection(phoneNumber, session);
-  } else if (normalizedResponse === 'non' || normalizedResponse === 'n' || normalizedResponse === 'no') {
-    // Proposer les options de modification
-    const modifyMessage = `Que souhaitez-vous faire?\n\n1️⃣ Supprimer un article\n2️⃣ Ajouter d'autres articles\n3️⃣ Tout annuler et recommencer\n\nRépondez avec votre choix.`;
+  } else if (normalizedResponse === '2') {
+    // 2 = Continuer vos achats (garder le panier)
+    const restaurant = await SimpleRestaurant.getById(session.context.selectedRestaurantId);
+    const { data: menuItems } = await supabase
+      .from('menus')
+      .select('*')
+      .eq('restaurant_id', restaurant.id)
+      .eq('disponible', true)
+      .order('categorie')
+      .order('ordre_affichage')
+      .order('id');
+    await showCategoryMenu(phoneNumber, restaurant, session, menuItems);
+  } else if (normalizedResponse === '3') {
+    // 3 = Recommencer (vider le panier)
+    const restaurant = await SimpleRestaurant.getById(session.context.selectedRestaurantId);
     
-    await whatsapp.sendMessage(phoneNumber, modifyMessage);
-    
+    // Vider le panier
     await SimpleSession.update(session.id, {
-      state: 'MODIFYING_ORDER',
-      context: session.context
+      state: 'SELECTING_CATEGORY',
+      context: {
+        ...session.context,
+        cart: {} // Vider le panier
+      }
     });
+    
+    const { data: menuItems } = await supabase
+      .from('menus')
+      .select('*')
+      .eq('restaurant_id', restaurant.id)
+      .eq('disponible', true)
+      .order('categorie')
+      .order('ordre_affichage')
+      .order('id');
+    await showCategoryMenu(phoneNumber, restaurant, session, menuItems);
+  } else if (normalizedResponse === 'retour') {
+    // NOUVEAU: Retour aux catégories depuis le panier
+    const restaurant = await SimpleRestaurant.getById(session.context.selectedRestaurantId);
+    const { data: menuItems } = await supabase
+      .from('menus')
+      .select('*')
+      .eq('restaurant_id', restaurant.id)
+      .eq('disponible', true)
+      .order('categorie')
+      .order('ordre_affichage')
+      .order('id');
+    await showCategoryMenu(phoneNumber, restaurant, session, menuItems);
   } else {
     await whatsapp.sendMessage(phoneNumber, 
-      '❓ Répondez par OUI pour confirmer ou NON pour modifier votre commande.');
+      '❓ Tapez votre choix : 1 (Finaliser), 2 (Continuer) ou 3 (Recommencer)');
   }
 }
 
@@ -1115,6 +1379,56 @@ async function handleOrderModification(phoneNumber: string, session: any, choice
       await whatsapp.sendMessage(phoneNumber,
         '❓ Choix non reconnu. Répondez avec:\n1️⃣ Supprimer\n2️⃣ Ajouter\n3️⃣ Annuler');
   }
+}
+
+// Fonction pour afficher le panier (consultation seule)
+async function showCartView(phoneNumber: string, session: any) {
+  const cart = session.context.cart || {};
+  
+  if (Object.keys(cart).length === 0) {
+    await whatsapp.sendMessage(phoneNumber, 
+      '🛒 Votre panier est vide.\n\nContinuez vos achats en tapez les numéros des produits.');
+    return;
+  }
+  
+  // Récupérer le restaurant pour la currency
+  const restaurantId = session.context.selectedRestaurantId;
+  const restaurant = await SimpleRestaurant.getById(restaurantId);
+  
+  let subtotal = 0;
+  let cartMessage = '🛒 Votre panier:\n\n';
+
+  for (const [itemKey, cartItem] of Object.entries(cart) as [string, any][]) {
+    const itemTotal = cartItem.item.prix * cartItem.quantity;
+    subtotal += itemTotal;
+    
+    const formattedPrice = formatPrice(itemTotal, restaurant?.currency);
+    cartMessage += `• ${cartItem.quantity}× ${cartItem.item.nom_plat} - ${formattedPrice}\n`;
+  }
+
+  const formattedSubtotal = formatPrice(subtotal, restaurant?.currency);
+  const totalItems = Object.values(cart).reduce((sum: number, item: any) => sum + item.quantity, 0);
+  
+  cartMessage += `\n────────────────────`;
+  cartMessage += `\n💰 Sous-total: ${formattedSubtotal}`;
+  cartMessage += `\n📦 Total: ${totalItems} article${totalItems > 1 ? 's' : ''}`;
+  cartMessage += `\n\nQue voulez-vous faire ?\n`;
+  cartMessage += `\n⿡ Finaliser la commande`;
+  cartMessage += `\n⿢ Continuer vos achats (garder le panier)`;
+  cartMessage += `\n⿣ Recommencer (vider le panier)`;
+  cartMessage += `\n\nTapez votre choix (1, 2 ou 3)`;
+
+  await whatsapp.sendMessage(phoneNumber, cartMessage);
+
+  // Changer l'état pour gérer les réponses 1,2,3
+  await SimpleSession.update(session.id, {
+    state: 'CONFIRMING_ORDER',
+    context: {
+      ...session.context,
+      cart: cart,
+      subtotal: subtotal
+    }
+  });
 }
 
 // Fonction pour afficher les articles du panier pour suppression
@@ -2141,7 +2455,7 @@ ${restaurantName}
     }
 
     // Vérifier si l'utilisateur veut redémarrer depuis n'importe quel état
-    const restartKeywords = ['resto', 'restaurant', 'menu', 'accueil', 'start', 'restart', 'retour'];
+    const restartKeywords = ['resto', 'restaurant', 'menu', 'accueil', 'start', 'restart'];
     if (restartKeywords.some(keyword => message.toLowerCase().includes(keyword))) {
       console.log('🔄 Redémarrage demandé, réinitialisation complète de la session');
       
@@ -2179,6 +2493,67 @@ ${restaurantName}
           await whatsapp.sendMessage(phoneNumber, '🔄 Fonctionnalité "suivant" en cours de développement...');
         } else {
           await handleRestaurantSelection(phoneNumber, session, message);
+        }
+        break;
+
+      case 'SELECTING_CATEGORY':
+        // Gestion de la sélection de catégorie
+        if (/^\d+$/.test(message.trim())) {
+          const categoryIndex = parseInt(message.trim());
+          const availableCategories = session.context.availableCategories || [];
+          
+          if (categoryIndex >= 1 && categoryIndex <= availableCategories.length) {
+            const selectedCategory = availableCategories[categoryIndex - 1];
+            const restaurant = await SimpleRestaurant.getById(session.context.selectedRestaurantId);
+            await showProductsInCategory(phoneNumber, restaurant, session, selectedCategory);
+          } else {
+            await whatsapp.sendMessage(phoneNumber, 
+              `❓ Numéro de catégorie invalide. Choisissez entre 1 et ${availableCategories.length}.`);
+          }
+        } else if (message.toLowerCase() === 'menu') {
+          // Réafficher le menu des catégories
+          const restaurant = await SimpleRestaurant.getById(session.context.selectedRestaurantId);
+          const { data: menuItems } = await supabase
+            .from('menus')
+            .select('*')
+            .eq('restaurant_id', restaurant.id)
+            .eq('disponible', true)
+            .order('categorie')
+            .order('ordre_affichage')
+            .order('id');
+          await showCategoryMenu(phoneNumber, restaurant, session, menuItems);
+        } else {
+          await whatsapp.sendMessage(phoneNumber, 
+            '❓ Tapez le numéro de la catégorie souhaitée ou "menu" pour revoir les catégories.');
+        }
+        break;
+
+      case 'VIEWING_CATEGORY':
+        // Dans une catégorie - gestion des commandes ou navigation
+        if (message.trim() === '0') {
+          // 0 = Retour au menu des catégories
+          const restaurant = await SimpleRestaurant.getById(session.context.selectedRestaurantId);
+          const { data: menuItems } = await supabase
+            .from('menus')
+            .select('*')
+            .eq('restaurant_id', restaurant.id)
+            .eq('disponible', true)
+            .order('categorie')
+            .order('ordre_affichage')
+            .order('id');
+          await showCategoryMenu(phoneNumber, restaurant, session, menuItems);
+        } else if (message.trim() === '00') {
+          // 00 = Afficher le panier actuel
+          await showCartView(phoneNumber, session);
+        } else if (message.trim() === '000') {
+          // 000 = Annuler
+          await handleCancellation(phoneNumber, session, '000');
+        } else if (message.includes(',') || /^\d+$/.test(message.trim())) {
+          // Commande dans la catégorie - utilise le système existant
+          await handleOrderCommand(phoneNumber, session, message);
+        } else {
+          await whatsapp.sendMessage(phoneNumber, 
+            '💡 Pour commander: tapez les numéros (ex: 1,2,2)\n🔙 Tapez "0" pour les catégories\n🛒 Tapez "00" pour voir votre commande\n💡 Tapez "annuler" pour arrêter, "retour" pour changer ou le numéro du resto pour accéder directement.');
         }
         break;
 

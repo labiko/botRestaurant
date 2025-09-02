@@ -49,7 +49,7 @@ Dans l'onglet "Table editor", vous devriez voir :
 Vérifiez que ces secrets sont configurés dans "Project Settings" > "Environment Variables":
 - ✅ `GREEN_API_INSTANCE_ID` = `7105303512`
 - ✅ `GREEN_API_TOKEN` = `[votre token]`
-- ✅ `BOT_PHONE_NUMBER` = `224623542219`
+- ✅ `BOT_PHONE_NUMBER` = `33753058254`
 - ✅ `SUPABASE_URL` = (généré automatiquement)
 - ✅ `SUPABASE_SERVICE_ROLE_KEY` = (généré automatiquement)
 
