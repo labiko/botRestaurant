@@ -1,6 +1,6 @@
 <ion-header [translucent]="true">
   <ion-toolbar color="primary">
-    <ion-title>Commandes disponibles</ion-title>
+    <ion-title>Historique</ion-title>
     <ion-buttons slot="start">
       <!-- Toggle Statut En Ligne -->
       <div class="header-online-toggle">
@@ -27,7 +27,7 @@
 <ion-content [fullscreen]="true">
   <ion-header collapse="condense">
     <ion-toolbar>
-      <ion-title size="large">Commandes disponibles</ion-title>
+      <ion-title size="large">Historique</ion-title>
     </ion-toolbar>
   </ion-header>
 
@@ -41,9 +41,9 @@
     </ion-refresher-content>
   </ion-refresher>
 
-  <!-- Contenu des commandes disponibles -->
+  <!-- Contenu de l'historique des commandes livrées -->
   <div class="orders-section">
-    <ion-card *ngFor="let order of availableOrders" class="order-card-compact available-order">
+    <ion-card *ngFor="let order of historyOrders" class="order-card-compact">
       <ion-card-content>
         <!-- Vue compacte par défaut -->
         <div class="compact-header">
@@ -64,11 +64,11 @@
           📍 {{ getDeliveryZone(order.delivery_address) }}
         </div>
 
-        <div class="compact-time">
-          🕒 Commandé à {{ formatTime(order.created_at) }}
+        <div class="compact-date">
+          📅 {{ formatDate(order.created_at) }} à {{ formatTime(order.created_at) }}
         </div>
 
-        <!-- Actions compactes -->
+        <!-- Actions compactes pour l'historique -->
         <div class="compact-actions">
           <ion-button 
             size="small" 
@@ -78,22 +78,14 @@
             <ion-icon [name]="isOrderExpanded(order) ? 'chevron-up' : 'chevron-down'" slot="start"></ion-icon>
             {{ isOrderExpanded(order) ? 'Masquer' : 'Détails' }}
           </ion-button>
-          <ion-button 
-            size="small" 
-            fill="solid" 
-            color="success"
-            (click)="acceptOrder(order)">
-            <ion-icon name="checkmark-circle" slot="start"></ion-icon>
-            Accepter
-          </ion-button>
         </div>
 
         <!-- ACCORDÉON DÉTAILS (uniquement si développé) -->
         <div class="order-details-accordion" *ngIf="isOrderExpanded(order)">
           <div class="accordion-divider"></div>
           
-          <!-- Contact client -->
-          <div class="detail-section">
+          <!-- Contact client - MASQUÉ DANS L'HISTORIQUE -->
+          <!-- <div class="detail-section">
             <div class="detail-row">
               <div class="detail-actions">
                 <ion-button 
@@ -106,13 +98,13 @@
                 </ion-button>
               </div>
             </div>
-          </div>
+          </div> -->
 
-          <!-- Adresse complète -->
+          <!-- Adresse complète - GPS MASQUÉ DANS L'HISTORIQUE -->
           <div class="detail-section" *ngIf="order.delivery_address">
             <div class="detail-row-vertical">
               <span class="address-display">📍 {{ order.delivery_address }}</span>
-              <ion-button 
+              <!-- <ion-button 
                 size="small" 
                 fill="outline" 
                 color="success"
@@ -120,7 +112,7 @@
                 class="gps-button">
                 <ion-icon name="navigate" slot="start"></ion-icon>
                 GPS
-              </ion-button>
+              </ion-button> -->
             </div>
           </div>
 
@@ -205,27 +197,27 @@
             </div>
           </div>
 
-          <!-- Temps de mise à jour (si récent) -->
-          <div class="detail-section" *ngIf="shouldShowUpdateTime(order)">
+          <!-- Date et heure de livraison -->
+          <div class="detail-section" *ngIf="order.updated_at">
             <div class="detail-row">
-              <span class="detail-label">🔄 Mis à jour:</span>
-              <span class="update-time-display">{{ getUpdateTimeText(order) }}</span>
+              <span class="detail-label">✅ Livré à:</span>
+              <span class="delivery-time-display">{{ formatTime(order.updated_at) }}</span>
             </div>
           </div>
         </div>
       </ion-card-content>
     </ion-card>
 
-    <!-- Message si pas de commandes disponibles - CENTRÉ -->
-    <div *ngIf="availableOrders.length === 0 && !isLoading" class="empty-state-container">
+    <!-- Message si pas de commandes dans l'historique - CENTRÉ -->
+    <div *ngIf="historyOrders.length === 0 && !isLoading" class="empty-state-container">
       <div class="empty-state-content">
         <div class="empty-state-icon">
-          <ion-icon name="notifications-off" color="medium"></ion-icon>
+          <ion-icon name="archive" color="primary"></ion-icon>
         </div>
-        <h3 class="empty-state-title">Aucune commande disponible</h3>
+        <h3 class="empty-state-title">Aucune livraison dans l'historique</h3>
         <p class="empty-state-subtitle">
-          Les nouvelles commandes à livrer apparaîtront ici.<br>
-          Assurez-vous d'être en mode en ligne pour recevoir des notifications !
+          Vos livraisons terminées apparaîtront ici.<br>
+          Commencez à livrer pour créer votre historique !
         </p>
       </div>
     </div>
@@ -236,7 +228,7 @@
     <ion-card>
       <ion-card-content class="text-center">
         <ion-spinner name="crescent"></ion-spinner>
-        <p>Chargement des commandes disponibles...</p>
+        <p>Chargement de l'historique...</p>
       </ion-card-content>
     </ion-card>
   </div>
@@ -259,8 +251,7 @@
   
   <ion-tab-button 
     routerLink="/restaurant-france/delivery-france/available-orders"
-    routerLinkActive="tab-selected"
-    (click)="refreshAvailableOrders()">
+    routerLinkActive="tab-selected">
     <ion-icon name="notifications"></ion-icon>
     <ion-label>Disponibles</ion-label>
     <ion-badge 
@@ -273,7 +264,8 @@
 
   <ion-tab-button 
     routerLink="/restaurant-france/delivery-france/history"
-    routerLinkActive="tab-selected">
+    routerLinkActive="tab-selected"
+    (click)="refreshHistory()">
     <ion-icon name="archive"></ion-icon>
     <ion-label>Historique</ion-label>
     <ion-badge 

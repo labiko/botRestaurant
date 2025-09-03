@@ -34,14 +34,6 @@ const routes: Routes = [
     loadChildren: () => import('./drivers-france/drivers-france.module').then( m => m.DriversFrancePageModule),
     canActivate: [RestaurantFranceGuard]
   },
-  {
-    path: 'my-orders',
-    loadChildren: () => import('./delivery-france/my-orders/my-orders.module').then( m => m.MyOrdersPageModule)
-  },
-  {
-    path: 'available-orders',
-    loadChildren: () => import('./delivery-france/available-orders/available-orders.module').then( m => m.AvailableOrdersPageModule)
-  }
 ];
 
 @NgModule({

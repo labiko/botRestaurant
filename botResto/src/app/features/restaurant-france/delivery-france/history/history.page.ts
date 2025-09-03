@@ -5,19 +5,20 @@ import { Subscription } from 'rxjs';
 
 import { AuthFranceService, FranceUser } from '../../auth-france/services/auth-france.service';
 import { DeliveryOrdersService, DeliveryOrder } from '../../../../core/services/delivery-orders.service';
+import { SupabaseFranceService } from '../../../../core/services/supabase-france.service';
 import { LoadingController } from '@ionic/angular';
 import { DriverOnlineStatusService } from '../../../../core/services/driver-online-status.service';
 import { DeliveryCountersService, DeliveryCounters } from '../../../../core/services/delivery-counters.service';
 
 @Component({
-  selector: 'app-available-orders',
-  templateUrl: './available-orders.page.html',
-  styleUrls: ['./available-orders.page.scss'],
+  selector: 'app-history',
+  templateUrl: './history.page.html',
+  styleUrls: ['./history.page.scss'],
   standalone: false
 })
-export class AvailableOrdersPage implements OnInit, OnDestroy {
+export class HistoryPage implements OnInit, OnDestroy {
   currentDriver: FranceUser | null = null;
-  availableOrders: DeliveryOrder[] = [];
+  historyOrders: DeliveryOrder[] = [];
   isLoading = false;
   
   // Compteurs partagés pour les badges
@@ -32,13 +33,14 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   isToggling = false;
 
   private userSubscription?: Subscription;
-  private availableOrdersSubscription?: Subscription;
+  private historyOrdersSubscription?: Subscription;
   private onlineStatusSubscription?: Subscription;
   private countersSubscription?: Subscription;
 
   constructor(
     private authFranceService: AuthFranceService,
     private deliveryOrdersService: DeliveryOrdersService,
+    private supabaseFranceService: SupabaseFranceService,
     private router: Router,
     private alertController: AlertController,
     private toastController: ToastController,
@@ -53,7 +55,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.userSubscription?.unsubscribe();
-    this.availableOrdersSubscription?.unsubscribe();
+    this.historyOrdersSubscription?.unsubscribe();
     this.onlineStatusSubscription?.unsubscribe();
     this.countersSubscription?.unsubscribe();
   }
@@ -65,7 +67,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     // S'abonner aux compteurs partagés pour les badges
     this.countersSubscription = this.deliveryCountersService.counters$.subscribe(counters => {
       this.currentCounters = counters;
-      console.log(`🔢 [AvailableOrders] Compteurs reçus:`, counters);
+      console.log(`🔢 [History] Compteurs reçus:`, counters);
     });
     
     // S'abonner aux données utilisateur
@@ -74,7 +76,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
       if (user !== undefined) {
         this.currentDriver = user;
         if (user && user.type === 'driver') {
-          this.loadAvailableOrders();
+          this.loadHistoryOrders();
           this.initializeOnlineStatus();
         }
       }
@@ -82,86 +84,101 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Charger les commandes disponibles
+   * Charger l'historique des commandes livrées et validées
    */
-  private async loadAvailableOrders() {
-    if (!this.currentDriver) return;
+  private async loadHistoryOrders() {
+    if (!this.currentDriver) {
+      console.log('❌ [History] Pas de driver connecté');
+      return;
+    }
 
+    console.log(`🔍 [History] Recherche historique pour driver ID: ${this.currentDriver.id}`);
     this.isLoading = true;
+    
     try {
-      // Charger les commandes disponibles
-      await this.deliveryOrdersService.loadAvailableOrders(this.currentDriver.restaurantId);
-      
-      // S'abonner aux changements des commandes disponibles
-      this.availableOrdersSubscription = this.deliveryOrdersService.availableOrders$.subscribe(orders => {
-        this.availableOrders = orders;
-        this.isLoading = false;
+      // D'abord, chercher toutes les commandes du driver (pour diagnostiquer)
+      const { data: allDriverOrders, error: allError } = await this.supabaseFranceService.client
+        .from('france_orders')
+        .select('id, status, driver_id, date_validation_code, delivery_validation_code, created_at, updated_at')
+        .eq('driver_id', this.currentDriver.id);
+
+      console.log(`📊 [History] Toutes les commandes du driver:`, allDriverOrders);
+
+      if (allDriverOrders) {
+        console.log(`📊 [History] Répartition par statut:`);
+        const statusCount: any = {};
+        const validationCount = { with: 0, without: 0 };
         
-        // Mettre à jour le compteur dans le service partagé
-        this.deliveryCountersService.updateAvailableOrdersCount(orders.length);
-      });
+        allDriverOrders.forEach(order => {
+          statusCount[order.status] = (statusCount[order.status] || 0) + 1;
+          if (order.date_validation_code) {
+            validationCount.with++;
+          } else {
+            validationCount.without++;
+          }
+        });
+        
+        console.log(`📊 [History] Statuts:`, statusCount);
+        console.log(`📊 [History] Validation:`, validationCount);
+      }
+
+      // Maintenant chercher spécifiquement l'historique
+      const { data: historyOrders, error } = await this.supabaseFranceService.client
+        .from('france_orders')
+        .select(`
+          *,
+          france_restaurants!inner(name)
+        `)
+        .eq('driver_id', this.currentDriver.id)
+        .eq('status', 'livree')
+        .not('date_validation_code', 'is', null)
+        .order('updated_at', { ascending: false });
+
+      console.log(`🔍 [History] Requête historique - résultat:`, historyOrders);
+      console.log(`🔍 [History] Erreur éventuelle:`, error);
+
+      if (error) {
+        console.error('❌ [History] Erreur chargement historique:', error);
+        this.historyOrders = [];
+        this.isLoading = false;
+        return;
+      }
+
+      // Traiter les commandes pour l'affichage
+      const processedOrders = historyOrders?.map((order: any) => ({
+        ...order,
+        availableActions: []
+      })) || [];
+      
+      this.historyOrders = processedOrders;
+      this.isLoading = false;
+      
+      // Mettre à jour le compteur dans le service partagé
+      this.deliveryCountersService.updateHistoryOrdersCount(processedOrders.length);
+      
+      console.log(`✅ [History] ${processedOrders.length} commandes dans l'historique (validées)`);
+      
+      if (processedOrders.length === 0) {
+        console.log(`💡 [History] Aucune commande trouvée. Critères:
+        - driver_id: ${this.currentDriver.id}
+        - status: 'livree'
+        - date_validation_code: not null`);
+      }
     } catch (error) {
-      console.error('Erreur chargement commandes disponibles:', error);
+      console.error('❌ [History] Erreur exception:', error);
+      this.historyOrders = [];
       this.isLoading = false;
     }
   }
 
   /**
-   * Accepter une commande - LOGIQUE IDENTIQUE AU DASHBOARD
-   */
-  async acceptOrder(order: DeliveryOrder) {
-    if (!this.currentDriver) return;
-
-    const alert = await this.alertController.create({
-      header: 'Accepter la commande',
-      message: `Voulez-vous accepter la commande #${order.order_number} ?`,
-      cssClass: 'custom-alert-white',
-      buttons: [
-        {
-          text: 'Annuler',
-          role: 'cancel'
-        },
-        {
-          text: 'Accepter',
-          handler: async () => {
-            const loading = await this.loadingController.create({
-              message: 'Acceptation en cours...'
-            });
-            await loading.present();
-
-            try {
-              const success = await this.deliveryOrdersService.acceptOrder(order.id, this.currentDriver!.id);
-              if (success) {
-                this.loadAvailableOrders(); // Recharger les données
-                this.presentToast('Commande acceptée avec succès');
-                // Naviguer vers mes commandes après acceptation
-                this.router.navigate(['/restaurant-france/delivery-france/my-orders']);
-              } else {
-                this.presentToast('Erreur lors de l\'acceptation');
-              }
-            } catch (error) {
-              console.error('Erreur acceptation commande:', error);
-              this.presentToast('Erreur lors de l\'acceptation');
-            }
-            
-            await loading.dismiss();
-          }
-        }
-      ]
-    });
-
-    await alert.present();
-  }
-
-  /**
-   * FONCTIONS UTILITAIRES - IDENTIQUES AU DASHBOARD ET MY-ORDERS
+   * FONCTIONS UTILITAIRES - IDENTIQUES À MY-ORDERS
    */
 
   getOrderStatusColor(status: string): string {
     const colors: Record<string, string> = {
-      'en_attente_assignation': 'warning',
-      'assignee': 'primary',
-      'en_livraison': 'secondary', 
+      'assignee': 'warning',
+      'en_livraison': 'primary', 
       'livree': 'success',
       'annulee': 'danger'
     };
@@ -170,7 +187,6 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
 
   getOrderStatusText(status: string): string {
     const texts: Record<string, string> = {
-      'en_attente_assignation': 'Disponible',
       'assignee': 'Assignée',
       'en_livraison': 'En livraison',
       'livree': 'Livrée',
@@ -201,13 +217,13 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
       
       return 0;
     } catch (error) {
-      console.error(`❌ [AvailableOrders] Erreur comptage items:`, error);
+      console.error(`❌ [History] Erreur comptage items:`, error);
       return 0;
     }
   }
 
   getDeliveryZone(address?: string): string {
-    return address ? address.substring(0, 30) + '...' : 'Adresse non spécifiée';
+    return address || 'Adresse non spécifiée';
   }
 
   formatPrice(amount: number): string {
@@ -218,6 +234,14 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     return new Date(dateString).toLocaleTimeString('fr-FR', {
       hour: '2-digit',
       minute: '2-digit'
+    });
+  }
+
+  formatDate(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
     });
   }
 
@@ -238,11 +262,62 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
 
   // Fonctions détails articles
   hasOrderItems(order: DeliveryOrder): boolean {
-    return order.items && order.items.length > 0;
+    if (!order.items) {
+      return false;
+    }
+    
+    // Les items peuvent être une string JSON ou un objet
+    if (typeof order.items === 'string') {
+      try {
+        const parsedItems = JSON.parse(order.items);
+        const hasItems = parsedItems && Object.keys(parsedItems).length > 0;
+        return hasItems;
+      } catch (error) {
+        console.error(`❌ [History] Erreur parsing items string:`, error);
+        return false;
+      }
+    }
+    
+    // Si c'est déjà un objet
+    const hasItems = order.items && Object.keys(order.items).length > 0;
+    return hasItems;
   }
 
   getOrderItems(order: DeliveryOrder): any[] {
-    return order.items || [];
+    if (!order.items) {
+      return [];
+    }
+    
+    try {
+      let itemsData = order.items;
+      
+      // Parser si c'est une string JSON
+      if (typeof order.items === 'string') {
+        itemsData = JSON.parse(order.items);
+      }
+      
+      // Les items sont dans un format objet avec des clés comme "item_2_..."
+      const itemsArray: any[] = [];
+      
+      if (itemsData && typeof itemsData === 'object') {
+        Object.entries(itemsData).forEach(([key, value]: [string, any]) => {
+          // Extraire les données de l'item
+          if (value && value.item) {
+            const processedItem = {
+              ...value.item,
+              quantity: value.quantity || 1,
+              key: key
+            };
+            itemsArray.push(processedItem);
+          }
+        });
+      }
+      
+      return itemsArray;
+    } catch (error) {
+      console.error(`❌ [History] Erreur parsing items:`, error);
+      return [];
+    }
   }
 
   hasSelectedOptions(selectedOptions: any): boolean {
@@ -365,16 +440,11 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
       // S'abonner aux changements de statut
       this.onlineStatusSubscription = this.driverOnlineStatusService.onlineStatus$.subscribe(isOnline => {
         this.isOnline = isOnline;
-        console.log(`📱 [AvailableOrders] Statut mis à jour: ${isOnline ? 'En ligne' : 'Hors ligne'}`);
-        
-        // Si hors ligne, vider les commandes disponibles
-        if (!isOnline) {
-          this.availableOrders = [];
-        }
+        console.log(`📱 [History] Statut mis à jour: ${isOnline ? 'En ligne' : 'Hors ligne'}`);
       });
 
     } catch (error) {
-      console.error('❌ [AvailableOrders] Erreur initialisation statut en ligne:', error);
+      console.error('❌ [History] Erreur initialisation statut en ligne:', error);
     }
   }
 
@@ -392,20 +462,17 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
       if (result.success) {
         this.presentToast(result.message);
         
-        // Si on vient de se mettre en ligne, recharger les commandes disponibles
+        // Si on vient de se mettre en ligne, recharger les données disponibles
         if (result.newStatus) {
-          this.loadAvailableOrders();
-          console.log('✅ [AvailableOrders] Livreur en ligne - rechargement des commandes');
+          console.log('✅ [History] Livreur en ligne - données actualisées');
         } else {
-          // Si hors ligne, vider les commandes disponibles
-          this.availableOrders = [];
-          console.log('⏸️ [AvailableOrders] Livreur hors ligne - commandes vidées');
+          console.log('⏸️ [History] Livreur hors ligne');
         }
       } else {
         this.presentToast(result.message);
       }
     } catch (error) {
-      console.error('❌ [AvailableOrders] Erreur toggle statut:', error);
+      console.error('❌ [History] Erreur toggle statut:', error);
       this.presentToast('Erreur lors de la mise à jour du statut');
     } finally {
       this.isToggling = false;
@@ -436,10 +503,10 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   /**
    * Rafraîchir les données lors du clic sur le tab
    */
-  refreshAvailableOrders() {
-    console.log('🔄 [AvailableOrders] Rafraîchissement des données...');
+  refreshHistory() {
+    console.log('🔄 [History] Rafraîchissement des données...');
     if (this.currentDriver) {
-      this.loadAvailableOrders();
+      this.loadHistoryOrders();
     }
   }
 
@@ -447,14 +514,14 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
    * Pull to refresh - Rafraîchir les données en tirant vers le bas
    */
   async doRefresh(event: any) {
-    console.log('🔄 [AvailableOrders] Pull to refresh déclenché');
+    console.log('🔄 [History] Pull to refresh déclenché');
     
     try {
-      if (this.currentDriver && this.currentDriver.restaurantId) {
-        await this.deliveryOrdersService.loadAvailableOrders(this.currentDriver.restaurantId);
+      if (this.currentDriver) {
+        await this.loadHistoryOrders();
       }
     } catch (error) {
-      console.error('❌ [AvailableOrders] Erreur lors du rafraîchissement:', error);
+      console.error('❌ [History] Erreur lors du rafraîchissement:', error);
     } finally {
       // Terminer l'animation de refresh après un court délai
       setTimeout(() => {

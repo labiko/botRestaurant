@@ -6,10 +6,12 @@ import { Subscription } from 'rxjs';
 import { AuthFranceService, FranceUser } from '../../auth-france/services/auth-france.service';
 import { DeliveryOrdersService, DeliveryOrder } from '../../../../core/services/delivery-orders.service';
 import { DeliveryValidationOtpService } from '../../../../core/services/delivery-validation-otp.service';
+import { SupabaseFranceService } from '../../../../core/services/supabase-france.service';
 import { LoadingController } from '@ionic/angular';
 import { FranceOrdersService } from '../../../../core/services/france-orders.service';
 import { WhatsAppNotificationFranceService } from '../../../../core/services/whatsapp-notification-france.service';
 import { DriverOnlineStatusService } from '../../../../core/services/driver-online-status.service';
+import { DeliveryCountersService, DeliveryCounters } from '../../../../core/services/delivery-counters.service';
 
 @Component({
   selector: 'app-my-orders',
@@ -21,7 +23,13 @@ export class MyOrdersPage implements OnInit, OnDestroy {
   currentDriver: FranceUser | null = null;
   myOrders: DeliveryOrder[] = [];
   isLoading = false;
-  availableOrdersCount = 0;
+  
+  // Compteurs partagés pour les badges
+  currentCounters: DeliveryCounters = {
+    myOrdersCount: 0,
+    availableOrdersCount: 0,
+    historyOrdersCount: 0
+  };
 
   // Statut en ligne/hors ligne
   isOnline = false;
@@ -34,18 +42,21 @@ export class MyOrdersPage implements OnInit, OnDestroy {
   private userSubscription?: Subscription;
   private myOrdersSubscription?: Subscription;
   private onlineStatusSubscription?: Subscription;
+  private countersSubscription?: Subscription;
 
   constructor(
     private authFranceService: AuthFranceService,
     private deliveryOrdersService: DeliveryOrdersService,
     private deliveryValidationOtpService: DeliveryValidationOtpService,
+    private supabaseFranceService: SupabaseFranceService,
     private router: Router,
     private alertController: AlertController,
     private toastController: ToastController,
     private loadingController: LoadingController,
     private whatsappNotificationFranceService: WhatsAppNotificationFranceService,
     private franceOrdersService: FranceOrdersService,
-    private driverOnlineStatusService: DriverOnlineStatusService
+    private driverOnlineStatusService: DriverOnlineStatusService,
+    private deliveryCountersService: DeliveryCountersService
   ) {}
 
   ngOnInit() {
@@ -56,12 +67,19 @@ export class MyOrdersPage implements OnInit, OnDestroy {
     this.userSubscription?.unsubscribe();
     this.myOrdersSubscription?.unsubscribe();
     this.onlineStatusSubscription?.unsubscribe();
+    this.countersSubscription?.unsubscribe();
   }
 
   /**
    * Initialiser les données
    */
   private async initializeData() {
+    // S'abonner aux compteurs partagés pour les badges
+    this.countersSubscription = this.deliveryCountersService.counters$.subscribe(counters => {
+      this.currentCounters = counters;
+      console.log(`🔢 [MyOrders] Compteurs reçus:`, counters);
+    });
+    
     // S'abonner aux données utilisateur
     this.userSubscription = this.authFranceService.currentUser$.subscribe(user => {
       // Ignorer undefined (en cours de vérification)
@@ -91,6 +109,9 @@ export class MyOrdersPage implements OnInit, OnDestroy {
         next: (orders: DeliveryOrder[]) => {
           this.myOrders = orders;
           this.isLoading = false;
+          
+          // Mettre à jour le compteur dans le service partagé
+          this.deliveryCountersService.updateMyOrdersCount(orders.length);
         },
         error: (error: any) => {
           console.error('Erreur chargement mes commandes:', error);
@@ -261,9 +282,43 @@ export class MyOrdersPage implements OnInit, OnDestroy {
         const otpContainer = document.querySelector('.otp-digits');
         otpContainer?.classList.add('otp-success');
         
-        // Code correct, marquer comme livré
+        // Code correct, marquer comme livré ET mettre à jour la date de validation
         const success = await this.deliveryOrdersService.updateDeliveryStatus(order.id, 'livree');
+        
+        // IMPORTANT: Mettre à jour la date de validation OTP et updated_at
         if (success) {
+          const { error: validationError } = await this.supabaseFranceService.client
+            .from('france_orders')
+            .update({
+              date_validation_code: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', order.id);
+
+          if (validationError) {
+            console.error('❌ [MyOrders] Erreur mise à jour date_validation_code:', validationError);
+          } else {
+            console.log('✅ [MyOrders] Date de validation OTP mise à jour pour commande:', order.id);
+          }
+
+          // NOUVEAU: Envoyer le message de remerciement au client
+          try {
+            const restaurantName = order.france_restaurants?.name || 'Restaurant';
+            const messageSent = await this.whatsappNotificationFranceService.sendOrderCompletionMessage(
+              order.phone_number,
+              order.order_number,
+              restaurantName
+            );
+            
+            if (messageSent) {
+              console.log(`✅ [MyOrders] Message de remerciement envoyé pour commande ${order.order_number}`);
+            } else {
+              console.log(`⚠️ [MyOrders] Échec envoi message de remerciement pour commande ${order.order_number}`);
+            }
+          } catch (messageError) {
+            console.error('❌ [MyOrders] Erreur envoi message remerciement:', messageError);
+          }
+
           this.showOTPInput[order.id] = false;
           this.otpDigits[order.id] = ['', '', '', ''];
           this.loadMyOrders();
@@ -350,11 +405,30 @@ export class MyOrdersPage implements OnInit, OnDestroy {
   }
 
   getItemsCount(order: DeliveryOrder): number {
-    return order.items?.length || 0;
+    if (!order.items) return 0;
+    
+    try {
+      let itemsData = order.items;
+      
+      // Parser si c'est une string JSON
+      if (typeof order.items === 'string') {
+        itemsData = JSON.parse(order.items);
+      }
+      
+      // Compter les clés dans l'objet items (chaque clé = un item)
+      if (itemsData && typeof itemsData === 'object') {
+        return Object.keys(itemsData).length;
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error(`❌ [MyOrders] Erreur comptage items:`, error);
+      return 0;
+    }
   }
 
   getDeliveryZone(address?: string): string {
-    return address ? address.substring(0, 30) + '...' : 'Adresse non spécifiée';
+    return address || 'Adresse non spécifiée';
   }
 
   formatPrice(amount: number): string {
@@ -385,11 +459,76 @@ export class MyOrdersPage implements OnInit, OnDestroy {
 
   // Fonctions détails articles
   hasOrderItems(order: DeliveryOrder): boolean {
-    return order.items && order.items.length > 0;
+    console.log(`🔍 [MyOrders] hasOrderItems pour commande ${order.order_number}:`, order.items);
+    
+    if (!order.items) {
+      console.log(`❌ [MyOrders] Pas d'items pour commande ${order.order_number}`);
+      return false;
+    }
+    
+    // Les items peuvent être une string JSON ou un objet
+    if (typeof order.items === 'string') {
+      try {
+        const parsedItems = JSON.parse(order.items);
+        const hasItems = parsedItems && Object.keys(parsedItems).length > 0;
+        console.log(`✅ [MyOrders] Items parsés (string):`, parsedItems, 'hasItems:', hasItems);
+        return hasItems;
+      } catch (error) {
+        console.error(`❌ [MyOrders] Erreur parsing items string:`, error);
+        return false;
+      }
+    }
+    
+    // Si c'est déjà un objet
+    const hasItems = order.items && Object.keys(order.items).length > 0;
+    console.log(`✅ [MyOrders] Items objet:`, order.items, 'hasItems:', hasItems);
+    return hasItems;
   }
 
   getOrderItems(order: DeliveryOrder): any[] {
-    return order.items || [];
+    console.log(`📦 [MyOrders] getOrderItems pour commande ${order.order_number}:`, order.items);
+    
+    if (!order.items) {
+      return [];
+    }
+    
+    try {
+      let itemsData = order.items;
+      
+      // Parser si c'est une string JSON
+      if (typeof order.items === 'string') {
+        itemsData = JSON.parse(order.items);
+      }
+      
+      console.log(`📦 [MyOrders] Items data parsé:`, itemsData);
+      
+      // Les items sont dans un format objet avec des clés comme "item_2_..."
+      const itemsArray: any[] = [];
+      
+      if (itemsData && typeof itemsData === 'object') {
+        Object.entries(itemsData).forEach(([key, value]: [string, any]) => {
+          console.log(`📦 [MyOrders] Processing item:`, key, value);
+          
+          // Extraire les données de l'item
+          if (value && value.item) {
+            const processedItem = {
+              ...value.item,
+              quantity: value.quantity || 1,
+              key: key
+            };
+            console.log(`📦 [MyOrders] Item traité:`, processedItem);
+            console.log(`📦 [MyOrders] Properties disponibles:`, Object.keys(processedItem));
+            itemsArray.push(processedItem);
+          }
+        });
+      }
+      
+      console.log(`📦 [MyOrders] Items array final:`, itemsArray);
+      return itemsArray;
+    } catch (error) {
+      console.error(`❌ [MyOrders] Erreur parsing items:`, error);
+      return [];
+    }
   }
 
   hasSelectedOptions(selectedOptions: any): boolean {
@@ -571,5 +710,35 @@ export class MyOrdersPage implements OnInit, OnDestroy {
    */
   getStatusIcon(): string {
     return this.driverOnlineStatusService.getStatusIcon();
+  }
+
+  /**
+   * Rafraîchir les données lors du clic sur le tab
+   */
+  refreshMyOrders() {
+    console.log('🔄 [MyOrders] Rafraîchissement des données...');
+    if (this.currentDriver) {
+      this.loadMyOrders();
+    }
+  }
+
+  /**
+   * Pull to refresh - Rafraîchir les données en tirant vers le bas
+   */
+  async doRefresh(event: any) {
+    console.log('🔄 [MyOrders] Pull to refresh déclenché');
+    
+    try {
+      if (this.currentDriver) {
+        await this.deliveryOrdersService.loadDriverOrders(this.currentDriver.id);
+      }
+    } catch (error) {
+      console.error('❌ [MyOrders] Erreur lors du rafraîchissement:', error);
+    } finally {
+      // Terminer l'animation de refresh après un court délai
+      setTimeout(() => {
+        event.target.complete();
+      }, 500);
+    }
   }
 }

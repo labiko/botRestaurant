@@ -370,6 +370,46 @@ Merci pour votre commande !
   }
 
   /**
+   * Envoie un message de remerciement après validation OTP - Modèle 5
+   */
+  async sendOrderCompletionMessage(
+    clientPhone: string, 
+    orderNumber: string, 
+    restaurantName: string
+  ): Promise<boolean> {
+    try {
+      console.log(`🎉 [WhatsAppFrance] Sending completion message for order ${orderNumber}`);
+      
+      const completionMessage = `🌟 *Livraison réussie - Commande #${orderNumber}*
+
+Votre expérience avec *${restaurantName}* se termine en beauté ! ✨
+
+✅ Livraison confirmée
+🍽️ Il ne reste plus qu'à déguster !
+
+Tapez "resto" pour commander à nouveau ! 
+
+Excellente dégustation ! 
+
+${restaurantName} 💫`;
+
+      const result = await this.sendMessage(clientPhone, completionMessage, orderNumber);
+      
+      if (result) {
+        console.log(`✅ [WhatsAppFrance] Completion message sent successfully for order ${orderNumber}`);
+      } else {
+        console.error(`❌ [WhatsAppFrance] Failed to send completion message for order ${orderNumber}`);
+      }
+      
+      return result;
+      
+    } catch (error) {
+      console.error(`❌ [WhatsAppFrance] Error sending completion message:`, error);
+      return false;
+    }
+  }
+
+  /**
    * Formate un prix en euros
    */
   private formatPriceEuros(amount: number): string {

@@ -31,6 +31,16 @@
     </ion-toolbar>
   </ion-header>
 
+  <!-- Pull to refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      pullingText="Tirez pour rafraîchir"
+      refreshingSpinner="circles"
+      refreshingText="Chargement...">
+    </ion-refresher-content>
+  </ion-refresher>
+
   <!-- Contenu des Mes commandes avec interface OTP moderne -->
   <div class="orders-section">
     <ion-card *ngFor="let order of myOrders" class="order-card-compact">
@@ -283,14 +293,15 @@
 <ion-tab-bar slot="bottom">
   <ion-tab-button 
     routerLink="/restaurant-france/delivery-france/my-orders"
-    routerLinkActive="tab-selected">
+    routerLinkActive="tab-selected"
+    (click)="refreshMyOrders()">
     <ion-icon name="bicycle"></ion-icon>
     <ion-label>Mes commandes</ion-label>
     <ion-badge 
-      *ngIf="myOrders.length > 0" 
+      *ngIf="currentCounters.myOrdersCount > 0" 
       color="primary" 
       class="tab-badge">
-      {{ myOrders.length }}
+      {{ currentCounters.myOrdersCount }}
     </ion-badge>
   </ion-tab-button>
   
@@ -300,10 +311,23 @@
     <ion-icon name="notifications"></ion-icon>
     <ion-label>Disponibles</ion-label>
     <ion-badge 
-      *ngIf="availableOrdersCount > 0" 
+      *ngIf="currentCounters.availableOrdersCount > 0" 
       color="success" 
       class="tab-badge">
-      {{ availableOrdersCount }}
+      {{ currentCounters.availableOrdersCount }}
+    </ion-badge>
+  </ion-tab-button>
+
+  <ion-tab-button 
+    routerLink="/restaurant-france/delivery-france/history"
+    routerLinkActive="tab-selected">
+    <ion-icon name="archive"></ion-icon>
+    <ion-label>Historique</ion-label>
+    <ion-badge 
+      *ngIf="currentCounters.historyOrdersCount > 0" 
+      color="tertiary" 
+      class="tab-badge">
+      {{ currentCounters.historyOrdersCount }}
     </ion-badge>
   </ion-tab-button>
 </ion-tab-bar>

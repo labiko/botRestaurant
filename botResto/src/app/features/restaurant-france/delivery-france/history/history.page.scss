@@ -1,0 +1,55 @@
+@import '../my-orders/my-orders.page.scss';
+@import '../my-orders/toggle-header-styles.scss';
+
+// Force le fond blanc pour Edge - Spécifique à l'historique
+:host {
+  --background: #ffffff !important;
+  --color: #000000 !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+:host ion-content {
+  --background: #ffffff !important;
+  --color: #000000 !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+:host ion-header {
+  --background: var(--ion-color-primary) !important;
+  --color: #ffffff !important;
+}
+
+:host ion-toolbar {
+  --background: var(--ion-color-primary) !important;
+  --color: #ffffff !important;
+}
+
+:host ion-card {
+  --background: #ffffff !important;
+  --color: #000000 !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+:host ion-card-content {
+  --background: #ffffff !important;
+  --color: #000000 !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+.compact-date {
+  font-size: 0.8rem;
+  color: var(--ion-color-medium);
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.delivery-time-display {
+  color: var(--ion-color-success);
+  font-weight: 600;
+}

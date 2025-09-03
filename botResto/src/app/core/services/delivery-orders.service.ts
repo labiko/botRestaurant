@@ -8,6 +8,9 @@ export interface DeliveryOrder extends FranceOrder {
   driver_name?: string;
   estimated_delivery_time?: string;
   delivery_instructions?: string;
+  france_restaurants?: {
+    name: string;
+  };
 }
 
 @Injectable({
@@ -99,8 +102,7 @@ export class DeliveryOrdersService {
         { key: 'accept', label: 'Accepter', color: 'success', nextStatus: 'prete' }
       ],
       'en_livraison': [
-        { key: 'delivered', label: 'Marquer livrée', color: 'success', nextStatus: 'livree' },
-        { key: 'problem', label: 'Problème', color: 'warning', nextStatus: 'en_livraison' }
+        { key: 'delivered', label: 'Marquer livrée', color: 'success', nextStatus: 'livree' }
       ]
     };
 

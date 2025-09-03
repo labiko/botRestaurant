@@ -17,6 +17,11 @@ const routes: Routes = [
     path: 'available-orders',
     loadChildren: () => import('./available-orders/available-orders.module').then(m => m.AvailableOrdersPageModule),
     canActivate: [DeliveryFranceGuard]
+  },
+  {
+    path: 'history',
+    loadChildren: () => import('./history/history.module').then(m => m.HistoryPageModule),
+    canActivate: [DeliveryFranceGuard]
   }
 ];
 

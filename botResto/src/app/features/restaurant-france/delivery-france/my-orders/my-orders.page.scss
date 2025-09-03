@@ -554,7 +554,54 @@
   }
 }
 
-// Style sp�cifique pour les badges de statut
+// Empêcher le retour à la ligne pour l'affichage de l'heure - FORCÉ
+.detail-section {
+  width: 100% !important;
+  
+  .detail-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    white-space: nowrap !important;
+    min-width: 0 !important;
+    flex-wrap: nowrap !important;
+    
+    .detail-label {
+      white-space: nowrap !important;
+      flex: 0 0 auto !important;
+      margin-right: 10px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+    }
+    
+    .time-display,
+    .update-time-display,
+    .delivery-time-display {
+      white-space: nowrap !important;
+      display: inline-block !important;
+      flex: 0 0 auto !important;
+      font-weight: 600;
+      margin-left: auto !important;
+    }
+  }
+}
+
+// Style global pour forcer sur une ligne et aligner à gauche
+.order-details-accordion {
+  .detail-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    
+    > * {
+      white-space: nowrap !important;
+    }
+  }
+}
+
+// Style specifique pour les badges de statut
 ion-badge {
   font-size: 0.75rem;
   font-weight: 600;
