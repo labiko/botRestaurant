@@ -22,9 +22,9 @@ export interface MessageTemplate {
   providedIn: 'root'
 })
 export class WhatsAppNotificationService {
-  private readonly GREEN_API_INSTANCE_ID = '7105303512';
-  private readonly GREEN_API_TOKEN = '022e5da3d2e641ab99a3f70539270b187fbfa80635c44b71ad';
-  private readonly baseUrl = 'https://7105.api.greenapi.com';
+  private readonly GREEN_API_INSTANCE_ID = '7105313693';
+  private readonly GREEN_API_TOKEN = '994e56511a43455693d2c4c1e4be86384a27eb921c394d5693';
+  private readonly baseUrl = 'https://api.green-api.com';
 
   // Templates de messages par statut
   private readonly MESSAGE_TEMPLATES: MessageTemplate = {

@@ -1,11 +1,14 @@
 <ion-content>
-  <!-- Header avec logo simple -->
+  <!-- Header avec logo moderne -->
   <div class="header-section">
     <div class="logo-container">
       <img src="assets/images/botlogo.png" alt="Bot Resto France" class="app-logo" />
     </div>
-    <h1 class="app-title">Bot Resto France</h1>
-    <p class="app-subtitle">Gestion des commandes et livraisons</p>
+    <h1 class="app-title">
+      <span class="french-flag">🇫🇷</span>
+      Bot Resto France
+    </h1>
+    <p class="app-subtitle">Système de gestion des commandes et livraisons</p>
   </div>
   
   <!-- Profile Selection -->
@@ -43,40 +46,48 @@
 
     <form [formGroup]="loginForm" (ngSubmit)="onLogin()" class="login-form">
       <div class="input-container">
-        <ion-item class="modern-input" lines="none">
-          <div class="input-prefix" *ngIf="selectedProfileType === 'restaurant'">
-            <span class="flag-icon">🇫🇷</span>
-            <span class="country-code">+33</span>
-          </div>
-          <div class="input-prefix" *ngIf="selectedProfileType === 'driver'">
-            <ion-icon name="call" class="phone-icon"></ion-icon>
+        <ion-item class="modern-input phone-input" lines="none">
+          <div class="input-prefix">
+            <div class="french-indicator">
+              <div class="flag-background">
+                <span class="flag-blue"></span>
+                <span class="flag-white"></span>
+                <span class="flag-red"></span>
+              </div>
+            </div>
+            <ion-icon name="call-outline" class="phone-icon"></ion-icon>
           </div>
           <div class="input-content">
-            <ion-label position="floating">
-              {{ selectedProfileType === 'restaurant' ? 'Numéro restaurant' : 'Numéro de téléphone' }}
+            <ion-label position="floating" class="modern-label">
+              {{ selectedProfileType === 'restaurant' ? 'Téléphone restaurant' : 'Numéro mobile (06 ou 07)' }}
             </ion-label>
             <ion-input 
               formControlName="phone" 
               type="tel" 
-              [placeholder]="selectedProfileType === 'restaurant' ? '1 23 45 67 89' : '6 12 34 56 78'"
-              clearInput="true">
+              [placeholder]="selectedProfileType === 'restaurant' ? '06 12 34 56 78' : getPhoneFormatHelp()"
+              clearInput="true"
+              class="phone-number-input">
             </ion-input>
           </div>
         </ion-item>
       </div>
 
       <div class="input-container">
-        <ion-item class="modern-input" lines="none">
+        <ion-item class="modern-input password-input" lines="none">
           <div class="input-prefix">
-            <ion-icon name="lock-closed" class="password-icon"></ion-icon>
+            <ion-icon name="lock-closed-outline" class="password-icon"></ion-icon>
           </div>
           <div class="input-content">
-            <ion-label position="floating">Mot de passe</ion-label>
+            <ion-label position="floating" class="modern-label">
+              {{ selectedProfileType === 'restaurant' ? 'Mot de passe' : 'Code à 6 chiffres' }}
+            </ion-label>
             <ion-input 
               formControlName="password" 
               [type]="showPassword ? 'text' : 'password'"
-              placeholder="Entrez votre mot de passe"
-              clearInput="true">
+              [placeholder]="getPasswordHelp()"
+              [maxlength]="selectedProfileType === 'driver' ? 6 : null"
+              clearInput="true"
+              class="password-field">
             </ion-input>
           </div>
           <ion-button 
@@ -84,7 +95,7 @@
             slot="end" 
             (click)="togglePassword()"
             class="password-toggle">
-            <ion-icon [name]="showPassword ? 'eye-off' : 'eye'"></ion-icon>
+            <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
           </ion-button>
         </ion-item>
       </div>
@@ -111,5 +122,15 @@
   <!-- Footer -->
   <div class="footer-section">
     <p>Version 1.0.0 | © 2024 Bot Resto France</p>
+    
+    <!-- BOUTON DEBUG - Petit et discret -->
+    <ion-button 
+      fill="clear" 
+      size="small" 
+      color="medium"
+      (click)="debugFillJeanCredentials()"
+      class="debug-button">
+      🐛 Jean
+    </ion-button>
   </div>
 </ion-content>

@@ -1928,6 +1928,7 @@ async function saveOrderToDatabase(phoneNumber: string, session: any): Promise<s
       phone_number: phoneNumber.replace('@c.us', ''),
       items: session.context.cart || {},
       total_amount: session.context.totalPrice || 0,
+      delivery_mode: session.context.deliveryMode || null, // CHAMP MANQUANT AJOUTÉ !
       status: 'en_attente',
       order_number: orderNumber,
       created_at: new Date().toISOString(),

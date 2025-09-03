@@ -1,0 +1,550 @@
+// ========================================================================
+// DASHBOARD LIVREUR - REPRODUCTION EXACTE DU STYLE PAGE RESTAURANT
+// ========================================================================
+
+// Variables exactes de la page restaurant
+:host {
+  --restaurant-radius: 8px;
+  --restaurant-spacing: 16px;
+  --restaurant-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --restaurant-primary: #6366f1;
+  --restaurant-success: #10b981;
+  --restaurant-warning: #f59e0b;
+  --restaurant-text-dark: #1f2937;
+  --restaurant-text-medium: #6b7280;
+  --restaurant-text-light: #9ca3af;
+  --restaurant-bg: #ffffff;
+  --restaurant-border: #e5e7eb;
+}
+
+// ========================================================================
+// CARTES COMPACTES LIVREUR (par défaut)
+// ========================================================================
+.order-card-compact {
+  margin: 8px 16px 16px 16px;
+  border-radius: var(--restaurant-radius);
+  box-shadow: var(--restaurant-shadow);
+  border: 1px solid var(--restaurant-border);
+  --background: var(--restaurant-bg);
+
+  ion-card-content {
+    padding: 16px;
+    --background: transparent;
+  }
+
+  // Header compact
+  .compact-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+
+    .compact-title {
+      font-size: 1rem;
+      color: var(--restaurant-text-dark);
+      font-weight: 600;
+    }
+
+    .compact-badge {
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 4px 8px;
+    }
+  }
+
+  // Client compact
+  .compact-client {
+    color: var(--restaurant-text-medium);
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+
+  // Résumé compact
+  .compact-summary {
+    color: var(--restaurant-text-medium);
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+  }
+
+  // Actions compactes
+  .compact-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    align-items: center;
+
+    ion-button {
+      font-size: 0.8rem;
+      height: 32px;
+    }
+  }
+}
+
+// ========================================================================
+// ACCORDÉON DÉTAILS (seulement si développé)
+// ========================================================================
+.order-details-accordion {
+  animation: slideInDown 0.3s ease-out;
+  margin-top: 12px;
+
+  .accordion-divider {
+    height: 1px;
+    background: var(--restaurant-border);
+    margin: 12px -16px 16px -16px;
+  }
+
+  .detail-section {
+    margin-bottom: 18px;
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+
+      .detail-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--restaurant-text-dark);
+        min-width: 120px;
+      }
+
+      .detail-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+
+        .phone-display,
+        .address-display {
+          flex: 1;
+          font-size: 0.9rem;
+          color: var(--restaurant-text-medium);
+          line-height: 1.3;
+        }
+
+        ion-button {
+          font-size: 0.8rem;
+          height: 28px;
+          --border-radius: 6px;
+        }
+      }
+
+      .time-display {
+        font-size: 0.9rem;
+        color: var(--restaurant-text-medium);
+      }
+
+      .update-time-display {
+        font-size: 0.85rem;
+        color: var(--restaurant-warning);
+        font-weight: 500;
+        font-style: italic;
+      }
+    }
+
+    // Layout vertical pour adresse complète
+    .detail-row-vertical {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      
+      .address-display {
+        font-size: 0.9rem;
+        color: var(--restaurant-text-medium);
+        line-height: 1.3;
+        padding: 8px 0;
+      }
+
+      .gps-button {
+        align-self: flex-start;
+        font-size: 0.8rem;
+        height: 28px;
+        --border-radius: 6px;
+      }
+    }
+
+    .detail-label:not(.detail-row .detail-label) {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--restaurant-text-dark);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .notes-content {
+      background: #fef3c7;
+      padding: 12px;
+      border-radius: var(--restaurant-radius);
+      border-left: 4px solid var(--restaurant-warning);
+      font-size: 0.9rem;
+      line-height: 1.4;
+      color: var(--restaurant-text-dark);
+      font-style: italic;
+    }
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ========================================================================
+// DÉTAILS DES ARTICLES (style page restaurant)
+// ========================================================================
+.order-items-detailed {
+  margin-top: 12px;
+
+  .item-card-livreur {
+    background: #f8fafc;
+    border: 1px solid var(--restaurant-border);
+    border-radius: var(--restaurant-radius);
+    padding: 12px;
+    margin-bottom: 12px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    // En-tête de l'article
+    .item-header-livreur {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+
+      .item-main-livreur {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+
+        .item-quantity-livreur {
+          background: var(--restaurant-primary);
+          color: white;
+          padding: 3px 8px;
+          border-radius: 4px;
+          font-weight: 600;
+          font-size: 0.8rem;
+          min-width: 28px;
+          text-align: center;
+        }
+
+        .item-name-livreur {
+          font-weight: 600;
+          color: var(--restaurant-text-dark);
+          font-size: 0.9rem;
+
+          .size-badge-livreur {
+            margin-left: 6px;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+          }
+        }
+      }
+
+      .item-price-livreur {
+        color: var(--restaurant-success);
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+    }
+
+    // Détails de composition
+    .item-details-livreur {
+      margin-bottom: 8px;
+
+      .composition-list-livreur {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+
+        .composition-chip-livreur {
+          font-size: 0.75rem;
+          height: 24px;
+        }
+      }
+    }
+
+    // Options détaillées
+    .item-options-livreur {
+      margin-bottom: 8px;
+
+      .option-group-livreur {
+        margin-bottom: 6px;
+
+        .option-group-header-livreur {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.8rem;
+          color: var(--restaurant-text-dark);
+          margin-bottom: 4px;
+
+          .option-icon-livreur {
+            font-size: 0.8rem;
+            color: var(--restaurant-text-medium);
+          }
+
+          strong {
+            font-weight: 600;
+          }
+        }
+
+        .option-items-livreur {
+          margin-left: 20px;
+          font-size: 0.8rem;
+          color: var(--restaurant-text-medium);
+
+          .option-item-livreur {
+            .price-modifier-livreur {
+              font-size: 0.7rem;
+              margin-left: 4px;
+              padding: 1px 4px;
+            }
+          }
+        }
+      }
+    }
+
+    // Informations supplémentaires
+    .item-extras-livreur {
+      .extra-info-livreur {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        color: var(--restaurant-text-medium);
+        margin-bottom: 4px;
+
+        ion-icon {
+          font-size: 1rem;
+        }
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+  }
+}
+
+
+// ========================================================================
+// STATUT EN LIGNE TOGGLE - SECTION ACCUEIL
+// ========================================================================
+.welcome-section {
+  .driver-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 16px;
+    
+    .driver-icon {
+      font-size: 2.5rem;
+      color: var(--restaurant-primary);
+    }
+    
+    .info-text {
+      flex: 1;
+      
+      h2 {
+        margin: 0 0 4px 0;
+        font-size: 1.2rem;
+        color: var(--restaurant-text-dark);
+        font-weight: 600;
+      }
+      
+      p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--restaurant-text-medium);
+      }
+    }
+    
+    .online-status-toggle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      border-radius: var(--restaurant-radius);
+      background: #f8fafc;
+      border: 1px solid var(--restaurant-border);
+      min-width: 120px;
+      
+      .status-info {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 4px;
+        
+        .status-icon {
+          font-size: 1.1rem;
+        }
+        
+        .status-text {
+          font-size: 0.85rem;
+          font-weight: 600;
+          
+          &.online {
+            color: var(--restaurant-success);
+          }
+          
+          &.offline {
+            color: var(--restaurant-text-medium);
+          }
+        }
+      }
+      
+      .online-toggle {
+        --handle-width: 20px;
+        --handle-height: 20px;
+        --track-width: 44px;
+        --track-height: 24px;
+        transform: scale(0.9);
+      }
+    }
+  }
+}
+
+// ========================================================================
+// EMPTY STATE STYLING
+// ========================================================================
+.empty-state-card {
+  margin: 20px 16px;
+  border-radius: var(--restaurant-radius);
+  --background: #fafbff;
+  border: 2px dashed var(--restaurant-border);
+
+  .empty-state-icon {
+    margin: 20px 0 16px 0;
+    
+    ion-icon {
+      font-size: 64px;
+      opacity: 0.8;
+    }
+  }
+
+  .empty-state-title {
+    color: var(--restaurant-text-dark);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+  }
+
+  .empty-state-subtitle {
+    color: var(--restaurant-text-medium);
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin: 0 0 20px 0;
+  }
+
+  ion-button {
+    margin-top: 8px;
+  }
+
+  ion-chip {
+    margin-top: 12px;
+  }
+}
+
+// ========================================================================
+// TAB BADGES STYLING
+// ========================================================================
+.tabs-section {
+  .tab-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 10px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    font-weight: 600;
+  }
+
+  ion-segment-button {
+    position: relative;
+  }
+}
+
+// ========================================================================
+// RESPONSIVE DESIGN MOBILE
+// ========================================================================
+
+@media (max-width: 768px) {
+  .order-card-compact {
+    margin: 6px 12px 12px 12px;
+
+    ion-card-content {
+      padding: 12px;
+    }
+
+    .compact-header {
+      .compact-title {
+        font-size: 0.9rem;
+      }
+
+      .compact-badge {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+      }
+    }
+
+    .compact-client,
+    .compact-summary {
+      font-size: 0.8rem;
+    }
+
+    .compact-actions {
+      flex-direction: column;
+      gap: 8px;
+
+      ion-button {
+        width: 100%;
+        font-size: 0.85rem;
+      }
+    }
+
+    .order-details-accordion {
+      .detail-section {
+        .detail-row {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+
+          .detail-label {
+            min-width: auto;
+          }
+
+          .detail-actions {
+            width: 100%;
+
+            ion-button {
+              flex-shrink: 0;
+            }
+          }
+        }
+
+        // Responsive pour layout vertical adresse
+        .detail-row-vertical {
+          gap: 12px;
+
+          .gps-button {
+            align-self: stretch;
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+}
+

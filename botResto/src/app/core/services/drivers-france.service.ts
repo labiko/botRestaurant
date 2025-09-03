@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { SupabaseService } from './supabase.service';
+import { SupabaseFranceService } from './supabase-france.service';
 
 export interface FranceDriver {
   id: number;
@@ -33,14 +33,14 @@ export class DriversFranceService {
   private driversSubject = new BehaviorSubject<FranceDriver[]>([]);
   public drivers$ = this.driversSubject.asObservable();
 
-  constructor(private supabaseService: SupabaseService) { }
+  constructor(private supabaseFranceService: SupabaseFranceService) { }
 
   /**
    * Charger les livreurs d'un restaurant
    */
   async loadDrivers(restaurantId: number): Promise<void> {
     try {
-      const { data, error } = await this.supabaseService.client
+      const { data, error } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
         .select('*')
         .eq('restaurant_id', restaurantId)
@@ -79,14 +79,14 @@ export class DriversFranceService {
       const today = new Date().toISOString().split('T')[0];
 
       // Compter les livraisons totales
-      const { count: totalDeliveries } = await this.supabaseService.client
+      const { count: totalDeliveries } = await this.supabaseFranceService.client
         .from('france_orders')
         .select('*', { count: 'exact', head: true })
         .eq('driver_id', driverId)
         .eq('status', 'livree');
 
       // Compter les livraisons du jour
-      const { count: todayDeliveries } = await this.supabaseService.client
+      const { count: todayDeliveries } = await this.supabaseFranceService.client
         .from('france_orders')
         .select('*', { count: 'exact', head: true })
         .eq('driver_id', driverId)
@@ -94,7 +94,7 @@ export class DriversFranceService {
         .gte('updated_at', today);
 
       // Compter les commandes actives
-      const { count: activeOrders } = await this.supabaseService.client
+      const { count: activeOrders } = await this.supabaseFranceService.client
         .from('france_orders')
         .select('*', { count: 'exact', head: true })
         .eq('driver_id', driverId)
@@ -125,7 +125,7 @@ export class DriversFranceService {
       const saltRounds = 10;
       const password_hash = await bcrypt.hash(driverData.password, saltRounds);
 
-      const { error } = await this.supabaseService.client
+      const { error } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
         .insert({
           restaurant_id: restaurantId,
@@ -156,7 +156,7 @@ export class DriversFranceService {
    */
   async updateDriverStatus(driverId: number, isActive: boolean): Promise<boolean> {
     try {
-      const { error } = await this.supabaseService.client
+      const { error } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
         .update({
           is_active: isActive,
@@ -181,7 +181,7 @@ export class DriversFranceService {
    */
   async deleteDriver(driverId: number): Promise<boolean> {
     try {
-      const { error } = await this.supabaseService.client
+      const { error } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
         .delete()
         .eq('id', driverId);
@@ -203,11 +203,12 @@ export class DriversFranceService {
    */
   async getActiveDriversCount(restaurantId: number): Promise<number> {
     try {
-      const { count } = await this.supabaseService.client
+      const { count } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
         .select('*', { count: 'exact', head: true })
         .eq('restaurant_id', restaurantId)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('is_online', true); // AJOUTÉ : même logique que findAvailableDrivers
 
       return count || 0;
     } catch (error) {

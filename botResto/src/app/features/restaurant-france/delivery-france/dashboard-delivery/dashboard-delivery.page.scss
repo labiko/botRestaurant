@@ -1,4 +1,187 @@
-// Dashboard Delivery styles - Clean design sans dégradés
+// ========================================================================
+// DASHBOARD LIVREUR - DESIGN IDENTIQUE À LA PAGE RESTAURANT
+// ========================================================================
+@import './dashboard-delivery-modern.scss';
+
+// Import des styles de la page restaurant pour avoir la même structure
+@import '../../orders-france/orders-france.page.scss';
+
+// Styles pour les modals avec fond blanc forcé (spécial Edge)
+:host ::ng-deep .custom-alert-white {
+  --background: #ffffff !important;
+  --color: #000000 !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  
+  .alert-wrapper {
+    --background: #ffffff !important;
+    --color: #000000 !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+  }
+  
+  .alert-head {
+    color: #000000 !important;
+    background: #ffffff !important;
+  }
+  
+  .alert-message {
+    color: #000000 !important;
+    background: #ffffff !important;
+  }
+  
+  .alert-button {
+    --color: #000000 !important;
+    color: #000000 !important;
+  }
+}
+
+// Force supplémentaire pour Edge
+:host ::ng-deep ion-alert.custom-alert-white {
+  --background: #ffffff !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+:host ::ng-deep ion-alert.custom-alert-white .alert-wrapper {
+  --background: #ffffff !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+// Styles pour l'interface OTP moderne inline
+.otp-inline-container {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px solid #e2e8f0;
+  animation: slideInDown 0.3s ease-out;
+
+  .otp-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+
+    ion-icon {
+      font-size: 18px;
+    }
+  }
+
+  .otp-modern-container {
+    .otp-digits {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 16px;
+
+      .otp-digit {
+        width: 50px;
+        height: 50px;
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+        border: 2px solid var(--ion-color-medium);
+        border-radius: 12px;
+        background: #ffffff;
+        color: var(--ion-color-dark);
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+        &:focus {
+          outline: none;
+          border-color: var(--ion-color-primary);
+          box-shadow: 0 0 0 3px var(--ion-color-primary-tint);
+          transform: scale(1.05);
+        }
+
+        &.otp-focus {
+          animation: focusScale 0.2s ease;
+        }
+      }
+
+      &.otp-success .otp-digit {
+        border-color: var(--ion-color-success);
+        background: var(--ion-color-success-tint);
+        animation: successPulse 0.5s ease;
+      }
+
+      &.otp-error .otp-digit {
+        border-color: var(--ion-color-danger);
+        background: var(--ion-color-danger-tint);
+        animation: errorShake 0.5s ease;
+      }
+    }
+
+    .otp-actions {
+      display: flex;
+      justify-content: center;
+
+      ion-button {
+        --border-radius: 8px;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+// Animations
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes focusScale {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1.05); }
+}
+
+@keyframes successPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); box-shadow: 0 0 20px var(--ion-color-success-tint); }
+  100% { transform: scale(1); }
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+// Force le mode clair sur tous les navigateurs (fixe le problème Edge)
+:host {
+  --ion-background-color: #ffffff;
+  --ion-text-color: #1e293b;
+  --ion-color-step-50: #f9fafb;
+  --ion-color-step-100: #f3f4f6;
+  --ion-color-step-150: #e5e7eb;
+  --ion-color-step-200: #d1d5db;
+  
+  ion-content {
+    --background: #ffffff;
+    --color: #1e293b;
+  }
+  
+  ion-card {
+    --background: #ffffff;
+    --color: #1e293b;
+  }
+  
+  ion-card-content {
+    --color: #1e293b;
+  }
+}
 .welcome-section {
   padding: 20px;
   margin-bottom: 20px;
@@ -200,50 +383,190 @@
   }
 }
 
-// Responsive design
+// Responsive design pour mobile - Optimisation UX livreur
 @media (max-width: 768px) {
-  .stats-section {
-    ion-col {
-      padding: 4px;
-    }
+  // Section d'accueil plus compacte
+  .welcome-section {
+    padding: 15px;
+    margin-bottom: 15px;
 
-    .stat-card .stat-content {
-      gap: 10px;
+    .driver-info {
+      gap: 12px;
 
-      .stat-icon {
-        font-size: 1.5rem;
+      .driver-icon {
+        font-size: 2.2rem;
       }
 
-      .stat-text h3 {
-        font-size: 1.5rem;
-      }
-    }
-  }
+      .info-text {
+        h2 {
+          font-size: 1.2rem;
+          margin: 0 0 3px 0;
+        }
 
-  .orders-section {
-    .order-card {
-      .order-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-      }
-
-      .order-actions {
-        ion-button {
-          flex: 1;
-          min-width: auto;
+        p {
+          font-size: 0.85rem;
         }
       }
     }
   }
 
-  .welcome-section .driver-info {
-    .driver-icon {
-      font-size: 2.5rem;
+  // Statistiques optimisées mobile
+  .stats-section {
+    padding: 0 12px;
+    margin-bottom: 15px;
+
+    ion-col {
+      padding: 2px;
     }
 
-    .info-text h2 {
-      font-size: 1.3rem;
+    .stat-card {
+      border-radius: 8px;
+
+      .stat-content {
+        gap: 8px;
+        padding: 8px 0;
+
+        .stat-icon {
+          font-size: 1.3rem;
+        }
+
+        .stat-text {
+          h3 {
+            font-size: 1.3rem;
+            margin: 0 0 1px 0;
+          }
+
+          p {
+            font-size: 0.75rem;
+          }
+        }
+      }
+    }
+  }
+
+  // Onglets optimisés tactile
+  .tabs-section {
+    padding: 0 12px;
+    margin-bottom: 15px;
+
+    ion-segment {
+      border-radius: 8px;
+      height: 44px; // Taille tactile optimale
+
+      ion-segment-button {
+        font-size: 14px;
+        font-weight: 600;
+      }
+    }
+  }
+
+  // Commandes optimisées mobile
+  .orders-section {
+    padding: 0 12px;
+
+    h3 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+
+    .order-card {
+      border-radius: 10px;
+      margin-bottom: 12px;
+
+      .order-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 8px;
+
+        .order-info {
+          h4 {
+            font-size: 0.95rem;
+            margin: 0 0 1px 0;
+          }
+
+          p {
+            font-size: 0.8rem;
+          }
+        }
+
+        ion-badge {
+          font-size: 0.7rem;
+          padding: 4px 8px;
+        }
+      }
+
+      .order-details {
+        margin-bottom: 12px;
+
+        p {
+          margin: 3px 0;
+          font-size: 0.85rem;
+        }
+      }
+
+      .order-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+
+        ion-button {
+          height: 38px; // Taille tactile mobile
+          font-size: 0.8rem;
+          font-weight: 600;
+          flex: 1;
+          min-width: auto;
+          --border-radius: 6px;
+        }
+      }
+    }
+
+    // Messages vides plus compacts
+    .text-center {
+      padding: 30px 15px;
+
+      .no-orders-icon {
+        font-size: 3rem;
+        margin-bottom: 12px;
+      }
+
+      h3 {
+        font-size: 1.1rem;
+        margin-bottom: 8px;
+      }
+
+      p {
+        font-size: 0.85rem;
+      }
+    }
+  }
+}
+
+// Optimisations très petits écrans (iPhone SE, etc.)
+@media (max-width: 375px) {
+  .stats-section {
+    .stat-card .stat-content {
+      .stat-icon {
+        font-size: 1.1rem;
+      }
+
+      .stat-text {
+        h3 {
+          font-size: 1.1rem;
+        }
+
+        p {
+          font-size: 0.7rem;
+        }
+      }
+    }
+  }
+
+  .orders-section {
+    .order-card .order-actions {
+      ion-button {
+        font-size: 0.75rem;
+        height: 36px;
+      }
     }
   }
 }
@@ -256,12 +579,41 @@ ion-badge {
   border-radius: 16px;
 }
 
-// Animation pour les cartes
+// Animation pour les cartes - Optimisée tactile
 .order-card {
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 
-  &:hover {
-    transform: translateY(-2px);
+  // Effet hover desktop
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  // Effet tactile mobile
+  @media (hover: none) {
+    &:active {
+      transform: scale(0.98);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
+
+// Boutons tactiles optimisés
+ion-button {
+  // Taille tactile minimum 44px pour accessibilité
+  min-height: 44px;
+  
+  @media (max-width: 768px) {
+    // Feedback tactile mobile
+    &:active {
+      transform: scale(0.96);
+    }
+    
+    // Espacement tactile entre boutons
+    & + ion-button {
+      margin-left: 8px;
+    }
   }
 }
 
@@ -269,4 +621,317 @@ ion-badge {
 ion-segment-button.segment-button-checked {
   --color: white !important;
   --background: var(--ion-color-primary) !important;
+}
+
+// ============================================================================
+// NOUVELLE CARD COMPACTE POUR COMMANDES LIVREUR
+// ============================================================================
+.order-card-compact {
+  ion-card-content {
+    padding: 12px !important; // Réduction du padding pour compacité
+  }
+
+  .compact-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+
+    .compact-title {
+      font-size: 0.9rem;
+      color: var(--ion-color-dark);
+      font-weight: 500;
+    }
+
+    .compact-badge {
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      border-radius: 12px;
+    }
+  }
+
+  .compact-client {
+    font-size: 0.85rem;
+    color: var(--ion-color-dark);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  .compact-summary {
+    font-size: 0.8rem;
+    color: var(--ion-color-medium);
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+
+  .compact-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+
+    ion-button {
+      height: 32px; // Boutons plus petits
+      font-size: 0.75rem;
+      font-weight: 600;
+      --border-radius: 6px;
+
+      // Bouton détail spécifique
+      &[fill="clear"] {
+        --color: var(--ion-color-primary);
+        min-width: 60px;
+      }
+    }
+  }
+}
+
+// Responsive pour la card compacte
+@media (max-width: 768px) {
+  .order-card-compact {
+    margin-bottom: 10px;
+
+    ion-card-content {
+      padding: 10px !important;
+    }
+
+    .compact-header {
+      margin-bottom: 4px;
+
+      .compact-title {
+        font-size: 0.85rem;
+      }
+
+      .compact-badge {
+        font-size: 0.65rem;
+        padding: 2px 6px;
+      }
+    }
+
+    .compact-client {
+      font-size: 0.8rem;
+      margin-bottom: 3px;
+    }
+
+    .compact-summary {
+      font-size: 0.75rem;
+      margin-bottom: 6px;
+    }
+
+    .compact-actions {
+      gap: 4px;
+
+      ion-button {
+        height: 30px;
+        font-size: 0.7rem;
+
+        &[fill="clear"] {
+          min-width: 50px;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 375px) {
+  .order-card-compact {
+    .compact-actions {
+      ion-button {
+        height: 28px;
+        font-size: 0.65rem;
+        padding: 0 8px;
+      }
+    }
+  }
+}
+
+// ============================================================================
+// ACCORDÉON DÉTAIL COMMANDE
+// ============================================================================
+.order-details-accordion {
+  margin-top: 8px;
+  animation: slideInDown 0.3s ease-out;
+
+  .accordion-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--ion-color-medium), transparent);
+    margin: 8px 0 12px 0;
+    opacity: 0.3;
+  }
+
+  .detail-section {
+    margin-bottom: 12px;
+    
+    .detail-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--ion-color-dark);
+      margin-bottom: 4px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 8px;
+
+      .detail-label {
+        margin-bottom: 0;
+        min-width: 80px;
+        flex-shrink: 0;
+      }
+
+      .detail-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+
+        .phone-display,
+        .address-display,
+        .time-display {
+          font-size: 0.8rem;
+          color: var(--ion-color-dark);
+          flex: 1;
+          min-width: 0;
+          word-break: break-word;
+        }
+
+        .address-display {
+          max-width: 200px;
+        }
+
+        ion-button {
+          height: 28px;
+          font-size: 0.7rem;
+          --border-radius: 4px;
+          flex-shrink: 0;
+        }
+      }
+    }
+
+    // Section articles
+    .items-list {
+      background: rgba(var(--ion-color-light-rgb), 0.5);
+      border-radius: 6px;
+      padding: 8px;
+      border: 1px solid rgba(var(--ion-color-medium-rgb), 0.2);
+
+      .item-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+        
+        &:not(:last-child) {
+          border-bottom: 1px solid rgba(var(--ion-color-medium-rgb), 0.1);
+        }
+
+        .item-quantity {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: var(--ion-color-primary);
+          min-width: 25px;
+        }
+
+        .item-name {
+          font-size: 0.8rem;
+          color: var(--ion-color-dark);
+          flex: 1;
+          min-width: 0;
+        }
+
+        .item-price {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: var(--ion-color-success);
+        }
+      }
+    }
+
+    // Section notes
+    .notes-content {
+      background: rgba(var(--ion-color-warning-rgb), 0.1);
+      border-left: 3px solid var(--ion-color-warning);
+      padding: 8px 12px;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.8rem;
+      color: var(--ion-color-dark);
+      font-style: italic;
+    }
+  }
+}
+
+// Animation d'accordéon
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Responsive accordéon mobile
+@media (max-width: 768px) {
+  .order-details-accordion {
+    .detail-section {
+      margin-bottom: 10px;
+
+      .detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+
+        .detail-label {
+          min-width: auto;
+        }
+
+        .detail-actions {
+          width: 100%;
+          flex-wrap: wrap;
+
+          .address-display {
+            max-width: none;
+            margin-bottom: 4px;
+          }
+
+          ion-button {
+            height: 30px;
+            font-size: 0.75rem;
+          }
+        }
+      }
+
+      .items-list {
+        padding: 6px;
+
+        .item-row {
+          .item-name {
+            font-size: 0.75rem;
+          }
+        }
+      }
+
+      .notes-content {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+      }
+    }
+  }
+}
+
+@media (max-width: 375px) {
+  .order-details-accordion {
+    .detail-section {
+      .detail-row .detail-actions ion-button {
+        height: 28px;
+        font-size: 0.65rem;
+        padding: 0 8px;
+      }
+    }
+  }
 }

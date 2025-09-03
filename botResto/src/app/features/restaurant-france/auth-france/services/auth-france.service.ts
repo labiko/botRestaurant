@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { SupabaseFranceService } from '../../../../core/services/supabase-france.service';
-import * as bcrypt from 'bcryptjs';
+import { PhoneFormatService } from '../../../../core/services/phone-format.service';
 
 export interface FranceUser {
   id: number;
@@ -9,6 +9,7 @@ export interface FranceUser {
   firstName?: string;
   lastName?: string;
   name?: string; // Pour restaurants
+  restaurantName?: string; // Nom du restaurant (pour drivers)
   phoneNumber: string;
   email?: string;
   restaurantId: number;
@@ -38,7 +39,10 @@ export class AuthFranceService {
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
-  constructor(private supabaseFranceService: SupabaseFranceService) {
+  constructor(
+    private supabaseFranceService: SupabaseFranceService,
+    private phoneFormatService: PhoneFormatService
+  ) {
     this.checkExistingSession();
   }
 
@@ -47,22 +51,43 @@ export class AuthFranceService {
    */
   private async checkExistingSession(): Promise<void> {
     try {
+      console.log('🔍 [AuthFrance] Vérification session existante...');
+      
       const sessionData = localStorage.getItem('france_auth_session');
-      if (sessionData) {
-        const session = JSON.parse(sessionData);
-        const isValid = await this.validateSession(session.id);
+      if (!sessionData) {
+        console.log('📝 [AuthFrance] Aucune session trouvée');
+        return;
+      }
+
+      const session = JSON.parse(sessionData);
+      console.log('📋 [AuthFrance] Session trouvée:', {
+        id: session.id,
+        user_type: session.user_type,
+        expires_at: session.expires_at
+      });
+
+      const isValid = await this.validateSession(session.id);
+      console.log('✅ [AuthFrance] Session valide:', isValid);
         
-        if (isValid) {
-          const user = await this.getUserFromSession(session.id);
-          if (user) {
-            this.setCurrentUser(user);
-          }
+      if (isValid) {
+        const user = await this.getUserFromSession(session.id);
+        if (user) {
+          console.log('👤 [AuthFrance] Utilisateur récupéré:', {
+            id: user.id,
+            type: user.type,
+            name: user.name || `${user.firstName} ${user.lastName}`
+          });
+          this.setCurrentUser(user);
         } else {
+          console.warn('⚠️ [AuthFrance] Impossible de récupérer les données utilisateur');
           this.clearSession();
         }
+      } else {
+        console.warn('⚠️ [AuthFrance] Session expirée ou invalide');
+        this.clearSession();
       }
     } catch (error) {
-      console.error('Erreur vérification session:', error);
+      console.error('❌ [AuthFrance] Erreur vérification session:', error);
       this.clearSession();
     }
   }
@@ -158,12 +183,30 @@ export class AuthFranceService {
     try {
       console.log('🚴 [AuthFrance] Connexion livreur:', phone);
 
-      // Rechercher le livreur par téléphone
+      // Valider le format du numéro de téléphone
+      const phoneValidation = this.phoneFormatService.isValidDriverPhone(phone);
+      if (!phoneValidation.valid) {
+        return { 
+          success: false, 
+          message: phoneValidation.message || 'Format de téléphone invalide' 
+        };
+      }
+
+      // Normaliser le numéro pour la recherche
+      const normalizedPhone = this.phoneFormatService.normalizeForStorage(phone);
+
+      // Rechercher le livreur par téléphone avec nom du restaurant
       const { data: driver, error } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
-        .select('id, restaurant_id, first_name, last_name, phone_number, email, password_hash, is_active')
-        .eq('phone_number', phone)
+        .select('id, restaurant_id, first_name, last_name, phone_number, email, password, is_active, france_restaurants(name)')
+        .eq('phone_number', normalizedPhone)
         .single();
+
+      console.log('🔍 [AuthFrance] Recherche livreur:', { 
+        normalizedPhone, 
+        driver, 
+        error 
+      });
 
       if (error || !driver) {
         console.error('Livreur non trouvé:', error);
@@ -174,11 +217,15 @@ export class AuthFranceService {
         return { success: false, message: 'Compte livreur désactivé' };
       }
 
-      // Vérifier le mot de passe
-      const passwordValid = await this.verifyPassword(password, driver.password_hash);
+      // Vérifier le code à 6 chiffres
+      console.log('🔐 [AuthFrance] Vérification code:', {
+        provided: password,
+        stored: driver.password,
+        match: driver.password === password
+      });
 
-      if (!passwordValid) {
-        return { success: false, message: 'Mot de passe incorrect' };
+      if (driver.password !== password) {
+        return { success: false, message: 'Code incorrect' };
       }
 
       // Créer la session
@@ -197,7 +244,8 @@ export class AuthFranceService {
         type: 'driver',
         firstName: driver.first_name,
         lastName: driver.last_name,
-        phoneNumber: phone,
+        restaurantName: driver.france_restaurants?.[0]?.name,
+        phoneNumber: normalizedPhone,
         email: driver.email,
         restaurantId: driver.restaurant_id,
         isActive: driver.is_active
@@ -322,71 +370,82 @@ export class AuthFranceService {
    */
   private async getUserFromSession(sessionId: string): Promise<FranceUser | null> {
     try {
+      console.log('🔍 [AuthFrance] Récupération utilisateur depuis session:', sessionId);
+
       const { data: session, error } = await this.supabaseFranceService.client
         .from('france_auth_sessions')
-        .select('user_id, user_type, phone_number, restaurant_id')
+        .select('user_id, user_type, session_token')
         .eq('id', sessionId)
         .single();
 
+      console.log('📋 [AuthFrance] Données session récupérées:', { session, error });
+
       if (error || !session) {
+        console.error('❌ [AuthFrance] Session non trouvée ou erreur:', error);
         return null;
       }
 
       if (session.user_type === 'restaurant') {
-        const { data: restaurant } = await this.supabaseFranceService.client
+        console.log('🏪 [AuthFrance] Récupération données restaurant...');
+        
+        const { data: restaurant, error: restError } = await this.supabaseFranceService.client
           .from('france_restaurants')
-          .select('id, name, is_active')
+          .select('id, name, phone, whatsapp_number, is_active')
           .eq('id', session.user_id)
           .single();
 
-        if (restaurant) {
+        console.log('🏪 [AuthFrance] Restaurant récupéré:', { restaurant, restError });
+
+        if (restaurant && !restError) {
           return {
             id: restaurant.id,
             type: 'restaurant',
             name: restaurant.name,
-            phoneNumber: session.phone_number,
-            restaurantId: session.restaurant_id,
+            phoneNumber: restaurant.whatsapp_number || restaurant.phone,
+            restaurantId: restaurant.id,
             isActive: restaurant.is_active
           };
         }
       } else if (session.user_type === 'driver') {
-        const { data: driver } = await this.supabaseFranceService.client
+        console.log('🚴 [AuthFrance] Récupération données livreur...');
+        
+        const { data: driver, error: driverError } = await this.supabaseFranceService.client
           .from('france_delivery_drivers')
-          .select('id, first_name, last_name, email, is_active')
+          .select('id, restaurant_id, first_name, last_name, phone_number, email, is_active, france_restaurants(name)')
           .eq('id', session.user_id)
           .single();
 
-        if (driver) {
+        console.log('🚴 [AuthFrance] Livreur récupéré:', { driver, driverError });
+
+        if (driver && !driverError) {
           return {
             id: driver.id,
             type: 'driver',
             firstName: driver.first_name,
             lastName: driver.last_name,
-            phoneNumber: session.phone_number,
+            restaurantName: driver.france_restaurants?.[0]?.name,
+            phoneNumber: driver.phone_number,
             email: driver.email,
-            restaurantId: session.restaurant_id,
+            restaurantId: driver.restaurant_id,
             isActive: driver.is_active
           };
         }
       }
 
+      console.warn('⚠️ [AuthFrance] Type utilisateur non géré ou données manquantes');
       return null;
     } catch (error) {
-      console.error('Erreur récupération utilisateur:', error);
+      console.error('❌ [AuthFrance] Erreur récupération utilisateur:', error);
       return null;
     }
   }
 
   /**
-   * Vérifier mot de passe
+   * Vérifier mot de passe (obsolète - gardé pour compatibilité restaurants)
    */
   private async verifyPassword(password: string, hash: string): Promise<boolean> {
     try {
-      // Si le hash commence par $2, c'est du bcrypt
-      if (hash && hash.startsWith('$2')) {
-        return await bcrypt.compare(password, hash);
-      }
-      // Sinon comparaison simple (temporaire)
+      // Comparaison simple pour les restaurants
       return password === hash;
     } catch (error) {
       console.error('Erreur vérification mot de passe:', error);

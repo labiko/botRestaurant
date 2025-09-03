@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { SupabaseService } from './supabase.service';
+import { SupabaseFranceService } from './supabase-france.service';
 import { FranceOrder, OrderAction } from './france-orders.service';
 
 export interface DeliveryOrder extends FranceOrder {
@@ -14,17 +14,20 @@ export interface DeliveryOrder extends FranceOrder {
   providedIn: 'root'
 })
 export class DeliveryOrdersService {
-  private ordersSubject = new BehaviorSubject<DeliveryOrder[]>([]);
-  public orders$ = this.ordersSubject.asObservable();
+  private driverOrdersSubject = new BehaviorSubject<DeliveryOrder[]>([]);
+  private availableOrdersSubject = new BehaviorSubject<DeliveryOrder[]>([]);
+  
+  public driverOrders$ = this.driverOrdersSubject.asObservable();
+  public availableOrders$ = this.availableOrdersSubject.asObservable();
 
-  constructor(private supabaseService: SupabaseService) { }
+  constructor(private supabaseFranceService: SupabaseFranceService) { }
 
   /**
    * Charger les commandes assignées à un livreur spécifique
    */
   async loadDriverOrders(driverId: number): Promise<void> {
     try {
-      const { data, error } = await this.supabaseService.client
+      const { data, error } = await this.supabaseFranceService.client
         .from('france_orders')
         .select(`
           *,
@@ -36,16 +39,16 @@ export class DeliveryOrdersService {
 
       if (error) {
         console.error('Erreur chargement commandes livreur:', error);
-        this.ordersSubject.next([]);
+        this.driverOrdersSubject.next([]);
         return;
       }
 
       const processedOrders = data?.map((order: any) => this.processDeliveryOrder(order)) || [];
-      this.ordersSubject.next(processedOrders);
+      this.driverOrdersSubject.next(processedOrders);
       console.log(`✅ [DeliveryOrders] ${processedOrders.length} commandes chargées pour livreur ${driverId}`);
     } catch (error) {
       console.error('Erreur service commandes livreur:', error);
-      this.ordersSubject.next([]);
+      this.driverOrdersSubject.next([]);
     }
   }
 
@@ -54,7 +57,7 @@ export class DeliveryOrdersService {
    */
   async loadAvailableOrders(restaurantId: number): Promise<void> {
     try {
-      const { data, error } = await this.supabaseService.client
+      const { data, error } = await this.supabaseFranceService.client
         .from('france_orders')
         .select(`
           *,
@@ -68,16 +71,16 @@ export class DeliveryOrdersService {
 
       if (error) {
         console.error('Erreur chargement commandes disponibles:', error);
-        this.ordersSubject.next([]);
+        this.availableOrdersSubject.next([]);
         return;
       }
 
       const processedOrders = data?.map((order: any) => this.processDeliveryOrder(order)) || [];
-      this.ordersSubject.next(processedOrders);
+      this.availableOrdersSubject.next(processedOrders);
       console.log(`✅ [DeliveryOrders] ${processedOrders.length} commandes disponibles`);
     } catch (error) {
       console.error('Erreur service commandes disponibles:', error);
-      this.ordersSubject.next([]);
+      this.availableOrdersSubject.next([]);
     }
   }
 
@@ -109,7 +112,7 @@ export class DeliveryOrdersService {
    */
   async acceptOrder(orderId: number, driverId: number): Promise<boolean> {
     try {
-      const { error } = await this.supabaseService.client
+      const { error } = await this.supabaseFranceService.client
         .from('france_orders')
         .update({
           driver_id: driverId,
@@ -146,7 +149,7 @@ export class DeliveryOrdersService {
         updateData.estimated_delivery_time = estimatedTime.toISOString();
       }
 
-      const { error } = await this.supabaseService.client
+      const { error } = await this.supabaseFranceService.client
         .from('france_orders')
         .update(updateData)
         .eq('id', orderId);

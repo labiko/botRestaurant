@@ -12,7 +12,11 @@ ion-content {
 // =============================================================================
 .header-section {
   text-align: center;
-  padding: 40px 20px 30px 20px;
+  padding: 20px 20px 30px 20px; // Réduction padding haut pour mobile
+  min-height: 180px; // Hauteur minimum au lieu de padding fixe
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
 
@@ -35,6 +39,12 @@ ion-content {
     font-weight: 700;
     margin: 15px 0 8px 0;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    
+    .french-flag {
+      font-size: 1.5rem;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
   }
 
   .app-subtitle {
@@ -204,16 +214,42 @@ ion-content {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         --background: white;
         --color: var(--ion-color-dark);
-        min-height: 58px;
+        min-height: 65px;
         display: flex;
         align-items: center;
         padding: 0 16px;
+        position: relative;
+
+        &.phone-input {
+          &.ion-focused {
+            .french-indicator .flag-background {
+              transform: scale(1.1);
+            }
+          }
+        }
+
+        &.password-input {
+          .password-toggle {
+            --color: var(--ion-color-medium);
+            margin: 0;
+            height: 40px;
+            
+            &:hover {
+              --color: var(--ion-color-primary);
+            }
+          }
+        }
 
         &.ion-focused {
           border-color: var(--ion-color-primary);
           box-shadow: 0 6px 25px rgba(var(--ion-color-primary-rgb), 0.15);
           transform: translateY(-2px);
-          background: rgba(var(--ion-color-primary-rgb), 0.02);
+          background: linear-gradient(135deg, rgba(var(--ion-color-primary-rgb), 0.02) 0%, rgba(var(--ion-color-primary-rgb), 0.05) 100%);
+          
+          .phone-icon, .password-icon {
+            color: var(--ion-color-primary);
+            transform: scale(1.1);
+          }
         }
 
         .input-prefix {
@@ -222,28 +258,40 @@ ion-content {
           margin-right: 12px;
           flex-shrink: 0;
 
-          .flag-icon {
-            font-size: 18px;
-            margin-right: 8px;
-            animation: flagWave 2s ease-in-out infinite;
-            transform-origin: bottom center;
-          }
-
-          .country-code {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--ion-color-dark);
-            background: rgba(var(--ion-color-primary-rgb), 0.1);
-            padding: 4px 8px;
-            border-radius: 6px;
-            border-right: 2px solid #e8ecf4;
-            margin-right: 8px;
+          // Drapeau français en CSS pur
+          .french-indicator {
+            margin-right: 10px;
+            
+            .flag-background {
+              width: 24px;
+              height: 16px;
+              display: flex;
+              border-radius: 2px;
+              overflow: hidden;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+              border: 0.5px solid rgba(0, 0, 0, 0.1);
+              
+              .flag-blue {
+                width: 8px;
+                background: #002395;
+              }
+              
+              .flag-white {
+                width: 8px;
+                background: #FFFFFF;
+              }
+              
+              .flag-red {
+                width: 8px;
+                background: #ED2939;
+              }
+            }
           }
 
           .phone-icon, .password-icon {
-            font-size: 20px;
-            color: var(--ion-color-medium);
-            transition: color 0.3s ease;
+            font-size: 22px;
+            color: var(--ion-color-primary);
+            transition: all 0.3s ease;
           }
         }
 
@@ -257,17 +305,30 @@ ion-content {
             font-size: 13px;
             transform: translateY(0);
             transition: all 0.3s ease;
+            
+            &.modern-label {
+              letter-spacing: 0.3px;
+            }
           }
 
           ion-input {
             --color: var(--ion-color-dark);
             --placeholder-color: var(--ion-color-medium);
+            --placeholder-opacity: 0.5;
             font-size: 16px;
             font-weight: 500;
             --padding-start: 0;
             --padding-end: 0;
             --padding-top: 8px;
             --padding-bottom: 8px;
+            
+            &.phone-number-input {
+              letter-spacing: 1px;
+            }
+            
+            &.password-field {
+              letter-spacing: 2px;
+            }
           }
         }
 
@@ -374,6 +435,17 @@ ion-content {
     font-size: 12px;
     margin: 0;
   }
+
+  .debug-button {
+    font-size: 11px;
+    opacity: 0.5;
+    margin-top: 8px;
+    --color: var(--ion-color-medium-shade);
+    
+    &:hover {
+      opacity: 0.8;
+    }
+  }
 }
 
 // =============================================================================
@@ -448,19 +520,21 @@ ion-content {
 // =============================================================================
 @media (max-width: 480px) {
   .header-section {
-    padding: 30px 15px 25px 15px;
+    padding: 10px 15px 20px 15px; // Header plus compact sur mobile
+    min-height: 140px; // Plus petit sur mobile
 
     .app-logo {
-      width: 70px !important;
-      height: 70px !important;
+      width: 60px !important;
+      height: 60px !important;
     }
 
     .app-title {
-      font-size: 1.6rem;
+      font-size: 1.4rem; // Plus petit pour mobile
+      margin: 10px 0 5px 0;
     }
 
     .app-subtitle {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
   }
 
@@ -490,12 +564,17 @@ ion-content {
 
   .login-section {
     padding: 15px;
+    min-height: calc(100vh - 160px); // Ajustement pour header plus petit
 
-    .login-header .login-title {
-      font-size: 1.2rem;
+    .login-header {
+      margin-bottom: 20px; // Réduction espace sur mobile
+      
+      .login-title {
+        font-size: 1.2rem;
 
-      .login-icon {
-        font-size: 1.4rem;
+        .login-icon {
+          font-size: 1.4rem;
+        }
       }
     }
 

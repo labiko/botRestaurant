@@ -133,6 +133,129 @@
       color: var(--ion-color-primary);
     }
   }
+
+  // Styles pour l'affichage détaillé des items
+  .item-card {
+    background: rgba(var(--ion-color-light-rgb), 0.3);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border-left: 4px solid var(--ion-color-primary);
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+
+      .item-main {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+
+        .item-quantity {
+          font-weight: 600;
+          color: var(--ion-color-primary);
+          min-width: 30px;
+        }
+
+        .item-name {
+          font-weight: 500;
+          color: var(--ion-color-dark);
+          flex: 1;
+        }
+
+        .size-badge {
+          --background: var(--ion-color-medium);
+          --color: white;
+          font-size: 0.75rem;
+        }
+      }
+
+      .item-price {
+        font-weight: 600;
+        color: var(--ion-color-success);
+        font-size: 1.1rem;
+      }
+    }
+
+    .item-details {
+      margin-bottom: 12px;
+
+      .composition-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+
+        .composition-chip {
+          --background: rgba(var(--ion-color-tertiary-rgb), 0.1);
+          --color: var(--ion-color-tertiary);
+          font-size: 0.8rem;
+          height: 28px;
+        }
+      }
+    }
+
+    .item-options {
+      margin-bottom: 8px;
+
+      .option-group {
+        margin-bottom: 8px;
+
+        .option-group-header {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          margin-bottom: 4px;
+          
+          .option-icon {
+            font-size: 12px;
+            color: var(--ion-color-medium);
+          }
+          
+          strong {
+            color: var(--ion-color-dark);
+            font-size: 0.9rem;
+          }
+        }
+
+        .option-items {
+          padding-left: 20px;
+          
+          .option-item {
+            color: var(--ion-color-medium-shade);
+            font-size: 0.9rem;
+            
+            .price-modifier {
+              --background: var(--ion-color-warning);
+              --color: white;
+              font-size: 0.7rem;
+              margin-left: 4px;
+            }
+          }
+        }
+      }
+    }
+
+    .item-extras {
+      border-top: 1px solid var(--ion-color-light-shade);
+      padding-top: 8px;
+      
+      .extra-info {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 4px;
+        font-size: 0.85rem;
+        color: var(--ion-color-medium-shade);
+        
+        ion-icon {
+          font-size: 16px;
+        }
+      }
+    }
+  }
 }
 
 .order-totals {
@@ -257,4 +380,115 @@
       font-size: 0.875rem;
     }
   }
+}
+
+// ========== NOUVEAUX STYLES POUR SYSTÈME DE LIVRAISON ==========
+
+.assignment-status {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(var(--ion-color-warning-rgb), 0.1);
+  border-radius: 8px;
+  border-left: 4px solid var(--ion-color-warning);
+
+  .assignment-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+
+    span {
+      font-size: 0.9rem;
+    }
+
+    .assignment-badge {
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+  }
+
+  .assignment-button {
+    width: 100%;
+    margin: 0;
+    --border-style: dashed;
+    --border-width: 2px;
+
+    ion-icon {
+      margin-right: 8px;
+    }
+  }
+}
+
+// Animation pour les nouveaux éléments
+.assignment-status {
+  animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Styles pour les alerts de livraison
+.delivery-alert {
+  .alert-head {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .alert-message {
+    text-align: left;
+    line-height: 1.6;
+    
+    p {
+      margin: 0.5rem 0;
+    }
+  }
+
+  .drivers-count {
+    background: var(--ion-color-success);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+}
+
+// Indicateurs de statut améliorés
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    
+    &.searching {
+      background: var(--ion-color-warning);
+      animation: pulse 2s infinite;
+    }
+    
+    &.assigned {
+      background: var(--ion-color-success);
+    }
+    
+    &.none {
+      background: var(--ion-color-medium);
+    }
+  }
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
