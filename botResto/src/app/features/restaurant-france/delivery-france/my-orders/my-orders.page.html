@@ -1,0 +1,309 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-title>Mes commandes</ion-title>
+    <ion-buttons slot="start">
+      <!-- Toggle Statut En Ligne -->
+      <div class="header-online-toggle">
+        <ion-toggle 
+          [checked]="isOnline" 
+          (ionChange)="toggleOnlineStatus()"
+          [color]="isOnline ? 'success' : 'light'"
+          [disabled]="isToggling"
+          class="online-toggle">
+        </ion-toggle>
+        <span class="status-text" [class.online]="isOnline" [class.offline]="!isOnline">
+          {{ getStatusText() }}
+        </span>
+      </div>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-button (click)="logout()">
+        <ion-icon name="log-out" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title size="large">Mes commandes</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <!-- Contenu des Mes commandes avec interface OTP moderne -->
+  <div class="orders-section">
+    <ion-card *ngFor="let order of myOrders" class="order-card-compact">
+      <ion-card-content>
+        <!-- Vue compacte par défaut -->
+        <div class="compact-header">
+          <div class="compact-title">
+            <strong>#{{ order.order_number }}</strong> • 💰 {{ formatPrice(order.total_amount) }}
+          </div>
+          <ion-badge [color]="getOrderStatusColor(order.status)" class="compact-badge">
+            {{ getOrderStatusText(order.status) }}
+          </ion-badge>
+        </div>
+        
+        <div class="compact-client">
+          👤 {{ getCustomerName(order) }}
+        </div>
+        
+        <div class="compact-summary">
+          📦 {{ getItemsCount(order) }} article{{ getItemsCount(order) > 1 ? 's' : '' }} • 
+          📍 {{ getDeliveryZone(order.delivery_address) }}
+        </div>
+
+        <!-- Actions compactes -->
+        <div class="compact-actions">
+          <ion-button 
+            size="small" 
+            fill="clear" 
+            color="primary"
+            (click)="toggleOrderDetail(order)">
+            <ion-icon [name]="isOrderExpanded(order) ? 'chevron-up' : 'chevron-down'" slot="start"></ion-icon>
+            {{ isOrderExpanded(order) ? 'Masquer' : 'Détails' }}
+          </ion-button>
+          <ion-button 
+            *ngFor="let action of order.availableActions"
+            size="small" 
+            fill="solid" 
+            [color]="action.color"
+            [disabled]="showOTPInput[order.id] && action.key === 'delivered'"
+            (click)="updateOrderStatus(order, action.key)">
+            {{ action.label }}
+          </ion-button>
+        </div>
+
+        <!-- Interface OTP moderne avec animation -->
+        <div *ngIf="showOTPInput[order.id]" class="otp-inline-container">
+          <div class="otp-label">
+            <ion-icon name="lock-closed" color="warning"></ion-icon>
+            <span>Code de validation client :</span>
+          </div>
+          <div class="otp-modern-container">
+            <div class="otp-digits">
+              <input 
+                #digit0
+                type="number"
+                maxlength="1" 
+                class="otp-digit"
+                (input)="onOTPDigitInput($event, 0, order.id, digit1)"
+                (keydown)="onOTPKeyDown($event, 0, order.id, undefined, digit1)">
+              <input 
+                #digit1
+                type="number"
+                maxlength="1" 
+                class="otp-digit"
+                (input)="onOTPDigitInput($event, 1, order.id, digit2)"
+                (keydown)="onOTPKeyDown($event, 1, order.id, digit0, digit2)">
+              <input 
+                #digit2
+                type="number"
+                maxlength="1" 
+                class="otp-digit"
+                (input)="onOTPDigitInput($event, 2, order.id, digit3)"
+                (keydown)="onOTPKeyDown($event, 2, order.id, digit1, digit3)">
+              <input 
+                #digit3
+                type="number"
+                maxlength="1" 
+                class="otp-digit"
+                (input)="onOTPDigitInput($event, 3, order.id, undefined)"
+                (keydown)="onOTPKeyDown($event, 3, order.id, digit2, undefined)">
+            </div>
+            <div class="otp-actions">
+              <ion-button 
+                size="small" 
+                fill="clear" 
+                color="medium"
+                (click)="cancelOTPInput(order)">
+                <ion-icon name="close" slot="start"></ion-icon>
+                Annuler
+              </ion-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACCORDÉON DÉTAILS (uniquement si développé) -->
+        <div class="order-details-accordion" *ngIf="isOrderExpanded(order)">
+          <div class="accordion-divider"></div>
+          
+          <!-- Contact client -->
+          <div class="detail-section">
+            <div class="detail-row">
+              <div class="detail-actions">
+                <ion-button 
+                  size="small" 
+                  fill="outline" 
+                  color="primary"
+                  (click)="callCustomer(order.phone_number)">
+                  <ion-icon name="call" slot="start"></ion-icon>
+                  Appeler
+                </ion-button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Adresse complète -->
+          <div class="detail-section" *ngIf="order.delivery_address">
+            <div class="detail-row-vertical">
+              <span class="address-display">📍 {{ order.delivery_address }}</span>
+              <ion-button 
+                size="small" 
+                fill="outline" 
+                color="success"
+                (click)="openDirections(order.delivery_address || '')"
+                class="gps-button">
+                <ion-icon name="navigate" slot="start"></ion-icon>
+                GPS
+              </ion-button>
+            </div>
+          </div>
+
+          <!-- DÉTAILS DES ARTICLES -->
+          <div class="detail-section" *ngIf="hasOrderItems(order)">
+            <div class="detail-label">📦 Articles commandés:</div>
+            <div class="order-items">
+              <div *ngFor="let item of getOrderItems(order)" class="item-card">
+                
+                <!-- En-tête de l'article -->
+                <div class="item-header">
+                  <div class="item-main">
+                    <span class="item-quantity">{{ item.quantity || 1 }}x</span>
+                    <span class="item-name">
+                      {{ item.name }}
+                      <ion-badge *ngIf="item.size_name" color="medium" class="size-badge">{{ item.size_name }}</ion-badge>
+                    </span>
+                  </div>
+                  <span class="item-price">{{ formatPrice(item.total_price || item.price || 0) }}</span>
+                </div>
+
+                <!-- Détails de composition -->
+                <div class="item-details" *ngIf="item.configuration_details && item.configuration_details.length > 0">
+                  <div class="composition-list">
+                    <ion-chip 
+                      *ngFor="let detail of item.configuration_details" 
+                      color="tertiary" 
+                      outline="true"
+                      class="composition-chip">
+                      {{ detail }}
+                    </ion-chip>
+                  </div>
+                </div>
+
+                <!-- Options détaillées -->
+                <div class="item-options" *ngIf="item.selected_options && hasSelectedOptions(item.selected_options)">
+                  <div *ngFor="let optionGroup of getSelectedOptionsGroups(item.selected_options)" class="option-group">
+                    <div class="option-group-header">
+                      <ion-icon name="chevron-forward" class="option-icon"></ion-icon>
+                      <strong>{{ formatOptionGroupName(optionGroup.groupName) }}:</strong>
+                    </div>
+                    <div class="option-items">
+                      <span 
+                        *ngFor="let option of optionGroup.options; let last = last" 
+                        class="option-item">
+                        {{ option.option_name }}{{ !last ? ', ' : '' }}
+                        <ion-badge *ngIf="option.price_modifier > 0" color="warning" class="price-modifier">
+                          +{{ formatPrice(option.price_modifier) }}
+                        </ion-badge>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Informations supplémentaires -->
+                <div class="item-extras" *ngIf="item.includes_drink || item.composition">
+                  <div *ngIf="item.includes_drink" class="extra-info">
+                    <ion-icon name="cafe" color="primary"></ion-icon>
+                    <span>Boisson incluse</span>
+                  </div>
+                  <div *ngIf="item.composition" class="extra-info">
+                    <ion-icon name="information-circle" color="medium"></ion-icon>
+                    <span>{{ item.composition }}</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Instructions spéciales -->
+          <div class="detail-section" *ngIf="order.notes">
+            <div class="detail-label">📝 Instructions:</div>
+            <div class="notes-content">{{ order.notes }}</div>
+          </div>
+
+          <!-- Heure commande -->
+          <div class="detail-section">
+            <div class="detail-row">
+              <span class="detail-label">🕒 Commandé à:</span>
+              <span class="time-display">{{ formatTime(order.created_at) }}</span>
+            </div>
+          </div>
+
+          <!-- Temps de mise à jour (si récent) -->
+          <div class="detail-section" *ngIf="shouldShowUpdateTime(order)">
+            <div class="detail-row">
+              <span class="detail-label">🔄 Mis à jour:</span>
+              <span class="update-time-display">{{ getUpdateTimeText(order) }}</span>
+            </div>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Message si pas de commandes - CENTRÉ -->
+    <div *ngIf="myOrders.length === 0 && !isLoading" class="empty-state-container">
+      <div class="empty-state-content">
+        <div class="empty-state-icon">
+          <ion-icon name="bicycle" color="primary"></ion-icon>
+        </div>
+        <h3 class="empty-state-title">Aucune commande en cours</h3>
+        <p class="empty-state-subtitle">
+          Vos prochaines livraisons apparaîtront ici.<br>
+          Activez le mode en ligne pour recevoir des commandes !
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-section" *ngIf="isLoading">
+    <ion-card>
+      <ion-card-content class="text-center">
+        <ion-spinner name="crescent"></ion-spinner>
+        <p>Chargement des commandes...</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>
+
+<!-- TAB BAR EN BAS - SORTIR DU ION-CONTENT -->
+<ion-tab-bar slot="bottom">
+  <ion-tab-button 
+    routerLink="/restaurant-france/delivery-france/my-orders"
+    routerLinkActive="tab-selected">
+    <ion-icon name="bicycle"></ion-icon>
+    <ion-label>Mes commandes</ion-label>
+    <ion-badge 
+      *ngIf="myOrders.length > 0" 
+      color="primary" 
+      class="tab-badge">
+      {{ myOrders.length }}
+    </ion-badge>
+  </ion-tab-button>
+  
+  <ion-tab-button 
+    routerLink="/restaurant-france/delivery-france/available-orders"
+    routerLinkActive="tab-selected">
+    <ion-icon name="notifications"></ion-icon>
+    <ion-label>Disponibles</ion-label>
+    <ion-badge 
+      *ngIf="availableOrdersCount > 0" 
+      color="success" 
+      class="tab-badge">
+      {{ availableOrdersCount }}
+    </ion-badge>
+  </ion-tab-button>
+</ion-tab-bar>

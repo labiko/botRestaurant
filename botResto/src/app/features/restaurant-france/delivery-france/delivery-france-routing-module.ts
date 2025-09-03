@@ -5,12 +5,17 @@ import { DeliveryFranceGuard } from '../auth-france/guards/delivery-france.guard
 const routes: Routes = [
   {
     path: '',
-    redirectTo: '/restaurant-france/delivery-france/dashboard-delivery',
+    redirectTo: '/restaurant-france/delivery-france/my-orders',
     pathMatch: 'full'
   },
   {
-    path: 'dashboard-delivery',
-    loadChildren: () => import('./dashboard-delivery/dashboard-delivery.module').then(m => m.DashboardDeliveryPageModule),
+    path: 'my-orders',
+    loadChildren: () => import('./my-orders/my-orders.module').then(m => m.MyOrdersPageModule),
+    canActivate: [DeliveryFranceGuard]
+  },
+  {
+    path: 'available-orders',
+    loadChildren: () => import('./available-orders/available-orders.module').then(m => m.AvailableOrdersPageModule),
     canActivate: [DeliveryFranceGuard]
   }
 ];

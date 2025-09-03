@@ -80,9 +80,12 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
   private initializeDashboard() {
     // S'abonner aux changements d'utilisateur
     this.userSubscription = this.authFranceService.currentUser$.subscribe(user => {
-      this.currentUser = user;
-      if (user && user.type === 'restaurant') {
-        this.loadDashboardData();
+      // Ignorer undefined (en cours de vérification)
+      if (user !== undefined) {
+        this.currentUser = user;
+        if (user && user.type === 'restaurant') {
+          this.loadDashboardData();
+        }
       }
     });
 

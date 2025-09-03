@@ -71,9 +71,12 @@ export class DashboardDeliveryPage implements OnInit, OnDestroy {
    */
   private initializeDashboard() {
     this.userSubscription = this.authFranceService.currentUser$.subscribe(driver => {
-      this.currentDriver = driver;
-      if (driver && driver.type === 'driver') {
-        this.loadDashboardData();
+      // Ignorer undefined (en cours de vérification)
+      if (driver !== undefined) {
+        this.currentDriver = driver;
+        if (driver && driver.type === 'driver') {
+          this.loadDashboardData();
+        }
       }
     });
   }
@@ -245,6 +248,20 @@ export class DashboardDeliveryPage implements OnInit, OnDestroy {
       position: 'top'
     });
     await toast.present();
+  }
+
+  /**
+   * Naviguer vers "Mes commandes"
+   */
+  navigateToMyOrders() {
+    this.router.navigate(['/restaurant-france/delivery-france/my-orders']);
+  }
+
+  /**
+   * Naviguer vers "Commandes disponibles"
+   */
+  navigateToAvailableOrders() {
+    this.router.navigate(['/restaurant-france/delivery-france/available-orders']);
   }
 
   /**

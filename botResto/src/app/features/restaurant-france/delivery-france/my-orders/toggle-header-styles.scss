@@ -1,0 +1,90 @@
+// ============================================================================
+// STYLES POUR TOGGLE EN LIGNE/HORS LIGNE DANS LE HEADER
+// ============================================================================
+.header-online-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  
+  .online-toggle {
+    --handle-background-checked: #ffffff;
+    --handle-background: #ffffff;
+    --background-checked: var(--ion-color-success);
+    --background: rgba(255, 255, 255, 0.3);
+    --border-radius: 14px;
+    --handle-width: 20px;
+    --handle-height: 20px;
+    --track-width: 36px;
+    --track-height: 20px;
+    
+    &.toggle-disabled {
+      opacity: 0.6;
+    }
+  }
+  
+  .status-text {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: color 0.3s ease;
+    white-space: nowrap;
+    
+    &.online {
+      color: #ffffff;
+    }
+    
+    &.offline {
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
+}
+
+// Animation pour le toggle
+@keyframes togglePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.header-online-toggle .online-toggle.toggle-checking {
+  animation: togglePulse 1s ease-in-out infinite;
+}
+
+// Responsive pour mobile - Toggle header
+@media (max-width: 768px) {
+  .header-online-toggle {
+    gap: 6px;
+    padding: 3px 6px;
+    
+    .status-text {
+      font-size: 0.75rem;
+    }
+    
+    .online-toggle {
+      --handle-width: 16px;
+      --handle-height: 16px;
+      --track-width: 30px;
+      --track-height: 16px;
+    }
+  }
+}
+
+@media (max-width: 375px) {
+  .header-online-toggle {
+    .status-text {
+      font-size: 0.7rem;
+    }
+    
+    .online-toggle {
+      --handle-width: 14px;
+      --handle-height: 14px;
+      --track-width: 26px;
+      --track-height: 14px;
+    }
+  }
+}

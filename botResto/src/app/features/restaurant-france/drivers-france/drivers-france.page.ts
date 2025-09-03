@@ -46,9 +46,12 @@ export class DriversFrancePage implements OnInit, OnDestroy {
    */
   private initializePage() {
     this.userSubscription = this.authFranceService.currentUser$.subscribe(user => {
-      this.currentUser = user;
-      if (user && user.type === 'restaurant') {
-        this.loadDrivers();
+      // Ignorer undefined (en cours de vérification)
+      if (user !== undefined) {
+        this.currentUser = user;
+        if (user && user.type === 'restaurant') {
+          this.loadDrivers();
+        }
       }
     });
 

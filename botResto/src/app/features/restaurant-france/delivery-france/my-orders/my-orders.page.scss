@@ -1,7 +1,8 @@
 // ========================================================================
-// DASHBOARD LIVREUR - DESIGN IDENTIQUE À LA PAGE RESTAURANT
+// MES COMMANDES - DESIGN IDENTIQUE AU DASHBOARD LIVREUR
 // ========================================================================
-@import './dashboard-delivery-modern.scss';
+@import '../dashboard-delivery/dashboard-delivery-modern.scss';
+@import './toggle-header-styles.scss';
 
 // Import des styles de la page restaurant pour avoir la même structure
 @import '../../orders-france/orders-france.page.scss';
@@ -365,148 +366,6 @@
   }
 }
 
-// ============================================================================
-// STYLES POUR NAVIGATION CARDS
-// ============================================================================
-.navigation-section {
-  padding: 0 16px;
-  margin-bottom: 20px;
-
-  .nav-card {
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 0;
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    &:active {
-      transform: scale(0.98);
-    }
-
-    .nav-content {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      padding: 15px 0;
-
-      .icon-badge-container {
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        .nav-icon {
-          font-size: 2.5rem;
-          color: var(--ion-color-primary);
-        }
-
-        .nav-badge {
-          position: absolute;
-          top: -8px;
-          right: -8px;
-          font-size: 0.7rem;
-          min-width: 20px;
-          height: 20px;
-          border-radius: 10px;
-          z-index: 10;
-        }
-      }
-
-      .nav-text {
-        flex: 1;
-
-        h3 {
-          margin: 0 0 4px 0;
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: var(--ion-color-dark);
-        }
-
-        p {
-          margin: 0;
-          font-size: 0.85rem;
-          color: var(--ion-color-medium);
-        }
-      }
-    }
-  }
-}
-
-// Responsive pour navigation cards
-@media (max-width: 768px) {
-  .navigation-section {
-    padding: 0 12px;
-    margin-bottom: 15px;
-
-    .nav-card {
-      border-radius: 10px;
-
-      .nav-content {
-        gap: 12px;
-        padding: 12px 0;
-
-        .icon-badge-container {
-          .nav-icon {
-            font-size: 2rem;
-          }
-
-          .nav-badge {
-            top: -6px;
-            right: -6px;
-            font-size: 0.65rem;
-            min-width: 18px;
-            height: 18px;
-            border-radius: 9px;
-          }
-        }
-
-        .nav-text {
-          h3 {
-            font-size: 1rem;
-            margin: 0 0 3px 0;
-          }
-
-          p {
-            font-size: 0.8rem;
-          }
-        }
-      }
-    }
-  }
-}
-
-@media (max-width: 375px) {
-  .navigation-section {
-    .nav-card {
-      .nav-content {
-        gap: 10px;
-        padding: 10px 0;
-
-        .icon-badge-container {
-          .nav-icon {
-            font-size: 1.8rem;
-          }
-        }
-
-        .nav-text {
-          h3 {
-            font-size: 0.95rem;
-          }
-
-          p {
-            font-size: 0.75rem;
-          }
-        }
-      }
-    }
-  }
-}
-
 // Responsive design pour mobile - Optimisation UX livreur
 @media (max-width: 768px) {
   // Section d'accueil plus compacte
@@ -753,8 +612,8 @@ ion-tab-bar {
     --color-selected: var(--ion-color-primary);
     --ripple-color: var(--ion-color-primary-tint);
     
-    // Animation active
-    &.tab-active {
+    // Animation active avec routerLinkActive
+    &.tab-selected {
       --color: var(--ion-color-primary);
       transform: scale(1.05);
       transition: all 0.2s ease;
@@ -792,6 +651,71 @@ ion-tab-bar {
 // Ajustement de la hauteur du contenu pour les tabs
 ion-content {
   --padding-bottom: 60px; // Espace pour les tabs en bas
+}
+
+// ============================================================================
+// STYLES POUR MESSAGE VIDE CENTRÉ
+// ============================================================================
+.empty-state-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 60px; // Espace pour les tabs
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  
+  .empty-state-content {
+    text-align: center;
+    padding: 40px 20px;
+    max-width: 300px;
+    
+    .empty-state-icon {
+      margin-bottom: 20px;
+      
+      ion-icon {
+        font-size: 4rem;
+        opacity: 0.7;
+      }
+    }
+    
+    .empty-state-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--ion-color-dark);
+      margin-bottom: 12px;
+    }
+    
+    .empty-state-subtitle {
+      font-size: 0.95rem;
+      color: var(--ion-color-medium);
+      line-height: 1.4;
+      margin: 0;
+    }
+  }
+}
+
+// Responsive pour mobile
+@media (max-width: 768px) {
+  .empty-state-container {
+    .empty-state-content {
+      padding: 30px 20px;
+      
+      .empty-state-icon ion-icon {
+        font-size: 3rem;
+      }
+      
+      .empty-state-title {
+        font-size: 1.1rem;
+      }
+      
+      .empty-state-subtitle {
+        font-size: 0.85rem;
+      }
+    }
+  }
 }
 
 // ============================================================================
@@ -1102,6 +1026,126 @@ ion-content {
         height: 28px;
         font-size: 0.65rem;
         padding: 0 8px;
+      }
+    }
+  }
+}
+
+// ============================================================================
+// STYLES POUR TABS EN BAS D'ÉCRAN
+// ============================================================================
+ion-tab-bar {
+  --background: #ffffff;
+  --border-color: var(--ion-color-light-shade);
+  border-top: 1px solid var(--ion-color-light-shade);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  
+  ion-tab-button {
+    --color: var(--ion-color-medium);
+    --color-selected: var(--ion-color-primary);
+    --ripple-color: var(--ion-color-primary-tint);
+    
+    // Animation active avec routerLinkActive
+    &.tab-selected {
+      --color: var(--ion-color-primary);
+      transform: scale(1.05);
+      transition: all 0.2s ease;
+      
+      ion-icon {
+        transform: scale(1.1);
+      }
+    }
+    
+    ion-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+    
+    ion-icon {
+      font-size: 1.4rem;
+      margin-bottom: 2px;
+      transition: transform 0.2s ease;
+    }
+    
+    .tab-badge {
+      position: absolute;
+      top: 4px;
+      right: 12px;
+      font-size: 0.6rem;
+      min-width: 16px;
+      height: 16px;
+      border-radius: 8px;
+      z-index: 10;
+    }
+  }
+}
+
+// Ajustement de la hauteur du contenu pour les tabs
+ion-content {
+  --padding-bottom: 60px; // Espace pour les tabs en bas
+}
+
+// ============================================================================
+// STYLES POUR MESSAGE VIDE CENTRÉ
+// ============================================================================
+.empty-state-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 60px; // Espace pour les tabs
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  
+  .empty-state-content {
+    text-align: center;
+    padding: 40px 20px;
+    max-width: 300px;
+    
+    .empty-state-icon {
+      margin-bottom: 20px;
+      
+      ion-icon {
+        font-size: 4rem;
+        opacity: 0.7;
+      }
+    }
+    
+    .empty-state-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--ion-color-dark);
+      margin-bottom: 12px;
+    }
+    
+    .empty-state-subtitle {
+      font-size: 0.95rem;
+      color: var(--ion-color-medium);
+      line-height: 1.4;
+      margin: 0;
+    }
+  }
+}
+
+// Responsive pour mobile
+@media (max-width: 768px) {
+  .empty-state-container {
+    .empty-state-content {
+      padding: 30px 20px;
+      
+      .empty-state-icon ion-icon {
+        font-size: 3rem;
+      }
+      
+      .empty-state-title {
+        font-size: 1.1rem;
+      }
+      
+      .empty-state-subtitle {
+        font-size: 0.85rem;
       }
     }
   }

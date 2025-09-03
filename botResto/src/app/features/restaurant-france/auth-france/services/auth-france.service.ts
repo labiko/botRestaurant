@@ -33,7 +33,8 @@ export interface LoginCredentials {
   providedIn: 'root'
 })
 export class AuthFranceService {
-  private currentUserSubject = new BehaviorSubject<FranceUser | null>(null);
+  // Initialiser avec undefined pour indiquer qu'on est en cours de vérification
+  private currentUserSubject = new BehaviorSubject<FranceUser | null | undefined>(undefined);
   public currentUser$ = this.currentUserSubject.asObservable();
   
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
@@ -56,6 +57,8 @@ export class AuthFranceService {
       const sessionData = localStorage.getItem('france_auth_session');
       if (!sessionData) {
         console.log('📝 [AuthFrance] Aucune session trouvée');
+        // Important: émettre null pour indiquer qu'il n'y a pas de session
+        this.currentUserSubject.next(null);
         return;
       }
 
@@ -306,7 +309,15 @@ export class AuthFranceService {
   private async createSession(sessionData: any): Promise<{ success: boolean }> {
     try {
       const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24); // Session 24h
+      
+      // Sessions plus longues pour les livreurs (30 jours) vs restaurants (24h)
+      if (sessionData.user_type === 'driver') {
+        expiresAt.setDate(expiresAt.getDate() + 30); // 30 jours pour livreurs
+        console.log('👤 [AuthFrance] Session livreur - 30 jours');
+      } else {
+        expiresAt.setHours(expiresAt.getHours() + 24); // 24h pour restaurants
+        console.log('🏪 [AuthFrance] Session restaurant - 24 heures');
+      }
 
       const { data, error } = await this.supabaseFranceService.client
         .from('france_auth_sessions')
@@ -474,7 +485,8 @@ export class AuthFranceService {
    * Récupérer l'utilisateur courant
    */
   getCurrentUser(): FranceUser | null {
-    return this.currentUserSubject.value;
+    const user = this.currentUserSubject.value;
+    return user === undefined ? null : user;
   }
 
   /**
