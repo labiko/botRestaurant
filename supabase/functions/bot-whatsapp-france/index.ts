@@ -1288,14 +1288,23 @@ async function addItemToCart(phoneNumber: string, session: any, item: any, quant
   
   console.log('💾 Item stocké dans cart[itemKey]:', JSON.stringify(cart[itemKey], null, 2));
 
-  // Sauvegarder le panier mis à jour dans la session
+  // 💰 CORRECTION BUG: Calculer le total du panier après ajout
+  let cartTotal = 0;
+  Object.values(cart).forEach(cartItem => {
+    const itemPrice = cartItem.item.final_price || cartItem.item.base_price || 0;
+    cartTotal += itemPrice * cartItem.quantity;
+  });
+  console.log('💰 [addItemToCart] Total calculé:', cartTotal);
+
+  // Sauvegarder le panier ET le total mis à jour dans la session
   await SimpleSession.update(session.id, {
     context: {
       ...session.context,
-      cart: cart
+      cart: cart,
+      totalPrice: cartTotal  // 💰 CORRECTION: Sauvegarder le total calculé
     }
   });
-  console.log('💾 Panier sauvegardé en session');
+  console.log('💾 Panier et total sauvegardés en session');
 
   // Utiliser le panier local (qui contient déjà le nouvel item)
   const updatedSession = await SimpleSession.get(phoneNumber);
@@ -1911,10 +1920,24 @@ async function buildOrderConfirmationMessage(session: any, orderNumber: string |
         }
       });
     }
+    
+    // 🥤 CORRECTION BUG: Afficher la boisson sélectionnée si présente
+    if (cartItem.item.selected_drink) {
+      confirmationMessage += `🥤 ${cartItem.item.selected_drink.name} ${cartItem.item.selected_drink.variant}\n`;
+    }
+    
     confirmationMessage += '\n';
   });
   
-  confirmationMessage += `💎 **Total: ${formatPrice(session.context.totalPrice, 'EUR')}**`;
+  // 💰 CORRECTION BUG: Recalculer le total à partir du panier réel (même logique que addItemToCart)
+  let finalTotal = 0;
+  Object.values(currentCart).forEach((cartItem: any) => {
+    const itemPrice = cartItem.item.final_price || cartItem.item.base_price || 0;
+    finalTotal += itemPrice * cartItem.quantity;
+  });
+  console.log('💰 [buildOrderConfirmationMessage] Total recalculé:', finalTotal);
+  
+  confirmationMessage += `💎 **Total: ${formatPrice(finalTotal, 'EUR')}**`;
 
   // Afficher les informations selon le mode de livraison
   if (session.context.deliveryMode === 'livraison') {
