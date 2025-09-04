@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { AlertController, ToastController, RefresherCustomEvent } from '@ionic/angular';
-import { Subscription, interval } from 'rxjs';
+import { Subscription } from 'rxjs';
 
 import { AuthFranceService, FranceUser } from '../../auth-france/services/auth-france.service';
 import { DeliveryTrackingService, DeliveryTrackingData, OrderTrackingStats } from '../../../../core/services/delivery-tracking.service';
@@ -23,8 +23,8 @@ export class DeliveryTrackingPage implements OnInit, OnDestroy {
   isLoading = false;
   isRefreshing = false;
   
-  private refreshSubscription?: Subscription;
-  private readonly REFRESH_INTERVAL = 30000; // 30 secondes
+  // Auto-refresh supprimé - refresh manuel uniquement
+  private userSubscription?: Subscription;
 
   constructor(
     private authFranceService: AuthFranceService,
@@ -34,25 +34,29 @@ export class DeliveryTrackingPage implements OnInit, OnDestroy {
   ) {}
 
   async ngOnInit() {
-    // Récupérer l'utilisateur connecté
-    this.currentUser = this.authFranceService.getCurrentUser();
-    
-    if (!this.currentUser) {
-      console.error('❌ [DeliveryTracking] Utilisateur non connecté');
-      return;
-    }
-
-    // Charger les données initiales
-    await this.loadTrackingData();
+    // S'abonner aux changements d'utilisateur pour gérer l'authentification asynchrone
+    this.userSubscription = this.authFranceService.currentUser$.subscribe(user => {
+      // Ignorer undefined (en cours de vérification)
+      if (user !== undefined) {
+        this.currentUser = user;
+        if (user && user.type === 'restaurant') {
+          console.log('✅ [DeliveryTracking] Utilisateur restaurant authentifié');
+          this.loadTrackingData();
+        } else if (!user) {
+          console.log('❌ [DeliveryTracking] Utilisateur non connecté');
+        } else {
+          console.log('⚠️ [DeliveryTracking] Utilisateur non-restaurant détecté');
+        }
+      }
+    });
 
     // Green API déjà configuré automatiquement
-
-    // Auto-refresh toutes les 30 secondes
-    this.startAutoRefresh();
+    // Auto-refresh supprimé - refresh manuel uniquement via l'icône
   }
 
   ngOnDestroy() {
-    this.stopAutoRefresh();
+    // Nettoyer la subscription utilisateur
+    this.userSubscription?.unsubscribe();
   }
 
   /**
@@ -94,25 +98,7 @@ export class DeliveryTrackingPage implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Démarrer l'auto-refresh
-   */
-  private startAutoRefresh() {
-    this.refreshSubscription = interval(this.REFRESH_INTERVAL).subscribe(() => {
-      if (!this.isLoading && !this.isRefreshing) {
-        this.loadTrackingData();
-      }
-    });
-  }
-
-  /**
-   * Arrêter l'auto-refresh
-   */
-  private stopAutoRefresh() {
-    if (this.refreshSubscription) {
-      this.refreshSubscription.unsubscribe();
-    }
-  }
+  // Méthodes d'auto-refresh supprimées - refresh manuel uniquement via l'icône
 
   /**
    * Forcer la libération d'une commande
