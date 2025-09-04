@@ -86,6 +86,14 @@
             <ion-icon name="checkmark-circle" slot="start"></ion-icon>
             Accepter
           </ion-button>
+          <ion-button 
+            size="small" 
+            fill="outline" 
+            color="medium"
+            (click)="refuseOrder(order)">
+            <ion-icon name="close-circle" slot="start"></ion-icon>
+            Refuser
+          </ion-button>
         </div>
 
         <!-- ACCORDÉON DÉTAILS (uniquement si développé) -->

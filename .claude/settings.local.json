@@ -321,7 +321,17 @@
       "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\features\\restaurant-france\\delivery-france\\dashboard-delivery/**)",
       "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src/**)",
       "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant/**)",
-      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant/**)"
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\features\\restaurant-france\\delivery-france\\available-orders/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\features\\restaurant-france\\delivery-france\\available-orders/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\.claude/**)",
+      "Edit(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant/**)",
+      "Write(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant/**)",
+      "MultiEdit(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\environments/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\core\\services/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto/**)"
     ],
     "deny": [],
     "ask": []

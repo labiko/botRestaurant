@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
-import { AlertController, ToastController } from '@ionic/angular';
+import { AlertController, ToastController, ActionSheetController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 
 import { AuthFranceService, FranceUser } from '../../auth-france/services/auth-france.service';
@@ -9,6 +9,7 @@ import { LoadingController } from '@ionic/angular';
 import { DriverOnlineStatusService } from '../../../../core/services/driver-online-status.service';
 import { DeliveryCountersService, DeliveryCounters } from '../../../../core/services/delivery-counters.service';
 import { DeliveryOrderItemsService } from '../../../../core/services/delivery-order-items.service';
+import { DeliveryRefusalService } from '../../../../core/services/delivery-refusal.service';
 
 @Component({
   selector: 'app-available-orders',
@@ -46,7 +47,9 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     private loadingController: LoadingController,
     private driverOnlineStatusService: DriverOnlineStatusService,
     private deliveryCountersService: DeliveryCountersService,
-    private deliveryOrderItemsService: DeliveryOrderItemsService
+    private deliveryOrderItemsService: DeliveryOrderItemsService,
+    private actionSheetController: ActionSheetController,
+    private deliveryRefusalService: DeliveryRefusalService
   ) {}
 
   ngOnInit() {
@@ -153,6 +156,112 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     });
 
     await alert.present();
+  }
+
+  /**
+   * NOUVEAU - Refuser une commande avec sélection de raison
+   */
+  async refuseOrder(order: DeliveryOrder) {
+    if (!this.currentDriver) return;
+
+    const actionSheet = await this.actionSheetController.create({
+      header: 'Pourquoi ne pouvez-vous pas accepter cette commande ?',
+      buttons: [
+        ...this.deliveryRefusalService.getRefusalReasons().map(reason => ({
+          text: reason.label,
+          icon: reason.icon,
+          handler: () => this.handleRefusalReason(order, reason.code)
+        })),
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        }
+      ]
+    });
+
+    await actionSheet.present();
+  }
+
+  /**
+   * Traiter la raison de refus sélectionnée
+   */
+  private async handleRefusalReason(order: DeliveryOrder, reasonCode: string) {
+    if (!this.currentDriver) return;
+
+    // Si c'est "autre raison", demander une raison personnalisée
+    if (reasonCode === 'other') {
+      await this.showCustomReasonPrompt(order);
+      return;
+    }
+
+    // Sinon, refuser directement avec la raison sélectionnée
+    await this.processOrderRefusal(order, reasonCode);
+  }
+
+  /**
+   * Demander une raison personnalisée
+   */
+  private async showCustomReasonPrompt(order: DeliveryOrder) {
+    const alert = await this.alertController.create({
+      header: 'Précisez votre raison',
+      inputs: [
+        {
+          name: 'customReason',
+          type: 'textarea',
+          placeholder: 'Expliquez pourquoi vous ne pouvez pas accepter...'
+        }
+      ],
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        },
+        {
+          text: 'Refuser la commande',
+          handler: async (data) => {
+            if (data.customReason?.trim()) {
+              await this.processOrderRefusal(order, 'other', data.customReason);
+            }
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  /**
+   * Traiter le refus de la commande via le service
+   */
+  private async processOrderRefusal(order: DeliveryOrder, reason: string, customReason?: string) {
+    if (!this.currentDriver) return;
+
+    const loading = await this.loadingController.create({
+      message: 'Traitement du refus...'
+    });
+    await loading.present();
+
+    try {
+      const result = await this.deliveryRefusalService.refuseOrder({
+        orderId: order.id,
+        driverId: this.currentDriver.id,
+        reason,
+        customReason
+      });
+
+      if (result.success) {
+        this.presentToast(result.message);
+        // Recharger les commandes disponibles
+        this.loadAvailableOrders();
+      } else {
+        this.presentToast(result.message);
+      }
+    } catch (error) {
+      console.error('Erreur refus commande:', error);
+      this.presentToast('Erreur lors du refus de la commande');
+    } finally {
+      await loading.dismiss();
+    }
   }
 
   /**
