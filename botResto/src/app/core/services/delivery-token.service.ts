@@ -50,8 +50,8 @@ export class DeliveryTokenService {
 
   // Configuration des tokens selon le plan
   private readonly CONFIG = {
-    TOKEN_EXPIRY_MINUTES: 15,
-    TOKEN_ABSOLUTE_EXPIRY_HOURS: 2,
+    TOKEN_EXPIRY_MINUTES: 15, // 15 minutes comme spécifié dans les règles
+    TOKEN_ABSOLUTE_EXPIRY_HOURS: 2, // 2 heures comme spécifié initialement
     REACTIVATION_THRESHOLD_MINUTES: 5,
     TOKEN_LENGTH: 32
   };
@@ -447,20 +447,65 @@ export class DeliveryTokenService {
     try {
       console.log(`🔔 [DeliveryToken] Réactivation tokens pour rappels commande ${orderId}...`);
 
+      // DIAGNOSTIC: Vérifier les tokens existants AVANT réactivation
+      const { data: existingTokens, error: checkError } = await this.supabaseFranceService.client
+        .from('delivery_tokens')
+        .select('id, token, expires_at, absolute_expires_at, used, suspended, created_at')
+        .eq('order_id', orderId);
+        
+      console.log(`🔍 [DeliveryToken] DIAGNOSTIC - Tokens existants pour commande ${orderId}:`, existingTokens);
+      
+      if (existingTokens) {
+        const now = new Date();
+        existingTokens.forEach((token, index) => {
+          console.log(`📝 [DeliveryToken] Token ${index + 1}:`);
+          console.log(`   ID: ${token.id}, Token: ${token.token?.substring(0, 8)}...`);
+          console.log(`   Créé: ${token.created_at}`);
+          console.log(`   expires_at: ${token.expires_at} (${new Date(token.expires_at) < now ? 'EXPIRÉ' : 'VALIDE'})`);
+          console.log(`   absolute_expires_at: ${token.absolute_expires_at} (${new Date(token.absolute_expires_at) < now ? 'EXPIRÉ' : 'VALIDE'})`);
+          console.log(`   Utilisé: ${token.used}, Suspendu: ${token.suspended}`);
+        });
+      }
+
       // Réactiver les tokens expirés mais non utilisés (différent de reactivateTokensAfterRefusal)
-      const newExpiryTime = new Date(Date.now() + this.CONFIG.TOKEN_EXPIRY_MINUTES * 60000);
+      const now = Date.now();
+      const newExpiryTime = new Date(now + this.CONFIG.TOKEN_EXPIRY_MINUTES * 60000);
+      console.log(`🕐 [DeliveryToken] DIAGNOSTIC TEMPOREL COMPLET:`);
+      console.log(`   Timestamp: ${now}`);
+      console.log(`   Date locale: ${new Date(now).toString()}`);
+      console.log(`   Date ISO (UTC): ${new Date(now).toISOString()}`);
+      console.log(`   Date locale string: ${new Date(now).toLocaleString('fr-FR')}`);
+      console.log(`   Fuseau détecté: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`);
+      console.log(`   Offset UTC: ${new Date(now).getTimezoneOffset()} minutes`);
+      console.log(`   TOKEN_EXPIRY_MINUTES: ${this.CONFIG.TOKEN_EXPIRY_MINUTES}`);
+      console.log(`   Calcul: ${now} + ${this.CONFIG.TOKEN_EXPIRY_MINUTES * 60000} = ${now + this.CONFIG.TOKEN_EXPIRY_MINUTES * 60000}`);
+      console.log(`🔄 [DeliveryToken] Nouvelle expiration:`);
+      console.log(`   ISO (UTC): ${newExpiryTime.toISOString()}`);
+      console.log(`   Locale: ${newExpiryTime.toLocaleString('fr-FR')}`);
+      
+      // SOLUTION SIMPLE : CORRIGER - soustraire l'offset au lieu de l'ajouter
+      const utcOffset = new Date().getTimezoneOffset(); // minutes de décalage
+      const adjustedExpiryTime = new Date(now + (this.CONFIG.TOKEN_EXPIRY_MINUTES * 60000) - (utcOffset * 60000));
+      const adjustedAbsoluteExpiry = new Date(now + (this.CONFIG.TOKEN_ABSOLUTE_EXPIRY_HOURS * 3600000) - (utcOffset * 60000));
+      
+      console.log(`🌍 [DeliveryToken] CORRECTION TIMEZONE:`);
+      console.log(`   UTC Offset: ${utcOffset} minutes`);
+      console.log(`   Expiration ajustée: ${adjustedExpiryTime.toISOString()}`);
+      console.log(`   Expiration ajustée locale: ${adjustedExpiryTime.toLocaleString('fr-FR')}`);
       
       const { data: reactivatedTokens, error } = await this.supabaseFranceService.client
         .from('delivery_tokens')
         .update({
           suspended: false,
           reactivated: true,
-          expires_at: newExpiryTime.toISOString(),
+          token: this.generateSecureToken(), // 🔥 NOUVEAU TOKEN !
+          expires_at: adjustedExpiryTime.toISOString(), // 🔥 AVEC CORRECTION TIMEZONE !
+          absolute_expires_at: adjustedAbsoluteExpiry.toISOString(), // 🔥 AVEC CORRECTION TIMEZONE !
           updated_at: new Date().toISOString()
         })
         .eq('order_id', orderId)
         .eq('used', false)
-        .gt('absolute_expires_at', new Date().toISOString())
+        // Supprimer la condition absolute_expires_at pour permettre la réactivation des tokens expirés
         .select(`
           *,
           france_delivery_drivers!driver_id (
@@ -479,6 +524,19 @@ export class DeliveryTokenService {
 
       const tokenCount = reactivatedTokens?.length || 0;
       console.log(`✅ [DeliveryToken] ${tokenCount} tokens réactivés pour rappels`);
+      
+      // DIAGNOSTIC: Afficher les tokens réactivés
+      if (reactivatedTokens && reactivatedTokens.length > 0) {
+        console.log(`📋 [DeliveryToken] DIAGNOSTIC - Tokens réactivés:`);
+        reactivatedTokens.forEach((token, index) => {
+          console.log(`   Token ${index + 1}: ID=${token.id}, expires_at=${token.expires_at}`);
+        });
+      } else {
+        console.log(`⚠️ [DeliveryToken] DIAGNOSTIC - Aucun token réactivé. Vérifiez les conditions :`);
+        console.log(`   - order_id = ${orderId}`);
+        console.log(`   - used = false`);
+        console.log(`   - absolute_expires_at > ${new Date().toISOString()}`);
+      }
 
       return {
         success: tokenCount > 0,

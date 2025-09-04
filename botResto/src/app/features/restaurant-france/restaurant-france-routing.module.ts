@@ -27,8 +27,9 @@ const routes: Routes = [
   },
   {
     path: 'delivery-france',
-    loadChildren: () => import('./delivery-france/delivery-france-module').then(m => m.DeliveryFranceModule),
-    canActivate: [DeliverySharedGuard]
+    loadChildren: () => import('./delivery-france/delivery-france-module').then(m => m.DeliveryFranceModule)
+    // Pas de guard au niveau parent pour permettre l'authentification par token sur /accept
+    // Les guards sont gérés individuellement sur chaque route enfant
   },
   {
     path: 'drivers-france',

@@ -138,8 +138,8 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
           this.tokenOrder = validation.orderData;
           console.log(`✅ [AvailableOrders] Token valide pour commande #${validation.orderData.order_number}`);
           
-          // Optionnel: Afficher automatiquement la modal d'acceptation
-          await this.showTokenAcceptanceModal(validation.orderData);
+          // L'utilisateur est déjà authentifié par le DeliveryTokenGuard
+          // Pas besoin d'afficher la popup - il peut voir les commandes directement
         } else {
           console.log(`❌ [AvailableOrders] Token invalide: ${validation.reason}`);
           await this.showToast(validation.reason || 'Lien expiré ou invalide', 'danger');

@@ -5,6 +5,12 @@ import { DeliveryTokenGuard } from '../auth-france/guards/delivery-token.guard';
 
 const routes: Routes = [
   {
+    path: 'accept',
+    // Route prioritaire pour éviter la redirection par défaut
+    loadChildren: () => import('./available-orders/available-orders.module').then(m => m.AvailableOrdersPageModule),
+    canActivate: [DeliveryTokenGuard]
+  },
+  {
     path: '',
     redirectTo: '/restaurant-france/delivery-france/my-orders',
     pathMatch: 'full'
@@ -29,12 +35,6 @@ const routes: Routes = [
     loadChildren: () => import('./delivery-tracking/delivery-tracking.module').then(m => m.DeliveryTrackingPageModule)
     // Pas de guard pour permettre l'accès aux restaurants
   },
-  {
-    path: 'accept',
-    // Au lieu d'une redirection simple, utiliser le même composant avec le guard token
-    loadChildren: () => import('./available-orders/available-orders.module').then(m => m.AvailableOrdersPageModule),
-    canActivate: [DeliveryTokenGuard]
-  }
 ];
 
 @NgModule({

@@ -17,7 +17,7 @@ export interface DriverFormData {
   standalone: false
 })
 export class AddDriverModalComponent implements OnInit {
-  driverForm: FormGroup;
+  driverForm!: FormGroup; // Utiliser ! pour dire à TypeScript que ce sera initialisé
   isLoading = false;
   showPassword = false;
 
@@ -27,12 +27,13 @@ export class AddDriverModalComponent implements OnInit {
     private toastController: ToastController
   ) {
     console.log('🔧 [AddDriverModal] Constructor appelé');
-    this.driverForm = this.createForm();
-    console.log('📋 [AddDriverModal] Form créé:', this.driverForm.value);
   }
 
   ngOnInit() {
     console.log('🚀 [AddDriverModal] ngOnInit appelé');
+    // Initialiser le formulaire dans ngOnInit pour éviter les problèmes de détection de changements
+    this.driverForm = this.createForm();
+    console.log('📋 [AddDriverModal] Form créé:', this.driverForm.value);
     console.log('📋 [AddDriverModal] Form status:', this.driverForm.status);
   }
 

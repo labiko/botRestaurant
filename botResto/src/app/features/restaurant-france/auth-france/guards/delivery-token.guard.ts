@@ -19,8 +19,13 @@ export class DeliveryTokenGuard implements CanActivate {
   ) { }
 
   canActivate(route: ActivatedRouteSnapshot): Observable<boolean | UrlTree> {
+    console.log('🚀 [DeliveryTokenGuard] GUARD EXÉCUTÉ !');
+    console.log('🚀 [DeliveryTokenGuard] Route:', route.url);
+    console.log('🚀 [DeliveryTokenGuard] Query params:', route.queryParams);
+    
     // Récupérer le token depuis les query params
     const token = route.queryParams['token'];
+    console.log('🔑 [DeliveryTokenGuard] Token détecté:', token ? `${token.substring(0,8)}...` : 'AUCUN');
     
     // Si un token est présent, tenter l'authentification par token
     if (token) {
