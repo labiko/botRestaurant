@@ -1,10 +1,11 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
-import { AlertController, ModalController } from '@ionic/angular';
+import { AlertController, ModalController, ToastController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 
 import { AuthFranceService, FranceUser } from '../auth-france/services/auth-france.service';
 import { DriversFranceService, FranceDriver, CreateDriverRequest } from '../../../core/services/drivers-france.service';
+import { AddDriverModalComponent, DriverFormData } from './add-driver-modal/add-driver-modal.component';
 
 @Component({
   selector: 'app-drivers-france',
@@ -25,7 +26,8 @@ export class DriversFrancePage implements OnInit, OnDestroy {
     private driversFranceService: DriversFranceService,
     private router: Router,
     private alertController: AlertController,
-    private modalController: ModalController
+    private modalController: ModalController,
+    private toastController: ToastController
   ) { }
 
   ngOnInit() {
@@ -77,70 +79,23 @@ export class DriversFrancePage implements OnInit, OnDestroy {
   }
 
   /**
-   * Ajouter un nouveau livreur
+   * Ajouter un nouveau livreur avec modale moderne
    */
   async addDriver() {
-    const alert = await this.alertController.create({
-      header: 'Ajouter un livreur',
-      inputs: [
-        {
-          name: 'first_name',
-          type: 'text',
-          placeholder: 'Prénom',
-          attributes: {
-            required: true
-          }
-        },
-        {
-          name: 'last_name',
-          type: 'text',
-          placeholder: 'Nom',
-          attributes: {
-            required: true
-          }
-        },
-        {
-          name: 'phone_number',
-          type: 'tel',
-          placeholder: 'Téléphone (ex: 33612345678)',
-          attributes: {
-            required: true
-          }
-        },
-        {
-          name: 'email',
-          type: 'email',
-          placeholder: 'Email (optionnel)'
-        },
-        {
-          name: 'password',
-          type: 'password',
-          placeholder: 'Mot de passe',
-          attributes: {
-            required: true,
-            minlength: 6
-          }
-        }
-      ],
-      buttons: [
-        {
-          text: 'Annuler',
-          role: 'cancel'
-        },
-        {
-          text: 'Ajouter',
-          handler: async (data) => {
-            if (this.validateDriverData(data)) {
-              await this.createDriver(data);
-              return true;
-            }
-            return false;
-          }
-        }
-      ]
+    const modal = await this.modalController.create({
+      component: AddDriverModalComponent,
+      cssClass: 'add-driver-modal',
+      backdropDismiss: false,
+      showBackdrop: true
     });
 
-    await alert.present();
+    await modal.present();
+
+    const { data, role } = await modal.onWillDismiss();
+
+    if (role === 'save' && data) {
+      await this.createDriver(data);
+    }
   }
 
   /**
@@ -175,24 +130,25 @@ export class DriversFrancePage implements OnInit, OnDestroy {
   /**
    * Créer un livreur
    */
-  private async createDriver(data: CreateDriverRequest) {
+  private async createDriver(data: DriverFormData) {
     if (!this.currentUser) return;
 
     const success = await this.driversFranceService.createDriver(
       this.currentUser.restaurantId,
       {
-        first_name: data.first_name.trim(),
-        last_name: data.last_name.trim(),
-        phone_number: data.phone_number.replace(/\s+/g, ''),
-        email: data.email?.trim() || undefined,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        phone_number: data.phone_number,
+        email: data.email,
         password: data.password
       }
     );
 
     if (success) {
-      this.showSuccess('Livreur ajouté avec succès');
+      await this.showToast('🎉 Livreur créé avec succès !', 'success');
+      await this.loadDrivers(); // Recharger la liste
     } else {
-      this.showError('Erreur lors de l\'ajout du livreur');
+      await this.showToast('❌ Erreur lors de la création du livreur', 'danger');
     }
   }
 
@@ -294,21 +250,30 @@ export class DriversFrancePage implements OnInit, OnDestroy {
     return this.drivers.filter(d => !d.is_active).length;
   }
 
-  private async showSuccess(message: string) {
-    const alert = await this.alertController.create({
-      header: 'Succès',
+  /**
+   * Afficher un toast moderne
+   */
+  private async showToast(message: string, color: 'success' | 'danger' | 'warning' = 'success') {
+    const toast = await this.toastController.create({
       message,
-      buttons: ['OK']
+      duration: 3000,
+      color,
+      position: 'top',
+      buttons: [
+        {
+          text: '✕',
+          role: 'cancel'
+        }
+      ]
     });
-    await alert.present();
+    await toast.present();
+  }
+
+  private async showSuccess(message: string) {
+    await this.showToast(message, 'success');
   }
 
   private async showError(message: string) {
-    const alert = await this.alertController.create({
-      header: 'Erreur',
-      message,
-      buttons: ['OK']
-    });
-    await alert.present();
+    await this.showToast(message, 'danger');
   }
 }

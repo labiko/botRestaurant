@@ -1,0 +1,180 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>👤 Nouveau Livreur</ion-title>
+    <ion-buttons slot="start">
+      <ion-button fill="clear" (click)="dismiss()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form [formGroup]="driverForm" (ngSubmit)="save()">
+    
+    <!-- Informations personnelles -->
+    <div class="form-section">
+      <div class="section-header">
+        <ion-icon name="person-circle" color="primary"></ion-icon>
+        <h3>Informations personnelles</h3>
+      </div>
+
+      <!-- Prénom -->
+      <ion-item lines="inset" [class.ion-invalid]="hasError('first_name')">
+        <ion-label position="stacked">
+          Prénom <span class="required">*</span>
+        </ion-label>
+        <ion-input
+          type="text"
+          formControlName="first_name"
+          placeholder="Ex: Jean"
+          [class.ion-invalid]="hasError('first_name')"
+          clearInput="true">
+        </ion-input>
+        <ion-note slot="error" *ngIf="hasError('first_name')">
+          {{getErrorMessage('first_name')}}
+        </ion-note>
+      </ion-item>
+
+      <!-- Nom -->
+      <ion-item lines="inset" [class.ion-invalid]="hasError('last_name')">
+        <ion-label position="stacked">
+          Nom <span class="required">*</span>
+        </ion-label>
+        <ion-input
+          type="text"
+          formControlName="last_name"
+          placeholder="Ex: Dupont"
+          [class.ion-invalid]="hasError('last_name')"
+          clearInput="true">
+        </ion-input>
+        <ion-note slot="error" *ngIf="hasError('last_name')">
+          {{getErrorMessage('last_name')}}
+        </ion-note>
+      </ion-item>
+    </div>
+
+    <!-- Contact -->
+    <div class="form-section">
+      <div class="section-header">
+        <ion-icon name="call" color="primary"></ion-icon>
+        <h3>Contact</h3>
+      </div>
+
+      <!-- Téléphone -->
+      <ion-item lines="inset" [class.ion-invalid]="hasError('phone_number')">
+        <ion-label position="stacked">
+          Téléphone mobile <span class="required">*</span>
+        </ion-label>
+        <ion-input
+          type="tel"
+          formControlName="phone_number"
+          placeholder="33612345678"
+          (ionInput)="onPhoneInput($event)"
+          [class.ion-invalid]="hasError('phone_number')"
+          maxlength="11">
+          <ion-icon name="call" slot="start" color="medium"></ion-icon>
+        </ion-input>
+        <ion-note slot="helper" *ngIf="!hasError('phone_number') && driverForm.get('phone_number')?.value">
+          {{formattedPhone}}
+        </ion-note>
+        <ion-note slot="error" *ngIf="hasError('phone_number')">
+          {{getErrorMessage('phone_number')}}
+        </ion-note>
+      </ion-item>
+
+      <!-- Email -->
+      <ion-item lines="inset" [class.ion-invalid]="hasError('email')">
+        <ion-label position="stacked">Email (optionnel)</ion-label>
+        <ion-input
+          type="email"
+          formControlName="email"
+          placeholder="jean.dupont@email.com"
+          [class.ion-invalid]="hasError('email')"
+          clearInput="true">
+          <ion-icon name="mail" slot="start" color="medium"></ion-icon>
+        </ion-input>
+        <ion-note slot="error" *ngIf="hasError('email')">
+          {{getErrorMessage('email')}}
+        </ion-note>
+      </ion-item>
+    </div>
+
+    <!-- Sécurité -->
+    <div class="form-section">
+      <div class="section-header">
+        <ion-icon name="shield-checkmark" color="primary"></ion-icon>
+        <h3>Sécurité</h3>
+      </div>
+
+      <!-- Mot de passe -->
+      <ion-item lines="inset" [class.ion-invalid]="hasError('password')">
+        <ion-label position="stacked">
+          Mot de passe <span class="required">*</span>
+        </ion-label>
+        <ion-input
+          [type]="showPassword ? 'text' : 'password'"
+          formControlName="password"
+          placeholder="Minimum 6 caractères"
+          [class.ion-invalid]="hasError('password')">
+          <ion-icon name="lock-closed" slot="start" color="medium"></ion-icon>
+          <ion-button
+            slot="end"
+            fill="clear"
+            size="small"
+            (click)="togglePasswordVisibility()">
+            <ion-icon
+              [name]="showPassword ? 'eye-off' : 'eye'"
+              color="medium">
+            </ion-icon>
+          </ion-button>
+        </ion-input>
+        <ion-note slot="error" *ngIf="hasError('password')">
+          {{getErrorMessage('password')}}
+        </ion-note>
+      </ion-item>
+    </div>
+
+    <!-- Information importante -->
+    <ion-card class="info-card">
+      <ion-card-content>
+        <div class="info-content">
+          <ion-icon name="information-circle" color="primary"></ion-icon>
+          <div class="info-text">
+            <p><strong>Le livreur recevra :</strong></p>
+            <ul>
+              <li>Ses identifiants de connexion par SMS</li>
+              <li>Les notifications de commandes via WhatsApp</li>
+              <li>L'accès à l'application livreur</li>
+            </ul>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+  </form>
+</ion-content>
+
+<ion-footer class="ion-no-border">
+  <ion-toolbar>
+    <div class="footer-buttons">
+      <ion-button
+        fill="outline"
+        color="medium"
+        (click)="dismiss()"
+        [disabled]="isLoading">
+        <ion-icon name="close" slot="start"></ion-icon>
+        Annuler
+      </ion-button>
+
+      <ion-button
+        color="primary"
+        (click)="save()"
+        [disabled]="!driverForm.valid || isLoading">
+        <ion-spinner name="crescent" *ngIf="isLoading"></ion-spinner>
+        <ion-icon name="checkmark" slot="start" *ngIf="!isLoading"></ion-icon>
+        {{isLoading ? 'Création...' : 'Créer le livreur'}}
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>
