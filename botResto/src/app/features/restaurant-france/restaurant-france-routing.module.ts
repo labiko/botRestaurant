@@ -8,7 +8,7 @@ import { DeliverySharedGuard } from './auth-france/guards/delivery-shared.guard'
 const routes: Routes = [
   {
     path: '',
-    redirectTo: 'dashboard-france',
+    redirectTo: 'auth-france/login-france',
     pathMatch: 'full'
   },
   {

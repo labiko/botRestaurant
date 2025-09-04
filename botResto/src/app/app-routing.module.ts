@@ -16,7 +16,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    redirectTo: 'restaurant/dashboard',
+    redirectTo: 'restaurant-france/auth-france/login-france',
     pathMatch: 'full'
   },
   {
@@ -43,6 +43,10 @@ const routes: Routes = [
     path: 'restaurant-france',
     loadChildren: () => import('./features/restaurant-france/restaurant-france.module').then( m => m.RestaurantFranceModule)
   },
+  {
+    path: '**',
+    redirectTo: 'restaurant-france/auth-france/login-france'
+  }
 ];
 
 @NgModule({
