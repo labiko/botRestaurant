@@ -446,10 +446,31 @@ export class MyOrdersPage implements OnInit, OnDestroy {
   private expandedOrders = new Set<number>();
 
   toggleOrderDetail(order: DeliveryOrder) {
+    console.log('🔄 [MyOrders] Toggle détails pour commande:', order.order_number);
+    console.log('📊 [MyOrders] Données complètes de la commande:', order);
+    console.log('📦 [MyOrders] Items bruts (order.items):', order.items);
+    console.log('📦 [MyOrders] Type des items:', typeof order.items);
+    
     if (this.expandedOrders.has(order.id)) {
+      console.log('➖ [MyOrders] Fermeture des détails pour commande:', order.order_number);
       this.expandedOrders.delete(order.id);
     } else {
+      console.log('➕ [MyOrders] Ouverture des détails pour commande:', order.order_number);
       this.expandedOrders.add(order.id);
+      
+      // Analyser les items lors de l'expansion
+      if (order.items) {
+        console.log('🔍 [MyOrders] Analyse détaillée des items:');
+        const items = this.getOrderItems(order);
+        items.forEach((item, index) => {
+          console.log(`  📌 Item ${index + 1}:`, item);
+          console.log(`     - Nom: ${item.name}`);
+          console.log(`     - Prix: ${item.price}`);
+          console.log(`     - Prix total: ${item.total_price}`);
+          console.log(`     - Quantité: ${item.quantity}`);
+          console.log(`     - Toutes les propriétés:`, Object.keys(item));
+        });
+      }
     }
   }
 
@@ -460,6 +481,7 @@ export class MyOrdersPage implements OnInit, OnDestroy {
   // Fonctions détails articles
   hasOrderItems(order: DeliveryOrder): boolean {
     console.log(`🔍 [MyOrders] hasOrderItems pour commande ${order.order_number}:`, order.items);
+    console.log(`🔍 [MyOrders] Type des items: ${typeof order.items}`);
     
     if (!order.items) {
       console.log(`❌ [MyOrders] Pas d'items pour commande ${order.order_number}`);
@@ -469,9 +491,12 @@ export class MyOrdersPage implements OnInit, OnDestroy {
     // Les items peuvent être une string JSON ou un objet
     if (typeof order.items === 'string') {
       try {
+        console.log(`🔍 [MyOrders] Tentative de parsing de la string JSON...`);
         const parsedItems = JSON.parse(order.items);
         const hasItems = parsedItems && Object.keys(parsedItems).length > 0;
-        console.log(`✅ [MyOrders] Items parsés (string):`, parsedItems, 'hasItems:', hasItems);
+        console.log(`✅ [MyOrders] Items parsés (string):`, parsedItems);
+        console.log(`✅ [MyOrders] Nombre d'items: ${Object.keys(parsedItems).length}`);
+        console.log(`✅ [MyOrders] hasItems: ${hasItems}`);
         return hasItems;
       } catch (error) {
         console.error(`❌ [MyOrders] Erreur parsing items string:`, error);
@@ -480,8 +505,11 @@ export class MyOrdersPage implements OnInit, OnDestroy {
     }
     
     // Si c'est déjà un objet
-    const hasItems = order.items && Object.keys(order.items).length > 0;
-    console.log(`✅ [MyOrders] Items objet:`, order.items, 'hasItems:', hasItems);
+    const itemCount = Object.keys(order.items).length;
+    const hasItems = order.items && itemCount > 0;
+    console.log(`✅ [MyOrders] Items objet - Nombre d'items: ${itemCount}`);
+    console.log(`✅ [MyOrders] hasItems: ${hasItems}`);
+    console.log(`✅ [MyOrders] Clés des items:`, Object.keys(order.items));
     return hasItems;
   }
 
@@ -507,7 +535,8 @@ export class MyOrdersPage implements OnInit, OnDestroy {
       
       if (itemsData && typeof itemsData === 'object') {
         Object.entries(itemsData).forEach(([key, value]: [string, any]) => {
-          console.log(`📦 [MyOrders] Processing item:`, key, value);
+          console.log(`📦 [MyOrders] Processing item avec clé "${key}":`, value);
+          console.log(`📦 [MyOrders] Structure de l'item:`, JSON.stringify(value, null, 2));
           
           // Extraire les données de l'item
           if (value && value.item) {
@@ -516,8 +545,25 @@ export class MyOrdersPage implements OnInit, OnDestroy {
               quantity: value.quantity || 1,
               key: key
             };
-            console.log(`📦 [MyOrders] Item traité:`, processedItem);
-            console.log(`📦 [MyOrders] Properties disponibles:`, Object.keys(processedItem));
+            console.log(`📦 [MyOrders] Item traité complet:`, processedItem);
+            console.log(`📦 [MyOrders] Propriétés disponibles:`, Object.keys(processedItem));
+            console.log(`📦 [MyOrders] Valeurs de prix:`);
+            console.log(`    - price: ${processedItem.price}`);
+            console.log(`    - total_price: ${processedItem.total_price}`);
+            console.log(`    - unit_price: ${processedItem.unit_price}`);
+            console.log(`    - amount: ${processedItem.amount}`);
+            console.log(`    - item_price: ${processedItem.item_price}`);
+            itemsArray.push(processedItem);
+          } else if (value) {
+            // Cas où l'item n'est pas dans une propriété "item"
+            console.log(`📦 [MyOrders] Item direct (sans propriété 'item'):`, value);
+            const processedItem = {
+              ...value,
+              quantity: value.quantity || 1,
+              key: key
+            };
+            console.log(`📦 [MyOrders] Item direct traité:`, processedItem);
+            console.log(`📦 [MyOrders] Prix dans item direct: ${processedItem.price}`);
             itemsArray.push(processedItem);
           }
         });

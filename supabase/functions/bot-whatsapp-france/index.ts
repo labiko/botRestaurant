@@ -118,7 +118,9 @@ class SimpleSession {
     // Standardiser le format avec @c.us
     const standardPhone = phoneNumber.includes('@c.us') ? phoneNumber : `${phoneNumber}@c.us`;
     
-    const { data } = await supabase
+    console.log('🔍 [SimpleSession.get] Recherche session pour:', standardPhone);
+    
+    const { data, error } = await supabase
       .from('france_sessions')
       .select('*')
       .eq('phone_whatsapp', standardPhone)
@@ -126,6 +128,17 @@ class SimpleSession {
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('❌ [SimpleSession.get] Erreur récupération:', error);
+    }
+
+    console.log('📄 [SimpleSession.get] Session trouvée:', {
+      sessionExists: !!data,
+      sessionId: data?.id,
+      sessionState: data?.state,
+      contextKeys: data?.context ? Object.keys(data.context) : 'no-context'
+    });
 
     return data;
   }
@@ -150,7 +163,10 @@ class SimpleSession {
   }
 
   static async update(sessionId: string, updates: any) {
-    const { data } = await supabase
+    console.log('💾 [SimpleSession.update] AVANT update - sessionId:', sessionId);
+    console.log('💾 [SimpleSession.update] AVANT update - updates:', JSON.stringify(updates, null, 2));
+    
+    const { data, error } = await supabase
       .from('france_sessions')
       .update({
         ...updates,
@@ -160,6 +176,16 @@ class SimpleSession {
       .eq('id', sessionId)
       .select()
       .single();
+
+    if (error) {
+      console.error('❌ [SimpleSession.update] Erreur mise à jour:', error);
+    }
+
+    console.log('✅ [SimpleSession.update] APRÈS update - session mise à jour:', {
+      sessionId: data?.id,
+      newState: data?.state,
+      contextKeys: data?.context ? Object.keys(data.context) : 'no-context'
+    });
 
     return data;
   }
@@ -326,6 +352,14 @@ ${restaurants?.[0] ? `✅ ${restaurants[0].name}` : '❌ Aucun restaurant'}
 
   // PRIORITÉ 3: Gestion complète des messages selon l'état de session
   const session = await SimpleSession.get(phoneNumber);
+  
+  console.log('🔄 [SESSION_GET] Session récupérée:', {
+    sessionExists: !!session,
+    sessionId: session?.id,
+    sessionState: session?.state,
+    selectedRestaurantId: session?.context?.selectedRestaurantId,
+    contextKeys: session?.context ? Object.keys(session.context) : 'no-context'
+  });
   
   if (session && session.context?.selectedRestaurantId) {
     // L'utilisateur a une session active avec restaurant sélectionné
@@ -733,6 +767,7 @@ async function handleOrderCommand(phoneNumber: string, session: any, command: st
   console.log('🔍 DEBUG includes_drink check:', 
     'selectedItem.includes_drink =', selectedItem.includes_drink, 
     'type =', typeof selectedItem.includes_drink);
+  console.log('🔍 DEBUG selectedItem complet:', JSON.stringify(selectedItem, null, 2));
     
   if (selectedItem.includes_drink) {
     console.log('🥤 Produit avec boisson incluse, affichage choix boissons');
@@ -740,6 +775,7 @@ async function handleOrderCommand(phoneNumber: string, session: any, command: st
     return;
   } else {
     console.log('❌ Pas de boisson incluse détectée, ajout direct au panier');
+    console.log('❌ DEBUG - Raison: includes_drink =', selectedItem.includes_drink);
   }
 
   // Produit simple ou sans options obligatoires → Ajout direct au panier
@@ -1055,14 +1091,26 @@ async function handleConfigurationConfirmation(phoneNumber: string, session: any
       // Retour à l'affichage des produits - récupérer la session mise à jour
       const updatedSession = await SimpleSession.get(phoneNumber);
       if (updatedSession) {
-        await SimpleSession.update(session.id, {
-          state: 'ORDERING',
-          context: {
-            ...updatedSession.context,
-            configuredItem: null,
-            currentConfiguration: null
-          }
-        });
+        // ⚠️ NE PAS forcer ORDERING si la session est en DRINK_SELECTION (sélection boisson en cours)
+        if (updatedSession.state !== 'DRINK_SELECTION') {
+          await SimpleSession.update(session.id, {
+            state: 'ORDERING',
+            context: {
+              ...updatedSession.context,
+              configuredItem: null,
+              currentConfiguration: null
+            }
+          });
+        } else {
+          // Session en DRINK_SELECTION : nettoyer seulement le contexte sans changer l'état
+          await SimpleSession.update(session.id, {
+            context: {
+              ...updatedSession.context,
+              configuredItem: null,
+              currentConfiguration: null
+            }
+          });
+        }
       }
       break;
       
@@ -1140,7 +1188,7 @@ async function getAvailableDrinks(restaurantId: number): Promise<any[]> {
 }
 
 // Fonction pour afficher le choix de boisson
-async function showDrinkSelection(phoneNumber: string, session: any, selectedItem: any) {
+async function showDrinkSelection(phoneNumber: string, session: any, selectedItem: any, quantity: number = 1) {
   console.log('🥤 Affichage sélection boissons pour:', selectedItem.display_name);
   
   // Récupérer les boissons disponibles
@@ -1154,7 +1202,9 @@ async function showDrinkSelection(phoneNumber: string, session: any, selectedIte
   }
 
   // Construire le message de sélection - VERSION 1 modernisée
-  let message = `🍔 **${selectedItem.display_name}**\n`;
+  // Utiliser le nom de base sans la boisson pour éviter l'affichage prématuré
+  const baseDisplayName = selectedItem.display_name.split(' + ')[0]; // Retirer la partie boisson si présente
+  let message = `🍔 **${baseDisplayName}**\n`;
   message += `🎁 Votre boisson offerte est incluse !\n\n`;
   message += `┌─ 🥤 **CHOISISSEZ VOTRE BOISSON**\n│\n`;
 
@@ -1175,13 +1225,28 @@ async function showDrinkSelection(phoneNumber: string, session: any, selectedIte
   message += `\n💡 **Tapez simplement le chiffre de votre choix**`;
 
   // Sauvegarder l'état pour la prochaine étape
-  await SimpleSession.update(session.id, {
+  console.log('🔄 [DRINK] AVANT sauvegarde session - sessionId:', session.id);
+  const updatedSession = await SimpleSession.update(session.id, {
     state: 'DRINK_SELECTION',
     context: {
       ...session.context,
       selectedItemWithDrink: selectedItem,
+      selectedQuantity: quantity,  // NOUVEAU : sauvegarder la quantité
       availableDrinks: drinks
     }
+  });
+  console.log('✅ [DRINK] APRÈS sauvegarde - State: DRINK_SELECTION');
+
+  // VÉRIFICATION IMMÉDIATE : Re-récupérer la session pour vérifier la persistance
+  const phoneFormatted = phoneNumber.includes('@c.us') ? phoneNumber : `${phoneNumber}@c.us`;
+  const verifySession = await SimpleSession.get(phoneFormatted.replace('@c.us', ''));
+  console.log('🔍 [DRINK] VÉRIFICATION IMMÉDIATE - Session ré-récupérée:', {
+    sessionExists: !!verifySession,
+    sessionId: verifySession?.id,
+    sessionState: verifySession?.state,
+    contextKeys: verifySession?.context ? Object.keys(verifySession.context) : 'no-context',
+    hasSelectedItemWithDrink: !!verifySession?.context?.selectedItemWithDrink,
+    hasAvailableDrinks: !!verifySession?.context?.availableDrinks
   });
 
   await whatsapp.sendMessage(phoneNumber, message);
@@ -1192,6 +1257,14 @@ async function addItemToCart(phoneNumber: string, session: any, item: any, quant
   console.log('📦 addItemToCart - DÉBUT');
   console.log('🔍 DEBUG item reçu:', JSON.stringify(item, null, 2));
   console.log('🔍 DEBUG quantity:', quantity, 'silent:', silent);
+  
+  // 🥤 NOUVEAU : Vérification boisson pour produits configurés (AVANT ajout panier)
+  // ⚠️ NE PAS redemander de boisson si elle est déjà sélectionnée
+  if (item.includes_drink && !silent && !item.selected_drink) {
+    console.log('🥤 Produit configuré avec boisson détectée, redirection vers sélection...');
+    await showDrinkSelection(phoneNumber, session, item, quantity);
+    return; // Arrêter ici, la suite sera gérée par DRINK_SELECTION
+  }
   
   const cart: Record<string, { item: any; quantity: number }> = session.context.cart || {};
   
@@ -1250,6 +1323,11 @@ async function addItemToCart(phoneNumber: string, session: any, item: any, quant
         confirmMessage += `   ${getOptionEmoji(group)} ${option.option_name}\n`;
       }
     });
+  }
+  
+  // 🥤 NOUVEAU : Afficher la boisson sélectionnée si présente
+  if (item.selected_drink) {
+    confirmMessage += `   🥤 ${item.selected_drink.name} ${item.selected_drink.variant}\n`;
   }
   
   // Ajouter composition si disponible avec espaces et icône sur chaque ligne
@@ -1360,12 +1438,14 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
     return;
   }
 
-  console.log('🔍 Traitement message:', {
+  console.log('🔍 [DEBUG] État session AVANT traitement:', {
     phoneNumber,
     message,
     normalizedMessage,
     sessionState: session.state,
-    sessionId: session.id
+    sessionId: session.id,
+    hasContext: !!session.context,
+    contextKeys: session.context ? Object.keys(session.context) : []
   });
 
   switch (session.state) {
@@ -1426,12 +1506,17 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
 
     case 'DRINK_SELECTION':
       // Gestion sélection de boisson
-      console.log('🍺 DRINK_SELECTION - Message reçu:', normalizedMessage);
+      console.log('🍺 [DRINK_SELECTION] Message reçu:', normalizedMessage);
+      console.log('🍺 [DRINK_SELECTION] Session context keys:', Object.keys(session.context || {}));
+      console.log('🍺 [DRINK_SELECTION] selectedItemWithDrink présent:', !!session.context.selectedItemWithDrink);
+      console.log('🍺 [DRINK_SELECTION] selectedQuantity:', session.context.selectedQuantity);
+      
       const drinkChoice = parseInt(normalizedMessage);
       const availableDrinks = session.context.availableDrinks || [];
       
-      console.log('🔍 DEBUG availableDrinks count:', availableDrinks.length);
-      console.log('🔍 DEBUG drinkChoice parsed:', drinkChoice);
+      console.log('🔍 [DRINK_SELECTION] availableDrinks count:', availableDrinks.length);
+      console.log('🔍 [DRINK_SELECTION] drinkChoice parsed:', drinkChoice);
+      console.log('🔍 [DRINK_SELECTION] availableDrinks complets:', JSON.stringify(availableDrinks, null, 2));
       
       if (isNaN(drinkChoice) || drinkChoice < 1 || drinkChoice > availableDrinks.length) {
         console.log('❌ Choix boisson invalide');
@@ -1464,9 +1549,10 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
       
       console.log('🍽️ DEBUG selectedItemWithDrink APRÈS modification:', JSON.stringify(selectedItemWithDrink, null, 2));
       
-      // Ajouter au panier
+      // Ajouter au panier AVEC message de confirmation complet (silent: false)
       console.log('📦 Appel addItemToCart avec item modifié');
-      await addItemToCart(phoneNumber, session, selectedItemWithDrink);
+      const savedQuantity = session.context.selectedQuantity || 1;
+      await addItemToCart(phoneNumber, session, selectedItemWithDrink, savedQuantity, false);
       break;
 
     case 'ORDERING':
