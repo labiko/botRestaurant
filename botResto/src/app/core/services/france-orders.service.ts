@@ -248,6 +248,23 @@ export class FranceOrdersService {
 
   async updateOrderStatus(orderId: number, newStatus: string): Promise<boolean> {
     try {
+      // Étape 0: Récupérer le statut actuel pour vérifier le changement
+      const { data: currentOrder, error: fetchError } = await this.supabaseFranceService.client
+        .from('france_orders')
+        .select('status')
+        .eq('id', orderId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ [FranceOrders] Erreur récupération statut actuel:', fetchError);
+        return false;
+      }
+
+      const currentStatus = currentOrder?.status;
+      const statusChanged = currentStatus !== newStatus;
+
+      console.log(`🔄 [FranceOrders] Changement statut pour commande ${orderId}: "${currentStatus}" → "${newStatus}" (changé: ${statusChanged})`);
+
       // Étape 1: Mise à jour du statut en base de données
       const { error } = await this.supabaseFranceService.client
         .from('france_orders')
@@ -264,12 +281,16 @@ export class FranceOrdersService {
 
       console.log(`✅ [FranceOrders] Statut mis à jour: ${orderId} → ${newStatus}`);
 
-      // Étape 2: Envoyer notification WhatsApp (ajout France - pas de régression)
-      try {
-        await this.sendWhatsAppNotification(orderId, newStatus);
-      } catch (whatsappError) {
-        // Ne pas faire échouer la mise à jour du statut si WhatsApp échoue
-        console.error('⚠️ [FranceOrders] Erreur notification WhatsApp (non bloquant):', whatsappError);
+      // Étape 2: Envoyer notification WhatsApp SEULEMENT si le statut a vraiment changé
+      if (statusChanged) {
+        try {
+          await this.sendWhatsAppNotification(orderId, newStatus);
+        } catch (whatsappError) {
+          // Ne pas faire échouer la mise à jour du statut si WhatsApp échoue
+          console.error('⚠️ [FranceOrders] Erreur notification WhatsApp (non bloquant):', whatsappError);
+        }
+      } else {
+        console.log(`ℹ️ [FranceOrders] Statut inchangé pour commande ${orderId}, aucune notification envoyée`);
       }
 
       return true;
