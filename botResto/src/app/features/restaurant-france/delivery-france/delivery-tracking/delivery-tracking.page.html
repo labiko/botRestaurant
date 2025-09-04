@@ -19,30 +19,45 @@
 
   <!-- Configuration Green API supprimée - déjà configurée dans le code -->
 
-  <!-- Métriques globales -->
+  <!-- Métriques globales modernisées -->
   <div class="metrics-container">
     <div class="metrics-grid">
-      <div class="metric-card">
-        <ion-icon name="list-circle" color="primary"></ion-icon>
+      <div class="metric-card active-orders">
+        <div class="metric-icon-wrapper">
+          <ion-icon name="restaurant" color="primary"></ion-icon>
+        </div>
         <div class="metric-content">
           <h2>{{trackingData.totalActiveOrders}}</h2>
           <p>Commandes actives</p>
         </div>
+        <div class="metric-trend" *ngIf="trackingData.totalActiveOrders > 0">
+          <ion-icon name="trending-up" color="primary"></ion-icon>
+        </div>
       </div>
       
-      <div class="metric-card">
-        <ion-icon name="notifications" color="warning"></ion-icon>
+      <div class="metric-card pending-notifications">
+        <div class="metric-icon-wrapper">
+          <ion-icon name="hourglass" color="warning"></ion-icon>
+        </div>
         <div class="metric-content">
           <h2>{{trackingData.totalPendingNotifications}}</h2>
           <p>En attente</p>
         </div>
+        <div class="metric-trend" *ngIf="trackingData.totalPendingNotifications > 0">
+          <ion-icon name="alert-circle" color="warning"></ion-icon>
+        </div>
       </div>
       
-      <div class="metric-card">
-        <ion-icon name="time" color="success"></ion-icon>
+      <div class="metric-card response-time">
+        <div class="metric-icon-wrapper">
+          <ion-icon name="speedometer" color="success"></ion-icon>
+        </div>
         <div class="metric-content">
           <h2>{{trackingData.averageResponseTime}}min</h2>
           <p>Réponse moyenne</p>
+        </div>
+        <div class="metric-trend">
+          <ion-icon name="checkmark-circle" color="success"></ion-icon>
         </div>
       </div>
     </div>
@@ -68,20 +83,27 @@
       </ion-label>
     </ion-item>
 
-    <!-- Cartes de commandes -->
-    <ion-card *ngFor="let order of trackingData.activeOrders" class="order-card">
+    <!-- Cartes de commandes modernisées -->
+    <ion-card *ngFor="let order of trackingData.activeOrders" class="order-card modern-card">
       <ion-card-header>
         <div class="order-header">
           <div class="order-info">
             <ion-card-title>
-              <ion-icon [name]="getStatusIcon(order.currentStatus)" [color]="getStatusColor(order.currentStatus)"></ion-icon>
-              Commande #{{order.orderNumber}}
+              <div class="status-indicator" [attr.data-status]="order.currentStatus">
+                <ion-icon [name]="getStatusIcon(order.currentStatus)" [color]="getStatusColor(order.currentStatus)"></ion-icon>
+              </div>
+              <span class="order-number">Commande #{{order.orderNumber}}</span>
             </ion-card-title>
             <ion-card-subtitle>
-              <ion-chip [color]="getStatusColor(order.currentStatus)" size="small">
+              <ion-chip [color]="getStatusColor(order.currentStatus)" size="small" fill="solid">
+                <ion-icon [name]="getStatusIcon(order.currentStatus)" slot="start"></ion-icon>
                 {{getStatusText(order.currentStatus)}}
               </ion-chip>
             </ion-card-subtitle>
+          </div>
+          <div class="order-time" *ngIf="order.lastActionTimestamp">
+            <ion-icon name="time-outline" color="medium"></ion-icon>
+            <span>{{formatTime24H(order.lastActionTimestamp!)}}</span>
           </div>
         </div>
       </ion-card-header>
@@ -108,50 +130,56 @@
         </div>
 
         <!-- Dernière action -->
-        <div class="last-action" *ngIf="order.lastActionDriverName">
+        <div class="last-action" *ngIf="order.lastActionDriverName && order.lastActionTimestamp">
           <ion-icon name="person-circle" color="medium"></ion-icon>
           <span>
             <strong>{{order.lastActionDriverName}}</strong> 
             - {{order.lastActionType}} 
-            <small>({{order.lastActionTimestamp | date:'short'}})</small>
+            <small>{{getTimeAgo(order.lastActionTimestamp!)}}</small>
           </span>
         </div>
 
-        <!-- Actions -->
-        <div class="order-actions">
+        <!-- Actions modernisées -->
+        <div class="order-actions modern-actions">
           
           <!-- Marquer prête (si pas encore prête) -->
           <ion-button 
             *ngIf="order.currentStatus !== 'prete'" 
-            fill="outline" 
-            color="warning"
-            size="small"
+            expand="block" 
+            fill="solid" 
+            color="success"
+            size="default"
+            class="action-button ready-button"
             (click)="markOrderReady(order)">
-            <ion-icon name="checkmark-circle" slot="start"></ion-icon>
-            Marquer prête
+            <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+            <span>Marquer comme prête</span>
           </ion-button>
 
-          <!-- Rappels (si prête et notifiée mais pas acceptée) -->
-          <ion-button 
-            *ngIf="order.canSendReminder" 
-            fill="outline" 
-            color="primary"
-            size="small"
-            (click)="sendReminders(order)">
-            <ion-icon name="notifications" slot="start"></ion-icon>
-            Rappeler
-          </ion-button>
+          <div class="secondary-actions" *ngIf="order.currentStatus === 'prete'">
+            <!-- Rappels (si prête et notifiée mais pas acceptée) -->
+            <ion-button 
+              *ngIf="order.canSendReminder" 
+              fill="outline" 
+              color="primary"
+              size="default"
+              class="action-button reminder-button"
+              (click)="sendReminders(order)">
+              <ion-icon name="notifications-outline" slot="start"></ion-icon>
+              <span>Envoyer rappels</span>
+            </ion-button>
 
-          <!-- Force Release (si assignée) -->
-          <ion-button 
-            *ngIf="order.canForceRelease" 
-            fill="outline" 
-            color="danger"
-            size="small"
-            (click)="forceReleaseOrder(order)">
-            <ion-icon name="refresh-circle" slot="start"></ion-icon>
-            Force Release
-          </ion-button>
+            <!-- Force Release (si assignée) -->
+            <ion-button 
+              *ngIf="order.canForceRelease" 
+              fill="clear" 
+              color="danger"
+              size="default"
+              class="action-button force-button"
+              (click)="forceReleaseOrder(order)">
+              <ion-icon name="refresh-circle-outline" slot="start"></ion-icon>
+              <span>Force Release</span>
+            </ion-button>
+          </div>
 
         </div>
       </ion-card-content>

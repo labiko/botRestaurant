@@ -62,6 +62,7 @@ export class MyOrdersPage implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    console.log(`🚀 [MyOrders] Initialisation de la page MyOrders`);
     this.initializeData();
   }
 
@@ -109,6 +110,14 @@ export class MyOrdersPage implements OnInit, OnDestroy {
       // S'abonner aux changements des commandes
       this.myOrdersSubscription = this.deliveryOrdersService.driverOrders$.subscribe({
         next: (orders: DeliveryOrder[]) => {
+          console.log(`📦 [MyOrders] ${orders.length} commandes reçues:`);
+          orders.forEach(order => {
+            console.log(`  🏷️ Commande ${order.order_number} (ID: ${order.id})`);
+            console.log(`     - Status: ${order.status}`);
+            console.log(`     - Actions disponibles:`, order.availableActions);
+            console.log(`     - OTP: ${order.delivery_validation_code ? 'OUI (' + order.delivery_validation_code + ')' : 'NON'}`);
+          });
+          
           this.myOrders = orders;
           this.isLoading = false;
           
@@ -134,19 +143,64 @@ export class MyOrdersPage implements OnInit, OnDestroy {
    * Mettre à jour le statut d'une commande
    */
   async updateOrderStatus(order: DeliveryOrder, newStatus: string) {
+    console.log(`🔄 [MyOrders] ======================================================`);
+    console.log(`🔄 [MyOrders] ============ FONCTION updateOrderStatus APPELÉE ============`);
+    console.log(`🔄 [MyOrders] ======================================================`);
+    console.log(`🔄 [MyOrders] Order ID: ${order.id}`);
+    console.log(`🔄 [MyOrders] Order Number: ${order.order_number}`);
+    console.log(`🔄 [MyOrders] Status actuel: ${order.status}`);
+    console.log(`🔄 [MyOrders] Nouveau status demandé: ${newStatus}`);
+    console.log(`🔄 [MyOrders] Actions disponibles pour cette commande:`, order.availableActions);
+    
+    // Vérifier si on a un OTP existant
+    if (order.delivery_validation_code) {
+      console.log(`🔐 [MyOrders] OTP EXISTANT TROUVÉ: ${order.delivery_validation_code}`);
+    } else {
+      console.log(`❌ [MyOrders] AUCUN OTP pour cette commande`);
+    }
+    
     if (newStatus === 'delivered') {
+      console.log(`🔒 [MyOrders] *** DÉCLENCHEMENT INTERFACE OTP POUR COMMANDE ${order.id} ***`);
+      console.log(`🔒 [MyOrders] Activation showOTPInput[${order.id}] = true`);
+      
       // Marquer comme livré nécessite une validation OTP
       this.showOTPInput[order.id] = true;
       this.otpDigits[order.id] = ['', '', '', ''];
       
-      // Focus sur le premier champ après un délai
+      console.log(`🔒 [MyOrders] État showOTPInput après activation:`, this.showOTPInput);
+      
+      // Vérifier le DOM après un délai pour que Angular ait le temps de mettre à jour
       setTimeout(() => {
+        const otpContainer = document.querySelector('.otp-inline-container');
+        const otpDigits = document.querySelectorAll('.otp-digit');
+        
+        console.log(`🔍 [MyOrders] Vérification DOM OTP:`);
+        console.log(`   - Container OTP trouvé: ${otpContainer ? 'OUI' : 'NON'}`);
+        console.log(`   - Nombre de champs OTP: ${otpDigits.length}`);
+        
+        if (otpContainer) {
+          console.log(`   - Container visible: ${otpContainer.clientHeight > 0 ? 'OUI' : 'NON'}`);
+          console.log(`   - Classes du container:`, otpContainer.classList.toString());
+        }
+        
+        // Focus sur le premier champ après un délai
         const firstInput = document.querySelector('.otp-digit') as HTMLInputElement;
         if (firstInput) {
+          console.log(`🔒 [MyOrders] Focus appliqué sur le premier champ OTP`);
           firstInput.focus();
+        } else {
+          console.log(`❌ [MyOrders] AUCUN CHAMP OTP TROUVÉ DANS LE DOM`);
         }
-      }, 200);
+      }, 500);
+      
+      console.log(`🔒 [MyOrders] RETURN - Interface OTP activée, arrêt de la fonction`);
       return;
+    }
+
+    // CORRECTION: Gérer le cas 'start_delivery' pour passer à 'en_livraison'
+    if (newStatus === 'start_delivery') {
+      console.log(`🚚 [MyOrders] CORRECTION: start_delivery -> en_livraison`);
+      newStatus = 'en_livraison';
     }
 
     const loading = await this.loadingController.create({
@@ -155,9 +209,14 @@ export class MyOrdersPage implements OnInit, OnDestroy {
     await loading.present();
 
     try {
+      console.log(`📤 [MyOrders] Traitement du nouveau status: ${newStatus}`);
       let success = false;
 
       if (newStatus === 'en_livraison') {
+        console.log(`🚚 [MyOrders] PASSAGE EN LIVRAISON - Notification WhatsApp au client`);
+        console.log(`🚚 [MyOrders] Téléphone client: ${order.phone_number}`);
+        console.log(`🚚 [MyOrders] Code de validation: ${order.delivery_validation_code}`);
+        
         // Notification WhatsApp au client
         if (order.phone_number) {
           await this.whatsappNotificationFranceService.sendOrderStatusNotification(
@@ -170,16 +229,24 @@ export class MyOrdersPage implements OnInit, OnDestroy {
               validationCode: order.delivery_validation_code || ''
             }
           );
+          console.log(`✅ [MyOrders] Notification WhatsApp envoyée`);
+        } else {
+          console.log(`❌ [MyOrders] Pas de numéro de téléphone client`);
         }
       }
 
+      console.log(`💾 [MyOrders] Mise à jour BDD - Status: ${newStatus}`);
       success = await this.deliveryOrdersService.updateDeliveryStatus(order.id, newStatus);
+      console.log(`💾 [MyOrders] Résultat mise à jour BDD: ${success}`);
 
       if (success) {
+        console.log(`✅ [MyOrders] Mise à jour réussie - Rechargement des données`);
         this.loadMyOrders();
         const statusText = newStatus === 'en_livraison' ? 'En livraison' : this.getOrderStatusText(newStatus);
         this.presentToast(`Statut mis à jour : ${statusText}`);
+        console.log(`🎉 [MyOrders] Toast affiché: Statut mis à jour : ${statusText}`);
       } else {
+        console.log(`❌ [MyOrders] Échec de la mise à jour`);
         this.presentToast('Erreur lors de la mise à jour');
       }
     } catch (error) {

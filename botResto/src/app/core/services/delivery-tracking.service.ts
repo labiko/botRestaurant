@@ -353,4 +353,42 @@ export class DeliveryTrackingService {
       return [];
     }
   }
+
+  /**
+   * Calculer le temps relatif depuis une date
+   */
+  getTimeAgo(timestamp: string | Date): string {
+    if (!timestamp) return '';
+    
+    const now = new Date();
+    const actionTime = new Date(timestamp);
+    const diffMs = now.getTime() - actionTime.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 1) {
+      return 'maintenant';
+    } else if (diffMins < 60) {
+      return `il y a ${diffMins} min${diffMins > 1 ? 's' : ''}`;
+    } else if (diffHours < 24) {
+      return `il y a ${diffHours}h${diffMins % 60 > 0 ? (diffMins % 60).toString().padStart(2, '0') : ''}`;
+    } else {
+      return `il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+    }
+  }
+
+  /**
+   * Formater une date en heure 24H
+   */
+  formatTime24H(timestamp: string | Date): string {
+    if (!timestamp) return '';
+    
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('fr-FR', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
+  }
 }

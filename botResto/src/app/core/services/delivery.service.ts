@@ -1119,7 +1119,7 @@ Bonjour *${deliveryUser.nom}*,
     }
 
     // Ajouter le lien de connexion
-    message += `\n\n🔗 *Lien de connexion :*\nhttps://botresto.vercel.app/`;
+    message += `\n\n🔗 *Lien de connexion :*\nhttps://botresto-mrhb0w6sm-alphas-projects-d3cd7665.vercel.app/`;
 
     message += `\n\nBonne chance dans vos livraisons ! 🚴‍♂️💨`;
     

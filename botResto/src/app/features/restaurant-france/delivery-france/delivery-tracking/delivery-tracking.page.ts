@@ -180,7 +180,7 @@ export class DeliveryTrackingPage implements OnInit, OnDestroy {
     
     const alert = await this.alertController.create({
       header: '🔔 Envoi de rappels',
-      message: `Envoyer des rappels WhatsApp pour la commande #${order.orderNumber} ?<br><br>📱 Les livreurs déjà notifiés recevront un nouveau message de rappel.`,
+      message: `Envoyer des rappels WhatsApp pour la commande #${order.orderNumber} ?\n\n📱 Les livreurs déjà notifiés recevront un nouveau message de rappel.`,
       buttons: [
         {
           text: 'Annuler',
@@ -191,9 +191,11 @@ export class DeliveryTrackingPage implements OnInit, OnDestroy {
         },
         {
           text: 'Envoyer',
-          handler: async () => {
+          handler: () => {
             console.log('✅ [DeliveryTracking] Confirmation envoi rappels');
-            await this.performSendReminders(order.orderId);
+            // Fermer immédiatement l'alert et traiter en arrière-plan
+            this.performSendRemindersAsync(order.orderId);
+            return true; // Ferme l'alert immédiatement
           }
         }
       ]
@@ -204,7 +206,36 @@ export class DeliveryTrackingPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Exécuter l'envoi des rappels
+   * Exécuter l'envoi des rappels de manière asynchrone (non-bloquant)
+   */
+  private async performSendRemindersAsync(orderId: number) {
+    try {
+      // Afficher immédiatement un toast de traitement en cours
+      await this.showToast('📤 Envoi des rappels en cours...', 'warning');
+      
+      console.log('🚀 [DeliveryTracking] Début envoi rappels pour commande:', orderId);
+      
+      const result = await this.deliveryTrackingService.sendReminderNotifications(orderId);
+      
+      console.log('📋 [DeliveryTracking] Résultat envoi rappels:', result);
+
+      if (result.success) {
+        console.log('✅ [DeliveryTracking] Rappels envoyés avec succès');
+        await this.showToast(result.message, 'success');
+        await this.loadTrackingData(); // Recharger les données
+      } else {
+        console.log('❌ [DeliveryTracking] Échec envoi rappels:', result.message);
+        await this.showToast(result.message, 'danger');
+      }
+
+    } catch (error) {
+      console.error('❌ [DeliveryTracking] Erreur envoi rappels:', error);
+      await this.showToast('Erreur lors de l\'envoi des rappels', 'danger');
+    }
+  }
+
+  /**
+   * Exécuter l'envoi des rappels (version synchrone - conservée pour compatibilité)
    */
   private async performSendReminders(orderId: number) {
     try {
@@ -302,6 +333,20 @@ export class DeliveryTrackingPage implements OnInit, OnDestroy {
       case 'assignee': return 'primary';
       default: return 'medium';
     }
+  }
+
+  /**
+   * Calculer le temps relatif depuis une date (délégué au service)
+   */
+  getTimeAgo(timestamp: string | Date): string {
+    return this.deliveryTrackingService.getTimeAgo(timestamp);
+  }
+
+  /**
+   * Formater une date en heure 24H (délégué au service)
+   */
+  formatTime24H(timestamp: string | Date): string {
+    return this.deliveryTrackingService.formatTime24H(timestamp);
   }
 
   /**

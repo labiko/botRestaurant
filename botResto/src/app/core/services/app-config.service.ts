@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 
+// URL racine de production (constante)
+const PRODUCTION_BASE_URL = 'https://botresto-mrhb0w6sm-alphas-projects-d3cd7665.vercel.app';
+
 export interface AppEnvironmentConfig {
   production: boolean;
   baseUrl: string;
@@ -61,27 +64,11 @@ export class AppConfigService {
   }
 
   /**
-   * Détecter l'URL de base automatiquement
+   * Détecter l'URL de base (utilise toujours la constante de production)
    */
   private detectBaseUrl(): string {
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      const protocol = window.location.protocol;
-      const port = window.location.port;
-      
-      // Construction de l'URL complète
-      let baseUrl = `${protocol}//${hostname}`;
-      
-      // Ajouter le port seulement si nécessaire
-      if (port && port !== '80' && port !== '443') {
-        baseUrl += `:${port}`;
-      }
-      
-      return baseUrl;
-    }
-    
-    // Fallback pour développement
-    return 'http://localhost:4200';
+    // Utiliser toujours l'URL de production pour éviter les problèmes localhost
+    return PRODUCTION_BASE_URL;
   }
 
   /**

@@ -86,8 +86,8 @@ export class DeliveryNotificationService {
     try {
       console.log(`📱 [DeliveryNotification] Notifications de réactivation pour commande ${orderId}...`);
 
-      // 1. Réactiver les tokens disponibles
-      const reactivationResult = await this.deliveryTokenService.reactivateTokensAfterRefusal(orderId);
+      // 1. Réactiver les tokens disponibles (méthode spécifique aux rappels)
+      const reactivationResult = await this.deliveryTokenService.reactivateTokensForReminders(orderId);
       if (!reactivationResult.success || reactivationResult.reactivatedTokens.length === 0) {
         return {
           success: false,

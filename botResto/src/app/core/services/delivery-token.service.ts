@@ -367,6 +367,62 @@ export class DeliveryTokenService {
   }
 
   /**
+   * Réactiver les tokens pour les rappels (tokens expirés non utilisés)
+   */
+  async reactivateTokensForReminders(orderId: number): Promise<{success: boolean, reactivatedTokens: DeliveryToken[], message: string}> {
+    try {
+      console.log(`🔔 [DeliveryToken] Réactivation tokens pour rappels commande ${orderId}...`);
+
+      // Réactiver les tokens expirés mais non utilisés (différent de reactivateTokensAfterRefusal)
+      const newExpiryTime = new Date(Date.now() + this.CONFIG.TOKEN_EXPIRY_MINUTES * 60000);
+      
+      const { data: reactivatedTokens, error } = await this.supabaseFranceService.client
+        .from('delivery_tokens')
+        .update({
+          suspended: false,
+          reactivated: true,
+          expires_at: newExpiryTime.toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('order_id', orderId)
+        .eq('used', false)
+        .gt('absolute_expires_at', new Date().toISOString())
+        .select(`
+          *,
+          france_delivery_drivers!driver_id (
+            id, first_name, last_name, phone_number
+          )
+        `);
+
+      if (error) {
+        console.error('❌ [DeliveryToken] Erreur réactivation tokens rappels:', error);
+        return {
+          success: false,
+          reactivatedTokens: [],
+          message: 'Erreur lors de la réactivation des tokens'
+        };
+      }
+
+      const tokenCount = reactivatedTokens?.length || 0;
+      console.log(`✅ [DeliveryToken] ${tokenCount} tokens réactivés pour rappels`);
+
+      return {
+        success: tokenCount > 0,
+        reactivatedTokens: reactivatedTokens || [],
+        message: `${tokenCount} tokens réactivés pour rappels`
+      };
+
+    } catch (error) {
+      console.error('❌ [DeliveryToken] Erreur reactivateTokensForReminders:', error);
+      return {
+        success: false,
+        reactivatedTokens: [],
+        message: 'Erreur lors de la réactivation pour rappels'
+      };
+    }
+  }
+
+  /**
    * Générer l'URL complète pour un token
    */
   generateTokenUrl(token: string): string {

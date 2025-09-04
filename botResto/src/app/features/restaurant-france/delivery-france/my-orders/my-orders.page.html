@@ -226,7 +226,8 @@
                 <div class="item-extras" *ngIf="item.includes_drink || item.composition">
                   <div *ngIf="item.includes_drink" class="extra-info">
                     <ion-icon name="cafe" color="primary"></ion-icon>
-                    <span>Boisson incluse</span>
+                    <span *ngIf="item.selected_drink">{{ item.selected_drink.name }} {{ item.selected_drink.variant }}</span>
+                    <span *ngIf="!item.selected_drink">Boisson incluse</span>
                   </div>
                   <div *ngIf="item.composition" class="extra-info">
                     <ion-icon name="information-circle" color="medium"></ion-icon>
