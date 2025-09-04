@@ -319,7 +319,9 @@
       "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\features\\restaurant-france\\delivery-france\\available-orders/**)",
       "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\features\\restaurant-france/**)",
       "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\features\\restaurant-france\\delivery-france\\dashboard-delivery/**)",
-      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src/**)"
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant/**)"
     ],
     "deny": [],
     "ask": []
