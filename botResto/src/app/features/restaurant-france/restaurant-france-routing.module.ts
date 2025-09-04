@@ -3,6 +3,7 @@ import { Routes, RouterModule } from '@angular/router';
 import { AuthFranceGuard } from './auth-france/guards/auth-france.guard';
 import { RestaurantFranceGuard } from './auth-france/guards/restaurant-france.guard';
 import { DeliveryFranceGuard } from './auth-france/guards/delivery-france.guard';
+import { DeliverySharedGuard } from './auth-france/guards/delivery-shared.guard';
 
 const routes: Routes = [
   {
@@ -27,7 +28,7 @@ const routes: Routes = [
   {
     path: 'delivery-france',
     loadChildren: () => import('./delivery-france/delivery-france-module').then(m => m.DeliveryFranceModule),
-    canActivate: [DeliveryFranceGuard]
+    canActivate: [DeliverySharedGuard]
   },
   {
     path: 'drivers-france',

@@ -162,6 +162,13 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
   }
 
   /**
+   * Navigation vers le suivi des livraisons
+   */
+  goToDeliveryTracking() {
+    this.router.navigate(['/restaurant-france/delivery-france/tracking']);
+  }
+
+  /**
    * Afficher les statistiques
    */
   viewStats() {

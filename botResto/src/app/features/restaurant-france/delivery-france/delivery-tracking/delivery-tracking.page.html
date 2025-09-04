@@ -1,0 +1,158 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>📊 Suivi Livraisons</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" (click)="loadTrackingData()">
+        <ion-icon name="refresh" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Configuration Green API supprimée - déjà configurée dans le code -->
+
+  <!-- Métriques globales -->
+  <div class="metrics-container">
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <ion-icon name="list-circle" color="primary"></ion-icon>
+        <div class="metric-content">
+          <h2>{{trackingData.totalActiveOrders}}</h2>
+          <p>Commandes actives</p>
+        </div>
+      </div>
+      
+      <div class="metric-card">
+        <ion-icon name="notifications" color="warning"></ion-icon>
+        <div class="metric-content">
+          <h2>{{trackingData.totalPendingNotifications}}</h2>
+          <p>En attente</p>
+        </div>
+      </div>
+      
+      <div class="metric-card">
+        <ion-icon name="time" color="success"></ion-icon>
+        <div class="metric-content">
+          <h2>{{trackingData.averageResponseTime}}min</h2>
+          <p>Réponse moyenne</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statut Green API supprimé - déjà configuré automatiquement -->
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Chargement des données...</p>
+  </div>
+
+  <!-- Liste des commandes -->
+  <div class="orders-container" *ngIf="!isLoading">
+    
+    <!-- Aucune commande -->
+    <ion-item *ngIf="trackingData.activeOrders.length === 0" lines="none" class="empty-state">
+      <ion-icon name="checkmark-done-circle" color="success" slot="start"></ion-icon>
+      <ion-label>
+        <h2>Aucune commande en cours</h2>
+        <p>Toutes vos commandes sont livrées ou en préparation</p>
+      </ion-label>
+    </ion-item>
+
+    <!-- Cartes de commandes -->
+    <ion-card *ngFor="let order of trackingData.activeOrders" class="order-card">
+      <ion-card-header>
+        <div class="order-header">
+          <div class="order-info">
+            <ion-card-title>
+              <ion-icon [name]="getStatusIcon(order.currentStatus)" [color]="getStatusColor(order.currentStatus)"></ion-icon>
+              Commande #{{order.orderNumber}}
+            </ion-card-title>
+            <ion-card-subtitle>
+              <ion-chip [color]="getStatusColor(order.currentStatus)" size="small">
+                {{getStatusText(order.currentStatus)}}
+              </ion-chip>
+            </ion-card-subtitle>
+          </div>
+        </div>
+      </ion-card-header>
+
+      <ion-card-content>
+        <!-- Statistiques de la commande -->
+        <div class="order-stats">
+          <div class="stat-item">
+            <ion-icon name="send" color="primary"></ion-icon>
+            <span>{{order.notifiedCount}} notifiés</span>
+          </div>
+          <div class="stat-item">
+            <ion-icon name="eye" color="medium"></ion-icon>
+            <span>{{order.viewedCount}} vus</span>
+          </div>
+          <div class="stat-item">
+            <ion-icon name="close-circle" color="danger"></ion-icon>
+            <span>{{order.refusedCount}} refus</span>
+          </div>
+          <div class="stat-item">
+            <ion-icon name="checkmark-circle" color="success"></ion-icon>
+            <span>{{order.acceptedCount}} acceptés</span>
+          </div>
+        </div>
+
+        <!-- Dernière action -->
+        <div class="last-action" *ngIf="order.lastActionDriverName">
+          <ion-icon name="person-circle" color="medium"></ion-icon>
+          <span>
+            <strong>{{order.lastActionDriverName}}</strong> 
+            - {{order.lastActionType}} 
+            <small>({{order.lastActionTimestamp | date:'short'}})</small>
+          </span>
+        </div>
+
+        <!-- Actions -->
+        <div class="order-actions">
+          
+          <!-- Marquer prête (si pas encore prête) -->
+          <ion-button 
+            *ngIf="order.currentStatus !== 'prete'" 
+            fill="outline" 
+            color="warning"
+            size="small"
+            (click)="markOrderReady(order)">
+            <ion-icon name="checkmark-circle" slot="start"></ion-icon>
+            Marquer prête
+          </ion-button>
+
+          <!-- Rappels (si prête et notifiée mais pas acceptée) -->
+          <ion-button 
+            *ngIf="order.canSendReminder" 
+            fill="outline" 
+            color="primary"
+            size="small"
+            (click)="sendReminders(order)">
+            <ion-icon name="notifications" slot="start"></ion-icon>
+            Rappeler
+          </ion-button>
+
+          <!-- Force Release (si assignée) -->
+          <ion-button 
+            *ngIf="order.canForceRelease" 
+            fill="outline" 
+            color="danger"
+            size="small"
+            (click)="forceReleaseOrder(order)">
+            <ion-icon name="refresh-circle" slot="start"></ion-icon>
+            Force Release
+          </ion-button>
+
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+</ion-content>

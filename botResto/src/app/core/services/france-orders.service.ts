@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { SupabaseFranceService } from './supabase-france.service';
 import { WhatsAppNotificationFranceService, OrderDataFrance } from './whatsapp-notification-france.service';
+import { DeliveryNotificationService } from './delivery-notification.service';
 
 // Interface pour les paramètres de notification WhatsApp
 export interface NotificationSettings {
@@ -75,7 +76,8 @@ export class FranceOrdersService {
 
   constructor(
     private supabaseFranceService: SupabaseFranceService,
-    private whatsAppFranceService: WhatsAppNotificationFranceService
+    private whatsAppFranceService: WhatsAppNotificationFranceService,
+    private deliveryNotificationService: DeliveryNotificationService
   ) { }
 
   async loadOrders(restaurantId: number): Promise<void> {
@@ -285,6 +287,9 @@ export class FranceOrdersService {
       if (statusChanged) {
         try {
           await this.sendWhatsAppNotification(orderId, newStatus);
+          
+          // Étape 3: NOUVEAU - Déclencher le système de notification des livreurs si commande prête pour livraison
+          await this.handleDeliveryNotifications(orderId, newStatus);
         } catch (whatsappError) {
           // Ne pas faire échouer la mise à jour du statut si WhatsApp échoue
           console.error('⚠️ [FranceOrders] Erreur notification WhatsApp (non bloquant):', whatsappError);
@@ -547,5 +552,49 @@ export class FranceOrdersService {
   formatDateTime(dateString: string): string {
     const date = new Date(dateString);
     return date.toLocaleString('fr-FR');
+  }
+
+  /**
+   * NOUVEAU - Gérer les notifications de livraison selon le système de tokens sécurisés
+   */
+  private async handleDeliveryNotifications(orderId: number, newStatus: string): Promise<void> {
+    try {
+      // Déclencher le système de notification des livreurs SEULEMENT si:
+      // 1. Le statut devient "prete" 
+      // 2. ET la commande est en mode livraison
+      if (newStatus === 'prete') {
+        console.log(`🚚 [FranceOrders] Vérification mode livraison pour commande ${orderId}...`);
+
+        // Récupérer les détails de la commande pour vérifier le mode de livraison
+        const { data: order, error } = await this.supabaseFranceService.client
+          .from('france_orders')
+          .select('delivery_mode, restaurant_id')
+          .eq('id', orderId)
+          .single();
+
+        if (error) {
+          console.error('❌ [FranceOrders] Erreur récupération détails commande:', error);
+          return;
+        }
+
+        if (order && order.delivery_mode === 'livraison') {
+          console.log(`📱 [FranceOrders] Déclenchement notifications livreurs pour commande ${orderId}...`);
+          
+          // Déclencher le système de notification des livreurs avec tokens sécurisés
+          const notificationResult = await this.deliveryNotificationService.notifyAvailableDrivers(orderId);
+          
+          if (notificationResult.success) {
+            console.log(`✅ [FranceOrders] ${notificationResult.sentCount} livreurs notifiés pour commande ${orderId}`);
+          } else {
+            console.warn(`⚠️ [FranceOrders] Échec notifications livreurs: ${notificationResult.message}`);
+          }
+        } else {
+          console.log(`ℹ️ [FranceOrders] Commande ${orderId} n'est pas en mode livraison (mode: ${order?.delivery_mode}), pas de notification livreurs`);
+        }
+      }
+    } catch (error) {
+      console.error('❌ [FranceOrders] Erreur handleDeliveryNotifications:', error);
+      // Ne pas faire échouer le processus principal
+    }
   }
 }

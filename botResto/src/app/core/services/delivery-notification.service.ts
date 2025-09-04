@@ -1,698 +1,378 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
 import { SupabaseFranceService } from './supabase-france.service';
-import { WhatsAppNotificationFranceService } from './whatsapp-notification-france.service';
-import { PhoneFormatService } from './phone-format.service';
+import { DeliveryTokenService, DeliveryToken } from './delivery-token.service';
+import { GreenApiFranceService } from '../../features/restaurant-france/services/green-api-france.service';
 
-export interface DeliveryNotification {
-  id: number;
-  assignment_id: number;
-  notification_type: 'assignment_offer' | 'assignment_accepted' | 'assignment_rejected' | 'delivery_started' | 'delivery_completed';
-  recipient_type: 'driver' | 'restaurant' | 'customer';
-  recipient_id: string;
-  notification_data: any;
-  sent_at: string;
-  delivery_status: 'pending' | 'sent' | 'delivered' | 'failed';
-  error_message?: string;
+export interface NotificationData {
+  orderId: number;
+  orderNumber: string;
+  customerName: string;
+  totalAmount: number;
+  deliveryAddress: string;
+  restaurantName: string;
+  preparationTime: string;
 }
 
-export interface NotificationTemplate {
-  type: string;
-  title: string;
+export interface WhatsAppNotificationResult {
+  success: boolean;
   message: string;
-  actions?: NotificationAction[];
-}
-
-export interface NotificationAction {
-  key: string;
-  label: string;
-  type: 'accept' | 'reject' | 'info';
-}
-
-export interface NotificationStats {
-  total_sent: number;
-  delivery_rate: number;
-  response_rate: number;
-  avg_response_time: number;
+  sentCount?: number;
+  failedCount?: number;
+  details?: any[];
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class DeliveryNotificationService {
-  private notificationsSubject = new BehaviorSubject<DeliveryNotification[]>([]);
-  public notifications$ = this.notificationsSubject.asObservable();
-
-  // Templates de messages pré-définis
-  private readonly messageTemplates = {
-    // Messages pour livreurs
-    assignment_offer: {
-      title: "🚚 NOUVELLE LIVRAISON DISPONIBLE",
-      message: `
-📋 **Commande:** {{orderNumber}}
-🏪 **Restaurant:** {{restaurantName}}
-💰 **Montant:** {{totalAmount}}
-📍 **Adresse:** {{deliveryAddress}}
-📱 **Client:** {{customerPhone}}
-
-⏰ **Vous avez {{timeoutMinutes}} minutes pour répondre**
-
-Répondez:
-✅ **ACCEPTER** pour prendre la livraison
-❌ **REFUSER** pour passer
-      `.trim()
-    },
-    
-    assignment_accepted: {
-      title: "✅ LIVRAISON ACCEPTÉE",
-      message: `
-Parfait ! Vous avez accepté la livraison de la commande {{orderNumber}}.
-
-📍 **Restaurant:** {{restaurantName}}
-📞 **Restaurant:** {{restaurantPhone}}
-📍 **Adresse livraison:** {{deliveryAddress}}
-💰 **Montant:** {{totalAmount}}
-
-🚗 **Prochaines étapes:**
-1. Rendez-vous au restaurant
-2. Récupérez la commande
-3. Contactez le client si nécessaire
-4. Effectuez la livraison
-
-📱 **Contact client:** {{customerPhone}}
-      `.trim()
-    },
-
-    delivery_started: {
-      title: "🚗 LIVRAISON EN COURS",
-      message: `
-Votre livraison pour la commande {{orderNumber}} a commencé.
-
-📍 **Destination:** {{deliveryAddress}}
-💰 **Montant à encaisser:** {{totalAmount}}
-🔢 **Code de validation:** {{validationCode}}
-
-⚠️ **Important:** Demandez le code de validation au client pour confirmer la livraison.
-      `.trim()
-    },
-
-    // Messages pour restaurants
-    driver_assigned: {
-      title: "✅ LIVREUR ASSIGNÉ",
-      message: `
-La commande {{orderNumber}} a été prise en charge.
-
-👤 **Livreur:** {{driverName}}
-📱 **Contact:** {{driverPhone}}
-⏱️ **ETA:** {{estimatedTime}}
-
-La commande peut maintenant être marquée "En livraison" quand le livreur arrive.
-      `.trim()
-    },
-
-    no_driver_available: {
-      title: "⚠️ AUCUN LIVREUR DISPONIBLE",
-      message: `
-Aucun livreur n'est actuellement disponible pour la commande {{orderNumber}}.
-
-Options:
-• Attendre qu'un livreur se connecte
-• Proposer au client de venir récupérer
-• Utiliser un service de livraison externe
-
-La commande reste en statut "Prête".
-      `.trim()
-    },
-
-    // Messages pour clients
-    driver_assigned_customer: {
-      title: "✅ LIVREUR EN ROUTE",
-      message: `
-Bonne nouvelle ! Votre commande {{orderNumber}} a été prise en charge.
-
-👤 **Votre livreur:** {{driverName}}
-📱 **Contact livreur:** {{driverPhone}}
-⏱️ **Livraison estimée:** {{estimatedTime}}
-
-Vous pouvez contacter votre livreur si nécessaire.
-
-Merci pour votre patience !
-      `.trim()
-    },
-
-    delivery_completed_customer: {
-      title: "✅ LIVRAISON TERMINÉE",
-      message: `
-Votre commande {{orderNumber}} a été livrée avec succès !
-
-💰 **Montant payé:** {{totalAmount}}
-⭐ **Merci pour votre confiance**
-
-N'hésitez pas à nous recontacter pour vos prochaines commandes !
-
-{{restaurantName}}
-📱 {{restaurantPhone}}
-      `.trim()
-    }
-  };
 
   constructor(
     private supabaseFranceService: SupabaseFranceService,
-    private whatsAppFranceService: WhatsAppNotificationFranceService,
-    private phoneFormatService: PhoneFormatService
+    private deliveryTokenService: DeliveryTokenService,
+    private greenApiService: GreenApiFranceService
   ) {}
 
   /**
-   * Envoyer une notification d'offre d'assignation à un livreur
+   * Envoyer la notification initiale à tous les livreurs disponibles
+   * Appelée quand une commande passe en statut "prete"
    */
-  async sendAssignmentOffer(
-    assignmentId: number,
-    driverId: number,
-    orderData: any
-  ): Promise<boolean> {
+  async notifyAvailableDrivers(orderId: number): Promise<WhatsAppNotificationResult> {
     try {
-      console.log(`📱 [DeliveryNotification] Envoi offre assignation au livreur ${driverId}`);
+      console.log(`📱 [DeliveryNotification] Notification initiale pour commande ${orderId}...`);
 
-      // 1. Récupérer les données du livreur
-      const driver = await this.getDriverDetails(driverId);
-      if (!driver) {
-        console.error(`❌ [DeliveryNotification] Livreur ${driverId} introuvable`);
-        return false;
-      }
-
-      // 2. Formater le message
-      const message = this.formatMessage('assignment_offer', {
-        orderNumber: orderData.order_number,
-        restaurantName: orderData.restaurant_name,
-        totalAmount: `${orderData.total_amount}€`,
-        deliveryAddress: orderData.delivery_address,
-        customerPhone: orderData.phone_number,
-        timeoutMinutes: '3'
-      });
-
-      // 3. Enregistrer la notification en base
-      const notificationId = await this.saveNotification(assignmentId, {
-        notification_type: 'assignment_offer',
-        recipient_type: 'driver',
-        recipient_id: driver.phone_number,
-        notification_data: {
-          message: message,
-          order_id: orderData.id,
-          assignment_id: assignmentId
-        }
-      });
-
-      if (!notificationId) {
-        console.error('❌ [DeliveryNotification] Erreur sauvegarde notification');
-        return false;
-      }
-
-      // 4. Envoyer via WhatsApp - formatter le numéro pour WhatsApp
-      const whatsappPhone = this.phoneFormatService.formatForWhatsApp(driver.phone_number);
-      const sent = await this.sendWhatsAppMessage(whatsappPhone, message);
-      
-      // 5. Mettre à jour le statut d'envoi
-      await this.updateNotificationStatus(notificationId, sent ? 'sent' : 'failed');
-
-      return sent;
-
-    } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur envoi offre assignation:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Envoyer confirmation d'acceptation d'assignation
-   */
-  async sendAssignmentAccepted(
-    assignmentId: number,
-    driverId: number,
-    orderData: any
-  ): Promise<boolean> {
-    try {
-      console.log(`✅ [DeliveryNotification] Envoi confirmation acceptation au livreur ${driverId}`);
-
-      const driver = await this.getDriverDetails(driverId);
-      if (!driver) return false;
-
-      const message = this.formatMessage('assignment_accepted', {
-        orderNumber: orderData.order_number,
-        restaurantName: orderData.restaurant_name,
-        restaurantPhone: orderData.restaurant_phone,
-        deliveryAddress: orderData.delivery_address,
-        totalAmount: `${orderData.total_amount}€`,
-        customerPhone: orderData.phone_number
-      });
-
-      const notificationId = await this.saveNotification(assignmentId, {
-        notification_type: 'assignment_accepted',
-        recipient_type: 'driver',
-        recipient_id: driver.phone_number,
-        notification_data: { message, order_id: orderData.id }
-      });
-
-      if (!notificationId) return false;
-
-      const whatsappPhone = this.phoneFormatService.formatForWhatsApp(driver.phone_number);
-      const sent = await this.sendWhatsAppMessage(whatsappPhone, message);
-      await this.updateNotificationStatus(notificationId, sent ? 'sent' : 'failed');
-
-      return sent;
-
-    } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur confirmation acceptation:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Notifier restaurant qu'un livreur a été assigné
-   */
-  async notifyRestaurantDriverAssigned(
-    assignmentId: number,
-    orderData: any,
-    driverData: any
-  ): Promise<boolean> {
-    try {
-      console.log(`🏪 [DeliveryNotification] Notification restaurant - livreur assigné`);
-
-      const message = this.formatMessage('driver_assigned', {
-        orderNumber: orderData.order_number,
-        driverName: `${driverData.first_name} ${driverData.last_name}`,
-        driverPhone: this.phoneFormatService.formatForDisplay(driverData.phone_number),
-        estimatedTime: '30-45 min'
-      });
-
-      const notificationId = await this.saveNotification(assignmentId, {
-        notification_type: 'assignment_accepted',
-        recipient_type: 'restaurant',
-        recipient_id: orderData.restaurant_phone,
-        notification_data: { message, order_id: orderData.id, driver_id: driverData.id }
-      });
-
-      if (!notificationId) return false;
-
-      const sent = await this.sendWhatsAppMessage(orderData.restaurant_phone, message);
-      await this.updateNotificationStatus(notificationId, sent ? 'sent' : 'failed');
-
-      return sent;
-
-    } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur notification restaurant:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Notifier client qu'un livreur a été assigné
-   */
-  async notifyCustomerDriverAssigned(
-    assignmentId: number,
-    orderData: any,
-    driverData: any
-  ): Promise<boolean> {
-    try {
-      console.log(`👤 [DeliveryNotification] Notification client - livreur assigné`);
-
-      const message = this.formatMessage('driver_assigned_customer', {
-        orderNumber: orderData.order_number,
-        driverName: driverData.first_name,
-        driverPhone: this.phoneFormatService.formatForDisplay(driverData.phone_number),
-        estimatedTime: '30-45 min'
-      });
-
-      const notificationId = await this.saveNotification(assignmentId, {
-        notification_type: 'assignment_accepted',
-        recipient_type: 'customer',
-        recipient_id: orderData.phone_number,
-        notification_data: { message, order_id: orderData.id, driver_id: driverData.id }
-      });
-
-      if (!notificationId) return false;
-
-      const sent = await this.sendWhatsAppMessage(orderData.phone_number, message);
-      await this.updateNotificationStatus(notificationId, sent ? 'sent' : 'failed');
-
-      return sent;
-
-    } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur notification client:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Notifier restaurant qu'aucun livreur n'est disponible
-   */
-  async notifyRestaurantNoDrivers(orderId: number): Promise<boolean> {
-    try {
-      console.log(`⚠️ [DeliveryNotification] Notification restaurant - pas de livreurs`);
-
-      // Récupérer les données de la commande
-      const orderData = await this.getOrderDetails(orderId);
-      if (!orderData) return false;
-
-      const message = this.formatMessage('no_driver_available', {
-        orderNumber: orderData.order_number
-      });
-
-      // Créer une assignation fictive pour tracking
-      const assignmentId = await this.createNotificationOnlyRecord(orderId);
-      if (!assignmentId) return false;
-
-      const notificationId = await this.saveNotification(assignmentId, {
-        notification_type: 'assignment_rejected',
-        recipient_type: 'restaurant',
-        recipient_id: orderData.restaurant_phone,
-        notification_data: { message, order_id: orderId, reason: 'no_drivers_available' }
-      });
-
-      if (!notificationId) return false;
-
-      const sent = await this.sendWhatsAppMessage(orderData.restaurant_phone, message);
-      await this.updateNotificationStatus(notificationId, sent ? 'sent' : 'failed');
-
-      return sent;
-
-    } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur notification pas de livreurs:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Envoyer notification de début de livraison
-   */
-  async sendDeliveryStarted(orderId: number, driverId: number): Promise<boolean> {
-    try {
-      console.log(`🚗 [DeliveryNotification] Notification début livraison`);
-
-      const orderData = await this.getOrderDetails(orderId);
-      const driver = await this.getDriverDetails(driverId);
-
-      if (!orderData || !driver) return false;
-
-      const message = this.formatMessage('delivery_started', {
-        orderNumber: orderData.order_number,
-        deliveryAddress: orderData.delivery_address,
-        totalAmount: `${orderData.total_amount}€`,
-        validationCode: orderData.delivery_validation_code || '0000'
-      });
-
-      // Récupérer l'assignation active
-      const assignment = await this.getActiveAssignment(orderId, driverId);
-      if (!assignment) return false;
-
-      const notificationId = await this.saveNotification(assignment.id, {
-        notification_type: 'delivery_started',
-        recipient_type: 'driver',
-        recipient_id: driver.phone_number,
-        notification_data: { message, order_id: orderId }
-      });
-
-      if (!notificationId) return false;
-
-      const whatsappPhone = this.phoneFormatService.formatForWhatsApp(driver.phone_number);
-      const sent = await this.sendWhatsAppMessage(whatsappPhone, message);
-      await this.updateNotificationStatus(notificationId, sent ? 'sent' : 'failed');
-
-      return sent;
-
-    } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur notification début livraison:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Envoyer notification de livraison terminée
-   */
-  async sendDeliveryCompleted(orderId: number, driverId: number): Promise<boolean> {
-    try {
-      console.log(`✅ [DeliveryNotification] Notification livraison terminée`);
-
-      const orderData = await this.getOrderDetails(orderId);
-      if (!orderData) return false;
-
-      // Message pour le client
-      const customerMessage = this.formatMessage('delivery_completed_customer', {
-        orderNumber: orderData.order_number,
-        totalAmount: `${orderData.total_amount}€`,
-        restaurantName: orderData.restaurant_name,
-        restaurantPhone: orderData.restaurant_phone
-      });
-
-      const assignment = await this.getActiveAssignment(orderId, driverId);
-      if (!assignment) return false;
-
-      const notificationId = await this.saveNotification(assignment.id, {
-        notification_type: 'delivery_completed',
-        recipient_type: 'customer',
-        recipient_id: orderData.phone_number,
-        notification_data: { message: customerMessage, order_id: orderId }
-      });
-
-      if (!notificationId) return false;
-
-      const sent = await this.sendWhatsAppMessage(orderData.phone_number, customerMessage);
-      await this.updateNotificationStatus(notificationId, sent ? 'sent' : 'failed');
-
-      return sent;
-
-    } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur notification livraison terminée:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Obtenir les statistiques de notifications
-   */
-  async getNotificationStats(restaurantId: number, days: number = 7): Promise<NotificationStats> {
-    try {
-      const fromDate = new Date();
-      fromDate.setDate(fromDate.getDate() - days);
-
-      // Requête complexe pour obtenir les stats
-      const { data, error } = await this.supabaseFranceService.client
-        .rpc('get_delivery_notification_stats', {
-          restaurant_id: restaurantId,
-          from_date: fromDate.toISOString()
-        });
-
-      if (error) {
-        console.error('❌ [DeliveryNotification] Erreur récupération stats:', error);
+      // 1. Générer les tokens pour tous les livreurs actifs
+      const tokenResult = await this.deliveryTokenService.generateTokensForOrder(orderId);
+      if (!tokenResult.success || tokenResult.tokens.length === 0) {
         return {
-          total_sent: 0,
-          delivery_rate: 0,
-          response_rate: 0,
-          avg_response_time: 0
+          success: false,
+          message: tokenResult.message,
+          sentCount: 0,
+          failedCount: 0
         };
       }
 
-      return data || {
-        total_sent: 0,
-        delivery_rate: 0,
-        response_rate: 0,
-        avg_response_time: 0
-      };
+      // 2. Récupérer les détails de la commande
+      const orderData = await this.getOrderNotificationData(orderId);
+      if (!orderData) {
+        return {
+          success: false,
+          message: 'Impossible de récupérer les données de la commande',
+          sentCount: 0,
+          failedCount: 0
+        };
+      }
+
+      // 3. Envoyer les notifications WhatsApp
+      const results = await this.sendInitialWhatsAppNotifications(tokenResult.tokens, orderData);
+
+      return results;
 
     } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur service stats:', error);
+      console.error('❌ [DeliveryNotification] Erreur notifyAvailableDrivers:', error);
       return {
-        total_sent: 0,
-        delivery_rate: 0,
-        response_rate: 0,
-        avg_response_time: 0
+        success: false,
+        message: 'Erreur lors de l\'envoi des notifications',
+        sentCount: 0,
+        failedCount: 0
       };
     }
   }
 
-  // ========== MÉTHODES PRIVÉES ==========
-
   /**
-   * Formater un message avec les variables
+   * Envoyer les notifications de réactivation (Option B)
+   * Appelée quand un livreur refuse/annule une commande
    */
-  private formatMessage(templateKey: string, variables: Record<string, string>): string {
-    const template = (this.messageTemplates as any)[templateKey];
-    if (!template) {
-      console.error(`❌ [DeliveryNotification] Template ${templateKey} introuvable`);
-      return `Notification: ${templateKey}`;
-    }
-
-    let message = template.title + '\n\n' + template.message;
-
-    // Remplacer les variables {{variable}}
-    for (const [key, value] of Object.entries(variables)) {
-      const placeholder = `{{${key}}}`;
-      message = message.replace(new RegExp(placeholder, 'g'), value);
-    }
-
-    return message;
-  }
-
-  /**
-   * Sauvegarder une notification en base
-   */
-  private async saveNotification(assignmentId: number, notificationData: Partial<DeliveryNotification>): Promise<number | null> {
+  async sendReactivationNotifications(orderId: number): Promise<WhatsAppNotificationResult> {
     try {
-      const { data, error } = await this.supabaseFranceService.client
-        .from('france_delivery_notifications')
-        .insert({
-          assignment_id: assignmentId,
-          ...notificationData,
-          delivery_status: 'pending'
-        })
-        .select('id')
-        .single();
+      console.log(`📱 [DeliveryNotification] Notifications de réactivation pour commande ${orderId}...`);
 
-      if (error || !data) {
-        console.error('❌ [DeliveryNotification] Erreur sauvegarde notification:', error);
-        return null;
+      // 1. Réactiver les tokens disponibles
+      const reactivationResult = await this.deliveryTokenService.reactivateTokensAfterRefusal(orderId);
+      if (!reactivationResult.success || reactivationResult.reactivatedTokens.length === 0) {
+        return {
+          success: false,
+          message: reactivationResult.message,
+          sentCount: 0,
+          failedCount: 0
+        };
       }
 
-      return data.id;
-    } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur service sauvegarde:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Mettre à jour le statut d'une notification
-   */
-  private async updateNotificationStatus(notificationId: number, status: string, errorMessage?: string): Promise<void> {
-    try {
-      const updateData: any = { delivery_status: status };
-      if (errorMessage) {
-        updateData.error_message = errorMessage;
+      // 2. Récupérer les données de la commande
+      const orderData = await this.getOrderNotificationData(orderId);
+      if (!orderData) {
+        return {
+          success: false,
+          message: 'Impossible de récupérer les données de la commande',
+          sentCount: 0,
+          failedCount: 0
+        };
       }
 
-      const { error } = await this.supabaseFranceService.client
-        .from('france_delivery_notifications')
-        .update(updateData)
-        .eq('id', notificationId);
+      // 3. Envoyer les notifications de réactivation
+      const results = await this.sendReactivationWhatsAppNotifications(reactivationResult.reactivatedTokens, orderData);
 
-      if (error) {
-        console.error('❌ [DeliveryNotification] Erreur mise à jour statut:', error);
-      }
+      return results;
+
     } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur service mise à jour statut:', error);
+      console.error('❌ [DeliveryNotification] Erreur sendReactivationNotifications:', error);
+      return {
+        success: false,
+        message: 'Erreur lors de l\'envoi des notifications de réactivation',
+        sentCount: 0,
+        failedCount: 0
+      };
     }
   }
 
   /**
-   * Envoyer un message WhatsApp
+   * Récupérer les données nécessaires pour les notifications
    */
-  private async sendWhatsAppMessage(phoneNumber: string, message: string): Promise<boolean> {
+  private async getOrderNotificationData(orderId: number): Promise<NotificationData | null> {
     try {
-      // Valider que le numéro est bien au format international
-      console.log(`📱 [DeliveryNotification] Envoi WhatsApp vers ${phoneNumber}`);
-      console.log(`Message: ${message}`);
-      
-      // Vérifier le format WhatsApp
-      if (!phoneNumber.startsWith('+33')) {
-        console.warn(`⚠️ [DeliveryNotification] Numéro pas au format WhatsApp: ${phoneNumber}`);
-      }
-      
-      // TODO: Intégrer avec le service WhatsApp réel
-      // return await this.whatsAppFranceService.sendTextMessage(phoneNumber, message);
-      
-      // Pour l'instant, simuler un succès
-      return true;
-    } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur envoi WhatsApp:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Récupérer les détails d'un livreur
-   */
-  private async getDriverDetails(driverId: number): Promise<any | null> {
-    try {
-      const { data, error } = await this.supabaseFranceService.client
-        .from('france_delivery_drivers')
-        .select('id, first_name, last_name, phone_number')
-        .eq('id', driverId)
-        .single();
-
-      return error ? null : data;
-    } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur récupération livreur:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Récupérer les détails d'une commande
-   */
-  private async getOrderDetails(orderId: number): Promise<any | null> {
-    try {
-      const { data, error } = await this.supabaseFranceService.client
+      const { data: order, error } = await this.supabaseFranceService.client
         .from('france_orders')
         .select(`
-          *,
-          france_restaurants!inner (name, phone, whatsapp_number)
+          id,
+          order_number,
+          customer_name,
+          total_amount,
+          delivery_address,
+          created_at,
+          france_restaurants!restaurant_id (
+            name
+          )
         `)
         .eq('id', orderId)
         .single();
 
-      if (error || !data) return null;
+      if (error || !order) {
+        console.error('❌ [DeliveryNotification] Erreur récupération commande:', error);
+        return null;
+      }
 
-      // Ajouter les champs du restaurant au niveau principal
+      // Calculer le temps depuis la préparation
+      const createdTime = new Date(order.created_at);
+      const now = new Date();
+      const diffMinutes = Math.floor((now.getTime() - createdTime.getTime()) / (1000 * 60));
+
       return {
-        ...data,
-        restaurant_name: data.france_restaurants.name,
-        restaurant_phone: data.france_restaurants.whatsapp_number || data.france_restaurants.phone
+        orderId: order.id,
+        orderNumber: order.order_number,
+        customerName: order.customer_name || 'Client',
+        totalAmount: parseFloat(order.total_amount),
+        deliveryAddress: order.delivery_address || 'Adresse non spécifiée',
+        restaurantName: (order.france_restaurants as any)?.name || 'Restaurant',
+        preparationTime: `${diffMinutes} min`
       };
+
     } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur récupération commande:', error);
+      console.error('❌ [DeliveryNotification] Erreur getOrderNotificationData:', error);
       return null;
     }
   }
 
   /**
-   * Récupérer l'assignation active d'une commande
+   * Envoyer les messages WhatsApp initiaux
    */
-  private async getActiveAssignment(orderId: number, driverId: number): Promise<any | null> {
-    try {
-      const { data, error } = await this.supabaseFranceService.client
-        .from('france_delivery_assignments')
-        .select('*')
-        .eq('order_id', orderId)
-        .eq('driver_id', driverId)
-        .eq('assignment_status', 'accepted')
-        .single();
+  private async sendInitialWhatsAppNotifications(
+    tokens: DeliveryToken[], 
+    orderData: NotificationData
+  ): Promise<WhatsAppNotificationResult> {
+    
+    console.log(`📨 [DeliveryNotification] Envoi de ${tokens.length} notifications initiales...`);
+    
+    let sentCount = 0;
+    let failedCount = 0;
+    const details: any[] = [];
 
-      return error ? null : data;
-    } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur récupération assignation:', error);
-      return null;
+    for (const token of tokens) {
+      try {
+        // Générer l'URL personnalisée pour ce livreur
+        const personalizedUrl = this.deliveryTokenService.generateTokenUrl(token.token);
+        
+        // Créer le message WhatsApp
+        const message = this.createInitialWhatsAppMessage(orderData, personalizedUrl);
+        
+        // TODO: Ici sera intégrée l'API WhatsApp réelle
+        // Pour l'instant, on simule l'envoi
+        const sendResult = await this.sendWhatsAppMessage(token.driver_id, message);
+        
+        if (sendResult.success) {
+          sentCount++;
+          details.push({
+            driver_id: token.driver_id,
+            status: 'sent',
+            message: 'Message envoyé avec succès'
+          });
+        } else {
+          failedCount++;
+          details.push({
+            driver_id: token.driver_id,
+            status: 'failed',
+            message: sendResult.error || 'Échec envoi'
+          });
+        }
+
+      } catch (error) {
+        console.error(`❌ [DeliveryNotification] Erreur envoi pour livreur ${token.driver_id}:`, error);
+        failedCount++;
+        details.push({
+          driver_id: token.driver_id,
+          status: 'failed',
+          message: 'Erreur technique'
+        });
+      }
     }
+
+    console.log(`✅ [DeliveryNotification] Notifications initiales: ${sentCount} envoyées, ${failedCount} échouées`);
+
+    return {
+      success: sentCount > 0,
+      message: `${sentCount} notifications envoyées, ${failedCount} échouées`,
+      sentCount,
+      failedCount,
+      details
+    };
   }
 
   /**
-   * Créer un enregistrement d'assignation pour tracking seulement
+   * Envoyer les messages WhatsApp de réactivation
    */
-  private async createNotificationOnlyRecord(orderId: number): Promise<number | null> {
+  private async sendReactivationWhatsAppNotifications(
+    tokens: DeliveryToken[], 
+    orderData: NotificationData
+  ): Promise<WhatsAppNotificationResult> {
+    
+    console.log(`📨 [DeliveryNotification] Envoi de ${tokens.length} notifications de réactivation...`);
+    
+    let sentCount = 0;
+    let failedCount = 0;
+    const details: any[] = [];
+
+    for (const token of tokens) {
+      try {
+        // Générer l'URL personnalisée (même token réactivé)
+        const personalizedUrl = this.deliveryTokenService.generateTokenUrl(token.token);
+        
+        // Créer le message de réactivation
+        const message = this.createReactivationWhatsAppMessage(orderData, personalizedUrl);
+        
+        // Envoyer le message
+        const sendResult = await this.sendWhatsAppMessage(token.driver_id, message);
+        
+        if (sendResult.success) {
+          sentCount++;
+          details.push({
+            driver_id: token.driver_id,
+            status: 'sent',
+            message: 'Message de réactivation envoyé'
+          });
+        } else {
+          failedCount++;
+          details.push({
+            driver_id: token.driver_id,
+            status: 'failed',
+            message: sendResult.error || 'Échec envoi'
+          });
+        }
+
+      } catch (error) {
+        console.error(`❌ [DeliveryNotification] Erreur réactivation pour livreur ${token.driver_id}:`, error);
+        failedCount++;
+        details.push({
+          driver_id: token.driver_id,
+          status: 'failed',
+          message: 'Erreur technique'
+        });
+      }
+    }
+
+    console.log(`✅ [DeliveryNotification] Réactivations: ${sentCount} envoyées, ${failedCount} échouées`);
+
+    return {
+      success: sentCount > 0,
+      message: `${sentCount} notifications de réactivation envoyées, ${failedCount} échouées`,
+      sentCount,
+      failedCount,
+      details
+    };
+  }
+
+  /**
+   * Créer le message WhatsApp initial
+   */
+  private createInitialWhatsAppMessage(orderData: NotificationData, personalizedUrl: string): string {
+    return `🚨 *NOUVELLE COMMANDE DISPONIBLE* 🚨
+
+📦 Commande #${orderData.orderNumber}
+👤 Client: ${orderData.customerName}  
+📍 Adresse: ${orderData.deliveryAddress}
+💰 Total: ${orderData.totalAmount.toFixed(2)}€
+🕒 Prête depuis ${orderData.preparationTime}
+
+✅ *Cliquez pour accepter:*
+${personalizedUrl}
+
+⏱️ Lien valide 15 minutes
+🚀 Premier arrivé, premier servi !`;
+  }
+
+  /**
+   * Créer le message WhatsApp de réactivation
+   */
+  private createReactivationWhatsAppMessage(orderData: NotificationData, personalizedUrl: string): string {
+    return `🔄 *COMMANDE DISPONIBLE À NOUVEAU* 🔄
+
+📦 Commande #${orderData.orderNumber}
+👤 Client: ${orderData.customerName}
+💰 Total: ${orderData.totalAmount.toFixed(2)}€
+ℹ️ Le livreur précédent a annulé
+
+✅ *Votre lien est toujours actif:*
+${personalizedUrl}
+
+⏱️ Nouveau délai: 15 minutes
+🚀 À vous de jouer !`;
+  }
+
+  /**
+   * Envoyer un message WhatsApp à un livreur
+   */
+  private async sendWhatsAppMessage(driverId: number, message: string): Promise<{success: boolean, error?: string}> {
     try {
-      const { data, error } = await this.supabaseFranceService.client
-        .from('france_delivery_assignments')
-        .insert({
-          order_id: orderId,
-          driver_id: 0, // ID fictif
-          assignment_status: 'expired',
-          expires_at: new Date().toISOString()
-        })
-        .select('id')
+      console.log(`📱 [DeliveryNotification] Envoi WhatsApp au livreur ${driverId}...`);
+      
+      // Récupérer le numéro de téléphone du livreur
+      const { data: driver, error } = await this.supabaseFranceService.client
+        .from('france_delivery_drivers')
+        .select('phone_number, first_name, last_name')
+        .eq('id', driverId)
         .single();
 
-      return error ? null : data.id;
+      if (error || !driver) {
+        console.error(`❌ [DeliveryNotification] Livreur ${driverId} introuvable:`, error);
+        return { success: false, error: 'Livreur introuvable' };
+      }
+
+      if (!driver.phone_number) {
+        console.error(`❌ [DeliveryNotification] Numéro manquant pour livreur ${driverId}`);
+        return { success: false, error: 'Numéro de téléphone manquant' };
+      }
+
+      // Envoyer via Green API
+      const result = await this.greenApiService.sendMessage(driver.phone_number, message);
+      
+      if (result.success) {
+        console.log(`✅ [DeliveryNotification] Message envoyé à ${driver.first_name} ${driver.last_name} (${driver.phone_number}) - ID: ${result.messageId}`);
+        return { success: true };
+      } else {
+        console.error(`❌ [DeliveryNotification] Échec envoi à ${driver.phone_number}:`, result.error);
+        return { success: false, error: result.error || 'Échec envoi WhatsApp' };
+      }
+
     } catch (error) {
-      console.error('❌ [DeliveryNotification] Erreur création enregistrement:', error);
-      return null;
+      console.error(`❌ [DeliveryNotification] Erreur sendWhatsAppMessage pour livreur ${driverId}:`, error);
+      return { success: false, error: 'Erreur technique lors de l\'envoi' };
     }
   }
 }

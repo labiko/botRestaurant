@@ -1,0 +1,318 @@
+// Variables
+:root {
+  --metric-card-bg: #ffffff;
+  --metric-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --order-card-bg: #ffffff;
+  --order-card-border: #e0e0e0;
+  --stat-item-spacing: 12px;
+}
+
+// Conteneur principal
+ion-content {
+  --background: #f5f5f5;
+}
+
+// Métriques globales
+.metrics-container {
+  padding: 16px;
+  margin-bottom: 8px;
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+
+    .metric-card {
+      background: var(--metric-card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: var(--metric-card-shadow);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+
+      ion-icon {
+        font-size: 24px;
+      }
+
+      .metric-content {
+        h2 {
+          margin: 0;
+          font-size: 1.8rem;
+          font-weight: bold;
+          color: #333;
+        }
+
+        p {
+          margin: 0;
+          font-size: 0.85rem;
+          color: #666;
+        }
+      }
+    }
+  }
+}
+
+// Styles Green API supprimés - non utilisés
+
+// Loading
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #666;
+
+  ion-spinner {
+    margin-bottom: 16px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+}
+
+// Container des commandes
+.orders-container {
+  padding: 0 16px 16px;
+
+  // État vide
+  .empty-state {
+    --background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    margin-bottom: 16px;
+
+    ion-icon {
+      font-size: 24px;
+      margin-right: 12px;
+    }
+
+    ion-label {
+      h2 {
+        margin: 0 0 4px 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #333;
+      }
+
+      p {
+        margin: 0;
+        color: #666;
+        font-size: 0.9rem;
+      }
+    }
+  }
+}
+
+// Cartes de commandes
+.order-card {
+  --background: var(--order-card-bg);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid var(--order-card-border);
+
+  // Header de commande
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    .order-info {
+      flex: 1;
+
+      ion-card-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 4px;
+
+        ion-icon {
+          font-size: 20px;
+        }
+      }
+
+      ion-card-subtitle {
+        margin: 0;
+
+        ion-chip {
+          --background: var(--ion-color-primary-tint);
+          --color: var(--ion-color-primary-contrast);
+          font-size: 0.8rem;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+
+  // Contenu de la carte
+  ion-card-content {
+    padding: 16px;
+
+    // Statistiques de la commande
+    .order-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--stat-item-spacing);
+      margin-bottom: 16px;
+
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: #f8f9fa;
+        border-radius: 20px;
+        font-size: 0.85rem;
+
+        ion-icon {
+          font-size: 14px;
+        }
+
+        span {
+          font-weight: 500;
+          color: #333;
+        }
+      }
+    }
+
+    // Dernière action
+    .last-action {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: #f0f4ff;
+      border-left: 3px solid var(--ion-color-primary);
+      border-radius: 4px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+
+      ion-icon {
+        font-size: 16px;
+        color: var(--ion-color-primary);
+      }
+
+      strong {
+        color: #333;
+      }
+
+      small {
+        color: #666;
+        margin-left: 4px;
+      }
+    }
+
+    // Actions de la commande
+    .order-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-start;
+
+      ion-button {
+        --border-radius: 20px;
+        --padding-start: 12px;
+        --padding-end: 12px;
+        height: 36px;
+        font-size: 0.85rem;
+
+        ion-icon {
+          font-size: 16px;
+        }
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 576px) {
+  .metrics-container {
+    .metrics-grid {
+      grid-template-columns: repeat(3, 1fr);
+      
+      .metric-card {
+        padding: 12px 8px;
+        
+        .metric-content {
+          h2 {
+            font-size: 1.4rem;
+          }
+          
+          p {
+            font-size: 0.75rem;
+          }
+        }
+      }
+    }
+  }
+
+  .order-card {
+    .order-stats {
+      gap: 8px;
+      
+      .stat-item {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+      }
+    }
+
+    .order-actions {
+      ion-button {
+        flex: 1;
+        min-width: calc(50% - 4px);
+        
+        &:only-child {
+          flex: none;
+          min-width: auto;
+        }
+      }
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  :root {
+    --metric-card-bg: #1e1e1e;
+    --metric-card-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+    --order-card-bg: #2d2d2d;
+    --order-card-border: #404040;
+  }
+
+  ion-content {
+    --background: #121212;
+  }
+
+  // Métriques utilisent les couleurs par défaut du thème
+
+  .order-card {
+    ion-card-content {
+      .order-stats .stat-item {
+        background: #3d3d3d;
+        
+        span {
+          color: #e0e0e0;
+        }
+      }
+
+      .last-action {
+        background: #1a2b4d;
+        border-left-color: var(--ion-color-primary-tint);
+        
+        strong {
+          color: #e0e0e0;
+        }
+      }
+    }
+  }
+}

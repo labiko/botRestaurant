@@ -22,6 +22,16 @@ const routes: Routes = [
     path: 'history',
     loadChildren: () => import('./history/history.module').then(m => m.HistoryPageModule),
     canActivate: [DeliveryFranceGuard]
+  },
+  {
+    path: 'tracking',
+    loadChildren: () => import('./delivery-tracking/delivery-tracking.module').then(m => m.DeliveryTrackingPageModule)
+    // Pas de guard pour permettre l'accès aux restaurants
+  },
+  {
+    path: 'accept',
+    redirectTo: 'available-orders',
+    pathMatch: 'full'
   }
 ];
 

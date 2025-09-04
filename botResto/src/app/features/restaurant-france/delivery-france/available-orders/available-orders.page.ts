@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AlertController, ToastController, ActionSheetController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 
@@ -10,6 +10,7 @@ import { DriverOnlineStatusService } from '../../../../core/services/driver-onli
 import { DeliveryCountersService, DeliveryCounters } from '../../../../core/services/delivery-counters.service';
 import { DeliveryOrderItemsService } from '../../../../core/services/delivery-order-items.service';
 import { DeliveryRefusalService } from '../../../../core/services/delivery-refusal.service';
+import { DeliveryTokenService } from '../../../../core/services/delivery-token.service';
 
 @Component({
   selector: 'app-available-orders',
@@ -33,6 +34,10 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   isOnline = false;
   isToggling = false;
 
+  // Token d'acceptation depuis URL
+  acceptanceToken: string | null = null;
+  tokenOrder: DeliveryOrder | null = null;
+
   private userSubscription?: Subscription;
   private availableOrdersSubscription?: Subscription;
   private onlineStatusSubscription?: Subscription;
@@ -48,11 +53,16 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     private driverOnlineStatusService: DriverOnlineStatusService,
     private deliveryCountersService: DeliveryCountersService,
     private deliveryOrderItemsService: DeliveryOrderItemsService,
+    private route: ActivatedRoute,
     private actionSheetController: ActionSheetController,
-    private deliveryRefusalService: DeliveryRefusalService
+    private deliveryRefusalService: DeliveryRefusalService,
+    private deliveryTokenService: DeliveryTokenService
   ) {}
 
   ngOnInit() {
+    // Détecter le token d'acceptation dans l'URL
+    this.checkForAcceptanceToken();
+    
     this.initializeData();
   }
 
@@ -108,6 +118,102 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Erreur chargement commandes disponibles:', error);
       this.isLoading = false;
+    }
+  }
+
+  /**
+   * Vérifier s'il y a un token d'acceptation dans l'URL
+   */
+  private async checkForAcceptanceToken() {
+    this.acceptanceToken = this.route.snapshot.queryParams['token'];
+    
+    if (this.acceptanceToken) {
+      console.log(`🔍 [AvailableOrders] Token d'acceptation détecté: ${this.acceptanceToken.substring(0, 8)}...`);
+      
+      // Valider le token
+      try {
+        const validation = await this.deliveryTokenService.validateToken(this.acceptanceToken);
+        
+        if (validation.valid && validation.orderData) {
+          this.tokenOrder = validation.orderData;
+          console.log(`✅ [AvailableOrders] Token valide pour commande #${validation.orderData.order_number}`);
+          
+          // Optionnel: Afficher automatiquement la modal d'acceptation
+          await this.showTokenAcceptanceModal(validation.orderData);
+        } else {
+          console.log(`❌ [AvailableOrders] Token invalide: ${validation.reason}`);
+          await this.showToast(validation.reason || 'Lien expiré ou invalide', 'danger');
+        }
+      } catch (error) {
+        console.error('❌ [AvailableOrders] Erreur validation token:', error);
+        await this.showToast('Erreur lors de la validation du lien', 'danger');
+      }
+    }
+  }
+
+  /**
+   * Afficher la modal d'acceptation pour un token
+   */
+  private async showTokenAcceptanceModal(order: DeliveryOrder) {
+    const alert = await this.alertController.create({
+      header: '🔗 Acceptation via lien',
+      message: `Vous avez cliqué sur un lien WhatsApp pour accepter la commande:<br><br><strong>#${order.order_number}</strong><br>Total: ${order.total_amount}€<br><br>Voulez-vous l'accepter maintenant ?`,
+      cssClass: 'custom-alert-white',
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        },
+        {
+          text: 'Accepter',
+          handler: async () => {
+            await this.acceptOrderWithToken();
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  /**
+   * Accepter une commande via token
+   */
+  private async acceptOrderWithToken() {
+    if (!this.acceptanceToken || !this.tokenOrder) {
+      await this.showToast('Token manquant', 'danger');
+      return;
+    }
+
+    const loading = await this.loadingController.create({
+      message: 'Acceptation en cours...'
+    });
+    await loading.present();
+
+    try {
+      console.log(`🔄 [AvailableOrders] Acceptation via token pour commande ${this.tokenOrder.id}...`);
+      
+      const result = await this.deliveryTokenService.acceptOrderByToken(this.acceptanceToken);
+      
+      await loading.dismiss();
+      
+      if (result.success) {
+        console.log('✅ [AvailableOrders] Commande acceptée via token avec succès');
+        await this.showToast('Commande acceptée avec succès !', 'success');
+        
+        // Recharger les données et rediriger vers mes commandes
+        await this.loadAvailableOrders();
+        this.router.navigate(['/restaurant-france/delivery-france/my-orders']);
+        
+      } else {
+        console.error('❌ [AvailableOrders] Échec acceptation via token:', result.message);
+        await this.showToast(result.message, 'danger');
+      }
+
+    } catch (error) {
+      console.error('❌ [AvailableOrders] Erreur acceptation via token:', error);
+      await loading.dismiss();
+      await this.showToast('Erreur lors de l\'acceptation', 'danger');
     }
   }
 
@@ -514,5 +620,18 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
         event.target.complete();
       }, 500);
     }
+  }
+
+  /**
+   * Afficher un toast
+   */
+  private async showToast(message: string, color: 'success' | 'danger' | 'warning' = 'success') {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      color,
+      position: 'top'
+    });
+    await toast.present();
   }
 }
