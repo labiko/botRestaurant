@@ -311,7 +311,15 @@
       "Read(C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\BOT-V3/**)",
       "Read(C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\BOT-V3/**)",
       "Read(C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\BOT-V3/**)",
-      "Bash(copy:*)"
+      "Bash(copy:*)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\features\\restaurant-france\\delivery-france\\available-orders/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\features\\restaurant-france\\delivery-france\\my-orders/**)",
+      "Read(/C:\\Users\\diall\\Documents\\LABICOTAXI\\LOGS\\BOT-V3/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\features\\restaurant-france\\delivery-france\\available-orders/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\features\\restaurant-france\\delivery-france\\available-orders/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\features\\restaurant-france/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src\\app\\features\\restaurant-france\\delivery-france\\dashboard-delivery/**)",
+      "Read(/C:\\Users\\diall\\Documents\\IonicProjects\\Claude\\botRestaurant\\botResto\\src/**)"
     ],
     "deny": [],
     "ask": []

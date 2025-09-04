@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 📌 RÈGLES DE COMMIT ET PUSH
+
+**⚠️ IMPORTANT**: Quand l'utilisateur demande "commit + push" :
+- **TOUJOURS faire `git add .`** pour ajouter TOUS les fichiers modifiés
+- **NE JAMAIS faire de commits partiels** avec seulement certains fichiers
+- **Committer TOUT le projet** à chaque fois
+- **Un seul commit global** pour toutes les modifications en cours
+
 ## 🎯 PRINCIPE DE NON-RÉGRESSION
 
 **⚠️ IMPORTANT**: Avant toute modification du code, s'assurer que les changements ne cassent pas les workflows existants. Toujours tester les scénarios fonctionnels après chaque modification.

@@ -7,47 +7,76 @@
 // Import des styles de la page restaurant pour avoir la même structure
 @import '../../orders-france/orders-france.page.scss';
 
-// Styles pour les modals avec fond blanc forcé (spécial Edge)
-:host ::ng-deep .custom-alert-white {
+// FORCE ABSOLUE DU THÈME CLAIR POUR TOUTES LES POPUPS
+:host ::ng-deep .custom-alert-white,
+:host ::ng-deep .custom-alert-white *,
+:host ::ng-deep ion-alert.custom-alert-white,
+:host ::ng-deep ion-alert.custom-alert-white * {
+  --background: #ffffff !important;
+  --color: #000000 !important;
+  --ion-background-color: #ffffff !important;
+  --ion-text-color: #000000 !important;
+  --ion-color-base: #ffffff !important;
+  --ion-color-contrast: #000000 !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+:host ::ng-deep .custom-alert-white .alert-wrapper,
+:host ::ng-deep ion-alert.custom-alert-white .alert-wrapper {
   --background: #ffffff !important;
   --color: #000000 !important;
   background: #ffffff !important;
   background-color: #ffffff !important;
-  
-  .alert-wrapper {
+  color: #000000 !important;
+  border: none !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+:host ::ng-deep .custom-alert-white .alert-head,
+:host ::ng-deep ion-alert.custom-alert-white .alert-head {
+  color: #000000 !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+:host ::ng-deep .custom-alert-white .alert-message,
+:host ::ng-deep ion-alert.custom-alert-white .alert-message {
+  color: #000000 !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+:host ::ng-deep .custom-alert-white .alert-button,
+:host ::ng-deep ion-alert.custom-alert-white .alert-button {
+  --color: #000000 !important;
+  --background: #ffffff !important;
+  --background-hover: #f0f0f0 !important;
+  --background-focused: #f0f0f0 !important;
+  color: #000000 !important;
+  background: #ffffff !important;
+}
+
+:host ::ng-deep .custom-alert-white .alert-button.alert-button-role-cancel,
+:host ::ng-deep ion-alert.custom-alert-white .alert-button.alert-button-role-cancel {
+  --color: #6b7280 !important;
+  color: #6b7280 !important;
+}
+
+// Force globale sur la page entière si besoin
+:host ::ng-deep ion-alert {
+  &.custom-alert-white {
     --background: #ffffff !important;
     --color: #000000 !important;
     background: #ffffff !important;
-    background-color: #ffffff !important;
-  }
-  
-  .alert-head {
     color: #000000 !important;
-    background: #ffffff !important;
+    
+    * {
+      color: #000000 !important;
+      background: transparent !important;
+    }
   }
-  
-  .alert-message {
-    color: #000000 !important;
-    background: #ffffff !important;
-  }
-  
-  .alert-button {
-    --color: #000000 !important;
-    color: #000000 !important;
-  }
-}
-
-// Force supplémentaire pour Edge
-:host ::ng-deep ion-alert.custom-alert-white {
-  --background: #ffffff !important;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-}
-
-:host ::ng-deep ion-alert.custom-alert-white .alert-wrapper {
-  --background: #ffffff !important;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
 }
 
 // Styles pour l'interface OTP moderne inline
