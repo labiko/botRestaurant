@@ -210,17 +210,36 @@
               </ion-badge>
             </div>
             
-            <!-- Bouton pour lancer l'assignation manuelle -->
-            <ion-button 
-              *ngIf="canStartDeliveryAssignment(order)"
-              size="small" 
-              color="warning"
-              fill="outline"
-              class="assignment-button"
-              (click)="handleDeliveryOrderReady(order, { key: 'assign', label: 'Assigner', color: 'warning', nextStatus: 'prete' })">
-              <ion-icon name="person-add" slot="start"></ion-icon>
-              Assigner livreur
-            </ion-button>
+            <!-- CORRECTION : Afficher le statut de notification pour les commandes non assignées -->
+            <div *ngIf="!order.assigned_driver_id && order.status === 'prete'" class="notification-status">
+              <div class="notification-info">
+                <ion-icon name="notifications" color="primary"></ion-icon>
+                <span class="notification-text">📡 Notifié à {{ getNotifiedDriversCount(order) }} livreurs - {{ getNotificationTime(order) }}</span>
+              </div>
+              
+              <!-- Boutons d'action -->
+              <div class="notification-actions">
+                <ion-button 
+                  size="small" 
+                  color="warning"
+                  fill="outline"
+                  class="notification-button"
+                  (click)="handleDeliveryOrderReady(order, { key: 'assign', label: 'Assigner', color: 'warning', nextStatus: 'prete' })">
+                  <ion-icon name="refresh" slot="start"></ion-icon>
+                  🔄 Renvoyer notification
+                </ion-button>
+                
+                <ion-button 
+                  size="small" 
+                  color="tertiary"
+                  fill="clear"
+                  class="tracking-button"
+                  routerLink="/restaurant-france/delivery-france/tracking">
+                  <ion-icon name="analytics" slot="start"></ion-icon>
+                  📊 Voir détails tracking →
+                </ion-button>
+              </div>
+            </div>
           </div>
           
           <!-- Code de validation livraison - MASQUÉ POUR LE RESTAURANT -->
@@ -241,6 +260,7 @@
               *ngFor="let action of order.availableActions"
               size="small" 
               [color]="action.color"
+              [hidden]="shouldHideActionButton(order, action)"
               (click)="onActionButtonClick(order, action)">
               {{ action.label }}
             </ion-button>

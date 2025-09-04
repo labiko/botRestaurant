@@ -504,4 +504,33 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     return 'success';
   }
 
+  /**
+   * NOUVEAU : Vérifier si un bouton d'action doit être masqué
+   * Cache le bouton "EN LIVRAISON" pour les commandes non assignées
+   */
+  shouldHideActionButton(order: FranceOrder, action: OrderAction): boolean {
+    // Masquer le bouton "EN LIVRAISON" si la commande n'est pas assignée
+    if (action.nextStatus === 'en_livraison' && !order.assigned_driver_id) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * NOUVEAU : Obtenir le nombre de livreurs notifiés (valeur statique pour l'instant)
+   */
+  getNotifiedDriversCount(order: FranceOrder): number {
+    // TODO: Récupérer le nombre réel depuis le service
+    return 3;
+  }
+
+  /**
+   * NOUVEAU : Obtenir le temps écoulé depuis la notification
+   */
+  getNotificationTime(order: FranceOrder): string {
+    // TODO: Calculer le temps réel depuis la dernière notification
+    // Pour l'instant, retourner une valeur statique
+    return 'il y a 5 min';
+  }
+
 }

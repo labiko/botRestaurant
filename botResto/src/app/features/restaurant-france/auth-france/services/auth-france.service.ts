@@ -280,6 +280,15 @@ export class AuthFranceService {
   }
 
   /**
+   * NOUVEAU : Authentifier un livreur par token (méthode publique)
+   * Utilisée par le service delivery-token pour l'auto-login
+   */
+  public authenticateDriverByToken(driver: FranceUser): void {
+    console.log('🔐 [AuthFrance] Authentification par token pour:', driver.name);
+    this.setCurrentUser(driver);
+  }
+
+  /**
    * Déconnexion
    */
   async logout(): Promise<void> {

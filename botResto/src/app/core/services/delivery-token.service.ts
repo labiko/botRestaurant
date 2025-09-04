@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
+import { Observable, from } from 'rxjs';
 import { SupabaseFranceService } from './supabase-france.service';
 import { DeliveryOrder } from './delivery-orders.service';
 import { AppConfigService } from './app-config.service';
+import { AuthFranceService, FranceUser } from '../../features/restaurant-france/auth-france/services/auth-france.service';
 
 export interface DeliveryToken {
   id: number;
@@ -56,7 +58,8 @@ export class DeliveryTokenService {
 
   constructor(
     private supabaseFranceService: SupabaseFranceService,
-    private appConfigService: AppConfigService
+    private appConfigService: AppConfigService,
+    private authFranceService: AuthFranceService
   ) {}
 
   /**
@@ -272,6 +275,77 @@ export class DeliveryTokenService {
     } catch (error) {
       console.error('❌ [DeliveryToken] Erreur validateToken:', error);
       return { valid: false, reason: 'Erreur lors de la validation' };
+    }
+  }
+
+  /**
+   * NOUVEAU : Valider un token ET authentifier automatiquement le livreur
+   * Utilisé par le guard pour l'authentification automatique
+   */
+  validateAndAuthenticateToken(tokenString: string): Observable<{success: boolean, driver?: FranceUser, message: string}> {
+    return from(this.validateAndAuthenticateTokenAsync(tokenString));
+  }
+
+  private async validateAndAuthenticateTokenAsync(tokenString: string): Promise<{success: boolean, driver?: FranceUser, message: string}> {
+    try {
+      console.log(`🔐 [DeliveryToken] Tentative d'authentification par token...`);
+
+      // 1. Valider le token
+      const validation = await this.validateToken(tokenString);
+      if (!validation.valid) {
+        console.log('❌ [DeliveryToken] Token invalide:', validation.reason);
+        return { 
+          success: false, 
+          message: validation.reason || 'Token invalide' 
+        };
+      }
+
+      // 2. Récupérer les infos du livreur depuis la BDD
+      const { data: driverData, error: driverError } = await this.supabaseFranceService.client
+        .from('france_delivery_drivers')
+        .select('*')
+        .eq('id', validation.driverId!)
+        .single();
+
+      if (driverError || !driverData) {
+        console.error('❌ [DeliveryToken] Erreur récupération livreur:', driverError);
+        return { 
+          success: false, 
+          message: 'Livreur introuvable' 
+        };
+      }
+
+      // 3. Créer l'objet utilisateur pour l'authentification
+      const driver: FranceUser = {
+        id: driverData.id,
+        type: 'driver',
+        firstName: driverData.first_name,
+        lastName: driverData.last_name,
+        name: `${driverData.first_name} ${driverData.last_name}`,
+        phoneNumber: driverData.phone_number,
+        email: driverData.email || `driver${driverData.id}@delivery.com`, // Email par défaut si absent
+        restaurantId: driverData.restaurant_id,
+        restaurantName: '', // TODO: Récupérer le nom du restaurant si nécessaire
+        isActive: driverData.is_active
+      };
+
+      // 4. Mettre à jour l'authentification dans AuthFranceService
+      this.authFranceService.authenticateDriverByToken(driver);
+      
+      console.log('✅ [DeliveryToken] Authentification par token réussie pour:', driver.name);
+      
+      return {
+        success: true,
+        driver: driver,
+        message: 'Authentification réussie'
+      };
+
+    } catch (error) {
+      console.error('❌ [DeliveryToken] Erreur validateAndAuthenticateToken:', error);
+      return {
+        success: false,
+        message: 'Erreur lors de l\'authentification'
+      };
     }
   }
 

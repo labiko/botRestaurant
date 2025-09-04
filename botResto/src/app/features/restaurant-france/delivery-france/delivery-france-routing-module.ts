@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { DeliveryFranceGuard } from '../auth-france/guards/delivery-france.guard';
+import { DeliveryTokenGuard } from '../auth-france/guards/delivery-token.guard';
 
 const routes: Routes = [
   {
@@ -16,7 +17,7 @@ const routes: Routes = [
   {
     path: 'available-orders',
     loadChildren: () => import('./available-orders/available-orders.module').then(m => m.AvailableOrdersPageModule),
-    canActivate: [DeliveryFranceGuard]
+    canActivate: [DeliveryTokenGuard] // Utilise le nouveau guard qui gère les tokens
   },
   {
     path: 'history',
@@ -30,8 +31,9 @@ const routes: Routes = [
   },
   {
     path: 'accept',
-    redirectTo: 'available-orders',
-    pathMatch: 'full'
+    // Au lieu d'une redirection simple, utiliser le même composant avec le guard token
+    loadChildren: () => import('./available-orders/available-orders.module').then(m => m.AvailableOrdersPageModule),
+    canActivate: [DeliveryTokenGuard]
   }
 ];
 
