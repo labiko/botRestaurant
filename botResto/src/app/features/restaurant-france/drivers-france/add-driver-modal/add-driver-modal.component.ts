@@ -1,13 +1,17 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ModalController, ToastController } from '@ionic/angular';
+import { WhatsAppNotificationFranceService } from '../../../../core/services/whatsapp-notification-france.service';
+import { AuthFranceService } from '../../auth-france/services/auth-france.service';
 
 export interface DriverFormData {
   first_name: string;
   last_name: string;
   phone_number: string;
   email?: string;
-  password: string;
+  access_code: string;
+  is_online: boolean;
+  is_active: boolean;
 }
 
 @Component({
@@ -19,22 +23,28 @@ export interface DriverFormData {
 export class AddDriverModalComponent implements OnInit {
   driverForm!: FormGroup; // Utiliser ! pour dire à TypeScript que ce sera initialisé
   isLoading = false;
-  showPassword = false;
 
   constructor(
     private formBuilder: FormBuilder,
     private modalController: ModalController,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private whatsAppService: WhatsAppNotificationFranceService,
+    private authFranceService: AuthFranceService
   ) {
     console.log('🔧 [AddDriverModal] Constructor appelé');
   }
 
   ngOnInit() {
     console.log('🚀 [AddDriverModal] ngOnInit appelé');
-    // Initialiser le formulaire dans ngOnInit pour éviter les problèmes de détection de changements
-    this.driverForm = this.createForm();
-    console.log('📋 [AddDriverModal] Form créé:', this.driverForm.value);
-    console.log('📋 [AddDriverModal] Form status:', this.driverForm.status);
+    try {
+      // Initialiser le formulaire dans ngOnInit pour éviter les problèmes de détection de changements
+      this.driverForm = this.createForm();
+      console.log('📋 [AddDriverModal] Form créé avec succès:', this.driverForm.value);
+      console.log('📋 [AddDriverModal] Form status:', this.driverForm.status);
+      console.log('📋 [AddDriverModal] Form valid:', this.driverForm.valid);
+    } catch (error) {
+      console.error('❌ [AddDriverModal] Erreur création formulaire:', error);
+    }
   }
 
   private createForm(): FormGroup {
@@ -44,22 +54,9 @@ export class AddDriverModalComponent implements OnInit {
         Validators.minLength(2),
         Validators.maxLength(50)
       ]],
-      last_name: ['', [
-        Validators.required,
-        Validators.minLength(2),
-        Validators.maxLength(50)
-      ]],
       phone_number: ['', [
         Validators.required,
-        Validators.pattern(/^33[67]\d{8}$/)
-      ]],
-      email: ['', [
-        Validators.email
-      ]],
-      password: ['', [
-        Validators.required,
-        Validators.minLength(6),
-        Validators.maxLength(20)
+        Validators.pattern(/^(06|07)\d{8}$/)
       ]]
     });
   }
@@ -79,18 +76,44 @@ export class AddDriverModalComponent implements OnInit {
       this.isLoading = true;
       
       try {
+        // Générer le code d'accès automatiquement
+        const accessCode = this.whatsAppService.generateAccessCode();
+        
         const formData: DriverFormData = {
           first_name: this.driverForm.value.first_name.trim(),
-          last_name: this.driverForm.value.last_name.trim(),
+          last_name: this.driverForm.value.first_name.trim(), // Utilise le prénom comme nom aussi
           phone_number: this.driverForm.value.phone_number.replace(/\s+/g, ''),
-          email: this.driverForm.value.email?.trim() || undefined,
-          password: this.driverForm.value.password
+          email: undefined, // Plus de champ email
+          access_code: accessCode,
+          is_online: true, // Actif par défaut
+          is_active: true  // En ligne par défaut
         };
+
+        // Envoyer le code par WhatsApp
+        const driverName = `${formData.first_name} ${formData.last_name}`;
+        const currentUser = this.authFranceService.getCurrentUser();
+        const restaurantName = currentUser?.name || currentUser?.restaurantName || 'Restaurant';
+        
+        console.log('📱 [AddDriverModal] Envoi du code WhatsApp...');
+        const whatsAppSent = await this.whatsAppService.sendDriverAccessCode(
+          formData.phone_number,
+          driverName,
+          accessCode,
+          restaurantName,
+          currentUser?.phoneNumber // Ajouter le numéro du restaurant
+        );
+
+        if (!whatsAppSent) {
+          console.warn('⚠️ [AddDriverModal] Échec WhatsApp mais création continue');
+          await this.showToast('Livreur créé mais erreur d\'envoi WhatsApp', 'warning');
+        } else {
+          console.log('✅ [AddDriverModal] Code WhatsApp envoyé avec succès');
+        }
 
         await this.modalController.dismiss(formData, 'save');
         
       } catch (error) {
-        console.error('Erreur lors de la sauvegarde:', error);
+        console.error('❌ [AddDriverModal] Erreur lors de la sauvegarde:', error);
         await this.showToast('Erreur lors de la création du livreur', 'danger');
       } finally {
         this.isLoading = false;
@@ -101,31 +124,32 @@ export class AddDriverModalComponent implements OnInit {
     }
   }
 
-  /**
-   * Toggle visibilité mot de passe
-   */
-  togglePasswordVisibility() {
-    this.showPassword = !this.showPassword;
-  }
 
   /**
-   * Format automatique du numéro de téléphone
+   * Format automatique du numéro de téléphone (06/07 uniquement)
    */
   onPhoneInput(event: any) {
     let value = event.target.value.replace(/\D/g, ''); // Supprimer non-chiffres
     
-    // Ajouter le préfixe 33 si pas présent
-    if (value.length > 0 && !value.startsWith('33')) {
-      if (value.startsWith('0')) {
-        value = '33' + value.substring(1);
-      } else if (value.startsWith('6') || value.startsWith('7')) {
-        value = '33' + value;
+    // Ajouter le 0 si pas présent et commence par 6 ou 7
+    if (value.length > 0 && !value.startsWith('0')) {
+      if (value.startsWith('6') || value.startsWith('7')) {
+        value = '0' + value;
       }
     }
 
-    // Limiter à 11 chiffres (33 + 9 chiffres)
-    if (value.length > 11) {
-      value = value.substring(0, 11);
+    // Forcer 06 ou 07 seulement
+    if (value.length >= 2 && value.startsWith('0')) {
+      const secondDigit = value[1];
+      if (secondDigit !== '6' && secondDigit !== '7') {
+        // Si ce n'est ni 06 ni 07, on force à 06
+        value = '06' + value.substring(2);
+      }
+    }
+
+    // Limiter à 10 chiffres (06/07 + 8 chiffres)
+    if (value.length > 10) {
+      value = value.substring(0, 10);
     }
 
     this.driverForm.patchValue({ phone_number: value });
@@ -151,12 +175,8 @@ export class AddDriverModalComponent implements OnInit {
       return `Maximum ${maxLength} caractères autorisés`;
     }
     
-    if (field?.hasError('email')) {
-      return 'Format email invalide';
-    }
-    
     if (field?.hasError('pattern') && fieldName === 'phone_number') {
-      return 'Format: 33612345678 (mobile français)';
+      return 'Format: 0612345678 ou 0712345678 (mobile français)';
     }
     
     return '';
@@ -198,8 +218,8 @@ export class AddDriverModalComponent implements OnInit {
    */
   get formattedPhone(): string {
     const phone = this.driverForm.get('phone_number')?.value || '';
-    if (phone.length === 11 && phone.startsWith('33')) {
-      return `+33 ${phone.substring(2, 3)} ${phone.substring(3, 5)} ${phone.substring(5, 7)} ${phone.substring(7, 9)} ${phone.substring(9)}`;
+    if (phone.length === 10 && (phone.startsWith('06') || phone.startsWith('07'))) {
+      return `${phone.substring(0, 2)} ${phone.substring(2, 4)} ${phone.substring(4, 6)} ${phone.substring(6, 8)} ${phone.substring(8)}`;
     }
     return phone;
   }

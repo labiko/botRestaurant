@@ -410,6 +410,67 @@ ${restaurantName} 💫`;
   }
 
   /**
+   * Envoie le code d'accès à un nouveau livreur (Template 2 - Chaleureux)
+   */
+  async sendDriverAccessCode(
+    driverPhone: string, 
+    driverName: string, 
+    accessCode: string,
+    restaurantName: string,
+    restaurantPhone?: string
+  ): Promise<boolean> {
+    try {
+      console.log(`🔐 [WhatsAppFrance] Sending access code to driver: ${driverName} (${driverPhone})`);
+      
+      // Séparer prénom du nom complet pour un message plus personnel
+      const firstName = driverName.split(' ')[0];
+      
+      const message = `🌟 **BIENVENUE DANS L'ÉQUIPE ${restaurantName.toUpperCase()} !**
+
+Salut ${firstName} ! 👋
+
+🎊 C'est parti pour l'aventure livraison !
+
+🔑 **Tes identifiants :**
+📱 Ton numéro : ${driverPhone}
+🔐 Ton code secret : ${accessCode}
+
+🚀 **Tu es prêt à rouler :**
+✅ Compte activé automatiquement
+🟢 Statut en ligne
+🔔 Notifications ON
+
+📍 **Ton restaurant :**
+📞 ${restaurantName}${restaurantPhone ? ' : ' + restaurantPhone : ''}
+
+Prêt pour les premières commandes ? 🍕🏍️
+
+Bonne route partenaire ! 💪`;
+
+      const result = await this.sendMessage(driverPhone, message);
+      
+      if (result) {
+        console.log(`✅ [WhatsAppFrance] Access code sent successfully to ${driverName}`);
+      } else {
+        console.error(`❌ [WhatsAppFrance] Failed to send access code to ${driverName}`);
+      }
+      
+      return result;
+      
+    } catch (error) {
+      console.error(`❌ [WhatsAppFrance] Error sending driver access code:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Génère un code d'accès à 6 chiffres
+   */
+  generateAccessCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  /**
    * Formate un prix en euros
    */
   private formatPriceEuros(amount: number): string {

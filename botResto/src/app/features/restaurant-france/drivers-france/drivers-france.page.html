@@ -7,14 +7,23 @@
     </ion-buttons>
     <ion-title>Gestion des livreurs</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="addDriver()">
-        <ion-icon name="person-add" slot="icon-only"></ion-icon>
+      <ion-button (click)="manualRefresh()" [disabled]="isLoading">
+        <ion-icon name="refresh" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
+  <!-- Pull to refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content 
+      pullingIcon="chevron-down-circle-outline"
+      pullingText="Tirer pour actualiser"
+      refreshingSpinner="circles"
+      refreshingText="Actualisation...">
+    </ion-refresher-content>
+  </ion-refresher>
   <!-- Header Info -->
   <div class="header-section">
     <div class="header-info">
@@ -71,9 +80,18 @@
             </p>
           </div>
           <div class="driver-status">
-            <ion-badge [color]="getStatusColor(driver.is_active)">
-              {{ getStatusText(driver.is_active) }}
-            </ion-badge>
+            <div class="status-toggle-container">
+              <ion-badge [color]="getStatusColor(driver.is_active)" class="status-badge">
+                <ion-icon [name]="driver.is_active ? 'checkmark-circle' : 'close-circle'" class="status-icon"></ion-icon>
+                {{ getStatusText(driver.is_active) }}
+              </ion-badge>
+              <ion-toggle 
+                [checked]="driver.is_active"
+                (ionChange)="toggleDriverStatus(driver)"
+                [color]="driver.is_active ? 'success' : 'medium'"
+                class="status-toggle">
+              </ion-toggle>
+            </div>
           </div>
         </div>
 
@@ -96,15 +114,6 @@
         </div>
 
         <div class="driver-actions">
-          <ion-button 
-            size="small" 
-            fill="clear" 
-            [color]="driver.is_active ? 'warning' : 'success'"
-            (click)="toggleDriverStatus(driver)">
-            <ion-icon [name]="driver.is_active ? 'pause' : 'play'" slot="start"></ion-icon>
-            {{ driver.is_active ? 'Désactiver' : 'Activer' }}
-          </ion-button>
-          
           <ion-button 
             size="small" 
             fill="clear" 
@@ -145,8 +154,8 @@
     </ion-card>
   </div>
 
-  <!-- Bouton flottant d'ajout -->
-  <ion-fab vertical="bottom" horizontal="end" slot="fixed" *ngIf="drivers.length > 0">
+  <!-- Bouton flottant d'ajout - TOUJOURS VISIBLE -->
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
     <ion-fab-button color="primary" (click)="addDriver()">
       <ion-icon name="add"></ion-icon>
     </ion-fab-button>

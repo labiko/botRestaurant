@@ -23,7 +23,9 @@ export interface CreateDriverRequest {
   last_name: string;
   phone_number: string;
   email?: string;
-  password: string;
+  access_code: string;
+  is_online: boolean;
+  is_active: boolean;
 }
 
 @Injectable({
@@ -120,11 +122,6 @@ export class DriversFranceService {
    */
   async createDriver(restaurantId: number, driverData: CreateDriverRequest): Promise<boolean> {
     try {
-      // Hacher le mot de passe (simple pour la demo - à améliorer en production)
-      const bcrypt = await import('bcryptjs');
-      const saltRounds = 10;
-      const password_hash = await bcrypt.hash(driverData.password, saltRounds);
-
       const { error } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
         .insert({
@@ -133,8 +130,9 @@ export class DriversFranceService {
           last_name: driverData.last_name,
           phone_number: driverData.phone_number,
           email: driverData.email,
-          password_hash: password_hash,
-          is_active: true
+          password: driverData.access_code, // Code 6 chiffres au lieu du hash
+          is_active: driverData.is_active,
+          is_online: driverData.is_online
         });
 
       if (error) {
@@ -221,6 +219,10 @@ export class DriversFranceService {
    * Helpers de formatage
    */
   getDriverFullName(driver: FranceDriver): string {
+    // Si first_name et last_name sont identiques, afficher seulement une fois
+    if (driver.first_name === driver.last_name) {
+      return driver.first_name;
+    }
     return `${driver.first_name} ${driver.last_name}`;
   }
 

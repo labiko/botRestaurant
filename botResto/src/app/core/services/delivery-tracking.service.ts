@@ -12,6 +12,7 @@ export interface OrderTrackingStats {
   lastActionDriverName?: string;
   lastActionType?: string;
   lastActionTimestamp?: string;
+  lastTokenUpdate?: string;
   currentStatus: string;
   canForceRelease: boolean;
   canSendReminder: boolean;
@@ -126,6 +127,7 @@ export class DeliveryTrackingService {
 
       if (error) {
         console.error(`❌ [DeliveryTracking] Erreur stats commande ${orderId}:`, error);
+        console.error(`❌ [DeliveryTracking] Détail erreur:`, JSON.stringify(error, null, 2));
         return {
           orderId,
           orderNumber,
@@ -151,6 +153,7 @@ export class DeliveryTrackingService {
         lastActionDriverName: stat?.last_action_driver_name || undefined,
         lastActionType: stat?.last_action_type || undefined,
         lastActionTimestamp: stat?.last_action_timestamp || undefined,
+        lastTokenUpdate: stat?.last_token_update || undefined,
         currentStatus: status,
         canForceRelease: status === 'assignee' && !!driverId,
         canSendReminder: status === 'prete' && (stat?.notified_count || 0) > 0

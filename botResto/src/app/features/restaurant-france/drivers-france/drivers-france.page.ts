@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { AuthFranceService, FranceUser } from '../auth-france/services/auth-france.service';
 import { DriversFranceService, FranceDriver, CreateDriverRequest } from '../../../core/services/drivers-france.service';
 import { AddDriverModalComponent, DriverFormData } from './add-driver-modal/add-driver-modal.component';
+import { DriverStatusManagementService, StatusChangeResult } from '../../../core/services/driver-status-management.service';
 
 @Component({
   selector: 'app-drivers-france',
@@ -24,6 +25,7 @@ export class DriversFrancePage implements OnInit, OnDestroy {
   constructor(
     private authFranceService: AuthFranceService,
     private driversFranceService: DriversFranceService,
+    private driverStatusManagementService: DriverStatusManagementService,
     private router: Router,
     private alertController: AlertController,
     private modalController: ModalController,
@@ -112,15 +114,10 @@ export class DriversFrancePage implements OnInit, OnDestroy {
       return false;
     }
 
-    if (!data.password || data.password.length < 6) {
-      this.showError('Le mot de passe doit contenir au moins 6 caractères');
-      return false;
-    }
-
-    // Validation format téléphone français
-    const phoneRegex = /^33[67]\d{8}$/;
+    // Validation format téléphone français (06 ou 07)
+    const phoneRegex = /^(06|07)\d{8}$/;
     if (!phoneRegex.test(data.phone_number.replace(/\s+/g, ''))) {
-      this.showError('Format de téléphone invalide. Utilisez le format: 33612345678');
+      this.showError('Format de téléphone invalide. Utilisez le format: 0612345678');
       return false;
     }
 
@@ -140,7 +137,9 @@ export class DriversFrancePage implements OnInit, OnDestroy {
         last_name: data.last_name,
         phone_number: data.phone_number,
         email: data.email,
-        password: data.password
+        access_code: data.access_code,
+        is_online: data.is_online,
+        is_active: data.is_active
       }
     );
 
@@ -153,36 +152,78 @@ export class DriversFrancePage implements OnInit, OnDestroy {
   }
 
   /**
-   * Changer le statut d'un livreur
+   * Changer le statut d'un livreur via le service dédié
    */
   async toggleDriverStatus(driver: FranceDriver) {
     const newStatus = !driver.is_active;
     const action = newStatus ? 'activer' : 'désactiver';
     
-    const alert = await this.alertController.create({
-      header: 'Changer le statut',
-      message: `Voulez-vous ${action} ${this.getDriverFullName(driver)} ?`,
-      buttons: [
-        {
-          text: 'Annuler',
-          role: 'cancel'
-        },
-        {
-          text: 'Confirmer',
-          handler: async () => {
-            const success = await this.driversFranceService.updateDriverStatus(driver.id, newStatus);
-            if (success) {
-              driver.is_active = newStatus;
-              this.showSuccess(`Statut mis à jour avec succès`);
-            } else {
-              this.showError('Erreur lors de la mise à jour');
+    try {
+      // 1. Validation préalable via le service
+      const validation = await this.driverStatusManagementService.validateStatusChange(driver.id, newStatus);
+      
+      if (!validation.canChangeStatus) {
+        await this.showToast(validation.reason || 'Changement impossible', 'warning');
+        return;
+      }
+
+      // 2. Afficher la confirmation avec le message d'impact du service
+      const impactMessage = this.driverStatusManagementService.generateImpactMessage(newStatus, validation.warnings);
+      
+      const alert = await this.alertController.create({
+        header: `${action.charAt(0).toUpperCase() + action.slice(1)} le livreur`,
+        message: `${this.getDriverFullName(driver)}
+
+${impactMessage.replace(/<[^>]*>/g, '').replace('⚠️', '⚠️ ATTENTION:')}`,
+        cssClass: 'custom-alert-driver-status',
+        buttons: [
+          {
+            text: 'Annuler',
+            role: 'cancel',
+            cssClass: 'alert-button-cancel'
+          },
+          {
+            text: this.driverStatusManagementService.getActionButtonText(driver.is_active),
+            cssClass: newStatus ? 'alert-button-success' : 'alert-button-warning',
+            handler: async () => {
+              await this.executeStatusChange(driver, newStatus);
             }
           }
-        }
-      ]
-    });
+        ]
+      });
 
-    await alert.present();
+      await alert.present();
+
+    } catch (error) {
+      console.error('❌ [DriversPage] Erreur toggle status:', error);
+      await this.showToast('Erreur lors de la préparation du changement', 'danger');
+    }
+  }
+
+  /**
+   * Exécuter le changement de statut via le service
+   */
+  private async executeStatusChange(driver: FranceDriver, newStatus: boolean) {
+    try {
+      const result: StatusChangeResult = await this.driverStatusManagementService.changeDriverStatus(driver.id, newStatus);
+      
+      if (result.success) {
+        // Mise à jour locale immédiate
+        driver.is_active = newStatus;
+        
+        // Message de succès
+        const statusText = newStatus ? 'activé' : 'désactivé';
+        await this.showToast(`${this.getDriverFullName(driver)} ${statusText} avec succès`, 'success');
+        
+        // Recharger les données pour synchroniser
+        await this.loadDrivers();
+      } else {
+        await this.showToast(result.message, 'danger');
+      }
+    } catch (error) {
+      console.error('❌ [DriversPage] Erreur exécution changement:', error);
+      await this.showToast('Erreur lors du changement de statut', 'danger');
+    }
   }
 
   /**
@@ -231,11 +272,11 @@ export class DriversFrancePage implements OnInit, OnDestroy {
   }
 
   getStatusColor(isActive: boolean): string {
-    return this.driversFranceService.getStatusColor(isActive);
+    return this.driverStatusManagementService.getStatusDisplayColor(isActive);
   }
 
   getStatusText(isActive: boolean): string {
-    return this.driversFranceService.getStatusText(isActive);
+    return this.driverStatusManagementService.getStatusDisplayText(isActive);
   }
 
   formatPhone(phone: string): string {
@@ -275,5 +316,46 @@ export class DriversFrancePage implements OnInit, OnDestroy {
 
   private async showError(message: string) {
     await this.showToast(message, 'danger');
+  }
+
+  /**
+   * Refresh manuel via bouton header
+   */
+  async manualRefresh() {
+    console.log('🔄 [DriversFrance] Refresh manuel déclenché');
+    
+    if (this.isLoading) return; // Éviter double refresh
+    
+    try {
+      if (this.currentUser && this.currentUser.restaurantId) {
+        await this.loadDrivers();
+        await this.showToast('✅ Données actualisées', 'success');
+        console.log('✅ [DriversFrance] Refresh manuel réussi');
+      }
+    } catch (error) {
+      console.error('❌ [DriversFrance] Erreur refresh manuel:', error);
+      await this.showToast('❌ Erreur lors de l\'actualisation', 'danger');
+    }
+  }
+
+  /**
+   * Pull to refresh - Actualiser les données
+   */
+  async doRefresh(event: any) {
+    console.log('🔄 [DriversFrance] Pull to refresh déclenché');
+    
+    try {
+      if (this.currentUser && this.currentUser.restaurantId) {
+        await this.loadDrivers();
+        console.log('✅ [DriversFrance] Données actualisées avec succès');
+      }
+    } catch (error) {
+      console.error('❌ [DriversFrance] Erreur lors de l\'actualisation:', error);
+    } finally {
+      // Terminer l'animation de refresh après un court délai
+      setTimeout(() => {
+        event.target.complete();
+      }, 500);
+    }
   }
 }

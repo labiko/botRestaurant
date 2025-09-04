@@ -1,0 +1,56 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>👤 Nouveau Livreur - DEBUG</ion-title>
+    <ion-buttons slot="start">
+      <ion-button fill="clear" (click)="dismiss()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- VERSION ULTRA SIMPLE POUR DEBUG -->
+  <div style="background: red; color: white; padding: 20px; margin: 20px;">
+    <h1>DEBUG MODE</h1>
+    <p>Cette section devrait TOUJOURS être visible</p>
+    <p>Si vous ne voyez pas ce texte rouge, le problème est plus profond</p>
+  </div>
+
+  <!-- Test de base sans conditions -->
+  <ion-list>
+    <ion-item>
+      <ion-label position="stacked">Prénom</ion-label>
+      <ion-input type="text" placeholder="Entrez votre prénom" value="Test"></ion-input>
+    </ion-item>
+    
+    <ion-item>
+      <ion-label position="stacked">Nom</ion-label>
+      <ion-input type="text" placeholder="Entrez votre nom" value="Debug"></ion-input>
+    </ion-item>
+    
+    <ion-item>
+      <ion-label position="stacked">Téléphone</ion-label>
+      <ion-input type="tel" placeholder="33612345678" value="33612345678"></ion-input>
+    </ion-item>
+  </ion-list>
+  
+  <div style="margin-top: 20px;">
+    <p>Component initialisé: {{ !!this }}</p>
+    <p>ngOnInit appelé: voir console</p>
+  </div>
+
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <div style="display: flex; gap: 10px; padding: 10px;">
+      <ion-button fill="outline" color="medium" (click)="dismiss()">
+        Annuler
+      </ion-button>
+      <ion-button color="primary" (click)="save()">
+        Créer le livreur (DEBUG)
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

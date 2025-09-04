@@ -8,6 +8,7 @@ import { DriversFrancePageRoutingModule } from './drivers-france-routing.module'
 
 import { DriversFrancePage } from './drivers-france.page';
 import { AddDriverModalComponent } from './add-driver-modal/add-driver-modal.component';
+import { WhatsAppNotificationFranceService } from '../../../core/services/whatsapp-notification-france.service';
 
 @NgModule({
   imports: [
@@ -20,6 +21,9 @@ import { AddDriverModalComponent } from './add-driver-modal/add-driver-modal.com
   declarations: [
     DriversFrancePage,
     AddDriverModalComponent
+  ],
+  providers: [
+    WhatsAppNotificationFranceService
   ]
 })
 export class DriversFrancePageModule {}

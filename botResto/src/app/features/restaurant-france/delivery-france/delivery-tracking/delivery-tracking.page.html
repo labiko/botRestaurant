@@ -139,6 +139,15 @@
           </span>
         </div>
 
+        <!-- Dernière mise à jour des tokens -->
+        <div class="token-update" *ngIf="order.lastTokenUpdate">
+          <ion-icon name="refresh-circle" color="tertiary"></ion-icon>
+          <span>
+            Token mis à jour 
+            <small>{{getTimeAgo(order.lastTokenUpdate!)}}</small>
+          </span>
+        </div>
+
         <!-- Actions modernisées -->
         <div class="order-actions modern-actions">
           

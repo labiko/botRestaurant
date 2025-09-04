@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { SupabaseFranceService } from '../../../../core/services/supabase-france.service';
 import { PhoneFormatService } from '../../../../core/services/phone-format.service';
+import { DriverSessionMonitorService } from '../../../../core/services/driver-session-monitor.service';
 
 export interface FranceUser {
   id: number;
@@ -42,7 +43,8 @@ export class AuthFranceService {
 
   constructor(
     private supabaseFranceService: SupabaseFranceService,
-    private phoneFormatService: PhoneFormatService
+    private phoneFormatService: PhoneFormatService,
+    private driverSessionMonitorService: DriverSessionMonitorService
   ) {
     this.checkExistingSession();
   }
@@ -256,6 +258,10 @@ export class AuthFranceService {
 
       this.setCurrentUser(user);
       
+      // NOUVEAU: Démarrer monitoring session pour livreur
+      console.log('🔍 [AuthFrance] Démarrage monitoring session livreur ID:', user.id);
+      this.driverSessionMonitorService.startMonitoring(user.id);
+      
       return { 
         success: true, 
         user,
@@ -286,6 +292,12 @@ export class AuthFranceService {
   public authenticateDriverByToken(driver: FranceUser): void {
     console.log('🔐 [AuthFrance] Authentification par token pour:', driver.name);
     this.setCurrentUser(driver);
+    
+    // NOUVEAU: Démarrer monitoring session pour livreur authentifié par token
+    if (driver.type === 'driver') {
+      console.log('🔍 [AuthFrance] Démarrage monitoring session livreur token ID:', driver.id);
+      this.driverSessionMonitorService.startMonitoring(driver.id);
+    }
   }
 
   /**
@@ -293,6 +305,10 @@ export class AuthFranceService {
    */
   async logout(): Promise<void> {
     try {
+      // NOUVEAU: Arrêter monitoring avant déconnexion
+      console.log('⏹️ [AuthFrance] Arrêt monitoring session avant logout');
+      this.driverSessionMonitorService.stopMonitoring();
+      
       const sessionData = localStorage.getItem('france_auth_session');
       if (sessionData) {
         const session = JSON.parse(sessionData);

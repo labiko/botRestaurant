@@ -1,199 +1,119 @@
-<ion-header>
-  <ion-toolbar color="primary">
-    <ion-title>👤 Nouveau Livreur</ion-title>
-    <ion-buttons slot="start">
-      <ion-button fill="clear" (click)="dismiss()">
-        <ion-icon name="close" slot="icon-only"></ion-icon>
-      </ion-button>
-    </ion-buttons>
-  </ion-toolbar>
-</ion-header>
-
-<ion-content class="ion-padding">
-  <!-- Test basique -->
-  <div style="padding: 20px;">
-    <h2>TEST MODAL</h2>
-    <p>Contenu visible ?</p>
-    <p>Form existe: {{ !!driverForm }}</p>
-    
-    <!-- Form simple sans conditions -->
-    <ion-item>
-      <ion-label position="stacked">Prénom</ion-label>
-      <ion-input type="text" placeholder="Votre prénom"></ion-input>
-    </ion-item>
-    
-    <ion-item>
-      <ion-label position="stacked">Nom</ion-label>
-      <ion-input type="text" placeholder="Votre nom"></ion-input>
-    </ion-item>
+<!-- FORMULAIRE COMPLET AVEC HTML STANDARD -->
+<div style="width: 100%; height: 100%; background: #f8f9fa; padding: 0; display: flex; flex-direction: column;">
+  
+  <!-- En-tête -->
+  <div style="background: #6c5ce7; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 18px;">
+    <span style="position: absolute; left: 15px; cursor: pointer; font-size: 22px;" (click)="dismiss()">✕</span>
+    👤 Nouveau Livreur
   </div>
 
-  <!-- Form réactif conditionnel -->
-  <form [formGroup]="driverForm" (ngSubmit)="save()" *ngIf="driverForm" style="display: block;">
-    
-    <!-- Informations personnelles -->
-    <div class="form-section">
-      <div class="section-header">
-        <ion-icon name="person-circle" color="primary"></ion-icon>
-        <h3>Informations personnelles</h3>
-      </div>
-
-      <!-- Prénom -->
-      <ion-item lines="inset" [class.ion-invalid]="hasError('first_name')">
-        <ion-label position="stacked">
-          Prénom <span class="required">*</span>
-        </ion-label>
-        <ion-input
-          type="text"
-          formControlName="first_name"
-          placeholder="Ex: Jean"
-          [class.ion-invalid]="hasError('first_name')"
-          clearInput="true">
-        </ion-input>
-        <ion-note slot="error" *ngIf="hasError('first_name')">
-          {{getErrorMessage('first_name')}}
-        </ion-note>
-      </ion-item>
-
-      <!-- Nom -->
-      <ion-item lines="inset" [class.ion-invalid]="hasError('last_name')">
-        <ion-label position="stacked">
-          Nom <span class="required">*</span>
-        </ion-label>
-        <ion-input
-          type="text"
-          formControlName="last_name"
-          placeholder="Ex: Dupont"
-          [class.ion-invalid]="hasError('last_name')"
-          clearInput="true">
-        </ion-input>
-        <ion-note slot="error" *ngIf="hasError('last_name')">
-          {{getErrorMessage('last_name')}}
-        </ion-note>
-      </ion-item>
+  <!-- Message d'erreur si formulaire non initialisé -->
+  <div *ngIf="!driverForm" style="padding: 40px; text-align: center;">
+    <div style="background: #ff6b6b; color: white; padding: 20px; border-radius: 12px;">
+      <h3>❌ Erreur d'initialisation</h3>
+      <p>Le formulaire ne s'est pas chargé correctement.</p>
+      <button (click)="dismiss()" style="background: white; color: #ff6b6b; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+        Fermer
+      </button>
     </div>
+  </div>
 
-    <!-- Contact -->
-    <div class="form-section">
-      <div class="section-header">
-        <ion-icon name="call" color="primary"></ion-icon>
-        <h3>Contact</h3>
-      </div>
+  <!-- Contenu du formulaire -->
+  <div style="flex: 1; overflow-y: auto; padding: 15px;" *ngIf="driverForm">
+    <form [formGroup]="driverForm" (ngSubmit)="save()" style="max-width: 500px; margin: 0 auto;">
+      
+      <!-- Section Informations personnelles -->
+      <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h3 style="margin: 0 0 15px 0; color: #2d3436; display: flex; align-items: center; gap: 8px; font-size: 16px;">
+          <span style="color: #6c5ce7;">👤</span> Identité du livreur
+        </h3>
 
-      <!-- Téléphone -->
-      <ion-item lines="inset" [class.ion-invalid]="hasError('phone_number')">
-        <ion-label position="stacked">
-          Téléphone mobile <span class="required">*</span>
-        </ion-label>
-        <ion-input
-          type="tel"
-          formControlName="phone_number"
-          placeholder="33612345678"
-          (ionInput)="onPhoneInput($event)"
-          [class.ion-invalid]="hasError('phone_number')"
-          maxlength="11">
-          <ion-icon name="call" slot="start" color="medium"></ion-icon>
-        </ion-input>
-        <ion-note slot="helper" *ngIf="!hasError('phone_number') && driverForm.get('phone_number')?.value">
-          {{formattedPhone}}
-        </ion-note>
-        <ion-note slot="error" *ngIf="hasError('phone_number')">
-          {{getErrorMessage('phone_number')}}
-        </ion-note>
-      </ion-item>
-
-      <!-- Email -->
-      <ion-item lines="inset" [class.ion-invalid]="hasError('email')">
-        <ion-label position="stacked">Email (optionnel)</ion-label>
-        <ion-input
-          type="email"
-          formControlName="email"
-          placeholder="jean.dupont@email.com"
-          [class.ion-invalid]="hasError('email')"
-          clearInput="true">
-          <ion-icon name="mail" slot="start" color="medium"></ion-icon>
-        </ion-input>
-        <ion-note slot="error" *ngIf="hasError('email')">
-          {{getErrorMessage('email')}}
-        </ion-note>
-      </ion-item>
-    </div>
-
-    <!-- Sécurité -->
-    <div class="form-section">
-      <div class="section-header">
-        <ion-icon name="shield-checkmark" color="primary"></ion-icon>
-        <h3>Sécurité</h3>
-      </div>
-
-      <!-- Mot de passe -->
-      <ion-item lines="inset" [class.ion-invalid]="hasError('password')">
-        <ion-label position="stacked">
-          Mot de passe <span class="required">*</span>
-        </ion-label>
-        <ion-input
-          [type]="showPassword ? 'text' : 'password'"
-          formControlName="password"
-          placeholder="Minimum 6 caractères"
-          [class.ion-invalid]="hasError('password')">
-          <ion-icon name="lock-closed" slot="start" color="medium"></ion-icon>
-          <ion-button
-            slot="end"
-            fill="clear"
-            size="small"
-            (click)="togglePasswordVisibility()">
-            <ion-icon
-              [name]="showPassword ? 'eye-off' : 'eye'"
-              color="medium">
-            </ion-icon>
-          </ion-button>
-        </ion-input>
-        <ion-note slot="error" *ngIf="hasError('password')">
-          {{getErrorMessage('password')}}
-        </ion-note>
-      </ion-item>
-    </div>
-
-    <!-- Information importante -->
-    <ion-card class="info-card">
-      <ion-card-content>
-        <div class="info-content">
-          <ion-icon name="information-circle" color="primary"></ion-icon>
-          <div class="info-text">
-            <p><strong>Le livreur recevra :</strong></p>
-            <ul>
-              <li>Ses identifiants de connexion par SMS</li>
-              <li>Les notifications de commandes via WhatsApp</li>
-              <li>L'accès à l'application livreur</li>
-            </ul>
+        <!-- Prénom -->
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #2d3436; font-size: 14px;">
+            Prénom <span style="color: #e17055;">*</span>
+          </label>
+          <input 
+            type="text" 
+            formControlName="first_name"
+            placeholder="Ex: Jean"
+            style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
+            [style.border-color]="hasError('first_name') ? '#e17055' : '#ddd'"
+            (focus)="$event.target.style.borderColor='#6c5ce7'"
+            (blur)="$event.target.style.borderColor = hasError('first_name') ? '#e17055' : '#ddd'">
+          <div *ngIf="hasError('first_name')" style="color: #e17055; font-size: 12px; margin-top: 4px;">
+            {{getErrorMessage('first_name')}}
           </div>
         </div>
-      </ion-card-content>
-    </ion-card>
 
-  </form>
-</ion-content>
+      </div>
 
-<ion-footer class="ion-no-border">
-  <ion-toolbar>
-    <div class="footer-buttons">
-      <ion-button
-        fill="outline"
-        color="medium"
-        (click)="dismiss()"
-        [disabled]="isLoading">
-        <ion-icon name="close" slot="start"></ion-icon>
-        Annuler
-      </ion-button>
+      <!-- Section Contact -->
+      <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h3 style="margin: 0 0 15px 0; color: #2d3436; display: flex; align-items: center; gap: 8px; font-size: 16px;">
+          <span style="color: #6c5ce7;">📞</span> Contact
+        </h3>
 
-      <ion-button
-        color="primary"
-        (click)="save()"
-        [disabled]="!driverForm.valid || isLoading">
-        <ion-spinner name="crescent" *ngIf="isLoading"></ion-spinner>
-        <ion-icon name="checkmark" slot="start" *ngIf="!isLoading"></ion-icon>
-        {{isLoading ? 'Création...' : 'Créer le livreur'}}
-      </ion-button>
-    </div>
-  </ion-toolbar>
-</ion-footer>
+        <!-- Téléphone -->
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #2d3436; font-size: 14px;">
+            Téléphone mobile <span style="color: #e17055;">*</span>
+          </label>
+          <input 
+            type="tel" 
+            formControlName="phone_number"
+            placeholder="0612345678"
+            maxlength="10"
+            (input)="onPhoneInput($event)"
+            style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
+            [style.border-color]="hasError('phone_number') ? '#e17055' : '#ddd'"
+            (focus)="$event.target.style.borderColor='#6c5ce7'"
+            (blur)="$event.target.style.borderColor = hasError('phone_number') ? '#e17055' : '#ddd'">
+          <div *ngIf="!hasError('phone_number') && driverForm.get('phone_number')?.value" style="color: #636e72; font-size: 12px; margin-top: 4px; font-style: italic;">
+            {{formattedPhone}}
+          </div>
+          <div *ngIf="hasError('phone_number')" style="color: #e17055; font-size: 12px; margin-top: 4px;">
+            {{getErrorMessage('phone_number')}}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Section Code d'accès -->
+      <div style="background: linear-gradient(135deg, #e3f2fd, #f3e5f5); padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px; background: rgba(108, 92, 231, 0.1); border-radius: 8px; border-left: 4px solid #6c5ce7;">
+          <span style="font-size: 20px;">🔐</span>
+          <div style="flex: 1;">
+            <p style="margin: 0; font-weight: 600; color: #2d3436; font-size: 14px;">Code généré automatiquement</p>
+            <p style="margin: 0; font-size: 12px; color: #636e72;">Envoyé par WhatsApp</p>
+          </div>
+        </div>
+      </div>
+
+
+    </form>
+  </div>
+
+<!-- Boutons de pied de page - TOUJOURS VISIBLES -->
+<div style="background: white; padding: 15px; border-top: 1px solid #ddd; flex-shrink: 0;">
+  <div style="display: flex; gap: 12px; max-width: 500px; margin: 0 auto;">
+    <button 
+      type="button"
+      (click)="dismiss()" 
+      [disabled]="isLoading"
+      style="flex: 1; padding: 12px; background: #636e72; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;"
+      [style.opacity]="isLoading ? '0.6' : '1'">
+      Annuler
+    </button>
+    <button 
+      type="button"
+      (click)="save()" 
+      [disabled]="!driverForm?.valid || isLoading"
+      style="flex: 2; padding: 12px; background: #6c5ce7; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);"
+      [style.opacity]="(!driverForm?.valid || isLoading) ? '0.6' : '1'">
+      <span *ngIf="isLoading">⏳ Création...</span>
+      <span *ngIf="!isLoading">✅ Créer le livreur</span>
+    </button>
+  </div>
+</div>
+
