@@ -26,10 +26,15 @@ export class AddDriverModalComponent implements OnInit {
     private modalController: ModalController,
     private toastController: ToastController
   ) {
+    console.log('🔧 [AddDriverModal] Constructor appelé');
     this.driverForm = this.createForm();
+    console.log('📋 [AddDriverModal] Form créé:', this.driverForm.value);
   }
 
-  ngOnInit() {}
+  ngOnInit() {
+    console.log('🚀 [AddDriverModal] ngOnInit appelé');
+    console.log('📋 [AddDriverModal] Form status:', this.driverForm.status);
+  }
 
   private createForm(): FormGroup {
     return this.formBuilder.group({

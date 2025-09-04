@@ -10,7 +10,26 @@
 </ion-header>
 
 <ion-content class="ion-padding">
-  <form [formGroup]="driverForm" (ngSubmit)="save()">
+  <!-- Test basique -->
+  <div style="padding: 20px;">
+    <h2>TEST MODAL</h2>
+    <p>Contenu visible ?</p>
+    <p>Form existe: {{ !!driverForm }}</p>
+    
+    <!-- Form simple sans conditions -->
+    <ion-item>
+      <ion-label position="stacked">Prénom</ion-label>
+      <ion-input type="text" placeholder="Votre prénom"></ion-input>
+    </ion-item>
+    
+    <ion-item>
+      <ion-label position="stacked">Nom</ion-label>
+      <ion-input type="text" placeholder="Votre nom"></ion-input>
+    </ion-item>
+  </div>
+
+  <!-- Form réactif conditionnel -->
+  <form [formGroup]="driverForm" (ngSubmit)="save()" *ngIf="driverForm" style="display: block;">
     
     <!-- Informations personnelles -->
     <div class="form-section">

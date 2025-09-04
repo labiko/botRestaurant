@@ -129,28 +129,40 @@
     </ion-list>
   </div>
 
-  <!-- Commandes récentes -->
+  <!-- Commandes récentes dans un accordéon -->
   <div class="recent-orders-section" *ngIf="recentOrders.length > 0">
-    <h3>Commandes récentes</h3>
-    
-    <ion-card *ngFor="let order of recentOrders" class="order-card">
-      <ion-card-content>
-        <div class="order-header">
-          <div class="order-info">
-            <h4>#{{ order.order_number }}</h4>
-            <p>{{ order.phone_number }} • {{ formatTime(order.created_at) }}</p>
-          </div>
-          <ion-badge [color]="getStatusColor(order.status)">
-            {{ getStatusText(order.status) }}
-          </ion-badge>
-        </div>
+    <ion-accordion-group>
+      <ion-accordion value="recent-orders">
+        <ion-item slot="header" color="light">
+          <ion-icon name="receipt-outline" slot="start"></ion-icon>
+          <ion-label>
+            <h3>Commandes récentes</h3>
+            <p>{{ recentOrders.length }} commande(s)</p>
+          </ion-label>
+        </ion-item>
         
-        <div class="order-details">
-          <p><strong>Total:</strong> {{ formatPrice(order.total_amount) }}</p>
-          <p><strong>Mode:</strong> {{ getDeliveryModeText(order.delivery_mode) }}</p>
+        <div slot="content" class="accordion-content">
+          <ion-card *ngFor="let order of recentOrders" class="order-card">
+            <ion-card-content>
+              <div class="order-header">
+                <div class="order-info">
+                  <h4>#{{ order.order_number }}</h4>
+                  <p>{{ order.phone_number }} • {{ formatTime(order.created_at) }}</p>
+                </div>
+                <ion-badge [color]="getStatusColor(order.status)">
+                  {{ getStatusText(order.status) }}
+                </ion-badge>
+              </div>
+              
+              <div class="order-details">
+                <p><strong>Total:</strong> {{ formatPrice(order.total_amount) }}</p>
+                <p><strong>Mode:</strong> {{ getDeliveryModeText(order.delivery_mode) }}</p>
+              </div>
+            </ion-card-content>
+          </ion-card>
         </div>
-      </ion-card-content>
-    </ion-card>
+      </ion-accordion>
+    </ion-accordion-group>
   </div>
 
   <!-- Message si pas de commandes -->
