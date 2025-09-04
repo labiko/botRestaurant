@@ -88,10 +88,49 @@ export class DeliveryOrdersService {
   }
 
   private processDeliveryOrder(order: any): DeliveryOrder {
+    // Ajouter seulement le calcul des prix aux items sans changer le format existant
+    const enhancedItems = this.enhanceItemsWithPrices(order.items);
+    
     return {
       ...order,
+      items: enhancedItems,
       availableActions: this.getDeliveryActions(order.status, !!order.driver_id)
     };
+  }
+
+  /**
+   * Ajouter les propriétés price et total_price aux items existants
+   * SANS changer le format de parsing qui fonctionne déjà
+   */
+  private enhanceItemsWithPrices(rawItems: any): any {
+    if (!rawItems) return rawItems;
+
+    // Si c'est un objet (format bot complexe), enrichir chaque item
+    if (typeof rawItems === 'object' && rawItems !== null) {
+      const enhanced: any = {};
+      for (const [key, value] of Object.entries(rawItems)) {
+        if (value && typeof value === 'object' && (value as any).item) {
+          const item = (value as any).item;
+          const quantity = (value as any).quantity || 1;
+          
+          enhanced[key] = {
+            ...value,
+            item: {
+              ...item,
+              // Ajouter les propriétés de prix manquantes
+              price: item.final_price || item.base_price || 0,
+              total_price: (item.final_price || item.base_price || 0) * quantity
+            }
+          };
+        } else {
+          enhanced[key] = value;
+        }
+      }
+      return enhanced;
+    }
+
+    // Garder le format original pour les autres cas
+    return rawItems;
   }
 
   getDeliveryActions(status: string, hasDriver: boolean): OrderAction[] {

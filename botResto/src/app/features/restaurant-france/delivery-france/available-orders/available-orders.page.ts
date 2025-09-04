@@ -8,6 +8,7 @@ import { DeliveryOrdersService, DeliveryOrder } from '../../../../core/services/
 import { LoadingController } from '@ionic/angular';
 import { DriverOnlineStatusService } from '../../../../core/services/driver-online-status.service';
 import { DeliveryCountersService, DeliveryCounters } from '../../../../core/services/delivery-counters.service';
+import { DeliveryOrderItemsService } from '../../../../core/services/delivery-order-items.service';
 
 @Component({
   selector: 'app-available-orders',
@@ -44,7 +45,8 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     private toastController: ToastController,
     private loadingController: LoadingController,
     private driverOnlineStatusService: DriverOnlineStatusService,
-    private deliveryCountersService: DeliveryCountersService
+    private deliveryCountersService: DeliveryCountersService,
+    private deliveryOrderItemsService: DeliveryOrderItemsService
   ) {}
 
   ngOnInit() {
@@ -184,26 +186,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   }
 
   getItemsCount(order: DeliveryOrder): number {
-    if (!order.items) return 0;
-    
-    try {
-      let itemsData = order.items;
-      
-      // Parser si c'est une string JSON
-      if (typeof order.items === 'string') {
-        itemsData = JSON.parse(order.items);
-      }
-      
-      // Compter les clés dans l'objet items (chaque clé = un item)
-      if (itemsData && typeof itemsData === 'object') {
-        return Object.keys(itemsData).length;
-      }
-      
-      return 0;
-    } catch (error) {
-      console.error(`❌ [AvailableOrders] Erreur comptage items:`, error);
-      return 0;
-    }
+    return this.deliveryOrderItemsService.getOrderItems(order).length;
   }
 
   getDeliveryZone(address?: string): string {
@@ -238,70 +221,31 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
 
   // Fonctions détails articles
   hasOrderItems(order: DeliveryOrder): boolean {
-    return order.items && order.items.length > 0;
+    return this.deliveryOrderItemsService.hasOrderItems(order);
   }
 
   getOrderItems(order: DeliveryOrder): any[] {
-    return order.items || [];
+    return this.deliveryOrderItemsService.getOrderItems(order);
   }
 
   hasSelectedOptions(selectedOptions: any): boolean {
-    if (!selectedOptions) return false;
-    if (typeof selectedOptions === 'string') {
-      try {
-        selectedOptions = JSON.parse(selectedOptions);
-      } catch {
-        return false;
-      }
-    }
-    return selectedOptions && Object.keys(selectedOptions).length > 0;
+    return this.deliveryOrderItemsService.hasSelectedOptions(selectedOptions);
   }
 
   getSelectedOptionsGroups(selectedOptions: any): any[] {
-    if (!this.hasSelectedOptions(selectedOptions)) return [];
-    
-    if (typeof selectedOptions === 'string') {
-      try {
-        selectedOptions = JSON.parse(selectedOptions);
-      } catch {
-        return [];
-      }
-    }
-
-    return Object.entries(selectedOptions).map(([groupName, options]) => ({
-      groupName,
-      options: Array.isArray(options) ? options : [options]
-    }));
+    return this.deliveryOrderItemsService.getSelectedOptionsGroups(selectedOptions);
   }
 
   formatOptionGroupName(groupName: string): string {
-    const mapping: Record<string, string> = {
-      'sauces': 'Sauces',
-      'viandes': 'Viandes',
-      'legumes': 'Légumes',
-      'fromages': 'Fromages',
-      'boissons': 'Boissons'
-    };
-    return mapping[groupName] || groupName;
+    return this.deliveryOrderItemsService.formatOptionGroupName(groupName);
   }
 
   shouldShowUpdateTime(order: DeliveryOrder): boolean {
-    if (!order.updated_at) return false;
-    const updatedTime = new Date(order.updated_at);
-    const now = new Date();
-    const diffMinutes = (now.getTime() - updatedTime.getTime()) / (1000 * 60);
-    return diffMinutes < 5;
+    return this.deliveryOrderItemsService.shouldShowUpdateTime(order);
   }
 
   getUpdateTimeText(order: DeliveryOrder): string {
-    if (!order.updated_at) return '';
-    const updatedTime = new Date(order.updated_at);
-    const now = new Date();
-    const diffMinutes = Math.floor((now.getTime() - updatedTime.getTime()) / (1000 * 60));
-    
-    if (diffMinutes < 1) return 'À l\'instant';
-    if (diffMinutes === 1) return 'Il y a 1 minute';
-    return `Il y a ${diffMinutes} minutes`;
+    return this.deliveryOrderItemsService.getUpdateTimeText(order);
   }
 
   // Actions

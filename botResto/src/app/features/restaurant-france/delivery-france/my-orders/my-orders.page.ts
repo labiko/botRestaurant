@@ -12,6 +12,7 @@ import { FranceOrdersService } from '../../../../core/services/france-orders.ser
 import { WhatsAppNotificationFranceService } from '../../../../core/services/whatsapp-notification-france.service';
 import { DriverOnlineStatusService } from '../../../../core/services/driver-online-status.service';
 import { DeliveryCountersService, DeliveryCounters } from '../../../../core/services/delivery-counters.service';
+import { DeliveryOrderItemsService } from '../../../../core/services/delivery-order-items.service';
 
 @Component({
   selector: 'app-my-orders',
@@ -56,7 +57,8 @@ export class MyOrdersPage implements OnInit, OnDestroy {
     private whatsappNotificationFranceService: WhatsAppNotificationFranceService,
     private franceOrdersService: FranceOrdersService,
     private driverOnlineStatusService: DriverOnlineStatusService,
-    private deliveryCountersService: DeliveryCountersService
+    private deliveryCountersService: DeliveryCountersService,
+    private deliveryOrderItemsService: DeliveryOrderItemsService
   ) {}
 
   ngOnInit() {
@@ -405,26 +407,7 @@ export class MyOrdersPage implements OnInit, OnDestroy {
   }
 
   getItemsCount(order: DeliveryOrder): number {
-    if (!order.items) return 0;
-    
-    try {
-      let itemsData = order.items;
-      
-      // Parser si c'est une string JSON
-      if (typeof order.items === 'string') {
-        itemsData = JSON.parse(order.items);
-      }
-      
-      // Compter les clés dans l'objet items (chaque clé = un item)
-      if (itemsData && typeof itemsData === 'object') {
-        return Object.keys(itemsData).length;
-      }
-      
-      return 0;
-    } catch (error) {
-      console.error(`❌ [MyOrders] Erreur comptage items:`, error);
-      return 0;
-    }
+    return this.deliveryOrderItemsService.getOrderItems(order).length;
   }
 
   getDeliveryZone(address?: string): string {
@@ -480,160 +463,31 @@ export class MyOrdersPage implements OnInit, OnDestroy {
 
   // Fonctions détails articles
   hasOrderItems(order: DeliveryOrder): boolean {
-    console.log(`🔍 [MyOrders] hasOrderItems pour commande ${order.order_number}:`, order.items);
-    console.log(`🔍 [MyOrders] Type des items: ${typeof order.items}`);
-    
-    if (!order.items) {
-      console.log(`❌ [MyOrders] Pas d'items pour commande ${order.order_number}`);
-      return false;
-    }
-    
-    // Les items peuvent être une string JSON ou un objet
-    if (typeof order.items === 'string') {
-      try {
-        console.log(`🔍 [MyOrders] Tentative de parsing de la string JSON...`);
-        const parsedItems = JSON.parse(order.items);
-        const hasItems = parsedItems && Object.keys(parsedItems).length > 0;
-        console.log(`✅ [MyOrders] Items parsés (string):`, parsedItems);
-        console.log(`✅ [MyOrders] Nombre d'items: ${Object.keys(parsedItems).length}`);
-        console.log(`✅ [MyOrders] hasItems: ${hasItems}`);
-        return hasItems;
-      } catch (error) {
-        console.error(`❌ [MyOrders] Erreur parsing items string:`, error);
-        return false;
-      }
-    }
-    
-    // Si c'est déjà un objet
-    const itemCount = Object.keys(order.items).length;
-    const hasItems = order.items && itemCount > 0;
-    console.log(`✅ [MyOrders] Items objet - Nombre d'items: ${itemCount}`);
-    console.log(`✅ [MyOrders] hasItems: ${hasItems}`);
-    console.log(`✅ [MyOrders] Clés des items:`, Object.keys(order.items));
-    return hasItems;
+    return this.deliveryOrderItemsService.hasOrderItems(order);
   }
 
   getOrderItems(order: DeliveryOrder): any[] {
-    console.log(`📦 [MyOrders] getOrderItems pour commande ${order.order_number}:`, order.items);
-    
-    if (!order.items) {
-      return [];
-    }
-    
-    try {
-      let itemsData = order.items;
-      
-      // Parser si c'est une string JSON
-      if (typeof order.items === 'string') {
-        itemsData = JSON.parse(order.items);
-      }
-      
-      console.log(`📦 [MyOrders] Items data parsé:`, itemsData);
-      
-      // Les items sont dans un format objet avec des clés comme "item_2_..."
-      const itemsArray: any[] = [];
-      
-      if (itemsData && typeof itemsData === 'object') {
-        Object.entries(itemsData).forEach(([key, value]: [string, any]) => {
-          console.log(`📦 [MyOrders] Processing item avec clé "${key}":`, value);
-          console.log(`📦 [MyOrders] Structure de l'item:`, JSON.stringify(value, null, 2));
-          
-          // Extraire les données de l'item
-          if (value && value.item) {
-            const processedItem = {
-              ...value.item,
-              quantity: value.quantity || 1,
-              key: key
-            };
-            console.log(`📦 [MyOrders] Item traité complet:`, processedItem);
-            console.log(`📦 [MyOrders] Propriétés disponibles:`, Object.keys(processedItem));
-            console.log(`📦 [MyOrders] Valeurs de prix:`);
-            console.log(`    - price: ${processedItem.price}`);
-            console.log(`    - total_price: ${processedItem.total_price}`);
-            console.log(`    - unit_price: ${processedItem.unit_price}`);
-            console.log(`    - amount: ${processedItem.amount}`);
-            console.log(`    - item_price: ${processedItem.item_price}`);
-            itemsArray.push(processedItem);
-          } else if (value) {
-            // Cas où l'item n'est pas dans une propriété "item"
-            console.log(`📦 [MyOrders] Item direct (sans propriété 'item'):`, value);
-            const processedItem = {
-              ...value,
-              quantity: value.quantity || 1,
-              key: key
-            };
-            console.log(`📦 [MyOrders] Item direct traité:`, processedItem);
-            console.log(`📦 [MyOrders] Prix dans item direct: ${processedItem.price}`);
-            itemsArray.push(processedItem);
-          }
-        });
-      }
-      
-      console.log(`📦 [MyOrders] Items array final:`, itemsArray);
-      return itemsArray;
-    } catch (error) {
-      console.error(`❌ [MyOrders] Erreur parsing items:`, error);
-      return [];
-    }
+    return this.deliveryOrderItemsService.getOrderItems(order);
   }
 
   hasSelectedOptions(selectedOptions: any): boolean {
-    if (!selectedOptions) return false;
-    if (typeof selectedOptions === 'string') {
-      try {
-        selectedOptions = JSON.parse(selectedOptions);
-      } catch {
-        return false;
-      }
-    }
-    return selectedOptions && Object.keys(selectedOptions).length > 0;
+    return this.deliveryOrderItemsService.hasSelectedOptions(selectedOptions);
   }
 
   getSelectedOptionsGroups(selectedOptions: any): any[] {
-    if (!this.hasSelectedOptions(selectedOptions)) return [];
-    
-    if (typeof selectedOptions === 'string') {
-      try {
-        selectedOptions = JSON.parse(selectedOptions);
-      } catch {
-        return [];
-      }
-    }
-
-    return Object.entries(selectedOptions).map(([groupName, options]) => ({
-      groupName,
-      options: Array.isArray(options) ? options : [options]
-    }));
+    return this.deliveryOrderItemsService.getSelectedOptionsGroups(selectedOptions);
   }
 
   formatOptionGroupName(groupName: string): string {
-    const mapping: Record<string, string> = {
-      'sauces': 'Sauces',
-      'viandes': 'Viandes',
-      'legumes': 'Légumes',
-      'fromages': 'Fromages',
-      'boissons': 'Boissons'
-    };
-    return mapping[groupName] || groupName;
+    return this.deliveryOrderItemsService.formatOptionGroupName(groupName);
   }
 
   shouldShowUpdateTime(order: DeliveryOrder): boolean {
-    if (!order.updated_at) return false;
-    const updatedTime = new Date(order.updated_at);
-    const now = new Date();
-    const diffMinutes = (now.getTime() - updatedTime.getTime()) / (1000 * 60);
-    return diffMinutes < 5;
+    return this.deliveryOrderItemsService.shouldShowUpdateTime(order);
   }
 
   getUpdateTimeText(order: DeliveryOrder): string {
-    if (!order.updated_at) return '';
-    const updatedTime = new Date(order.updated_at);
-    const now = new Date();
-    const diffMinutes = Math.floor((now.getTime() - updatedTime.getTime()) / (1000 * 60));
-    
-    if (diffMinutes < 1) return 'À l\'instant';
-    if (diffMinutes === 1) return 'Il y a 1 minute';
-    return `Il y a ${diffMinutes} minutes`;
+    return this.deliveryOrderItemsService.getUpdateTimeText(order);
   }
 
   // Actions

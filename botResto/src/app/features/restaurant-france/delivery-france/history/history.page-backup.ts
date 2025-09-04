@@ -9,7 +9,6 @@ import { SupabaseFranceService } from '../../../../core/services/supabase-france
 import { LoadingController } from '@ionic/angular';
 import { DriverOnlineStatusService } from '../../../../core/services/driver-online-status.service';
 import { DeliveryCountersService, DeliveryCounters } from '../../../../core/services/delivery-counters.service';
-import { DeliveryOrderItemsService } from '../../../../core/services/delivery-order-items.service';
 
 @Component({
   selector: 'app-history',
@@ -47,8 +46,7 @@ export class HistoryPage implements OnInit, OnDestroy {
     private toastController: ToastController,
     private loadingController: LoadingController,
     private driverOnlineStatusService: DriverOnlineStatusService,
-    private deliveryCountersService: DeliveryCountersService,
-    private deliveryOrderItemsService: DeliveryOrderItemsService
+    private deliveryCountersService: DeliveryCountersService
   ) {}
 
   ngOnInit() {
@@ -146,10 +144,9 @@ export class HistoryPage implements OnInit, OnDestroy {
         return;
       }
 
-      // Traiter les commandes pour l'affichage avec items enrichis en prix
+      // Traiter les commandes pour l'affichage
       const processedOrders = historyOrders?.map((order: any) => ({
         ...order,
-        items: this.enhanceItemsWithPrices(order.items),
         availableActions: []
       })) || [];
       
@@ -203,7 +200,26 @@ export class HistoryPage implements OnInit, OnDestroy {
   }
 
   getItemsCount(order: DeliveryOrder): number {
-    return this.deliveryOrderItemsService.getOrderItems(order).length;
+    if (!order.items) return 0;
+    
+    try {
+      let itemsData = order.items;
+      
+      // Parser si c'est une string JSON
+      if (typeof order.items === 'string') {
+        itemsData = JSON.parse(order.items);
+      }
+      
+      // Compter les clés dans l'objet items (chaque clé = un item)
+      if (itemsData && typeof itemsData === 'object') {
+        return Object.keys(itemsData).length;
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error(`❌ [History] Erreur comptage items:`, error);
+      return 0;
+    }
   }
 
   getDeliveryZone(address?: string): string {
@@ -246,31 +262,121 @@ export class HistoryPage implements OnInit, OnDestroy {
 
   // Fonctions détails articles
   hasOrderItems(order: DeliveryOrder): boolean {
-    return this.deliveryOrderItemsService.hasOrderItems(order);
+    if (!order.items) {
+      return false;
+    }
+    
+    // Les items peuvent être une string JSON ou un objet
+    if (typeof order.items === 'string') {
+      try {
+        const parsedItems = JSON.parse(order.items);
+        const hasItems = parsedItems && Object.keys(parsedItems).length > 0;
+        return hasItems;
+      } catch (error) {
+        console.error(`❌ [History] Erreur parsing items string:`, error);
+        return false;
+      }
+    }
+    
+    // Si c'est déjà un objet
+    const hasItems = order.items && Object.keys(order.items).length > 0;
+    return hasItems;
   }
 
   getOrderItems(order: DeliveryOrder): any[] {
-    return this.deliveryOrderItemsService.getOrderItems(order);
+    if (!order.items) {
+      return [];
+    }
+    
+    try {
+      let itemsData = order.items;
+      
+      // Parser si c'est une string JSON
+      if (typeof order.items === 'string') {
+        itemsData = JSON.parse(order.items);
+      }
+      
+      // Les items sont dans un format objet avec des clés comme "item_2_..."
+      const itemsArray: any[] = [];
+      
+      if (itemsData && typeof itemsData === 'object') {
+        Object.entries(itemsData).forEach(([key, value]: [string, any]) => {
+          // Extraire les données de l'item
+          if (value && value.item) {
+            const processedItem = {
+              ...value.item,
+              quantity: value.quantity || 1,
+              key: key
+            };
+            itemsArray.push(processedItem);
+          }
+        });
+      }
+      
+      return itemsArray;
+    } catch (error) {
+      console.error(`❌ [History] Erreur parsing items:`, error);
+      return [];
+    }
   }
 
   hasSelectedOptions(selectedOptions: any): boolean {
-    return this.deliveryOrderItemsService.hasSelectedOptions(selectedOptions);
+    if (!selectedOptions) return false;
+    if (typeof selectedOptions === 'string') {
+      try {
+        selectedOptions = JSON.parse(selectedOptions);
+      } catch {
+        return false;
+      }
+    }
+    return selectedOptions && Object.keys(selectedOptions).length > 0;
   }
 
   getSelectedOptionsGroups(selectedOptions: any): any[] {
-    return this.deliveryOrderItemsService.getSelectedOptionsGroups(selectedOptions);
+    if (!this.hasSelectedOptions(selectedOptions)) return [];
+    
+    if (typeof selectedOptions === 'string') {
+      try {
+        selectedOptions = JSON.parse(selectedOptions);
+      } catch {
+        return [];
+      }
+    }
+
+    return Object.entries(selectedOptions).map(([groupName, options]) => ({
+      groupName,
+      options: Array.isArray(options) ? options : [options]
+    }));
   }
 
   formatOptionGroupName(groupName: string): string {
-    return this.deliveryOrderItemsService.formatOptionGroupName(groupName);
+    const mapping: Record<string, string> = {
+      'sauces': 'Sauces',
+      'viandes': 'Viandes',
+      'legumes': 'Légumes',
+      'fromages': 'Fromages',
+      'boissons': 'Boissons'
+    };
+    return mapping[groupName] || groupName;
   }
 
   shouldShowUpdateTime(order: DeliveryOrder): boolean {
-    return this.deliveryOrderItemsService.shouldShowUpdateTime(order);
+    if (!order.updated_at) return false;
+    const updatedTime = new Date(order.updated_at);
+    const now = new Date();
+    const diffMinutes = (now.getTime() - updatedTime.getTime()) / (1000 * 60);
+    return diffMinutes < 5;
   }
 
   getUpdateTimeText(order: DeliveryOrder): string {
-    return this.deliveryOrderItemsService.getUpdateTimeText(order);
+    if (!order.updated_at) return '';
+    const updatedTime = new Date(order.updated_at);
+    const now = new Date();
+    const diffMinutes = Math.floor((now.getTime() - updatedTime.getTime()) / (1000 * 60));
+    
+    if (diffMinutes < 1) return 'À l\'instant';
+    if (diffMinutes === 1) return 'Il y a 1 minute';
+    return `Il y a ${diffMinutes} minutes`;
   }
 
   // Actions
@@ -402,41 +508,6 @@ export class HistoryPage implements OnInit, OnDestroy {
     if (this.currentDriver) {
       this.loadHistoryOrders();
     }
-  }
-
-  /**
-   * Ajouter les propriétés price et total_price aux items existants
-   * SANS changer le format de parsing qui fonctionne déjà
-   */
-  private enhanceItemsWithPrices(rawItems: any): any {
-    if (!rawItems) return rawItems;
-
-    // Si c'est un objet (format bot complexe), enrichir chaque item
-    if (typeof rawItems === 'object' && rawItems !== null) {
-      const enhanced: any = {};
-      for (const [key, value] of Object.entries(rawItems)) {
-        if (value && typeof value === 'object' && (value as any).item) {
-          const item = (value as any).item;
-          const quantity = (value as any).quantity || 1;
-          
-          enhanced[key] = {
-            ...value,
-            item: {
-              ...item,
-              // Ajouter les propriétés de prix manquantes
-              price: item.final_price || item.base_price || 0,
-              total_price: (item.final_price || item.base_price || 0) * quantity
-            }
-          };
-        } else {
-          enhanced[key] = value;
-        }
-      }
-      return enhanced;
-    }
-
-    // Garder le format original pour les autres cas
-    return rawItems;
   }
 
   /**
