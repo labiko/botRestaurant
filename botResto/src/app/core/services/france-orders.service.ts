@@ -41,6 +41,12 @@ export interface FranceOrder {
   assignment_timeout_at?: string;
   estimated_delivery_time?: string;
   assigned_driver_id?: number; // Alias pour compatibilité UI
+  // CORRECTION BOUTON ITINÉRAIRE : Coordonnées GPS
+  delivery_address_coordinates?: {
+    latitude: number;
+    longitude: number;
+    address_label: string;
+  };
 }
 
 export interface OrderAction {
@@ -76,7 +82,14 @@ export class FranceOrdersService {
     try {
       const { data, error } = await this.supabaseFranceService.client
         .from('france_orders')
-        .select('*')
+        .select(`
+          *,
+          delivery_address_coordinates:france_customer_addresses(
+            latitude,
+            longitude,
+            address_label
+          )
+        `)
         .eq('restaurant_id', restaurantId)
         .order('created_at', { ascending: false });
 
@@ -88,6 +101,20 @@ export class FranceOrdersService {
       }
 
       const processedOrders = data?.map((order: any) => this.processOrder(order)) || [];
+      
+      // 🔍 LOGS DIAGNOSTICS: Analyser le total_amount des commandes
+      if (processedOrders.length > 0) {
+        const firstOrder = processedOrders[0];
+        console.log('💰 [FranceOrders] DEBUG - Première commande:');
+        console.log('💰 [FranceOrders] - order.total_amount:', firstOrder.total_amount);
+        console.log('💰 [FranceOrders] - Type total_amount:', typeof firstOrder.total_amount);
+        console.log('💰 [FranceOrders] - order.items:', firstOrder.items);
+        if (firstOrder.items && firstOrder.items.length > 0) {
+          console.log('💰 [FranceOrders] - Premier item.total_price:', firstOrder.items[0].total_price);
+          console.log('💰 [FranceOrders] - Premier item.price:', firstOrder.items[0].price);
+        }
+      }
+      
       this.ordersSubject.next(processedOrders);
       console.log(`✅ [FranceOrders] ${processedOrders.length} commandes chargées`);
       
@@ -104,6 +131,9 @@ export class FranceOrdersService {
   }
 
   private processOrder(order: any): FranceOrder {
+    // 🔍 LOGS DIAGNOSTICS: Analyser l'order brut de la BDD
+    console.log('🔍 [processOrder] Order brut reçu de la BDD:', JSON.stringify(order, null, 2));
+    
     // Extraire les items du format complexe du bot
     let processedItems: any[] = [];
     
@@ -145,6 +175,7 @@ export class FranceOrdersService {
               description: item.description,
               configuration_details: item.configuration_details,
               selected_options: optionsDetails,
+              selected_drink: item.selected_drink, // 🥤 AJOUT: Récupérer la boisson sélectionnée
               product_type: item.product_type,
               
               // Champs additionnels pour affichage détaillé
@@ -184,6 +215,7 @@ export class FranceOrdersService {
     return {
       ...order,
       items: processedItems,
+      total_amount: order.total_amount, // 🧪 TEST: Afficher le vrai total_amount de la base sans recalcul
       availableActions: this.getAvailableActions(order.status),
       // Alias pour compatibilité UI avec le système de livraison
       assigned_driver_id: order.driver_id

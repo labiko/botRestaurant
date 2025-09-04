@@ -141,11 +141,20 @@
             </div>
 
             <!-- Informations supplémentaires -->
-            <div class="item-extras" *ngIf="item.includes_drink || item.composition">
-              <div *ngIf="item.includes_drink" class="extra-info">
+            <div class="item-extras" *ngIf="item.includes_drink || item.composition || item.selected_drink">
+              
+              <!-- 🥤 CORRECTION: Afficher la boisson sélectionnée si présente -->
+              <div *ngIf="item.selected_drink" class="extra-info">
+                <ion-icon name="wine" color="primary"></ion-icon>
+                <span>🥤 {{ item.selected_drink.name }} {{ item.selected_drink.variant }}</span>
+              </div>
+              
+              <!-- Fallback: Si pas de boisson spécifique mais includes_drink=true -->
+              <div *ngIf="item.includes_drink && !item.selected_drink" class="extra-info">
                 <ion-icon name="cafe" color="primary"></ion-icon>
                 <span>Boisson incluse</span>
               </div>
+              
               <div *ngIf="item.composition" class="extra-info">
                 <ion-icon name="information-circle" color="medium"></ion-icon>
                 <span>{{ item.composition }}</span>
@@ -175,12 +184,16 @@
           <div class="delivery-header">
             <h4>Informations livraison:</h4>
             <ion-button 
-              *ngIf="order.delivery_address"
+              *ngIf="order.delivery_address && order.delivery_address_coordinates"
               fill="solid" 
               size="small" 
               color="primary"
               class="maps-button"
-              (click)="openDrivingDirections(0, 0, order.delivery_address)">
+              (click)="openDrivingDirections(
+                order.delivery_address_coordinates.latitude, 
+                order.delivery_address_coordinates.longitude, 
+                order.delivery_address
+              )">
               <ion-icon name="navigate" slot="start"></ion-icon>
               Itinéraire
             </ion-button>

@@ -503,4 +503,5 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     }
     return 'success';
   }
+
 }

@@ -31,6 +31,21 @@ const addressManager = new AddressManagementService(supabase);
 // Configuration délai d'expiration des sessions
 const SESSION_EXPIRE_MINUTES = 240; // 4 heures (240 minutes) - était 30 minutes
 
+// 💰 Fonction utilitaire pour préserver totalPrice lors des mises à jour de session
+function preserveTotalPriceContext(sessionContext: any, newContext: any): any {
+  const currentTotalPrice = sessionContext?.totalPrice || 0;
+  const newTotalPrice = newContext?.totalPrice;
+  
+  // Préserver le totalPrice existant si aucune nouvelle valeur n'est fournie
+  const preservedTotalPrice = newTotalPrice !== undefined ? newTotalPrice : currentTotalPrice;
+  
+  return {
+    ...sessionContext,
+    ...newContext,
+    totalPrice: preservedTotalPrice
+  };
+}
+
 // Service WhatsApp
 class WhatsAppService {
   private baseUrl = `https://api.green-api.com/waInstance${greenApiInstanceId}`;
@@ -562,12 +577,11 @@ async function showProductsInCategory(phoneNumber: string, restaurant: any, sess
   // Mettre à jour la session
   await SimpleSession.update(session.id, {
     state: 'VIEWING_CATEGORY',
-    context: {
-      ...session.context,
+    context: preserveTotalPriceContext(session.context, {
       currentCategory: categoryKey,
       currentCategoryProducts: categoryProducts,
       menuOrder: orderedMenu
-    }
+    })
   });
 
   await whatsapp.sendMessage(phoneNumber, productMessage);
@@ -893,15 +907,14 @@ async function showOptionGroup(phoneNumber: string, session: any, selectedItem: 
   
   await SimpleSession.update(session.id, {
     state: 'CONFIGURING_PRODUCT',
-    context: {
-      ...session.context,
+    context: preserveTotalPriceContext(session.context, {
       configuringProduct: selectedItem,
       currentOptionGroup: groupName,
       allOptionGroups: allGroups,
       groupNamesOrdered: groupNamesOrdered, // ✅ SAUVEGARDER L'ORDRE CORRECT
       currentGroupIndex: currentGroupIndex,
       selectedOptions: session.context.selectedOptions || {}
-    }
+    })
   });
 }
 
@@ -985,10 +998,9 @@ async function handleOptionSelection(phoneNumber: string, session: any, choice: 
 
   // Mettre à jour les selectedOptions dans la session
   await SimpleSession.update(session.id, {
-    context: {
-      ...session.context,
+    context: preserveTotalPriceContext(session.context, {
       selectedOptions: selectedOptions
-    }
+    })
   });
 
   // Passer au groupe suivant ou terminer
@@ -1069,10 +1081,9 @@ async function finalizeProductConfiguration(phoneNumber: string, session: any, b
   // Mettre à jour la session
   await SimpleSession.update(session.id, {
     state: 'CONFIRMING_CONFIGURATION',
-    context: {
-      ...session.context,
+    context: preserveTotalPriceContext(session.context, {
       configuredItem: configuredItem
-    }
+    })
   });
 }
 
@@ -1128,11 +1139,10 @@ async function handleConfigurationConfirmation(phoneNumber: string, session: any
       
       await SimpleSession.update(session.id, {
         state: 'ORDERING',
-        context: {
-          ...session.context,
+        context: preserveTotalPriceContext(session.context, {
           configuredItem: null,
           currentConfiguration: null
-        }
+        })
       });
       
       // Afficher les produits de la catégorie actuelle
@@ -1228,12 +1238,11 @@ async function showDrinkSelection(phoneNumber: string, session: any, selectedIte
   console.log('🔄 [DRINK] AVANT sauvegarde session - sessionId:', session.id);
   const updatedSession = await SimpleSession.update(session.id, {
     state: 'DRINK_SELECTION',
-    context: {
-      ...session.context,
+    context: preserveTotalPriceContext(session.context, {
       selectedItemWithDrink: selectedItem,
       selectedQuantity: quantity,  // NOUVEAU : sauvegarder la quantité
       availableDrinks: drinks
-    }
+    })
   });
   console.log('✅ [DRINK] APRÈS sauvegarde - State: DRINK_SELECTION');
 
@@ -1295,16 +1304,18 @@ async function addItemToCart(phoneNumber: string, session: any, item: any, quant
     cartTotal += itemPrice * cartItem.quantity;
   });
   console.log('💰 [addItemToCart] Total calculé:', cartTotal);
+  console.log('🔍 [addItemToCart] TRACE - session.id:', session.id);
+  console.log('🔍 [addItemToCart] TRACE - item.name:', item.name);
+  console.log('🔍 [addItemToCart] TRACE - silent:', silent);
 
   // Sauvegarder le panier ET le total mis à jour dans la session
   await SimpleSession.update(session.id, {
-    context: {
-      ...session.context,
+    context: preserveTotalPriceContext(session.context, {
       cart: cart,
       totalPrice: cartTotal  // 💰 CORRECTION: Sauvegarder le total calculé
-    }
+    })
   });
-  console.log('💾 Panier et total sauvegardés en session');
+  console.log('💾 [addItemToCart] Panier et total sauvegardés - totalPrice:', cartTotal);
 
   // Utiliser le panier local (qui contient déjà le nouvel item)
   const updatedSession = await SimpleSession.get(phoneNumber);
@@ -1422,8 +1433,7 @@ async function addItemToCart(phoneNumber: string, session: any, item: any, quant
   // Mettre à jour la session - retour à VIEWING_CATEGORY
   await SimpleSession.update(session.id, {
     state: 'VIEWING_CATEGORY',
-    context: {
-      ...session.context,
+    context: preserveTotalPriceContext(session.context, {
       cart: cart,
       // Nettoyer les variables de configuration
       configuringProduct: undefined,
@@ -1432,7 +1442,7 @@ async function addItemToCart(phoneNumber: string, session: any, item: any, quant
       currentGroupIndex: undefined,
       selectedOptions: undefined,
       configuredItem: undefined
-    }
+    })
   });
 }
 
@@ -1559,9 +1569,17 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
       console.log('🍽️ DEBUG selectedItemWithDrink APRÈS modification:', JSON.stringify(selectedItemWithDrink, null, 2));
       
       // Ajouter au panier AVEC message de confirmation complet (silent: false)
-      console.log('📦 Appel addItemToCart avec item modifié');
+      console.log('📦 [DRINK_SELECTION] Appel addItemToCart avec item modifié');
+      console.log('🔍 [DRINK_SELECTION] TRACE - session.id avant addItemToCart:', session.id);
+      console.log('🔍 [DRINK_SELECTION] TRACE - session.context.totalPrice AVANT addItemToCart:', session.context.totalPrice);
+      
       const savedQuantity = session.context.selectedQuantity || 1;
       await addItemToCart(phoneNumber, session, selectedItemWithDrink, savedQuantity, false);
+      
+      // 🔍 VÉRIFICATION POST-AJOUT : Récupérer la session mise à jour
+      const sessionAfterAdd = await SimpleSession.get(phoneNumber);
+      console.log('🔍 [DRINK_SELECTION] TRACE - session.context.totalPrice APRÈS addItemToCart:', sessionAfterAdd?.context?.totalPrice);
+      console.log('🔍 [DRINK_SELECTION] TRACE - session.id après addItemToCart:', sessionAfterAdd?.id);
       break;
 
     case 'ORDERING':
@@ -1617,10 +1635,9 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
         
         const updatedSession = await SimpleSession.update(session.id, { 
           state: 'CONFIRMING_ORDER',
-          context: {
-            ...session.context,
+          context: preserveTotalPriceContext(session.context, {
             totalPrice: totalPrice
-          }
+          })
         });
         
         console.log('💾 Session mise à jour avec totalPrice:', updatedSession?.context?.totalPrice);
@@ -1662,11 +1679,10 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
       } else if (hasItemsInCart && normalizedMessage === '0000') {
         // 0000 = Recommencer (vider le panier)
         await SimpleSession.update(session.id, {
-          context: {
-            ...session.context,
+          context: preserveTotalPriceContext(session.context, {
             cart: {},
             totalPrice: 0
-          }
+          })
         });
         
         const restaurant = await supabase
@@ -1714,10 +1730,9 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
           
           await SimpleSession.update(session.id, { 
             state: 'CONFIRMING_ORDER',
-            context: {
-              ...session.context,
+            context: preserveTotalPriceContext(session.context, {
               totalPrice: totalPrice
-            }
+            })
           });
           
           // Vérifier si une adresse de livraison est requise
@@ -1874,7 +1889,7 @@ async function showMenuAfterDeliveryModeChoice(phoneNumber: string, restaurant: 
     
     await SimpleSession.update(session.id, {
       state: 'VIEWING_MENU',
-      context: updatedContext
+      context: preserveTotalPriceContext(session.context, updatedContext)
     });
     
     // Vérifier immédiatement après la mise à jour
@@ -2031,17 +2046,35 @@ async function saveOrderToDatabase(phoneNumber: string, session: any): Promise<s
     
     const orderNumber = `${dayMonth}-${String((count || 0) + 1).padStart(4, '0')}`;
     
+    // 🔍 LOGS DIAGNOSTICS: Analyser le total avant sauvegarde
+    console.log('🔍 [saveOrderToDatabase] TRACE - session.id:', session.id);
+    console.log('🔍 [saveOrderToDatabase] TRACE - phoneNumber:', phoneNumber);
+    console.log('💰 [saveOrderToDatabase] session.context.totalPrice:', session.context.totalPrice);
+    console.log('💰 [saveOrderToDatabase] Type totalPrice:', typeof session.context.totalPrice);
+    console.log('💰 [saveOrderToDatabase] session.context.cart:', JSON.stringify(session.context.cart, null, 2));
+    
+    // Recalculer pour comparaison avec la logique de buildOrderConfirmationMessage
+    let calculatedTotal = 0;
+    if (session.context.cart) {
+      Object.values(session.context.cart).forEach((cartItem: any) => {
+        const itemPrice = cartItem.item.final_price || cartItem.item.base_price || 0;
+        calculatedTotal += itemPrice * cartItem.quantity;
+      });
+    }
+    console.log('💰 [saveOrderToDatabase] Total recalculé sur place:', calculatedTotal);
+
     // Préparer les données de la commande
     const orderData: any = {
       restaurant_id: session.context.selectedRestaurantId,
       phone_number: phoneNumber.replace('@c.us', ''),
       items: session.context.cart || {},
-      total_amount: session.context.totalPrice || 0,
+      total_amount: calculatedTotal, // 💰 CORRECTION: Utiliser le total recalculé au lieu de session.context.totalPrice
       delivery_mode: session.context.deliveryMode || null, // CHAMP MANQUANT AJOUTÉ !
       status: 'en_attente',
-      order_number: orderNumber,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      order_number: orderNumber
+      // 🕒 CORRECTION TIMEZONE: Laisser PostgreSQL utiliser DEFAULT NOW() avec timezone Europe/Paris
+      // Suppression de: created_at: new Date().toISOString() qui forçait UTC
+      // Suppression de: updated_at: new Date().toISOString() qui forçait UTC
     };
 
     // Ajouter les informations d'adresse de livraison si applicable
@@ -2127,11 +2160,10 @@ async function handleOrderConfirmation(phoneNumber: string, session: any, respon
     // Vider le panier
     await SimpleSession.update(session.id, {
       state: 'VIEWING_MENU',
-      context: {
-        ...session.context,
+      context: preserveTotalPriceContext(session.context, {
         cart: {},
         totalPrice: 0
-      }
+      })
     });
     
     const restaurant = await supabase
@@ -2224,10 +2256,9 @@ async function initiateDeliveryAddressProcess(phoneNumber: string, session: any)
       
       await SimpleSession.update(session.id, {
         state: 'CHOOSING_DELIVERY_ADDRESS',
-        context: {
-          ...session.context,
+        context: preserveTotalPriceContext(session.context, {
           addresses: addressSelection.addresses
-        }
+        })
       });
       
       await whatsapp.sendMessage(phoneNumber, addressSelection.message);
@@ -2295,10 +2326,9 @@ async function handleDeliveryAddressChoice(phoneNumber: string, session: any, me
     // Sauvegarder l'adresse dans la session et procéder à la confirmation de commande
     const updatedSession = await SimpleSession.update(session.id, {
       state: 'CONFIRMING_ORDER',
-      context: {
-        ...session.context,
+      context: preserveTotalPriceContext(session.context, {
         selectedDeliveryAddress: selectedAddress
-      }
+      })
     });
     
     await handleOrderConfirmation(phoneNumber, updatedSession || session, '99');
@@ -2330,10 +2360,9 @@ async function handleNewAddressInput(phoneNumber: string, session: any, message:
     // Valider l'adresse avec Google Places API directement
     await SimpleSession.update(session.id, {
       state: 'VALIDATING_ADDRESS',
-      context: {
-        ...session.context,
+      context: preserveTotalPriceContext(session.context, {
         pendingAddressInput: address
-      }
+      })
     });
     
     // Déclencher la validation
@@ -2372,11 +2401,10 @@ async function validateAddressWithGoogle(phoneNumber: string, session: any, addr
       
       await SimpleSession.update(session.id, {
         state: 'CONFIRMING_ADDRESS',
-        context: {
-          ...session.context,
+        context: preserveTotalPriceContext(session.context, {
           addressSuggestion: suggestion,
           addressSuggestions: validation.suggestions
-        }
+        })
       });
       
       const confirmMessage = `🎯 **Adresse trouvée !**\n\n📍 ${googlePlaces.formatAddressForWhatsApp(suggestion)}\n\n**1** ✅ Oui, livrer ici\n**2** 🔄 Corriger l'adresse\n\n*Tapez 1 ou 2*`;
@@ -2496,8 +2524,7 @@ async function handleAddressValidated(phoneNumber: string, session: any, validat
       // Procéder quand même à la confirmation avec l'adresse non sauvegardée
       const updatedSession = await SimpleSession.update(session.id, {
         state: 'CONFIRMING_ORDER',
-        context: {
-          ...session.context,
+        context: preserveTotalPriceContext(session.context, {
           selectedDeliveryAddress: {
             id: null,
             full_address: validatedAddress.formatted_address,
@@ -2506,7 +2533,7 @@ async function handleAddressValidated(phoneNumber: string, session: any, validat
             google_place_id: validatedAddress.place_id || null,
             address_label: autoLabel
           }
-        }
+        })
       });
       console.log('🛒 [AddressValidated] APRÈS update session (non sauvegardée) - Panier:', JSON.stringify(updatedSession?.context?.cartItems || []));
       console.log('💰 [AddressValidated] APRÈS update session (non sauvegardée) - Total:', updatedSession?.context?.cartTotal);
@@ -2558,10 +2585,9 @@ async function handleAddressLabelInput(phoneNumber: string, session: any, messag
       // Mettre à jour la session avec l'adresse sauvegardée et procéder à la confirmation de commande
       await SimpleSession.update(session.id, {
         state: 'CONFIRMING_ORDER',
-        context: {
-          ...session.context,
+        context: preserveTotalPriceContext(session.context, {
           selectedDeliveryAddress: savedAddress
-        }
+        })
       });
       
       await whatsapp.sendMessage(phoneNumber, `💾 **Adresse "${label}" sauvegardée !**\n\n🚀 Finalisation de votre commande...`);
@@ -2575,14 +2601,13 @@ async function handleAddressLabelInput(phoneNumber: string, session: any, messag
       // Procéder quand même à la confirmation avec l'adresse non sauvegardée
       await SimpleSession.update(session.id, {
         state: 'CONFIRMING_ORDER',
-        context: {
-          ...session.context,
+        context: preserveTotalPriceContext(session.context, {
           selectedDeliveryAddress: {
             id: null,
             full_address: validatedAddress.formatted_address,
             address_label: label
           }
-        }
+        })
       });
       
       await handleOrderConfirmation(phoneNumber, session, '99');
