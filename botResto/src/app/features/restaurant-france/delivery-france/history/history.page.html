@@ -116,68 +116,60 @@
             </div>
           </div>
 
-          <!-- DÉTAILS DES ARTICLES -->
+          <!-- DÉTAILS DES ARTICLES - VERSION UNIVERSELLE -->
           <div class="detail-section" *ngIf="hasOrderItems(order)">
             <div class="detail-label">📦 Articles commandés:</div>
             <div class="order-items">
-              <div *ngFor="let item of getOrderItems(order)" class="item-card">
+              <div *ngFor="let formattedItem of getFormattedItems(order)" class="item-card">
                 
-                <!-- En-tête de l'article -->
+                <!-- En-tête de l'article - FORMAT UNIVERSEL -->
                 <div class="item-header">
                   <div class="item-main">
-                    <span class="item-quantity">{{ item.quantity || 1 }}x</span>
+                    <span class="item-quantity">{{ formattedItem.quantity }}x</span>
                     <span class="item-name">
-                      {{ item.name }}
-                      <ion-badge *ngIf="item.size_name" color="medium" class="size-badge">{{ item.size_name }}</ion-badge>
+                      {{ formattedItem.productName }}
+                      <ion-badge *ngIf="formattedItem.sizeInfo" color="medium" class="size-badge">{{ formattedItem.sizeInfo }}</ion-badge>
                     </span>
                   </div>
-                  <span class="item-price">{{ formatPrice(item.total_price || item.price || 0) }}</span>
+                  <span class="item-price">{{ formatPrice(formattedItem.totalPrice) }}</span>
                 </div>
 
-                <!-- Détails de composition -->
-                <div class="item-details" *ngIf="item.configuration_details && item.configuration_details.length > 0">
-                  <div class="composition-list">
+                <!-- Configuration inline (tags colorés sous le nom) -->
+                <div class="item-inline-config" *ngIf="formattedItem.inlineConfiguration && formattedItem.inlineConfiguration.length > 0">
+                  <div class="inline-composition-list">
                     <ion-chip 
-                      *ngFor="let detail of item.configuration_details" 
+                      *ngFor="let config of formattedItem.inlineConfiguration" 
                       color="tertiary" 
                       outline="true"
                       class="composition-chip">
-                      {{ detail }}
+                      {{ config }}
                     </ion-chip>
                   </div>
                 </div>
 
-                <!-- Options détaillées -->
-                <div class="item-options" *ngIf="item.selected_options && hasSelectedOptions(item.selected_options)">
-                  <div *ngFor="let optionGroup of getSelectedOptionsGroups(item.selected_options)" class="option-group">
-                    <div class="option-group-header">
-                      <ion-icon name="chevron-forward" class="option-icon"></ion-icon>
-                      <strong>{{ formatOptionGroupName(optionGroup.groupName) }}:</strong>
+                <!-- Configuration détaillée avec icônes (format liste) -->
+                <div class="item-detailed-config" *ngIf="formattedItem.formattedConfiguration && formattedItem.formattedConfiguration.length > 0">
+                  <div *ngFor="let configLine of formattedItem.formattedConfiguration" class="config-group">
+                    <div class="config-group-header">
+                      <span class="config-icon">{{ configLine.icon }}</span>
+                      <strong>{{ configLine.category }}:</strong>
                     </div>
-                    <div class="option-items">
-                      <span 
-                        *ngFor="let option of optionGroup.options; let last = last" 
-                        class="option-item">
-                        {{ option.option_name }}{{ !last ? ', ' : '' }}
-                        <ion-badge *ngIf="option.price_modifier > 0" color="warning" class="price-modifier">
-                          +{{ formatPrice(option.price_modifier) }}
-                        </ion-badge>
-                      </span>
+                    <div class="config-items">
+                      <span class="config-value">{{ configLine.value }}</span>
                     </div>
                   </div>
                 </div>
 
-                <!-- Informations supplémentaires -->
-                <div class="item-extras" *ngIf="item.includes_drink || item.composition">
-                  <div *ngIf="item.includes_drink" class="extra-info">
-                    <ion-icon name="cafe" color="primary"></ion-icon>
-                    <span *ngIf="item.selected_drink">{{ item.selected_drink.name }} {{ item.selected_drink.variant }}</span>
-                    <span *ngIf="!item.selected_drink">Boisson incluse</span>
+                <!-- Items additionnels (boissons, etc.) -->
+                <div class="item-additional" *ngIf="formattedItem.additionalItems && formattedItem.additionalItems.length > 0">
+                  <div *ngFor="let additionalItem of formattedItem.additionalItems" class="additional-info">
+                    <span class="additional-text">{{ additionalItem }}</span>
                   </div>
-                  <div *ngIf="item.composition" class="extra-info">
-                    <ion-icon name="information-circle" color="medium"></ion-icon>
-                    <span>{{ item.composition }}</span>
-                  </div>
+                </div>
+
+                <!-- Description complète si présente -->
+                <div class="item-description" *ngIf="formattedItem.description" class="item-description">
+                  <small class="text-muted">{{ formattedItem.description }}</small>
                 </div>
 
               </div>
