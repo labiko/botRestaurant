@@ -20,6 +20,12 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   selectedFilter: string = 'all';
   isLoading: boolean = false;
   private ordersSubscription?: Subscription;
+  
+  // NOUVEAU : Propriétés pour le système de filtre moderne
+  searchText: string = '';
+  filteredOrders: FranceOrder[] = [];
+  filteredOrdersCount: number = 0;
+  totalOrdersCount: number = 0;
 
   // Restaurant ID fixe pour l'instant (à récupérer depuis l'auth plus tard)
   private restaurantId = 1;
@@ -111,10 +117,48 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   }
 
   getFilteredOrders(): FranceOrder[] {
+    // Appliquer d'abord le filtre par statut
+    let statusFilteredOrders: FranceOrder[] = [];
     if (this.selectedFilter === 'all') {
-      return this.orders;
+      statusFilteredOrders = this.orders;
+    } else {
+      statusFilteredOrders = this.orders.filter(order => order.status === this.selectedFilter);
     }
-    return this.orders.filter(order => order.status === this.selectedFilter);
+    
+    // Appliquer ensuite le filtre de recherche
+    const searchFilteredOrders = this.applySearchFilter(statusFilteredOrders);
+    
+    // Mettre à jour les compteurs
+    this.filteredOrdersCount = searchFilteredOrders.length;
+    this.totalOrdersCount = statusFilteredOrders.length;
+    
+    return searchFilteredOrders;
+  }
+
+  /**
+   * Appliquer le filtre de recherche sur les commandes
+   */
+  private applySearchFilter(orders: FranceOrder[]): FranceOrder[] {
+    if (!this.searchText || this.searchText.trim() === '') {
+      return orders;
+    }
+    
+    const searchTerm = this.searchText.toLowerCase().trim();
+    
+    return orders.filter(order => {
+      // Recherche par numéro de commande
+      const orderNumberMatch = order.order_number?.toLowerCase().includes(searchTerm);
+      
+      // Recherche par téléphone (nettoyer les formats)
+      const phoneClean = order.phone_number?.replace(/[\s\-\(\)\+]/g, '');
+      const termClean = searchTerm.replace(/[\s\-\(\)\+]/g, '');
+      const phoneMatch = phoneClean?.toLowerCase().includes(termClean);
+      
+      // Recherche par nom client
+      const nameMatch = order.customer_name?.toLowerCase().includes(searchTerm);
+      
+      return orderNumberMatch || phoneMatch || nameMatch;
+    });
   }
 
   getOrderCountByStatus(status: string): number {
@@ -529,6 +573,41 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       return 'warning';
     }
     return 'success';
+  }
+
+  /**
+   * NOUVEAU : Gestionnaires d'événements pour le système de filtre
+   */
+  onSearchChange(event: any) {
+    this.searchText = event.target.value || '';
+    // Le filtrage se fait automatiquement via getFilteredOrders()
+  }
+
+  onSearchClear() {
+    this.searchText = '';
+  }
+
+  /**
+   * Détecter si le texte de recherche ressemble à un numéro de téléphone
+   */
+  isPhoneNumber(text: string): boolean {
+    if (!text) return false;
+    
+    // Nettoyer le texte des espaces et caractères spéciaux
+    const cleaned = text.replace(/[\s\-\(\)\+]/g, '');
+    
+    // Vérifier si c'est principalement numérique et de longueur appropriée
+    return /^\d{8,15}$/.test(cleaned);
+  }
+
+  /**
+   * Détecter si le texte de recherche ressemble à un numéro de commande
+   */
+  isOrderNumber(text: string): boolean {
+    if (!text) return false;
+    
+    // Format typique : MMDD-XXXX ou similaire
+    return /^\d{4}\-?\d{4}$/.test(text) || text.startsWith('#') || /^[A-Z0-9\-]{4,}$/i.test(text);
   }
 
   /**

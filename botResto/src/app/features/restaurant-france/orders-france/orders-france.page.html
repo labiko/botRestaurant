@@ -48,6 +48,45 @@
     </div>
   </div>
 
+  <!-- NOUVEAU : Barre de recherche moderne -->
+  <div class="search-filter-bar" *ngIf="!isLoading">
+    <ion-searchbar 
+      [(ngModel)]="searchText"
+      placeholder="Rechercher par n° commande ou téléphone..."
+      debounce="300"
+      show-clear-button="focus"
+      (ionInput)="onSearchChange($event)"
+      (ionClear)="onSearchClear()"
+      class="modern-searchbar">
+    </ion-searchbar>
+    
+    <!-- Filtres rapides -->
+    <div class="quick-filters" *ngIf="searchText && searchText.length > 0">
+      <div class="filter-info">
+        <ion-icon name="search" class="search-icon"></ion-icon>
+        <span class="results-count">{{ filteredOrdersCount }} résultat{{ filteredOrdersCount !== 1 ? 's' : '' }} sur {{ totalOrdersCount }}</span>
+      </div>
+      
+      <!-- Suggestions de type de recherche -->
+      <div class="search-suggestions">
+        <ion-chip 
+          *ngIf="isPhoneNumber(searchText)" 
+          color="secondary" 
+          outline
+          class="suggestion-chip">
+          📞 Numéro de téléphone
+        </ion-chip>
+        <ion-chip 
+          *ngIf="isOrderNumber(searchText)" 
+          color="primary" 
+          outline
+          class="suggestion-chip">
+          📋 N° de commande
+        </ion-chip>
+      </div>
+    </div>
+  </div>
+
   <!-- Loading spinner -->
   <div *ngIf="isLoading" class="loading-container">
     <ion-spinner name="crescent"></ion-spinner>
@@ -57,15 +96,28 @@
   <!-- Orders list -->
   <div *ngIf="!isLoading">
     <!-- No orders message -->
-    <ion-card *ngIf="getFilteredOrders().length === 0" class="no-orders-card">
-      <ion-card-content>
-        <div class="no-orders-content">
-          <ion-icon name="receipt-outline" class="no-orders-icon"></ion-icon>
-          <h3>Aucune commande</h3>
-          <p>Il n'y a aucune commande pour le moment.</p>
+    <div *ngIf="getFilteredOrders().length === 0">
+      <!-- Message différent si recherche active -->
+      <div *ngIf="searchText && searchText.length > 0" class="no-search-results">
+        <ion-icon name="search-outline" class="no-results-icon"></ion-icon>
+        <div class="no-results-title">Aucun résultat trouvé</div>
+        <div class="no-results-subtitle">
+          Aucune commande ne correspond à "<strong>{{ searchText }}</strong>".<br>
+          Essayez de modifier votre recherche ou de vérifier l'orthographe.
         </div>
-      </ion-card-content>
-    </ion-card>
+      </div>
+      
+      <!-- Message par défaut si pas de commandes du tout -->
+      <ion-card *ngIf="!searchText || searchText.length === 0" class="no-orders-card">
+        <ion-card-content>
+          <div class="no-orders-content">
+            <ion-icon name="receipt-outline" class="no-orders-icon"></ion-icon>
+            <h3>Aucune commande</h3>
+            <p>Il n'y a aucune commande pour le moment.</p>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
 
     <!-- Orders cards -->
     <ion-card *ngFor="let order of getFilteredOrders()" class="order-card">
