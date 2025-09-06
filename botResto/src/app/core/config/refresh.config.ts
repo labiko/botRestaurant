@@ -15,9 +15,9 @@ export const REFRESH_CONFIG = {
   // Configuration par défaut pour différents composants
   COMPONENTS: {
     RESTAURANT_ORDERS: {
-      intervalMs: 2 * 60 * 1000, // 2 minutes - MODIFIABLE ICI
-      pauseOnHidden: true,
-      pauseOnInactive: true,
+      intervalMs: 30 * 1000, // 30 secondes - MODIFIABLE ICI
+      pauseOnHidden: false,   // CORRECTION: Ne pas mettre en pause quand caché
+      pauseOnInactive: true,  // Garder pause sur inactivité
       inactivityTimeoutMs: 5 * 60 * 1000
     },
     

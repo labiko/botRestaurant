@@ -25,6 +25,7 @@ export class AutoRefreshService implements OnDestroy {
   // État interne
   private refreshTimers = new Map<string, NodeJS.Timeout>();
   private refreshSubjects = new Map<string, BehaviorSubject<boolean>>();
+  private refreshConfigs = new Map<string, AutoRefreshConfig>(); // NOUVEAU: Stocker les configs
   private isPageVisible = true;
   private isUserActive = true;
   private lastUserActivity = Date.now();
@@ -55,6 +56,9 @@ export class AutoRefreshService implements OnDestroy {
     const subject = new BehaviorSubject<boolean>(false);
     this.refreshSubjects.set(componentId, subject);
     
+    // NOUVEAU: Stocker la configuration pour ce composant
+    this.refreshConfigs.set(componentId, finalConfig);
+    
     // Démarrer le timer
     this.scheduleNextRefresh(componentId, finalConfig);
     
@@ -81,6 +85,9 @@ export class AutoRefreshService implements OnDestroy {
       subject.complete();
       this.refreshSubjects.delete(componentId);
     }
+    
+    // NOUVEAU: Nettoyer la configuration
+    this.refreshConfigs.delete(componentId);
   }
 
   /**
@@ -160,14 +167,16 @@ export class AutoRefreshService implements OnDestroy {
     // Vérifier si on doit mettre en pause
     if ((config.pauseOnHidden && !this.isPageVisible) ||
         (config.pauseOnInactive && !this.isUserActive)) {
-      console.log(`⏸️ Refresh paused for ${componentId} (hidden: ${!this.isPageVisible}, inactive: ${!this.isUserActive})`);
+      console.log(`⏸️ [DEBUG] Refresh paused for ${componentId} (hidden: ${!this.isPageVisible}, inactive: ${!this.isUserActive})`);
       return;
     }
+    
+    console.log(`⏰ [DEBUG] Programming next refresh for ${componentId} in ${config.intervalMs}ms`);
     
     const timer = setTimeout(() => {
       const subject = this.refreshSubjects.get(componentId);
       if (subject) {
-        console.log(`🔄 Auto-refresh triggered for ${componentId}`);
+        console.log(`🔄 [DEBUG] Auto-refresh triggered for ${componentId}`);
         subject.next(true);
         // Programmer le prochain rafraîchissement
         this.scheduleNextRefresh(componentId, config);
@@ -228,9 +237,10 @@ export class AutoRefreshService implements OnDestroy {
 
   private handleVisibilityChange(): void {
     if (this.isPageVisible) {
-      // Page redevenue visible, reprendre tous les rafraîchissements
+      // Page redevenue visible, reprendre tous les rafraîchissements avec leurs configs originales
       for (const componentId of this.refreshSubjects.keys()) {
-        this.scheduleNextRefresh(componentId, this.DEFAULT_CONFIG);
+        const config = this.refreshConfigs.get(componentId) || this.DEFAULT_CONFIG;
+        this.scheduleNextRefresh(componentId, config);
       }
     } else {
       // Page cachée, arrêter tous les timers
@@ -243,9 +253,10 @@ export class AutoRefreshService implements OnDestroy {
 
   private handleActivityChange(): void {
     if (this.isUserActive) {
-      // Utilisateur redevenu actif, reprendre les rafraîchissements
+      // Utilisateur redevenu actif, reprendre les rafraîchissements avec leurs configs originales
       for (const componentId of this.refreshSubjects.keys()) {
-        this.scheduleNextRefresh(componentId, this.DEFAULT_CONFIG);
+        const config = this.refreshConfigs.get(componentId) || this.DEFAULT_CONFIG;
+        this.scheduleNextRefresh(componentId, config);
       }
     } else {
       // Utilisateur inactif, mettre en pause

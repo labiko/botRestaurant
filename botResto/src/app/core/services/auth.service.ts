@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { FuseauHoraireService } from './fuseau-horaire.service';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { SupabaseService } from './supabase.service';
 
@@ -24,10 +25,14 @@ export interface User {
   providedIn: 'root'
 })
 export class AuthService {
+
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor(private supabase: SupabaseService) {
+  constructor(
+    private supabase: SupabaseService,
+    private fuseauHoraireService: FuseauHoraireService
+  ) {
     this.checkSession();
     this.loadStoredUser();
   }
@@ -171,7 +176,7 @@ export class AuthService {
           .update({ 
             password: password, // TODO: hasher le mot de passe en production
             first_login: false,
-            updated_at: new Date().toISOString()
+            updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
           })
           .eq('id', restaurant.id);
 
@@ -220,7 +225,9 @@ export class AuthService {
       // Update last login (add a last_login field to restaurants table if needed)
       await this.supabase
         .from('restaurants')
-        .update({ updated_at: new Date().toISOString() })
+        .update({ 
+          updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
+        })
         .eq('id', restaurant.id);
       
       this.currentUserSubject.next(user);
@@ -288,7 +295,7 @@ export class AuthService {
         .from('delivery_users')
         .update({ 
           is_online: true,
-          updated_at: new Date().toISOString()
+          updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
         })
         .eq('id', deliveryUser.id);
       
@@ -315,7 +322,7 @@ export class AuthService {
         .from('delivery_users')
         .update({ 
           is_online: false,
-          updated_at: new Date().toISOString()
+          updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
         })
         .eq('id', Number(currentUser.deliveryId));
       
@@ -443,7 +450,7 @@ export class AuthService {
         .from('delivery_users')
         .update({ 
           is_online: false,
-          updated_at: new Date().toISOString()
+          updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
         })
         .eq('id', deliveryId);
 
@@ -472,7 +479,7 @@ export class AuthService {
         .from('restaurants')
         .update({ 
           last_activity_at: null,
-          updated_at: new Date().toISOString()
+          updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
         })
         .eq('id', restaurantId);
 

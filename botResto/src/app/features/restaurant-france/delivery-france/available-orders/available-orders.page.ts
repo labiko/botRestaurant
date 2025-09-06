@@ -269,9 +269,17 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     await alert.present();
   }
 
+
+  /* ===== FONCTIONNALITÉ REFUS DÉSACTIVÉE =====
+   * Bouton "Refuser" retiré de l'interface pour simplifier l'UX
+   * Logique : Pas intéressé = Ne fait rien (ignore la notification)
+   * Code conservé ci-dessous pour réactivation future si nécessaire
+   */
+
   /**
    * NOUVEAU - Refuser une commande avec sélection de raison
    */
+  /*
   async refuseOrder(order: DeliveryOrder) {
     if (!this.currentDriver) return;
 
@@ -296,6 +304,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   /**
    * Traiter la raison de refus sélectionnée
    */
+  /*
   private async handleRefusalReason(order: DeliveryOrder, reasonCode: string) {
     if (!this.currentDriver) return;
 
@@ -312,6 +321,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   /**
    * Demander une raison personnalisée
    */
+  /*
   private async showCustomReasonPrompt(order: DeliveryOrder) {
     const alert = await this.alertController.create({
       header: 'Précisez votre raison',
@@ -344,6 +354,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   /**
    * Traiter le refus de la commande via le service
    */
+  /*
   private async processOrderRefusal(order: DeliveryOrder, reason: string, customReason?: string) {
     if (!this.currentDriver) return;
 
@@ -374,6 +385,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
       await loading.dismiss();
     }
   }
+  */
 
   /**
    * FONCTIONS UTILITAIRES - IDENTIQUES AU DASHBOARD ET MY-ORDERS

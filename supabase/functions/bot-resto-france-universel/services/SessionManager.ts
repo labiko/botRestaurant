@@ -2,6 +2,9 @@
 // SOLID - Single Responsibility : Gère uniquement les sessions
 // Persistance complète de l'état et contexte utilisateur
 
+// ⏱️ Configuration durée de session
+const SESSION_DURATION_MINUTES = 120; // 2 heures - Durée raisonnable pour commandes livraison
+
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { 
   ISessionManager, 
@@ -68,7 +71,7 @@ export class SessionManager implements ISessionManager {
       const dbUpdates = this.mapSessionToDatabase(updates);
       
       // Ajouter timestamp de mise à jour
-      dbUpdates.updated_at = new Date().toISOString();
+      dbUpdates.updated_at = new Date();
       
       const { error } = await this.supabase
         .from('france_user_sessions')
@@ -111,7 +114,7 @@ export class SessionManager implements ISessionManager {
           },
           cart_items: [],
           total_amount: 0,
-          updated_at: new Date().toISOString()
+          updated_at: new Date()
         })
         .eq('phone_number', phoneNumber);
 
@@ -160,9 +163,9 @@ export class SessionManager implements ISessionManager {
         },
         cart_items: [],
         total_amount: 0,
-        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        expires_at: new Date(Date.now() + SESSION_DURATION_MINUTES * 60 * 1000), // 2 heures
+        created_at: new Date(),
+        updated_at: new Date()
       };
 
       const { data: newSession, error } = await this.supabase
@@ -258,7 +261,7 @@ export class SessionManager implements ISessionManager {
     }
     
     if (session.expiresAt !== undefined) {
-      dbData.expires_at = session.expiresAt.toISOString();
+      dbData.expires_at = session.expiresAt;
     }
 
     return dbData;
@@ -331,8 +334,8 @@ export class SessionManager implements ISessionManager {
       const { error } = await this.supabase
         .from('france_user_sessions')
         .update({ 
-          expires_at: newExpiresAt.toISOString(),
-          updated_at: new Date().toISOString()
+          expires_at: newExpiresAt,
+          updated_at: new Date()
         })
         .eq('id', sessionId);
 

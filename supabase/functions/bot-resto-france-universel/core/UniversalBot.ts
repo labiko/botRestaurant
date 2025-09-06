@@ -1,6 +1,9 @@
 // 🤖 BOT UNIVERSEL - ORCHESTRATEUR PRINCIPAL
 // Architecture SOLID : Single Responsibility + Dependency Injection
 
+// ⏱️ Configuration durée de session
+const SESSION_DURATION_MINUTES = 120; // 2 heures - Durée raisonnable pour commandes livraison
+
 import { 
   IMessageHandler, 
   ISessionManager, 
@@ -18,6 +21,7 @@ import { OrderService } from '../services/OrderService.ts';
 import { AddressManagementService } from '../services/AddressManagementService.ts';
 import { GooglePlacesService } from '../services/GooglePlacesService.ts';
 import { WhatsAppContactService } from '../services/WhatsAppContactService.ts';
+import { CancellationService } from '../services/CancellationService.ts';
 
 /**
  * Orchestrateur principal du bot universel
@@ -29,6 +33,7 @@ export class UniversalBot implements IMessageHandler {
   private addressService: AddressManagementService;
   private googlePlacesService: GooglePlacesService;
   private whatsappContactService: WhatsAppContactService;
+  private cancellationService: CancellationService;
   private supabaseUrl: string;
   private supabaseKey: string;
   
@@ -62,6 +67,13 @@ export class UniversalBot implements IMessageHandler {
       this.whatsappContactService
     );
     this.googlePlacesService = new GooglePlacesService();
+    
+    // Initialiser le service d'annulation
+    this.cancellationService = new CancellationService(
+      this.supabaseUrl, 
+      this.supabaseKey, 
+      this.messageSender as any // WhatsAppNotificationFranceService compatible
+    );
   }
 
   /**
@@ -89,13 +101,20 @@ export class UniversalBot implements IMessageHandler {
         }
       }
       
-      // PRIORITÉ 2: Messages classiques (salut/bonjour) - Menu générique  
+      // PRIORITÉ 2: Détection commande annulation
+      if (message.toLowerCase().trim() === 'annuler') {
+        const result = await this.cancellationService.handleCancellationRequest(phoneNumber);
+        await this.messageSender.sendMessage(phoneNumber, result.message);
+        return;
+      }
+      
+      // PRIORITÉ 3: Messages classiques (salut/bonjour) - Menu générique  
       if (message.toLowerCase().includes('salut') || message.toLowerCase().includes('bonjour')) {
         await this.handleGenericGreeting(phoneNumber);
         return;
       }
       
-      // PRIORITÉ 3: Gestion complète des messages selon l'état de session
+      // PRIORITÉ 4: Gestion complète des messages selon l'état de session
       const session = await this.sessionManager.getSession(phoneNumber);
       
       console.log('🔄 [SESSION_GET] Session récupérée:', {
@@ -118,7 +137,7 @@ export class UniversalBot implements IMessageHandler {
         return;
       }
       
-      // PRIORITÉ 4: Réponse par défaut
+      // PRIORITÉ 5: Réponse par défaut
       await this.messageSender.sendMessage(phoneNumber, 
         `🤖 Message reçu : "${message}"\n🚧 Bot universel opérationnel.\n💡 **Comment commander :**\n• Scannez le QR code du restaurant\n• Ou tapez "salut" pour voir les infos\nStatus : Bot universel ✅`);
       
@@ -551,7 +570,7 @@ export class UniversalBot implements IMessageHandler {
       
       // Créer nouvelle session avec l'état CHOOSING_DELIVERY_MODE
       const expiresAt = new Date();
-      expiresAt.setMinutes(expiresAt.getMinutes() + 30); // 30 minutes d'expiration
+      expiresAt.setMinutes(expiresAt.getMinutes() + SESSION_DURATION_MINUTES); // 2 heures d'expiration
       
       await supabase
         .from('france_user_sessions')
@@ -567,7 +586,7 @@ export class UniversalBot implements IMessageHandler {
           },
           cart_items: [],
           total_amount: 0,
-          expires_at: expiresAt.toISOString()
+          expires_at: expiresAt
         });
         
       console.log(`✅ [CreateSession] Session créée pour restaurant ${restaurant.name}`);
@@ -633,7 +652,7 @@ export class UniversalBot implements IMessageHandler {
     // Commandes globales
     if (normalizedMessage === 'annuler') {
       await this.deleteSession(phoneNumber);
-      await this.messageSender.sendMessage(phoneNumber, '❌ Commande annulée. Tapez le numéro du restaurant pour recommencer.');
+      await this.messageSender.sendMessage(phoneNumber, '❌ Session annulée. Tapez le numéro du restaurant pour recommencer.');
       return;
     }
 
@@ -682,6 +701,10 @@ export class UniversalBot implements IMessageHandler {
         
       case 'AWAITING_CART_ACTIONS':
         await this.handleCartActions(phoneNumber, session, message);
+        break;
+        
+      case 'AWAITING_CANCELLATION_CONFIRMATION':
+        await this.handleCancellationConfirmationFlow(phoneNumber, session, message);
         break;
         
       case 'AWAITING_QUANTITY':
@@ -1804,6 +1827,61 @@ export class UniversalBot implements IMessageHandler {
       console.log(`🗑️ [DeleteSession] Sessions supprimées pour: ${phoneNumber}`);
     } catch (error) {
       console.error('❌ [DeleteSession] Erreur suppression session:', error);
+    }
+  }
+
+
+  /**
+   * Gérer le flux de confirmation d'annulation
+   */
+  private async handleCancellationConfirmationFlow(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      console.log(`🔍 [CancellationFlow] handleCancellationConfirmationFlow - phoneNumber: ${phoneNumber}`);
+      console.log(`🔍 [CancellationFlow] message: "${message}"`);
+      console.log(`🔍 [CancellationFlow] session data:`, JSON.stringify(session, null, 2));
+      console.log(`🔍 [CancellationFlow] session.sessionData:`, JSON.stringify(session.sessionData, null, 2));
+      console.log(`🔍 [CancellationFlow] session expires_at:`, session.expiresAt);
+      console.log(`🔍 [CancellationFlow] current time:`, new Date());
+      
+      // Vérifier expiration
+      const now = new Date();
+      const expiresAt = new Date(session.expiresAt || session.expires_at);
+      const isExpired = now > expiresAt;
+      console.log(`🔍 [CancellationFlow] Session expired?:`, isExpired);
+      
+      const orderData = {
+        orderId: session.sessionData?.pendingCancellationOrderId,
+        orderNumber: session.sessionData?.pendingCancellationOrderNumber
+      };
+      
+      console.log(`🔍 [CancellationFlow] extracted orderData:`, JSON.stringify(orderData, null, 2));
+      
+      if (!orderData.orderId) {
+        console.log(`❌ [CancellationFlow] No orderId found - session expired or data missing`);
+        await this.deleteSession(phoneNumber);
+        await this.messageSender.sendMessage(phoneNumber, 
+          '❌ Session expirée. Tapez "annuler" pour recommencer.'
+        );
+        return;
+      }
+      
+      // Déléguer au service d'annulation
+      const result = await this.cancellationService.handleCancellationConfirmation(orderData, message);
+      
+      // Envoyer message résultat
+      await this.messageSender.sendMessage(phoneNumber, result.message);
+      
+      // Le service gère le nettoyage de session
+      if (result.action !== 'invalid_response') {
+        await this.cancellationService.cleanupCancellationSession(phoneNumber);
+      }
+      
+    } catch (error) {
+      console.error('❌ [CancellationConfirmationFlow] Erreur:', error);
+      await this.cancellationService.cleanupCancellationSession(phoneNumber);
+      await this.messageSender.sendMessage(phoneNumber, 
+        '❌ Erreur lors de l\'annulation. Veuillez réessayer.'
+      );
     }
   }
 }

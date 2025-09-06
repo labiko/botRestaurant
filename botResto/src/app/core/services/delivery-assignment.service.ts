@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { FuseauHoraireService } from './fuseau-horaire.service';
 import { BehaviorSubject, Observable, timer, Subscription } from 'rxjs';
 import { SupabaseFranceService } from './supabase-france.service';
 import { WhatsAppNotificationFranceService } from './whatsapp-notification-france.service';
@@ -40,6 +41,7 @@ export interface AvailableDriver extends FranceDriver {
   providedIn: 'root'
 })
 export class DeliveryAssignmentService {
+
   private assignmentsSubject = new BehaviorSubject<AssignmentDetails[]>([]);
   public assignments$ = this.assignmentsSubject.asObservable();
 
@@ -52,7 +54,8 @@ export class DeliveryAssignmentService {
 
   constructor(
     private supabaseFranceService: SupabaseFranceService,
-    private whatsAppFranceService: WhatsAppNotificationFranceService
+    private whatsAppFranceService: WhatsAppNotificationFranceService,
+    private fuseauHoraireService: FuseauHoraireService
   ) {
     this.startPeriodicCleanup();
   }
@@ -473,7 +476,7 @@ Répondez:
     try {
       const updateData: any = {
         driver_assignment_status: status,
-        updated_at: new Date().toISOString()
+        updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
       };
 
       if (status === 'searching') {
@@ -546,8 +549,8 @@ Répondez:
         .update({
           assigned_driver_id: driverId,
           driver_assignment_status: 'assigned',
-          delivery_started_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          delivery_started_at: this.fuseauHoraireService.getCurrentTimeForDatabase(),
+          updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
         })
         .eq('id', orderId);
 

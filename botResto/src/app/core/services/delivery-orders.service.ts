@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { FuseauHoraireService } from './fuseau-horaire.service';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { SupabaseFranceService } from './supabase-france.service';
 import { FranceOrder, OrderAction } from './france-orders.service';
@@ -17,13 +18,17 @@ export interface DeliveryOrder extends FranceOrder {
   providedIn: 'root'
 })
 export class DeliveryOrdersService {
+
   private driverOrdersSubject = new BehaviorSubject<DeliveryOrder[]>([]);
   private availableOrdersSubject = new BehaviorSubject<DeliveryOrder[]>([]);
   
   public driverOrders$ = this.driverOrdersSubject.asObservable();
   public availableOrders$ = this.availableOrdersSubject.asObservable();
 
-  constructor(private supabaseFranceService: SupabaseFranceService) { }
+  constructor(
+    private supabaseFranceService: SupabaseFranceService,
+    private fuseauHoraireService: FuseauHoraireService
+  ) { }
 
   /**
    * Charger les commandes assignées à un livreur spécifique
@@ -170,7 +175,7 @@ export class DeliveryOrdersService {
         .from('france_orders')
         .update({
           driver_id: driverId,
-          updated_at: new Date().toISOString()
+          updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
         })
         .eq('id', orderId);
 
@@ -193,7 +198,7 @@ export class DeliveryOrdersService {
     try {
       const updateData: any = {
         status: newStatus,
-        updated_at: new Date().toISOString()
+        updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
       };
 
       // Si on commence la livraison, ajouter l'heure estimée

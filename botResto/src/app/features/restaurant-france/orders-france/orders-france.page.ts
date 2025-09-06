@@ -8,6 +8,7 @@ import { DriversFranceService } from '../../../core/services/drivers-france.serv
 import { UniversalOrderDisplayService, FormattedItem } from '../../../core/services/universal-order-display.service';
 import { AddressWhatsAppService } from '../../../core/services/address-whatsapp.service';
 import { SupabaseFranceService } from '../../../core/services/supabase-france.service';
+import { FuseauHoraireService } from '../../../core/services/fuseau-horaire.service';
 
 @Component({
   selector: 'app-orders-france',
@@ -20,6 +21,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   selectedFilter: string = 'all';
   isLoading: boolean = false;
   private ordersSubscription?: Subscription;
+  private autoRefreshSubscription?: Subscription;
   
   // NOUVEAU : Propriétés pour le système de filtre moderne
   searchText: string = '';
@@ -37,6 +39,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     private alertController: AlertController,
     private deliveryAssignmentService: DeliveryAssignmentService,
     private driversFranceService: DriversFranceService,
+    private fuseauHoraireService: FuseauHoraireService,
     private universalOrderDisplayService: UniversalOrderDisplayService,
     private addressWhatsAppService: AddressWhatsAppService,
     private supabaseFranceService: SupabaseFranceService
@@ -44,12 +47,17 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.initializeOrders();
+    this.startAutoRefresh();
   }
 
   ngOnDestroy() {
     if (this.ordersSubscription) {
       this.ordersSubscription.unsubscribe();
     }
+    if (this.autoRefreshSubscription) {
+      this.autoRefreshSubscription.unsubscribe();
+    }
+    this.franceOrdersService.stopAutoRefresh();
   }
 
   private async initializeOrders() {
@@ -75,6 +83,10 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     }
   }
 
+  private startAutoRefresh(): void {
+    this.autoRefreshSubscription = this.franceOrdersService.startAutoRefresh(this.restaurantId);
+  }
+
   async manualRefresh(event?: any) {
     try {
       console.log('🔄 [OrdersFrance] Actualisation manuelle des commandes...');
@@ -88,6 +100,9 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
       // Recharger les commandes
       await this.franceOrdersService.loadOrders(this.restaurantId);
+      
+      // CORRECTION: Redémarrer l'auto-refresh après le refresh manuel
+      this.startAutoRefresh();
       
       console.log('✅ [OrdersFrance] Commandes actualisées avec succès');
       this.presentToast('Commandes actualisées', 'success');
@@ -120,7 +135,13 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     // Appliquer d'abord le filtre par statut
     let statusFilteredOrders: FranceOrder[] = [];
     if (this.selectedFilter === 'all') {
-      statusFilteredOrders = this.orders;
+      statusFilteredOrders = this.orders.filter(order => 
+        order.status !== 'livree' && order.status !== 'annulee'
+      );
+    } else if (this.selectedFilter === 'historique') {
+      statusFilteredOrders = this.orders.filter(order => 
+        order.status === 'livree' || order.status === 'annulee'
+      );
     } else {
       statusFilteredOrders = this.orders.filter(order => order.status === this.selectedFilter);
     }
@@ -163,7 +184,14 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
   getOrderCountByStatus(status: string): number {
     if (status === 'all') {
-      return this.orders.length;
+      return this.orders.filter(order => 
+        order.status !== 'livree' && order.status !== 'annulee'
+      ).length;
+    }
+    if (status === 'historique') {
+      return this.orders.filter(order => 
+        order.status === 'livree' || order.status === 'annulee'
+      ).length;
     }
     return this.orders.filter(order => order.status === status).length;
   }
@@ -669,9 +697,12 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    * NOUVEAU : Obtenir le temps écoulé depuis la notification
    */
   getNotificationTime(order: FranceOrder): string {
-    // TODO: Calculer le temps réel depuis la dernière notification
-    // Pour l'instant, retourner une valeur statique
-    return 'il y a 5 min';
+    if (!order.updated_at) {
+      return 'il y a quelques instants';
+    }
+    
+    // Utilise le service FuseauHoraire pour un calcul précis
+    return this.fuseauHoraireService.getTimeAgo(order.updated_at);
   }
 
 }

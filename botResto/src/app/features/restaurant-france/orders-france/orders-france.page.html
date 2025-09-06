@@ -32,6 +32,9 @@
       <ion-segment-button value="en_livraison">
         <ion-label>En livraison ({{ getOrderCountByStatus('en_livraison') }})</ion-label>
       </ion-segment-button>
+      <ion-segment-button value="historique">
+        <ion-label>Historique ({{ getOrderCountByStatus('historique') }})</ion-label>
+      </ion-segment-button>
     </ion-segment>
   </ion-toolbar>
 </ion-header>
@@ -131,10 +134,10 @@
             <ion-badge [color]="getStatusColor(order.status)" class="status-badge">
               {{ getStatusText(order.status) }}
             </ion-badge>
-            <ion-badge color="medium" outline>
+            <ion-badge color="medium" outline *ngIf="order.status !== 'livree' && order.status !== 'annulee'">
               {{ getDeliveryModeText(order.delivery_mode) }}
             </ion-badge>
-            <ion-badge color="tertiary" outline *ngIf="order.payment_mode">
+            <ion-badge color="tertiary" outline *ngIf="order.payment_mode && order.status !== 'livree' && order.status !== 'annulee'">
               {{ getPaymentModeText(order.payment_mode) }}
             </ion-badge>
           </div>
@@ -212,7 +215,8 @@
         <div class="delivery-info">
           <h4>Informations commande:</h4>
           <p><strong>Créée le:</strong> {{ formatDateTime(order.created_at) }}</p>
-          <p *ngIf="order.customer_name"><strong>Client:</strong> {{ order.customer_name }}</p>
+          <p><strong>Mise à jour:</strong> {{ formatDateTime(order.updated_at) }}</p>
+          <p><strong>Client:</strong> {{ order.phone_number }}</p>
         </div>
 
         <!-- Delivery information - VERSION ENRICHIE -->
@@ -236,6 +240,7 @@
           </div>
           
           <p *ngIf="order.delivery_address"><strong>Adresse:</strong> {{ order.delivery_address }}</p>
+          <p *ngIf="order.date_validation_code && order.status === 'livree'"><strong>Livrée le:</strong> {{ formatDateTime(order.date_validation_code) }}</p>
           
           <!-- Informations client enrichies -->
           <div class="customer-info-enriched">

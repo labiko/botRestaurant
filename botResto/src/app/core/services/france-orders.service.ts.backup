@@ -6,7 +6,6 @@ import { WhatsAppNotificationFranceService, OrderDataFrance } from './whatsapp-n
 import { DeliveryNotificationService } from './delivery-notification.service';
 import { UniversalOrderDisplayService } from './universal-order-display.service';
 import { AutoRefreshService } from './auto-refresh.service';
-import { FuseauHoraireService } from './fuseau-horaire.service';
 import { REFRESH_CONFIG } from '../config/refresh.config';
 
 // Interface pour les paramètres de notification WhatsApp
@@ -103,8 +102,7 @@ export class FranceOrdersService {
     private whatsAppFranceService: WhatsAppNotificationFranceService,
     private deliveryNotificationService: DeliveryNotificationService,
     private universalOrderDisplayService: UniversalOrderDisplayService,
-    private autoRefreshService: AutoRefreshService,
-    private fuseauHoraireService: FuseauHoraireService
+    private autoRefreshService: AutoRefreshService
   ) { }
 
   async loadOrders(restaurantId: number): Promise<void> {
@@ -264,7 +262,7 @@ export class FranceOrdersService {
       'livree': [
       ],
       'annulee': [
-        // { key: 'restore', label: 'Restaurer', color: 'primary', nextStatus: 'pending' } // BOUTON SUPPRIMÉ - Inutile
+        { key: 'restore', label: 'Restaurer', color: 'primary', nextStatus: 'pending' }
       ]
     };
 
@@ -293,13 +291,12 @@ export class FranceOrdersService {
       // Étape 1: Mise à jour du statut en base de données
       const updateData: any = {
         status: newStatus,
-        updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
+        updated_at: new Date().toISOString()
       };
 
       if (newStatus === 'en_livraison') {
-        updateData.delivery_started_at = this.fuseauHoraireService.getCurrentTimeForDatabase();
+        updateData.delivery_started_at = new Date().toISOString();
       }
-
 
       const { error } = await this.supabaseFranceService.client
         .from('france_orders')
@@ -413,8 +410,6 @@ export class FranceOrdersService {
    */
   private async getOrderCompleteData(orderId: number): Promise<any | null> {
     try {
-      console.log(`🔍 [FranceOrders] Récupération données commande ID: ${orderId}`);
-      
       const { data, error } = await this.supabaseFranceService.client
         .from('france_orders')
         .select(`
@@ -427,8 +422,7 @@ export class FranceOrdersService {
           ),
           france_delivery_drivers (
             id,
-            first_name,
-            last_name,
+            name,
             phone_number
           )
         `)
@@ -436,26 +430,13 @@ export class FranceOrdersService {
         .single();
 
       if (error) {
-        console.error('❌ [FranceOrders] Erreur récupération données commande:', {
-          orderId,
-          error,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
+        console.error('❌ [FranceOrders] Erreur récupération données commande:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('❌ [FranceOrders] Erreur service récupération données:', {
-        orderId,
-        error,
-        errorType: typeof error,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      console.error('❌ [FranceOrders] Erreur service récupération données:', error);
       return null;
     }
   }
