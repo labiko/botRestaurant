@@ -195,17 +195,35 @@
           </div>
           
           
-          <!-- NOUVEAU : Statut d'assignation livreur -->
+          <!-- NOUVEAU : Statut d'assignation livreur - VERSION MODERNE -->
           <div class="assignment-status" *ngIf="order.status === 'prete' || order.status === 'en_livraison'">
             <div class="assignment-row">
               <span><strong>Assignation:</strong></span>
-              <ion-badge [color]="getAssignmentStatusColor(order)" class="assignment-badge">
-                {{ getAssignmentStatusText(order) }}
-              </ion-badge>
+              <div class="driver-info-badge" *ngIf="order.driver_id && order.assigned_driver; else noDriverBadge">
+                <div class="driver-avatar">
+                  <ion-icon name="person" class="driver-icon"></ion-icon>
+                </div>
+                <div class="driver-details">
+                  <div class="driver-name">{{ order.assigned_driver.first_name || 'Livreur' }}</div>
+                  <div class="driver-phone">
+                    <ion-icon name="call" class="phone-icon"></ion-icon>
+                    {{ order.assigned_driver.phone_number }}
+                  </div>
+                  <div class="delivery-status" *ngIf="order.delivery_started_at && order.status === 'en_livraison'">
+                    <div class="pulse-dot"></div>
+                    <span class="status-text">En route depuis {{ franceOrdersService.getDeliveryStartedMinutesAgo(order.delivery_started_at) }} min</span>
+                  </div>
+                </div>
+              </div>
+              <ng-template #noDriverBadge>
+                <ion-badge color="warning" class="assignment-badge">
+                  Non assignée
+                </ion-badge>
+              </ng-template>
             </div>
             
             <!-- CORRECTION : Afficher le statut de notification pour les commandes non assignées -->
-            <div *ngIf="!order.assigned_driver_id && order.status === 'prete'" class="notification-status">
+            <div *ngIf="!order.driver_id && order.status === 'prete'" class="notification-status">
               <div class="notification-info">
                 <ion-icon name="notifications" color="primary"></ion-icon>
                 <span class="notification-text">📡 Notifié à {{ getNotifiedDriversCount(order) }} livreurs - {{ getNotificationTime(order) }}</span>

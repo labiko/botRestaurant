@@ -25,7 +25,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   private restaurantId = 1;
 
   constructor(
-    private franceOrdersService: FranceOrdersService,
+    public franceOrdersService: FranceOrdersService,
     public authService: AuthFranceService,
     private toastController: ToastController,
     private alertController: AlertController,
@@ -504,19 +504,28 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    * Obtenir le statut d'assignation pour affichage
    */
   getAssignmentStatusText(order: FranceOrder): string {
-    if (!order.assigned_driver_id) {
+    if (!order.driver_id || !order.assigned_driver) {
       return 'Non assignée';
     }
     
-    // TODO: Récupérer le nom du livreur assigné
-    return `Assignée (ID: ${order.assigned_driver_id})`;
+    // Utiliser le prénom depuis la base de données
+    const firstName = order.assigned_driver.first_name || 'Livreur';
+    let statusText = `${firstName} • 📞 ${order.assigned_driver.phone_number}`;
+    
+    // Ajouter le temps écoulé si la livraison a commencé
+    if (order.delivery_started_at && order.status === 'en_livraison') {
+      const minutesAgo = this.franceOrdersService.getDeliveryStartedMinutesAgo(order.delivery_started_at);
+      statusText += ` • Livraison commencée il y a ${minutesAgo} min`;
+    }
+    
+    return statusText;
   }
 
   /**
    * Obtenir la couleur du statut d'assignation
    */
   getAssignmentStatusColor(order: FranceOrder): string {
-    if (!order.assigned_driver_id) {
+    if (!order.driver_id) {
       return 'warning';
     }
     return 'success';

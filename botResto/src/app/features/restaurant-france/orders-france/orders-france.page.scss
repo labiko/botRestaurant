@@ -48,6 +48,109 @@
   }
 }
 
+// Badge moderne pour les informations du livreur
+.driver-info-badge {
+  display: flex;
+  align-items: center;
+  border-radius: 16px;
+  padding: 12px 16px;
+  margin: 8px 0;
+  transition: all 0.3s ease;
+  animation: slideInRight 0.5s ease-out;
+  
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.driver-avatar {
+  background: var(--ion-color-primary);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  
+  .driver-icon {
+    color: white;
+    font-size: 20px;
+  }
+}
+
+.driver-details {
+  flex: 1;
+  color: var(--ion-color-dark);
+  
+  .driver-name {
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  
+  .driver-phone {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    opacity: 0.9;
+    margin-bottom: 4px;
+    
+    .phone-icon {
+      margin-right: 6px;
+      font-size: 12px;
+    }
+  }
+  
+  .delivery-status {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    opacity: 0.8;
+    
+    .status-text {
+      margin-left: 8px;
+    }
+  }
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: #4ade80;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+// Animations
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+  }
+  
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(74, 222, 128, 0);
+  }
+  
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
 // Styles pour le nouveau système d'affichage universel
 .item-card {
   // Configuration inline (tags colorés sous le nom) - FORMAT rl1.png

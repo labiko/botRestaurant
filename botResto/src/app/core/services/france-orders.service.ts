@@ -58,6 +58,13 @@ export interface FranceOrder {
     last_reminder_at?: string;
   };
   drivers_notified_count?: number;
+  // NOUVEAU : Données du livreur assigné
+  assigned_driver?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    phone_number: string;
+  };
 }
 
 export interface OrderAction {
@@ -101,6 +108,12 @@ export class FranceOrdersService {
             latitude,
             longitude,
             address_label
+          ),
+          assigned_driver:france_delivery_drivers!france_orders_driver_fkey(
+            id,
+            first_name,
+            last_name,
+            phone_number
           )
         `)
         .eq('restaurant_id', restaurantId)
@@ -285,12 +298,18 @@ export class FranceOrdersService {
       console.log(`🔄 [FranceOrders] Changement statut pour commande ${orderId}: "${currentStatus}" → "${newStatus}" (changé: ${statusChanged})`);
 
       // Étape 1: Mise à jour du statut en base de données
+      const updateData: any = {
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      };
+
+      if (newStatus === 'en_livraison') {
+        updateData.delivery_started_at = new Date().toISOString();
+      }
+
       const { error } = await this.supabaseFranceService.client
         .from('france_orders')
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', orderId);
 
       if (error) {
@@ -409,6 +428,11 @@ export class FranceOrdersService {
             name,
             phone,
             whatsapp_number
+          ),
+          france_delivery_drivers (
+            id,
+            name,
+            phone_number
           )
         `)
         .eq('id', orderId)
@@ -473,8 +497,11 @@ export class FranceOrdersService {
       deliveryAddress: orderData.delivery_address || '',
       validationCode: orderData.delivery_validation_code || '',
       customerName: orderData.customer_name || '',
-      estimatedTime: '30-40 min', // Valeur par défaut
-      reason: '' // Pour les annulations
+      estimatedTime: '10-15 min', // Valeur par défaut
+      reason: '', // Pour les annulations
+      // NOUVEAU : Données du livreur
+      driverName: orderData.france_delivery_drivers?.name || 'Livreur en cours',
+      driverPhone: orderData.france_delivery_drivers?.phone_number || 'Non disponible'
     };
   }
 
@@ -605,6 +632,13 @@ export class FranceOrdersService {
       hour: '2-digit', 
       minute: '2-digit' 
     });
+  }
+
+  getDeliveryStartedMinutesAgo(deliveryStartedAt: string): number {
+    const startTime = new Date(deliveryStartedAt);
+    const now = new Date();
+    const diffMs = now.getTime() - startTime.getTime();
+    return Math.floor(diffMs / (1000 * 60)); // Convertir en minutes
   }
 
   formatDateTime(dateString: string): string {

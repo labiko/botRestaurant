@@ -31,6 +31,8 @@ export interface OrderDataFrance {
   customerName?: string;
   estimatedTime?: string;
   reason?: string;
+  driverName?: string;
+  driverPhone?: string;
 }
 
 @Injectable({
@@ -73,9 +75,7 @@ export class WhatsAppNotificationFranceService {
     // EN LIVRAISON : Info livreur et suivi
     en_livraison: `🚚 **EN ROUTE !**
 📋 N°{orderNumber}
-
-🏍️ Livreur : {driverName}
-📞 {driverPhone}
+🏍️ Livreur : {driverName} • 📞 {driverPhone}
 ⏰ Arrivée : ~{estimatedTime}
 {conditionalValidationCode}`,
 
@@ -303,11 +303,7 @@ Merci pour votre commande !
       // CONDITIONALVALIDATIONCODE : Pour livraison uniquement
       conditionalValidationCode: isDelivery && data.validationCode ? 
         `🔐 Code : ${data.validationCode}` : 
-        '',
-        
-      // Valeurs par défaut pour les champs livreur
-      driverName: 'Livreur en cours',
-      driverPhone: 'Contact restaurant'
+        ''
     };
   }
 
