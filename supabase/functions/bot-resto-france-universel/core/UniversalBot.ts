@@ -14,6 +14,10 @@ import {
 } from '../types.ts';
 
 import { CompositeWorkflowExecutor } from '../services/CompositeWorkflowExecutor.ts';
+import { OrderService } from '../services/OrderService.ts';
+import { AddressManagementService } from '../services/AddressManagementService.ts';
+import { GooglePlacesService } from '../services/GooglePlacesService.ts';
+import { WhatsAppContactService } from '../services/WhatsAppContactService.ts';
 
 /**
  * Orchestrateur principal du bot universel
@@ -21,6 +25,12 @@ import { CompositeWorkflowExecutor } from '../services/CompositeWorkflowExecutor
  */
 export class UniversalBot implements IMessageHandler {
   private compositeWorkflowExecutor: CompositeWorkflowExecutor;
+  private orderService: OrderService;
+  private addressService: AddressManagementService;
+  private googlePlacesService: GooglePlacesService;
+  private whatsappContactService: WhatsAppContactService;
+  private supabaseUrl: string;
+  private supabaseKey: string;
   
   constructor(
     private sessionManager: ISessionManager,
@@ -28,12 +38,30 @@ export class UniversalBot implements IMessageHandler {
     private workflowExecutor: IWorkflowExecutor,
     private messageSender: IMessageSender
   ) {
+    this.supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    this.supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
     // Initialiser le service de workflow composite
     this.compositeWorkflowExecutor = new CompositeWorkflowExecutor(
       messageSender,
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      this.supabaseUrl,
+      this.supabaseKey
     );
+    
+    // Initialiser le service WhatsApp Contact
+    const greenApiUrl = Deno.env.get('GREEN_API_URL') || 'https://api.green-api.com';
+    const instanceId = Deno.env.get('GREEN_API_INSTANCE_ID')!;
+    const apiToken = Deno.env.get('GREEN_API_TOKEN')!;
+    this.whatsappContactService = new WhatsAppContactService(greenApiUrl, instanceId, apiToken);
+    
+    // Initialiser les services de commande et adresse
+    this.orderService = new OrderService(this.supabaseUrl, this.supabaseKey);
+    this.addressService = new AddressManagementService(
+      this.supabaseUrl, 
+      this.supabaseKey, 
+      this.whatsappContactService
+    );
+    this.googlePlacesService = new GooglePlacesService();
   }
 
   /**
@@ -652,8 +680,28 @@ export class UniversalBot implements IMessageHandler {
         await this.handleWorkflowActions(phoneNumber, session, message);
         break;
         
+      case 'AWAITING_CART_ACTIONS':
+        await this.handleCartActions(phoneNumber, session, message);
+        break;
+        
       case 'AWAITING_QUANTITY':
         await this.handleQuantityInput(phoneNumber, session, message);
+        break;
+        
+      case 'AWAITING_DELIVERY_MODE_CHOICE':
+        await this.handleDeliveryModeSelection(phoneNumber, session, message);
+        break;
+        
+      case 'AWAITING_ADDRESS_CHOICE':
+        await this.handleAddressChoice(phoneNumber, session, message);
+        break;
+        
+      case 'AWAITING_NEW_ADDRESS':
+        await this.handleNewAddressInput(phoneNumber, session, message);
+        break;
+        
+      case 'AWAITING_ADDRESS_CONFIRMATION':
+        await this.handleAddressConfirmation(phoneNumber, session, message);
         break;
         
       default:
@@ -1169,6 +1217,443 @@ export class UniversalBot implements IMessageHandler {
   }
   
   /**
+   * Gérer les actions après ajout au panier (99=Commander, 00=Panier, 0=Continuer)
+   */
+  private async handleCartActions(phoneNumber: string, session: any, message: string): Promise<void> {
+    const choice = message.trim();
+    
+    switch (choice) {
+      case '99': // Passer commande
+        await this.handleOrderCreation(phoneNumber, session);
+        break;
+        
+      case '00': // Voir panier complet
+        // TODO: Implémenter l'affichage détaillé du panier
+        await this.messageSender.sendMessage(phoneNumber,
+          '🛒 Affichage du panier détaillé...\n(Fonctionnalité en cours de développement)'
+        );
+        break;
+        
+      case '0': // Ajouter d'autres produits
+        const categoryId = session.sessionData?.selectedCategoryId;
+        if (categoryId) {
+          await this.showCategoryProducts(phoneNumber, session, categoryId);
+        } else {
+          await this.showRestaurantMenu(phoneNumber, session);
+        }
+        break;
+        
+      default:
+        await this.messageSender.sendMessage(phoneNumber,
+          '❌ Choix invalide.\n\n*ACTIONS RAPIDES:*\n⚡ 99 = Passer commande\n🛒 00 = Voir panier complet\n🍕 0  = Ajouter d\'autres produits'
+        );
+        // Garder le même état pour réessayer
+        break;
+    }
+  }
+
+  /**
+   * Gérer la création de commande - Workflow complet
+   * Suit l'architecture de l'ancien bot avec les principes universels
+   */
+  private async handleOrderCreation(phoneNumber: string, session: any): Promise<void> {
+    try {
+      console.log(`📦 [OrderCreation] Début création commande pour: ${phoneNumber}`);
+      
+      const cart = session.sessionData?.cart || [];
+      const restaurantId = session.sessionData?.selectedRestaurantId;
+      const deliveryMode = session.sessionData?.deliveryMode;
+      
+      if (!cart || cart.length === 0) {
+        await this.messageSender.sendMessage(phoneNumber, '❌ Votre panier est vide. Ajoutez des produits avant de commander.');
+        return;
+      }
+      
+      if (!restaurantId) {
+        await this.messageSender.sendMessage(phoneNumber, '❌ Restaurant non sélectionné. Recommencez votre commande.');
+        await this.deleteSession(phoneNumber);
+        return;
+      }
+
+      if (!deliveryMode) {
+        await this.messageSender.sendMessage(phoneNumber, '❌ Mode de livraison non sélectionné. Recommencez votre commande.');
+        await this.deleteSession(phoneNumber);
+        return;
+      }
+
+      // Diriger vers le workflow approprié selon le mode déjà sélectionné
+      if (deliveryMode === 'livraison') {
+        await this.handleDeliveryAddressWorkflow(phoneNumber, session);
+      } else {
+        // Sur place ou à emporter - directement vers création commande
+        await this.processOrderWithMode(phoneNumber, session, deliveryMode);
+      }
+      
+    } catch (error) {
+      console.error('❌ [OrderCreation] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de la création de commande. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * Demander le mode de livraison
+   */
+  private async askForDeliveryMode(phoneNumber: string, session: any): Promise<void> {
+    const message = `🚚 *CHOISISSEZ LE MODE DE SERVICE :*\n\n` +
+                   `📍 *1* - Sur place\n` +
+                   `📦 *2* - À emporter\n` +
+                   `🚚 *3* - Livraison\n\n` +
+                   `*Tapez votre choix (1, 2 ou 3)*`;
+
+    await this.messageSender.sendMessage(phoneNumber, message);
+    await this.sessionManager.updateSession(session.id, { 
+      botState: 'AWAITING_DELIVERY_MODE_CHOICE',
+      sessionData: session.sessionData
+    });
+  }
+
+  /**
+   * Gérer le choix du mode de livraison
+   */
+  private async handleDeliveryModeSelection(phoneNumber: string, session: any, message: string): Promise<void> {
+    const choice = parseInt(message.trim());
+    let deliveryMode = '';
+    
+    switch (choice) {
+      case 1:
+        deliveryMode = 'sur_place';
+        await this.processOrderWithMode(phoneNumber, session, deliveryMode);
+        break;
+      case 2:
+        deliveryMode = 'a_emporter';
+        await this.processOrderWithMode(phoneNumber, session, deliveryMode);
+        break;
+      case 3:
+        deliveryMode = 'livraison';
+        await this.handleDeliveryAddressWorkflow(phoneNumber, session);
+        break;
+      default:
+        await this.messageSender.sendMessage(phoneNumber, '❌ Choix invalide. Tapez 1, 2 ou 3.');
+        return;
+    }
+  }
+
+  /**
+   * Gérer le workflow d'adresse pour la livraison
+   */
+  private async handleDeliveryAddressWorkflow(phoneNumber: string, session: any): Promise<void> {
+    console.log(`📍 [AddressWorkflow] Début pour: ${phoneNumber}`);
+    
+    // Récupérer les adresses existantes
+    const cleanPhone = phoneNumber.replace('@c.us', '');
+    const existingAddresses = await this.addressService.getCustomerAddresses(cleanPhone);
+    
+    if (existingAddresses.length > 0) {
+      // Afficher les adresses existantes
+      const addressMessage = this.addressService.formatAddressSelectionMessage(existingAddresses);
+      await this.messageSender.sendMessage(phoneNumber, addressMessage);
+      
+      await this.sessionManager.updateSession(session.id, {
+        botState: 'AWAITING_ADDRESS_CHOICE',
+        sessionData: {
+          ...session.sessionData,
+          existingAddresses
+        }
+      });
+    } else {
+      // Première adresse
+      await this.messageSender.sendMessage(phoneNumber, 
+        '📍 *Première livraison !*\n\n📝 *Saisissez votre adresse complète*\n\n💡 *Exemple : 15 rue de la Paix, 75001 Paris*'
+      );
+      
+      await this.sessionManager.updateSession(session.id, {
+        botState: 'AWAITING_NEW_ADDRESS',
+        sessionData: session.sessionData
+      });
+    }
+  }
+
+  /**
+   * Traiter la commande avec le mode sélectionné
+   * SOLID - Délégue la logique métier au service dédié
+   */
+  private async processOrderWithMode(phoneNumber: string, session: any, deliveryMode: string): Promise<void> {
+    try {
+      const cart = session.sessionData?.cart || [];
+      const restaurantId = session.sessionData?.selectedRestaurantId;
+      
+      // Déléguer la création au service dédié
+      const order = await this.orderService.createOrderWorkflow(
+        phoneNumber,
+        cart,
+        restaurantId,
+        deliveryMode
+      );
+      
+      // Récupérer le nom du restaurant pour le message
+      const restaurantName = await this.getRestaurantName(restaurantId);
+      
+      // Envoyer la confirmation
+      const confirmationMessage = this.orderService.buildOrderConfirmationMessage(
+        order,
+        restaurantName,
+        deliveryMode
+      );
+      
+      await this.messageSender.sendMessage(phoneNumber, confirmationMessage);
+      await this.deleteSession(phoneNumber);
+      
+    } catch (error) {
+      console.error('❌ [ProcessOrder] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de la création de commande. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * Gérer le choix d'adresse existante
+   */
+  private async handleAddressChoice(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      const choice = parseInt(message.trim());
+      const existingAddresses = session.sessionData?.existingAddresses || [];
+      
+      if (choice === existingAddresses.length + 1) {
+        // Nouvelle adresse
+        await this.messageSender.sendMessage(phoneNumber, 
+          '📝 *Saisissez votre nouvelle adresse complète*\n\n💡 *Exemple : 15 rue de la Paix, 75001 Paris*'
+        );
+        
+        await this.sessionManager.updateSession(session.id, {
+          botState: 'AWAITING_NEW_ADDRESS',
+          sessionData: session.sessionData
+        });
+        return;
+      }
+      
+      if (choice >= 1 && choice <= existingAddresses.length) {
+        // Adresse existante sélectionnée
+        const selectedAddress = existingAddresses[choice - 1];
+        console.log(`📍 [AddressChoice] Adresse sélectionnée: ${selectedAddress.address_label}`);
+        
+        // Traiter la commande avec cette adresse
+        await this.processOrderWithAddress(phoneNumber, session, selectedAddress);
+        return;
+      }
+      
+      // Choix invalide
+      await this.messageSender.sendMessage(phoneNumber, '❌ Choix invalide. Veuillez sélectionner un numéro valide.');
+      
+    } catch (error) {
+      console.error('❌ [AddressChoice] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors du choix d\'adresse. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * Gérer la saisie d'une nouvelle adresse
+   */
+  private async handleNewAddressInput(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      const addressText = message.trim();
+      
+      if (addressText.length < 10) {
+        await this.messageSender.sendMessage(phoneNumber, '❌ Adresse trop courte. Veuillez saisir une adresse complète.');
+        return;
+      }
+      
+      console.log(`🔍 [NewAddress] Validation adresse: "${addressText}"`);
+      
+      // Valider avec Google Places
+      const validation = await this.googlePlacesService.validateAddress(addressText);
+      
+      if (!validation.isValid || validation.suggestions.length === 0) {
+        await this.messageSender.sendMessage(phoneNumber, 
+          '❌ Adresse non trouvée. Vérifiez l\'orthographe et réessayez.\n\n💡 Incluez le code postal et la ville.'
+        );
+        return;
+      }
+      
+      // Proposer les suggestions
+      if (validation.suggestions.length === 1) {
+        // Une seule suggestion, proposer directement
+        const suggestion = validation.suggestions[0];
+        const message = `📍 *Adresse trouvée :*\n\n` +
+                       `${this.googlePlacesService.formatAddressForWhatsApp(suggestion)}\n\n` +
+                       `✅ *1* - Confirmer cette adresse\n` +
+                       `📝 *2* - Saisir une autre adresse`;
+        
+        await this.messageSender.sendMessage(phoneNumber, message);
+        
+        await this.sessionManager.updateSession(session.id, {
+          botState: 'AWAITING_ADDRESS_CONFIRMATION',
+          sessionData: {
+            ...session.sessionData,
+            pendingAddress: suggestion
+          }
+        });
+      } else {
+        // Plusieurs suggestions
+        const message = this.googlePlacesService.formatAddressSuggestionsMessage(validation.suggestions);
+        await this.messageSender.sendMessage(phoneNumber, message);
+        
+        await this.sessionManager.updateSession(session.id, {
+          botState: 'AWAITING_ADDRESS_CONFIRMATION',
+          sessionData: {
+            ...session.sessionData,
+            addressSuggestions: validation.suggestions
+          }
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ [NewAddress] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de la validation de l\'adresse. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * Gérer la confirmation d'adresse
+   */
+  private async handleAddressConfirmation(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      const choice = parseInt(message.trim());
+      
+      // Si une seule adresse en attente
+      if (session.sessionData?.pendingAddress) {
+        if (choice === 1) {
+          // Confirmer l'adresse
+          const address = session.sessionData.pendingAddress;
+          await this.saveNewAddressAndProcess(phoneNumber, session, address);
+        } else if (choice === 2) {
+          // Saisir une autre adresse
+          await this.messageSender.sendMessage(phoneNumber, 
+            '📝 *Saisissez votre adresse complète*'
+          );
+          
+          await this.sessionManager.updateSession(session.id, {
+            botState: 'AWAITING_NEW_ADDRESS',
+            sessionData: {
+              ...session.sessionData,
+              pendingAddress: undefined
+            }
+          });
+        } else {
+          await this.messageSender.sendMessage(phoneNumber, '❌ Tapez 1 pour confirmer ou 2 pour saisir une autre adresse.');
+        }
+        return;
+      }
+      
+      // Plusieurs suggestions
+      const suggestions = session.sessionData?.addressSuggestions || [];
+      if (choice >= 1 && choice <= suggestions.length) {
+        const selectedAddress = suggestions[choice - 1];
+        await this.saveNewAddressAndProcess(phoneNumber, session, selectedAddress);
+      } else {
+        await this.messageSender.sendMessage(phoneNumber, `❌ Choix invalide. Tapez un numéro entre 1 et ${suggestions.length}.`);
+      }
+      
+    } catch (error) {
+      console.error('❌ [AddressConfirmation] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de la confirmation. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * Sauvegarder une nouvelle adresse et traiter la commande
+   */
+  private async saveNewAddressAndProcess(phoneNumber: string, session: any, address: any): Promise<void> {
+    try {
+      const cleanPhone = phoneNumber.replace('@c.us', '');
+      
+      // Générer un label automatique
+      const existingAddresses = await this.addressService.getCustomerAddresses(cleanPhone);
+      const label = this.addressService.generateAddressLabel(existingAddresses);
+      
+      // Sauvegarder l'adresse
+      const savedAddress = await this.addressService.saveAddress({
+        phone_number: cleanPhone,
+        address_label: label,
+        full_address: address.formatted_address,
+        google_place_id: address.place_id,
+        latitude: address.geometry.location.lat,
+        longitude: address.geometry.location.lng,
+        is_default: existingAddresses.length === 0
+      });
+      
+      if (savedAddress) {
+        console.log(`✅ [SaveAddress] Adresse sauvegardée: ${label}`);
+        await this.processOrderWithAddress(phoneNumber, session, savedAddress);
+      } else {
+        throw new Error('Échec sauvegarde adresse');
+      }
+      
+    } catch (error) {
+      console.error('❌ [SaveAddress] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de la sauvegarde. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * Traiter la commande avec une adresse spécifique
+   * SOLID - Délégue la logique métier au service dédié
+   */
+  private async processOrderWithAddress(phoneNumber: string, session: any, address: any): Promise<void> {
+    try {
+      const cart = session.sessionData?.cart || [];
+      const restaurantId = session.sessionData?.selectedRestaurantId;
+      
+      // Déléguer la création au service dédié
+      const order = await this.orderService.createOrderWorkflow(
+        phoneNumber,
+        cart,
+        restaurantId,
+        'livraison',
+        address
+      );
+      
+      // Récupérer le nom du restaurant pour le message
+      const restaurantName = await this.getRestaurantName(restaurantId);
+      
+      // Envoyer la confirmation
+      const confirmationMessage = this.orderService.buildOrderConfirmationMessage(
+        order,
+        restaurantName,
+        'livraison',
+        address
+      );
+      
+      await this.messageSender.sendMessage(phoneNumber, confirmationMessage);
+      await this.deleteSession(phoneNumber);
+      
+    } catch (error) {
+      console.error('❌ [OrderWithAddress] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de la création de commande. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * Utilitaire : Récupérer le nom d'un restaurant
+   * SOLID - Single Responsibility : Méthode utilitaire simple
+   */
+  private async getRestaurantName(restaurantId: number): Promise<string> {
+    try {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+      const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+      
+      const { data: restaurant } = await supabase
+        .from('france_restaurants')
+        .select('name')
+        .eq('id', restaurantId)
+        .single();
+      
+      return restaurant?.name || 'Restaurant';
+    } catch (error) {
+      console.error('❌ [getRestaurantName] Erreur:', error);
+      return 'Restaurant';
+    }
+  }
+
+  /**
    * Gérer les actions après configuration produit (1=Ajouter, 2=Recommencer, 0=Retour)
    */
   private async handleWorkflowActions(phoneNumber: string, session: any, message: string): Promise<void> {
@@ -1253,10 +1738,8 @@ export class UniversalBot implements IMessageHandler {
     }
     
     // Ajouter au panier
-    const cart = session.sessionData?.cart || [];
-    if (!Array.isArray(cart)) {
-      cart = [];
-    }
+    const rawCart = session.sessionData?.cart || [];
+    const cart = Array.isArray(rawCart) ? rawCart : [];
     cart.push({
       productId: selectedProduct.id,
       productName: selectedProduct.name,
@@ -1270,21 +1753,16 @@ export class UniversalBot implements IMessageHandler {
     // Calculer le total du panier
     const cartTotal = cart.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
     
-    // Message de confirmation
-    let confirmMessage = `✅ *${quantity}x ${selectedProduct.name}* ajouté au panier !\n`;
-    confirmMessage += `💰 Sous-total: ${totalPrice}€\n\n`;
-    confirmMessage += `🛒 *PANIER ACTUEL*\n`;
+    // Utiliser le formatter universel pour le message
+    const { UniversalCartFormatter } = await import('../services/UniversalCartFormatter.ts');
+    const formatter = new UniversalCartFormatter();
     
-    cart.forEach((item: any) => {
-      confirmMessage += `• ${item.quantity}x ${item.productDescription} - ${item.totalPrice}€\n`;
-    });
-    
-    confirmMessage += `\n💰 *Total: ${cartTotal}€*\n\n`;
-    confirmMessage += `Que souhaitez-vous faire ?\n`;
-    confirmMessage += `1️⃣ Continuer mes achats\n`;
-    confirmMessage += `2️⃣ Voir mon panier\n`;
-    confirmMessage += `3️⃣ Valider ma commande\n\n`;
-    confirmMessage += `Tapez votre choix (1, 2 ou 3)`;
+    // Formater le message avec le nouveau standard universel
+    const confirmMessage = formatter.formatAdditionMessage(
+      selectedProduct,
+      cart,
+      quantity
+    );
     
     await this.messageSender.sendMessage(phoneNumber, confirmMessage);
     
@@ -1294,11 +1772,12 @@ export class UniversalBot implements IMessageHandler {
       cart: cart,
       cartTotal: cartTotal,
       selectedProduct: null,
-      awaitingQuantity: false
+      awaitingQuantity: false,
+      awaitingCartActions: true
     };
     
     await this.sessionManager.updateSession(session.id, {
-      botState: 'CART_OPTIONS',
+      botState: 'AWAITING_CART_ACTIONS',
       sessionData: updatedData
     });
     

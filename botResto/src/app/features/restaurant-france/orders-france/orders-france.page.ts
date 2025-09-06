@@ -5,6 +5,8 @@ import { FranceOrdersService, FranceOrder, OrderAction } from '../../../core/ser
 import { AuthFranceService } from '../auth-france/services/auth-france.service';
 import { DeliveryAssignmentService } from '../../../core/services/delivery-assignment.service';
 import { DriversFranceService } from '../../../core/services/drivers-france.service';
+import { UniversalOrderDisplayService, FormattedItem } from '../../../core/services/universal-order-display.service';
+import { AddressWhatsAppService } from '../../../core/services/address-whatsapp.service';
 
 @Component({
   selector: 'app-orders-france',
@@ -27,7 +29,9 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     private toastController: ToastController,
     private alertController: AlertController,
     private deliveryAssignmentService: DeliveryAssignmentService,
-    private driversFranceService: DriversFranceService
+    private driversFranceService: DriversFranceService,
+    private universalOrderDisplayService: UniversalOrderDisplayService,
+    private addressWhatsAppService: AddressWhatsAppService
   ) { }
 
   ngOnInit() {
@@ -43,9 +47,14 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   private async initializeOrders() {
     this.isLoading = true;
     
-    // S'abonner aux changements de commandes
-    this.ordersSubscription = this.franceOrdersService.orders$.subscribe(orders => {
-      this.orders = orders;
+    // S'abonner aux changements de commandes avec enrichissement WhatsApp
+    this.ordersSubscription = this.franceOrdersService.orders$.subscribe(async (orders) => {
+      console.log('🔄 [OrdersPage] Réception commandes:', orders.length);
+      
+      // Enrichir les commandes avec les noms WhatsApp
+      this.orders = await this.addressWhatsAppService.enrichOrdersWithWhatsAppNames(orders);
+      
+      console.log('✅ [OrdersPage] Commandes enrichies:', this.orders.length);
       this.isLoading = false;
     });
 
@@ -195,6 +204,13 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       'livraison': 'Cash livraison'
     };
     return modes[mode] || mode;
+  }
+
+  /**
+   * Formater les items avec le service universel
+   */
+  getFormattedItems(order: FranceOrder): FormattedItem[] {
+    return this.universalOrderDisplayService.formatOrderItems(order.items || []);
   }
 
   // Nouvelles méthodes pour l'affichage détaillé des items

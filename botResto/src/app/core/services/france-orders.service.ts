@@ -48,6 +48,8 @@ export interface FranceOrder {
     longitude: number;
     address_label: string;
   };
+  // NOUVEAU : Nom WhatsApp du client
+  customer_whatsapp_name?: string;
 }
 
 export interface OrderAction {
@@ -142,8 +144,21 @@ export class FranceOrdersService {
     try {
       const rawItems = order.items;
       
-      if (typeof rawItems === 'object' && rawItems !== null) {
-        // Format complexe du bot: extraire les informations utiles
+      if (Array.isArray(rawItems)) {
+        // NOUVEAU FORMAT: Tableau direct du bot universel - PRIORITÉ
+        processedItems = rawItems;
+      } else if (typeof rawItems === 'string') {
+        // Format JSON string simple
+        try {
+          const parsed = JSON.parse(rawItems);
+          if (Array.isArray(parsed)) {
+            processedItems = parsed;
+          }
+        } catch (error) {
+          console.error('Erreur parsing items JSON string:', error);
+        }
+      } else if (typeof rawItems === 'object' && rawItems !== null) {
+        // ANCIEN FORMAT: Format complexe du bot avec clés item_X_...
         for (const [key, value] of Object.entries(rawItems)) {
           if (value && typeof value === 'object' && (value as any).item) {
             const item = (value as any).item;
@@ -194,19 +209,6 @@ export class FranceOrdersService {
             });
           }
         }
-      } else if (typeof rawItems === 'string') {
-        // Format JSON string simple
-        try {
-          const parsed = JSON.parse(rawItems);
-          if (Array.isArray(parsed)) {
-            processedItems = parsed;
-          }
-        } catch (error) {
-          console.error('Erreur parsing items JSON string:', error);
-        }
-      } else if (Array.isArray(rawItems)) {
-        // Format tableau simple
-        processedItems = rawItems;
       }
       
     } catch (error) {

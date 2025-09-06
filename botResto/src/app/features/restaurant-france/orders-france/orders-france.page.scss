@@ -48,6 +48,137 @@
   }
 }
 
+// Styles pour le nouveau système d'affichage universel
+.item-card {
+  // Configuration inline (tags colorés sous le nom) - FORMAT rl1.png
+  .item-inline-config {
+    margin-top: 8px;
+    margin-bottom: 12px;
+    
+    .inline-composition-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      
+      .composition-chip {
+        --background: rgba(var(--ion-color-tertiary-rgb), 0.1);
+        --border-color: var(--ion-color-tertiary);
+        font-size: 0.8rem;
+        height: 28px;
+        padding: 0 8px;
+      }
+    }
+  }
+  
+  // Configuration détaillée avec icônes (format liste) - FORMAT rl1.png
+  .item-detailed-config {
+    margin-top: 12px;
+    padding-left: 8px;
+    
+    .config-group {
+      margin-bottom: 6px;
+      
+      .config-group-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 4px;
+        
+        .config-icon {
+          font-size: 0.9rem;
+          color: var(--ion-color-medium);
+          min-width: 16px;
+        }
+        
+        strong {
+          font-size: 0.9rem;
+          color: var(--ion-color-dark);
+        }
+      }
+      
+      .config-items {
+        margin-left: 22px;
+        
+        .config-value {
+          font-size: 0.85rem;
+          color: var(--ion-color-medium-shade);
+        }
+      }
+    }
+  }
+  
+  // Items additionnels (boissons, etc.) - FORMAT rl1.png
+  .item-additional {
+    margin-top: 10px;
+    padding-left: 8px;
+    
+    .additional-info {
+      margin-bottom: 4px;
+      
+      .additional-text {
+        font-size: 0.9rem;
+        color: var(--ion-color-primary);
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// Informations client enrichies
+.customer-info-enriched {
+  .whatsapp-name {
+    margin: 8px 0;
+    
+    .whatsapp-name-display {
+      color: var(--ion-color-success);
+      font-weight: 500;
+      background: rgba(var(--ion-color-success-rgb), 0.1);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// Section code de validation
+.validation-code-section {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(var(--ion-color-warning-rgb), 0.1);
+  border-radius: 8px;
+  border-left: 4px solid var(--ion-color-warning);
+  
+  .validation-info {
+    text-align: center;
+    
+    p {
+      margin: 0 0 8px 0;
+      font-weight: 600;
+      color: var(--ion-color-dark);
+    }
+    
+    .validation-code-display {
+      margin: 12px 0;
+      
+      .validation-chip {
+        --background: var(--ion-color-warning);
+        --color: var(--ion-color-warning-contrast);
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        padding: 0 16px;
+        height: 40px;
+      }
+    }
+    
+    .validation-note {
+      color: var(--ion-color-warning-shade);
+      font-style: italic;
+      font-size: 0.8rem;
+    }
+  }
+}
+
 .no-orders-card {
   margin: 1rem;
   text-align: center;

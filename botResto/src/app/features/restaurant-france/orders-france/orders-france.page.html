@@ -90,75 +90,59 @@
       </ion-card-header>
 
       <ion-card-content>
-        <!-- Order items -->
+        <!-- Order items - NOUVELLE VERSION UNIVERSELLE -->
         <div class="order-items">
           <h4>Articles commandés:</h4>
-          <div *ngFor="let item of order.items" class="item-card">
+          <div *ngFor="let formattedItem of getFormattedItems(order)" class="item-card">
             
-            <!-- En-tête de l'article -->
+            <!-- En-tête de l'article - FORMAT EXACT rl1.png -->
             <div class="item-header">
               <div class="item-main">
-                <span class="item-quantity">{{ item.quantity || 1 }}x</span>
+                <span class="item-quantity">{{ formattedItem.quantity }}x</span>
                 <span class="item-name">
-                  {{ item.name }}
-                  <ion-badge *ngIf="item.size_name" color="medium" class="size-badge">{{ item.size_name }}</ion-badge>
+                  {{ formattedItem.productName }}
+                  <ion-badge *ngIf="formattedItem.sizeInfo" color="medium" class="size-badge">{{ formattedItem.sizeInfo }}</ion-badge>
                 </span>
               </div>
-              <span class="item-price">{{ formatPrice(item.total_price || item.price || 0) }}</span>
+              <span class="item-price">{{ formatPrice(formattedItem.totalPrice) }}</span>
             </div>
 
-            <!-- Détails de composition -->
-            <div class="item-details" *ngIf="item.configuration_details && item.configuration_details.length > 0">
-              <div class="composition-list">
+            <!-- Configuration inline (tags colorés sous le nom) -->
+            <div class="item-inline-config" *ngIf="formattedItem.inlineConfiguration && formattedItem.inlineConfiguration.length > 0">
+              <div class="inline-composition-list">
                 <ion-chip 
-                  *ngFor="let detail of item.configuration_details" 
+                  *ngFor="let config of formattedItem.inlineConfiguration" 
                   color="tertiary" 
                   outline="true"
                   class="composition-chip">
-                  {{ detail }}
+                  {{ config }}
                 </ion-chip>
               </div>
             </div>
 
-            <!-- Options détaillées -->
-            <div class="item-options" *ngIf="item.selected_options && hasSelectedOptions(item.selected_options)">
-              <div *ngFor="let optionGroup of getSelectedOptionsGroups(item.selected_options)" class="option-group">
-                <div class="option-group-header">
-                  <ion-icon name="chevron-forward" class="option-icon"></ion-icon>
-                  <strong>{{ formatOptionGroupName(optionGroup.groupName) }}:</strong>
+            <!-- Configuration détaillée avec icônes (format liste) -->
+            <div class="item-detailed-config" *ngIf="formattedItem.formattedConfiguration && formattedItem.formattedConfiguration.length > 0">
+              <div *ngFor="let configLine of formattedItem.formattedConfiguration" class="config-group">
+                <div class="config-group-header">
+                  <span class="config-icon">{{ configLine.icon }}</span>
+                  <strong>{{ configLine.category }}:</strong>
                 </div>
-                <div class="option-items">
-                  <span 
-                    *ngFor="let option of optionGroup.options; let last = last" 
-                    class="option-item">
-                    {{ option.option_name }}{{ !last ? ', ' : '' }}
-                    <ion-badge *ngIf="option.price_modifier > 0" color="warning" class="price-modifier">
-                      +{{ formatPrice(option.price_modifier) }}
-                    </ion-badge>
-                  </span>
+                <div class="config-items">
+                  <span class="config-value">{{ configLine.value }}</span>
                 </div>
               </div>
             </div>
 
-            <!-- Informations supplémentaires -->
-            <div class="item-extras" *ngIf="item.includes_drink || item.composition || item.selected_drink">
-              
-              <!-- 🥤 CORRECTION: Afficher la boisson sélectionnée si présente -->
-              <div *ngIf="item.selected_drink" class="extra-info">
-                <ion-icon name="wine" color="primary"></ion-icon>
-                <span>🥤 {{ item.selected_drink.name }} {{ item.selected_drink.variant }}</span>
+            <!-- Items additionnels (boissons, etc.) -->
+            <div class="item-additional" *ngIf="formattedItem.additionalItems && formattedItem.additionalItems.length > 0">
+              <div *ngFor="let additionalItem of formattedItem.additionalItems" class="additional-info">
+                <span class="additional-text">{{ additionalItem }}</span>
               </div>
-              
-              <!-- Fallback: Si pas de boisson spécifique mais includes_drink=true -->
-              <div *ngIf="item.includes_drink && !item.selected_drink" class="extra-info">
-                <ion-icon name="cafe" color="primary"></ion-icon>
-                <span>Boisson incluse</span>
-              </div>
-              
-              <div *ngIf="item.composition" class="extra-info">
-                <ion-icon name="information-circle" color="medium"></ion-icon>
-                <span>{{ item.composition }}</span>
-              </div>
+            </div>
+
+            <!-- Description complète si présente -->
+            <div class="item-description" *ngIf="formattedItem.description" class="item-description">
+              <small class="text-muted">{{ formattedItem.description }}</small>
             </div>
 
           </div>
@@ -179,7 +163,7 @@
           <p *ngIf="order.customer_name"><strong>Client:</strong> {{ order.customer_name }}</p>
         </div>
 
-        <!-- Delivery information -->
+        <!-- Delivery information - VERSION ENRICHIE -->
         <div *ngIf="order.delivery_mode === 'livraison'" class="delivery-info">
           <div class="delivery-header">
             <h4>Informations livraison:</h4>
@@ -198,8 +182,18 @@
               Itinéraire
             </ion-button>
           </div>
+          
           <p *ngIf="order.delivery_address"><strong>Adresse:</strong> {{ order.delivery_address }}</p>
-          <p><strong>Téléphone:</strong> {{ order.phone_number }}</p>
+          
+          <!-- Informations client enrichies -->
+          <div class="customer-info-enriched">
+            <p><strong>Téléphone:</strong> {{ order.phone_number }}</p>
+            <p *ngIf="order.customer_whatsapp_name" class="whatsapp-name">
+              <strong>Client WhatsApp:</strong> 
+              <span class="whatsapp-name-display">{{ order.customer_whatsapp_name }}</span>
+            </p>
+          </div>
+          
           
           <!-- NOUVEAU : Statut d'assignation livreur -->
           <div class="assignment-status" *ngIf="order.status === 'prete' || order.status === 'en_livraison'">
