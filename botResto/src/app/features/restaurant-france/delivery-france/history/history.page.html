@@ -190,11 +190,11 @@
             </div>
           </div>
 
-          <!-- Date et heure de livraison -->
-          <div class="detail-section" *ngIf="order.updated_at">
+          <!-- Date et heure de livraison RÉELLE (validation livreur) -->
+          <div class="detail-section" *ngIf="order.date_validation_code">
             <div class="detail-row">
               <span class="detail-label">✅ Livré à:</span>
-              <span class="delivery-time-display">{{ formatTime(order.updated_at) }}</span>
+              <span class="delivery-time-display">{{ formatTime(order.date_validation_code) }}</span>
             </div>
           </div>
         </div>

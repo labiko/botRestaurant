@@ -11,6 +11,7 @@ import { DriverOnlineStatusService } from '../../../../core/services/driver-onli
 import { DeliveryCountersService, DeliveryCounters } from '../../../../core/services/delivery-counters.service';
 import { DeliveryOrderItemsService } from '../../../../core/services/delivery-order-items.service';
 import { UniversalOrderDisplayService, FormattedItem } from '../../../../core/services/universal-order-display.service';
+import { FranceOrdersService } from '../../../../core/services/france-orders.service';
 
 @Component({
   selector: 'app-history',
@@ -50,7 +51,8 @@ export class HistoryPage implements OnInit, OnDestroy {
     private driverOnlineStatusService: DriverOnlineStatusService,
     private deliveryCountersService: DeliveryCountersService,
     private deliveryOrderItemsService: DeliveryOrderItemsService,
-    private universalOrderDisplayService: UniversalOrderDisplayService
+    private universalOrderDisplayService: UniversalOrderDisplayService,
+    private franceOrdersService: FranceOrdersService
   ) {}
 
   ngOnInit() {
@@ -217,18 +219,15 @@ export class HistoryPage implements OnInit, OnDestroy {
   }
 
   formatTime(dateString: string): string {
-    return new Date(dateString).toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return this.franceOrdersService.formatTime(dateString);
   }
 
   formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    return this.franceOrdersService.formatDateTime(dateString).split(' ')[0];
+  }
+
+  formatDateTime(dateString: string): string {
+    return this.franceOrdersService.formatDateTime(dateString);
   }
 
   // Gestion accordéon détails
