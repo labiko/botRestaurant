@@ -27,11 +27,29 @@ export class FuseauHoraireService {
    * Respecte le fuseau horaire local sans conversion UTC forcée
    */
   getCurrentTimeForDatabase(): string {
-    const now = new Date();
-    // Utilise toISOString() mais compense le décalage UTC
-    const offset = now.getTimezoneOffset();
-    const localTime = new Date(now.getTime() - (offset * 60 * 1000));
-    return localTime.toISOString();
+    const now = this.getCurrentTime();
+    // Pour timestamp without time zone, on retourne directement l'heure UTC
+    // PostgreSQL stockera la valeur sans conversion
+    return now.toISOString();
+  }
+
+  /**
+   * Calculer une date d'expiration future avec le fuseau horaire correct
+   * @param minutes - Nombre de minutes à ajouter à l'heure actuelle
+   */
+  getFutureTimeForDatabase(minutes: number): string {
+    const now = this.getCurrentTime();
+    const future = new Date(now.getTime() + (minutes * 60 * 1000));
+    // Pour timestamp without time zone, on retourne directement l'heure UTC
+    return future.toISOString();
+  }
+
+  /**
+   * Calculer une date d'expiration future en heures avec le fuseau horaire correct
+   * @param hours - Nombre d'heures à ajouter à l'heure actuelle
+   */
+  getFutureTimeForDatabaseHours(hours: number): string {
+    return this.getFutureTimeForDatabase(hours * 60);
   }
 
   /**

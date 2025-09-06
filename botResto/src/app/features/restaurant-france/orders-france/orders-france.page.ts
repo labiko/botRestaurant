@@ -470,8 +470,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
         await this.franceOrdersService.loadOrders(this.restaurantId);
         this.switchToStatusTab('prete');
 
-        // Optionnel : Démarrer un monitoring de l'assignation
-        this.monitorAssignmentProgress(order.id);
+        // SUPPRIMÉ : Monitoring inutile qui causait des fausses alertes
+        // this.monitorAssignmentProgress(order.id);
 
       } else {
         // Échec d'assignation - NE PAS marquer comme prête, proposer des alternatives
@@ -540,8 +540,12 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   }
 
   /**
-   * Surveiller le progrès de l'assignation
+   * SUPPRIMÉ : Surveillance du progrès de l'assignation
+   * Cette fonction causait des fausses alertes "Aucun livreur trouvé"
+   * après une assignation réussie car elle vérifiait le statut 10 secondes
+   * après l'assignation, moment où le statut peut avoir changé.
    */
+  /*
   private async monitorAssignmentProgress(orderId: number): Promise<void> {
     // Surveillance simple avec timeout
     setTimeout(async () => {
@@ -561,6 +565,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       }
     }, 10000); // Vérifier après 10 secondes
   }
+  */
 
   /**
    * Vérifier si une commande peut être assignée automatiquement
@@ -697,12 +702,16 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    * NOUVEAU : Obtenir le temps écoulé depuis la notification
    */
   getNotificationTime(order: FranceOrder): string {
-    if (!order.updated_at) {
+    // Utilise assignment_started_at si disponible (mis à jour lors des notifications/rappels)
+    // Sinon utilise updated_at comme fallback
+    const timestamp = order.assignment_started_at || order.updated_at;
+    
+    if (!timestamp) {
       return 'il y a quelques instants';
     }
     
     // Utilise le service FuseauHoraire pour un calcul précis
-    return this.fuseauHoraireService.getTimeAgo(order.updated_at);
+    return this.fuseauHoraireService.getTimeAgo(timestamp);
   }
 
 }

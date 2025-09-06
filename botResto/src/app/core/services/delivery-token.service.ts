@@ -4,6 +4,7 @@ import { SupabaseFranceService } from './supabase-france.service';
 import { DeliveryOrder } from './delivery-orders.service';
 import { AppConfigService } from './app-config.service';
 import { AuthFranceService, FranceUser } from '../../features/restaurant-france/auth-france/services/auth-france.service';
+import { FuseauHoraireService } from './fuseau-horaire.service';
 
 export interface DeliveryToken {
   id: number;
@@ -59,7 +60,8 @@ export class DeliveryTokenService {
   constructor(
     private supabaseFranceService: SupabaseFranceService,
     private appConfigService: AppConfigService,
-    private authFranceService: AuthFranceService
+    private authFranceService: AuthFranceService,
+    private fuseauHoraireService: FuseauHoraireService
   ) {}
 
   /**
@@ -140,16 +142,16 @@ export class DeliveryTokenService {
 
       // 2. Générer les tokens
       const tokensToInsert = activeDrivers.map(driver => {
-        const now = new Date();
-        const expiresAt = new Date(now.getTime() + this.CONFIG.TOKEN_EXPIRY_MINUTES * 60000);
-        const absoluteExpiresAt = new Date(now.getTime() + this.CONFIG.TOKEN_ABSOLUTE_EXPIRY_HOURS * 3600000);
+        // Utiliser le service FuseauHoraireService pour calculer les expirations
+        const expiresAt = this.fuseauHoraireService.getFutureTimeForDatabase(this.CONFIG.TOKEN_EXPIRY_MINUTES);
+        const absoluteExpiresAt = this.fuseauHoraireService.getFutureTimeForDatabaseHours(this.CONFIG.TOKEN_ABSOLUTE_EXPIRY_HOURS);
 
         return {
           token: this.generateSecureToken(),
           order_id: orderId,
           driver_id: driver.id,
-          expires_at: expiresAt.toISOString(),
-          absolute_expires_at: absoluteExpiresAt.toISOString(),
+          expires_at: expiresAt,
+          absolute_expires_at: absoluteExpiresAt,
           used: false,
           suspended: false,
           reactivated: false
@@ -179,7 +181,7 @@ export class DeliveryTokenService {
         action_type: 'notified',
         details: {
           method: 'whatsapp',
-          token_generated_at: new Date().toISOString(),
+          token_generated_at: this.fuseauHoraireService.getCurrentTimeForDatabase(),
           expires_at: token.expires_at
         }
       }));
@@ -391,20 +393,20 @@ export class DeliveryTokenService {
       console.log(`🔄 [DeliveryToken] Réactivation des tokens pour commande ${orderId}...`);
 
       // Réactiver les tokens suspendus non expirés absolument
-      const newExpiryTime = new Date(Date.now() + this.CONFIG.TOKEN_EXPIRY_MINUTES * 60000);
+      const newExpiryTime = this.fuseauHoraireService.getFutureTimeForDatabase(this.CONFIG.TOKEN_EXPIRY_MINUTES);
       
       const { data: reactivatedTokens, error } = await this.supabaseFranceService.client
         .from('delivery_tokens')
         .update({
           suspended: false,
           reactivated: true,
-          expires_at: newExpiryTime.toISOString(),
-          updated_at: new Date().toISOString()
+          expires_at: newExpiryTime,
+          updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
         })
         .eq('order_id', orderId)
         .eq('suspended', true)
         .eq('used', false)
-        .gt('absolute_expires_at', new Date().toISOString())
+        .gt('absolute_expires_at', this.fuseauHoraireService.getCurrentTimeForDatabase())
         .select(`
           *,
           france_delivery_drivers!driver_id (
@@ -483,15 +485,13 @@ export class DeliveryTokenService {
       console.log(`   ISO (UTC): ${newExpiryTime.toISOString()}`);
       console.log(`   Locale: ${newExpiryTime.toLocaleString('fr-FR')}`);
       
-      // SOLUTION SIMPLE : CORRIGER - soustraire l'offset au lieu de l'ajouter
-      const utcOffset = new Date().getTimezoneOffset(); // minutes de décalage
-      const adjustedExpiryTime = new Date(now + (this.CONFIG.TOKEN_EXPIRY_MINUTES * 60000) - (utcOffset * 60000));
-      const adjustedAbsoluteExpiry = new Date(now + (this.CONFIG.TOKEN_ABSOLUTE_EXPIRY_HOURS * 3600000) - (utcOffset * 60000));
+      // SIMPLIFIÉ : Utilisation du service FuseauHoraireService pour gérer les fuseaux horaires
+      const adjustedExpiryTime = this.fuseauHoraireService.getFutureTimeForDatabase(this.CONFIG.TOKEN_EXPIRY_MINUTES);
+      const adjustedAbsoluteExpiry = this.fuseauHoraireService.getFutureTimeForDatabaseHours(this.CONFIG.TOKEN_ABSOLUTE_EXPIRY_HOURS);
       
-      console.log(`🌍 [DeliveryToken] CORRECTION TIMEZONE:`);
-      console.log(`   UTC Offset: ${utcOffset} minutes`);
-      console.log(`   Expiration ajustée: ${adjustedExpiryTime.toISOString()}`);
-      console.log(`   Expiration ajustée locale: ${adjustedExpiryTime.toLocaleString('fr-FR')}`);
+      console.log(`🌍 [DeliveryToken] FUSEAUX HORAIRES GÉRÉS PAR SERVICE:`);
+      console.log(`   Expiration (${this.CONFIG.TOKEN_EXPIRY_MINUTES}min): ${adjustedExpiryTime}`);
+      console.log(`   Expiration absolue (${this.CONFIG.TOKEN_ABSOLUTE_EXPIRY_HOURS}h): ${adjustedAbsoluteExpiry}`);
       
       const { data: reactivatedTokens, error } = await this.supabaseFranceService.client
         .from('delivery_tokens')
@@ -499,9 +499,9 @@ export class DeliveryTokenService {
           suspended: false,
           reactivated: true,
           token: this.generateSecureToken(), // 🔥 NOUVEAU TOKEN !
-          expires_at: adjustedExpiryTime.toISOString(), // 🔥 AVEC CORRECTION TIMEZONE !
-          absolute_expires_at: adjustedAbsoluteExpiry.toISOString(), // 🔥 AVEC CORRECTION TIMEZONE !
-          updated_at: new Date().toISOString()
+          expires_at: adjustedExpiryTime, // 🔥 AVEC CORRECTION TIMEZONE !
+          absolute_expires_at: adjustedAbsoluteExpiry, // 🔥 AVEC CORRECTION TIMEZONE !
+          updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
         })
         .eq('order_id', orderId)
         .eq('used', false)
@@ -535,7 +535,7 @@ export class DeliveryTokenService {
         console.log(`⚠️ [DeliveryToken] DIAGNOSTIC - Aucun token réactivé. Vérifiez les conditions :`);
         console.log(`   - order_id = ${orderId}`);
         console.log(`   - used = false`);
-        console.log(`   - absolute_expires_at > ${new Date().toISOString()}`);
+        console.log(`   - absolute_expires_at > ${this.fuseauHoraireService.getCurrentTimeForDatabase()}`);
       }
 
       return {

@@ -46,6 +46,7 @@ export interface FranceOrder {
   assignment_timeout_at?: string;
   estimated_delivery_time?: string;
   assigned_driver_id?: number; // Alias pour compatibilité UI
+  assignment_started_at?: string; // Timestamp de la première notification ou du dernier rappel
   // CORRECTION BOUTON ITINÉRAIRE : Coordonnées GPS
   delivery_address_coordinates?: {
     latitude: number;

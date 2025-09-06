@@ -3,6 +3,7 @@ import { SupabaseFranceService } from './supabase-france.service';
 import { DeliveryTokenService, DeliveryToken } from './delivery-token.service';
 import { GreenApiFranceService } from '../../features/restaurant-france/services/green-api-france.service';
 import { UniversalOrderDisplayService } from './universal-order-display.service';
+import { FuseauHoraireService } from './fuseau-horaire.service';
 
 export interface NotificationData {
   orderId: number;
@@ -32,7 +33,8 @@ export class DeliveryNotificationService {
     private supabaseFranceService: SupabaseFranceService,
     private deliveryTokenService: DeliveryTokenService,
     private greenApiService: GreenApiFranceService,
-    private universalOrderDisplayService: UniversalOrderDisplayService
+    private universalOrderDisplayService: UniversalOrderDisplayService,
+    private fuseauHoraireService: FuseauHoraireService
   ) {}
 
   /**
@@ -111,7 +113,23 @@ export class DeliveryNotificationService {
         };
       }
 
-      // 3. Envoyer les notifications de réactivation
+      // 3. Mettre à jour le champ assignment_started_at pour marquer le début des rappels
+      const currentTime = this.fuseauHoraireService.getCurrentTimeForDatabase();
+      const { error: updateError } = await this.supabaseFranceService.client
+        .from('france_orders')
+        .update({ 
+          assignment_started_at: currentTime,
+          updated_at: currentTime
+        })
+        .eq('id', orderId);
+
+      if (updateError) {
+        console.error('❌ [DeliveryNotification] Erreur mise à jour assignment_started_at:', updateError);
+      } else {
+        console.log(`✅ [DeliveryNotification] Champ assignment_started_at mis à jour: ${currentTime}`);
+      }
+
+      // 4. Envoyer les notifications de réactivation
       const results = await this.sendReactivationWhatsAppNotifications(reactivationResult.reactivatedTokens, orderData);
 
       return results;

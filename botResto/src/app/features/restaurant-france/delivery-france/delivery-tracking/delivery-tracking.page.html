@@ -134,7 +134,7 @@
           <ion-icon name="person-circle" color="medium"></ion-icon>
           <span>
             <strong>{{order.lastActionDriverName}}</strong> 
-            - {{order.lastActionType}} 
+            - Notification initiale 
             <small>{{getTimeAgo(order.lastActionTimestamp!)}}</small>
           </span>
         </div>
@@ -143,7 +143,7 @@
         <div class="token-update" *ngIf="order.lastTokenUpdate">
           <ion-icon name="refresh-circle" color="tertiary"></ion-icon>
           <span>
-            Token mis à jour 
+            Dernière mise à jour (rappels) 
             <small>{{getTimeAgo(order.lastTokenUpdate!)}}</small>
           </span>
         </div>
