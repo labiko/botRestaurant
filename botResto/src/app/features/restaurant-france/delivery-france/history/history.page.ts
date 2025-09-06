@@ -10,6 +10,7 @@ import { LoadingController } from '@ionic/angular';
 import { DriverOnlineStatusService } from '../../../../core/services/driver-online-status.service';
 import { DeliveryCountersService, DeliveryCounters } from '../../../../core/services/delivery-counters.service';
 import { DeliveryOrderItemsService } from '../../../../core/services/delivery-order-items.service';
+import { UniversalOrderDisplayService, FormattedItem } from '../../../../core/services/universal-order-display.service';
 
 @Component({
   selector: 'app-history',
@@ -48,7 +49,8 @@ export class HistoryPage implements OnInit, OnDestroy {
     private loadingController: LoadingController,
     private driverOnlineStatusService: DriverOnlineStatusService,
     private deliveryCountersService: DeliveryCountersService,
-    private deliveryOrderItemsService: DeliveryOrderItemsService
+    private deliveryOrderItemsService: DeliveryOrderItemsService,
+    private universalOrderDisplayService: UniversalOrderDisplayService
   ) {}
 
   ngOnInit() {
@@ -251,6 +253,14 @@ export class HistoryPage implements OnInit, OnDestroy {
 
   getOrderItems(order: DeliveryOrder): any[] {
     return this.deliveryOrderItemsService.getOrderItems(order);
+  }
+
+  /**
+   * NOUVEAU - Formater les items avec le service universel (même format que restaurant)
+   */
+  getFormattedItems(order: DeliveryOrder): FormattedItem[] {
+    const items = this.deliveryOrderItemsService.getOrderItems(order);
+    return this.universalOrderDisplayService.formatOrderItems(items || []);
   }
 
   hasSelectedOptions(selectedOptions: any): boolean {

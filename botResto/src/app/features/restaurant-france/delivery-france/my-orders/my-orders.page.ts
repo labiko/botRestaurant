@@ -13,6 +13,8 @@ import { WhatsAppNotificationFranceService } from '../../../../core/services/wha
 import { DriverOnlineStatusService } from '../../../../core/services/driver-online-status.service';
 import { DeliveryCountersService, DeliveryCounters } from '../../../../core/services/delivery-counters.service';
 import { DeliveryOrderItemsService } from '../../../../core/services/delivery-order-items.service';
+import { UniversalOrderDisplayService, FormattedItem } from '../../../../core/services/universal-order-display.service';
+import { AddressWhatsAppService } from '../../../../core/services/address-whatsapp.service';
 
 @Component({
   selector: 'app-my-orders',
@@ -58,7 +60,9 @@ export class MyOrdersPage implements OnInit, OnDestroy {
     private franceOrdersService: FranceOrdersService,
     private driverOnlineStatusService: DriverOnlineStatusService,
     private deliveryCountersService: DeliveryCountersService,
-    private deliveryOrderItemsService: DeliveryOrderItemsService
+    private deliveryOrderItemsService: DeliveryOrderItemsService,
+    private universalOrderDisplayService: UniversalOrderDisplayService,
+    private addressWhatsAppService: AddressWhatsAppService
   ) {}
 
   ngOnInit() {
@@ -535,6 +539,14 @@ export class MyOrdersPage implements OnInit, OnDestroy {
 
   getOrderItems(order: DeliveryOrder): any[] {
     return this.deliveryOrderItemsService.getOrderItems(order);
+  }
+
+  /**
+   * NOUVEAU - Formater les items avec le service universel (même format que restaurant)
+   */
+  getFormattedItems(order: DeliveryOrder): FormattedItem[] {
+    const items = this.deliveryOrderItemsService.getOrderItems(order);
+    return this.universalOrderDisplayService.formatOrderItems(items || []);
   }
 
   hasSelectedOptions(selectedOptions: any): boolean {

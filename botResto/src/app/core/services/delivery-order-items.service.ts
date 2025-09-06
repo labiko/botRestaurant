@@ -13,15 +13,23 @@ export class DeliveryOrderItemsService {
    * COPIÉ EXACTEMENT de history.page.ts (lignes 264-284)
    */
   hasOrderItems(order: DeliveryOrder): boolean {
+    console.log('🔍 [DeliveryOrderItems] hasOrderItems - Order:', order.order_number || order.id);
+    console.log('🔍 [DeliveryOrderItems] hasOrderItems - Items:', order.items);
+    console.log('🔍 [DeliveryOrderItems] hasOrderItems - Items type:', typeof order.items);
+    
     if (!order.items) {
+      console.log('❌ [DeliveryOrderItems] hasOrderItems - No items found');
       return false;
     }
     
     // Les items peuvent être une string JSON ou un objet
     if (typeof order.items === 'string') {
+      console.log('🔍 [DeliveryOrderItems] hasOrderItems - Items is string, parsing...');
       try {
         const parsedItems = JSON.parse(order.items);
+        console.log('🔍 [DeliveryOrderItems] hasOrderItems - Parsed items:', parsedItems);
         const hasItems = parsedItems && Object.keys(parsedItems).length > 0;
+        console.log('✅ [DeliveryOrderItems] hasOrderItems - String result:', hasItems);
         return hasItems;
       } catch (error) {
         console.error(`❌ [DeliveryOrderItems] Erreur parsing items string:`, error);
@@ -30,8 +38,20 @@ export class DeliveryOrderItemsService {
     }
     
     // Si c'est déjà un objet
-    const hasItems = order.items && Object.keys(order.items).length > 0;
-    return hasItems;
+    console.log('🔍 [DeliveryOrderItems] hasOrderItems - Items is object, checking keys...');
+    console.log('🔍 [DeliveryOrderItems] hasOrderItems - Object keys:', Object.keys(order.items));
+    
+    // Vérifier si au moins une entrée a des données valides
+    const hasValidItems = Object.values(order.items).some((value: any) => {
+      // Format restaurant (avec .item)
+      if (value && value.item) return true;
+      // Format livreur (objet direct avec productId)
+      if (value && typeof value === 'object' && value.productId) return true;
+      return false;
+    });
+    
+    console.log('✅ [DeliveryOrderItems] hasOrderItems - Has valid items:', hasValidItems);
+    return hasValidItems;
   }
 
   /**
@@ -39,7 +59,11 @@ export class DeliveryOrderItemsService {
    * COPIÉ EXACTEMENT de history.page.ts (lignes 286-321)
    */
   getOrderItems(order: DeliveryOrder): any[] {
+    console.log('🔍 [DeliveryOrderItems] getOrderItems - Order:', order.order_number || order.id);
+    console.log('🔍 [DeliveryOrderItems] getOrderItems - Raw items:', order.items);
+    
     if (!order.items) {
+      console.log('❌ [DeliveryOrderItems] getOrderItems - No items, returning empty array');
       return [];
     }
     
@@ -48,26 +72,56 @@ export class DeliveryOrderItemsService {
       
       // Parser si c'est une string JSON
       if (typeof order.items === 'string') {
+        console.log('🔍 [DeliveryOrderItems] getOrderItems - Parsing JSON string...');
         itemsData = JSON.parse(order.items);
+        console.log('🔍 [DeliveryOrderItems] getOrderItems - Parsed data:', itemsData);
       }
       
       // Les items sont dans un format objet avec des clés comme "item_2_..."
       const itemsArray: any[] = [];
+      console.log('🔍 [DeliveryOrderItems] getOrderItems - Processing items data...');
       
       if (itemsData && typeof itemsData === 'object') {
+        console.log('🔍 [DeliveryOrderItems] itemsData object entries:', Object.entries(itemsData));
+        console.log('🔍 [DeliveryOrderItems] itemsData keys:', Object.keys(itemsData));
+        console.log('🔍 [DeliveryOrderItems] itemsData structure:', JSON.stringify(itemsData, null, 2));
+        
         Object.entries(itemsData).forEach(([key, value]: [string, any]) => {
-          // Extraire les données de l'item
+          console.log(`🔍 [DeliveryOrderItems] Processing key: ${key}, value:`, value);
+          console.log(`🔍 [DeliveryOrderItems] Value type: ${typeof value}`);
+          
+          let processedItem: any = null;
+          
+          // Format restaurant (avec propriété .item)
           if (value && value.item) {
-            const processedItem = {
+            console.log(`✅ [DeliveryOrderItems] Format restaurant - Found item in key ${key}:`, value.item);
+            processedItem = {
               ...value.item,
               quantity: value.quantity || 1,
               key: key
             };
+          } 
+          // Format livreur (objet direct)
+          else if (value && typeof value === 'object' && value.productId) {
+            console.log(`✅ [DeliveryOrderItems] Format livreur - Direct item in key ${key}:`, value);
+            processedItem = {
+              ...value,
+              key: key
+            };
+          } else {
+            console.log(`❌ [DeliveryOrderItems] Unknown format for key ${key}, value structure:`, value);
+          }
+          
+          if (processedItem) {
             itemsArray.push(processedItem);
           }
         });
+      } else {
+        console.log('❌ [DeliveryOrderItems] itemsData is not a valid object:', itemsData);
       }
       
+      console.log('✅ [DeliveryOrderItems] getOrderItems - Final items array:', itemsArray);
+      console.log('✅ [DeliveryOrderItems] getOrderItems - Items count:', itemsArray.length);
       return itemsArray;
     } catch (error) {
       console.error(`❌ [DeliveryOrderItems] Erreur parsing items:`, error);

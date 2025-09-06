@@ -48,6 +48,96 @@
   background-color: #ffffff !important;
 }
 
+// ========================================================================
+// STYLES POUR FORMAT UNIVERSEL DES ITEMS (MÊME QUE RESTAURANT)
+// ========================================================================
+
+// Configuration inline (tags colorés sous le nom) - FORMAT rl1.png
+.item-inline-config {
+  margin-top: 8px;
+  margin-bottom: 12px;
+  
+  .inline-composition-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    
+    .composition-chip {
+      --background: rgba(var(--ion-color-tertiary-rgb), 0.1);
+      --border-color: var(--ion-color-tertiary);
+      --color: var(--ion-color-tertiary);
+      font-size: 0.8rem;
+      height: 28px;
+      padding: 0 8px;
+    }
+  }
+}
+
+// Configuration détaillée avec icônes (format liste) - FORMAT rl1.png
+.item-detailed-config {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  
+  .config-group {
+    margin-bottom: 6px;
+    
+    .config-group-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      
+      .config-icon {
+        font-size: 0.9rem;
+        color: var(--ion-color-primary);
+      }
+      
+      strong {
+        color: var(--ion-color-dark);
+        font-size: 0.9rem;
+      }
+    }
+    
+    .config-items {
+      margin-left: 20px;
+      
+      .config-value {
+        color: var(--ion-color-medium-shade);
+        font-size: 0.85rem;
+      }
+    }
+  }
+}
+
+// Items additionnels (boissons, etc.)
+.item-additional {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  
+  .additional-info {
+    margin-bottom: 4px;
+    
+    .additional-text {
+      font-size: 0.9rem;
+      color: var(--ion-color-primary);
+      font-weight: 500;
+    }
+  }
+}
+
+// Description complète si présente
+.item-description {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ion-color-light-shade);
+  
+  .text-muted {
+    color: var(--ion-color-medium);
+    font-style: italic;
+    line-height: 1.4;
+  }
+}
+
 :host ::ng-deep .custom-alert-white .alert-button,
 :host ::ng-deep ion-alert.custom-alert-white .alert-button {
   --color: #000000 !important;

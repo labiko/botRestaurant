@@ -131,7 +131,7 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
 
     this.todayOrders = todayOrdersList.length;
     this.pendingOrders = orders.filter(order => 
-      ['en_attente', 'confirmee'].includes(order.status)
+      ['pending', 'confirmee'].includes(order.status)
     ).length;
 
     this.todayRevenue = todayOrdersList.reduce((sum, order) => 

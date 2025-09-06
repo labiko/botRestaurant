@@ -59,6 +59,8 @@ export class DeliveryOrdersService {
    * Charger toutes les commandes prêtes pour livraison (non assignées)
    */
   async loadAvailableOrders(restaurantId: number): Promise<void> {
+    console.log('🔍 [DeliveryOrders] loadAvailableOrders - Restaurant ID:', restaurantId);
+    
     try {
       const { data, error } = await this.supabaseFranceService.client
         .from('france_orders')
@@ -78,7 +80,18 @@ export class DeliveryOrdersService {
         return;
       }
 
+      console.log('🔍 [DeliveryOrders] loadAvailableOrders - Raw data from DB:', data);
+      console.log('🔍 [DeliveryOrders] loadAvailableOrders - Orders count:', data?.length || 0);
+      
+      // Log détaillé pour chaque commande
+      data?.forEach((order: any, index: number) => {
+        console.log(`🔍 [DeliveryOrders] Order ${index + 1} - Number: ${order.order_number}`);
+        console.log(`🔍 [DeliveryOrders] Order ${index + 1} - Items:`, order.items);
+        console.log(`🔍 [DeliveryOrders] Order ${index + 1} - Items type:`, typeof order.items);
+      });
+
       const processedOrders = data?.map((order: any) => this.processDeliveryOrder(order)) || [];
+      console.log('✅ [DeliveryOrders] loadAvailableOrders - Processed orders:', processedOrders.length);
       this.availableOrdersSubject.next(processedOrders);
       console.log(`✅ [DeliveryOrders] ${processedOrders.length} commandes disponibles`);
     } catch (error) {

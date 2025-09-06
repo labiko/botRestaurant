@@ -291,6 +291,46 @@ ${impactMessage.replace(/<[^>]*>/g, '').replace('⚠️', '⚠️ ATTENTION:')}`
     return this.drivers.filter(d => !d.is_active).length;
   }
 
+  getOnlineDriversCount(): number {
+    return this.drivers.filter(d => d.is_active && d.is_online).length;
+  }
+
+  /**
+   * Toggle du statut en ligne d'un livreur
+   */
+  async toggleDriverOnlineStatus(driver: FranceDriver) {
+    if (!driver.is_active) {
+      await this.showToast('Le livreur doit être actif pour être mis en ligne', 'warning');
+      return;
+    }
+
+    const newOnlineStatus = !driver.is_online;
+    const success = await this.driversFranceService.updateDriverOnlineStatus(driver.id, newOnlineStatus);
+    
+    if (success) {
+      driver.is_online = newOnlineStatus;
+      const statusText = newOnlineStatus ? 'mis en ligne' : 'mis hors ligne';
+      await this.showToast(`${this.getDriverFullName(driver)} ${statusText}`, 'success');
+      await this.loadDrivers(); // Recharger pour synchroniser
+    } else {
+      await this.showToast('Erreur lors de la mise à jour du statut', 'danger');
+    }
+  }
+
+  /**
+   * Couleur du badge statut en ligne
+   */
+  getOnlineStatusColor(isOnline: boolean | undefined): string {
+    return isOnline ? 'primary' : 'medium';
+  }
+
+  /**
+   * Texte du badge statut en ligne
+   */
+  getOnlineStatusText(isOnline: boolean | undefined): string {
+    return isOnline ? 'En ligne' : 'Hors ligne';
+  }
+
   /**
    * Afficher un toast moderne
    */

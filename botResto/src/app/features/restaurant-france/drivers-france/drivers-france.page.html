@@ -39,19 +39,25 @@
   <div class="stats-section" *ngIf="drivers.length > 0">
     <ion-grid>
       <ion-row>
-        <ion-col size="4">
+        <ion-col size="3">
           <div class="stat-item">
             <div class="stat-number">{{ drivers.length }}</div>
             <div class="stat-label">Total</div>
           </div>
         </ion-col>
-        <ion-col size="4">
+        <ion-col size="3">
           <div class="stat-item">
             <div class="stat-number success">{{ getActiveDriversCount() }}</div>
             <div class="stat-label">Actifs</div>
           </div>
         </ion-col>
-        <ion-col size="4">
+        <ion-col size="3">
+          <div class="stat-item">
+            <div class="stat-number primary">{{ getOnlineDriversCount() }}</div>
+            <div class="stat-label">En ligne</div>
+          </div>
+        </ion-col>
+        <ion-col size="3">
           <div class="stat-item">
             <div class="stat-number warning">{{ getInactiveDriversCount() }}</div>
             <div class="stat-label">Inactifs</div>
@@ -90,6 +96,21 @@
                 (ionChange)="toggleDriverStatus(driver)"
                 [color]="driver.is_active ? 'success' : 'medium'"
                 class="status-toggle">
+              </ion-toggle>
+            </div>
+            
+            <!-- NOUVEAU: Toggle En ligne/Hors ligne -->
+            <div class="online-toggle-container">
+              <ion-badge [color]="getOnlineStatusColor(driver.is_online)" class="online-badge">
+                <ion-icon [name]="driver.is_online ? 'wifi' : 'wifi-outline'" class="online-icon"></ion-icon>
+                {{ getOnlineStatusText(driver.is_online) }}
+              </ion-badge>
+              <ion-toggle 
+                [checked]="driver.is_online"
+                (ionChange)="toggleDriverOnlineStatus(driver)"
+                [color]="driver.is_online ? 'primary' : 'medium'"
+                class="online-toggle"
+                [disabled]="!driver.is_active">
               </ion-toggle>
             </div>
           </div>

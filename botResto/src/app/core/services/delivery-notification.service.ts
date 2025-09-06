@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { SupabaseFranceService } from './supabase-france.service';
 import { DeliveryTokenService, DeliveryToken } from './delivery-token.service';
 import { GreenApiFranceService } from '../../features/restaurant-france/services/green-api-france.service';
+import { UniversalOrderDisplayService } from './universal-order-display.service';
 
 export interface NotificationData {
   orderId: number;
@@ -11,6 +12,7 @@ export interface NotificationData {
   deliveryAddress: string;
   restaurantName: string;
   preparationTime: string;
+  orderItems?: string;
 }
 
 export interface WhatsAppNotificationResult {
@@ -29,7 +31,8 @@ export class DeliveryNotificationService {
   constructor(
     private supabaseFranceService: SupabaseFranceService,
     private deliveryTokenService: DeliveryTokenService,
-    private greenApiService: GreenApiFranceService
+    private greenApiService: GreenApiFranceService,
+    private universalOrderDisplayService: UniversalOrderDisplayService
   ) {}
 
   /**
@@ -138,6 +141,7 @@ export class DeliveryNotificationService {
           total_amount,
           delivery_address,
           created_at,
+          items,
           france_restaurants!restaurant_id (
             name
           )
@@ -155,6 +159,15 @@ export class DeliveryNotificationService {
       const now = new Date();
       const diffMinutes = Math.floor((now.getTime() - createdTime.getTime()) / (1000 * 60));
 
+      // Formatter les articles avec le service universel
+      let orderItems = '';
+      if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+        const formattedItems = this.universalOrderDisplayService.formatOrderItems(order.items);
+        orderItems = formattedItems.map(item => 
+          `• ${item.quantity}x ${item.productName}${item.inlineConfiguration ? ' ' + item.inlineConfiguration : ''} - ${item.totalPrice.toFixed(2)}€`
+        ).join('\n');
+      }
+
       return {
         orderId: order.id,
         orderNumber: order.order_number,
@@ -162,7 +175,8 @@ export class DeliveryNotificationService {
         totalAmount: parseFloat(order.total_amount),
         deliveryAddress: order.delivery_address || 'Adresse non spécifiée',
         restaurantName: (order.france_restaurants as any)?.name || 'Restaurant',
-        preparationTime: `${diffMinutes} min`
+        preparationTime: `${diffMinutes} min`,
+        orderItems
       };
 
     } catch (error) {
@@ -302,12 +316,16 @@ export class DeliveryNotificationService {
    * Créer le message WhatsApp initial
    */
   private createInitialWhatsAppMessage(orderData: NotificationData, personalizedUrl: string): string {
-    return `🚨 *NOUVELLE COMMANDE DISPONIBLE* 🚨
+    const itemsSection = orderData.orderItems ? `
+🍕 *Commande :*
+${orderData.orderItems}
+` : '';
 
-📦 Commande #${orderData.orderNumber}
+    return `🚨 *NOUVELLE COMMANDE DISPONIBLE* 🚨
+📋 N°${orderData.orderNumber} • ${orderData.restaurantName}${itemsSection}
+💳 *Total : ${orderData.totalAmount.toFixed(2)}€*
 👤 Client: ${orderData.customerName}  
-📍 Adresse: ${orderData.deliveryAddress}
-💰 Total: ${orderData.totalAmount.toFixed(2)}€
+📍 ${orderData.deliveryAddress}
 🕒 Prête depuis ${orderData.preparationTime}
 
 ✅ *Cliquez pour accepter:*
@@ -321,11 +339,15 @@ ${personalizedUrl}
    * Créer le message WhatsApp de réactivation
    */
   private createReactivationWhatsAppMessage(orderData: NotificationData, personalizedUrl: string): string {
-    return `🔄 *COMMANDE DISPONIBLE À NOUVEAU* 🔄
+    const itemsSection = orderData.orderItems ? `
+🍕 *Commande :*
+${orderData.orderItems}
+` : '';
 
-📦 Commande #${orderData.orderNumber}
+    return `🔄 *COMMANDE DISPONIBLE À NOUVEAU* 🔄
+📋 N°${orderData.orderNumber} • ${orderData.restaurantName}${itemsSection}
+💳 *Total : ${orderData.totalAmount.toFixed(2)}€*
 👤 Client: ${orderData.customerName}
-💰 Total: ${orderData.totalAmount.toFixed(2)}€
 ℹ️ Le livreur précédent a annulé
 
 ✅ *Votre lien est toujours actif:*

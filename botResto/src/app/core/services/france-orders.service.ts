@@ -4,6 +4,7 @@ import { map } from 'rxjs/operators';
 import { SupabaseFranceService } from './supabase-france.service';
 import { WhatsAppNotificationFranceService, OrderDataFrance } from './whatsapp-notification-france.service';
 import { DeliveryNotificationService } from './delivery-notification.service';
+import { UniversalOrderDisplayService } from './universal-order-display.service';
 
 // Interface pour les paramètres de notification WhatsApp
 export interface NotificationSettings {
@@ -50,6 +51,13 @@ export interface FranceOrder {
   };
   // NOUVEAU : Nom WhatsApp du client
   customer_whatsapp_name?: string;
+  // NOUVEAU : Métadonnées de notification
+  notification_metadata?: {
+    drivers_notified?: number;
+    notification_sent_at?: string;
+    last_reminder_at?: string;
+  };
+  drivers_notified_count?: number;
 }
 
 export interface OrderAction {
@@ -79,7 +87,8 @@ export class FranceOrdersService {
   constructor(
     private supabaseFranceService: SupabaseFranceService,
     private whatsAppFranceService: WhatsAppNotificationFranceService,
-    private deliveryNotificationService: DeliveryNotificationService
+    private deliveryNotificationService: DeliveryNotificationService,
+    private universalOrderDisplayService: UniversalOrderDisplayService
   ) { }
 
   async loadOrders(restaurantId: number): Promise<void> {
@@ -228,7 +237,7 @@ export class FranceOrdersService {
 
   getAvailableActions(status: string): OrderAction[] {
     const actions: { [key: string]: OrderAction[] } = {
-      'en_attente': [
+      'pending': [
         { key: 'confirm', label: 'Confirmer', color: 'success', nextStatus: 'confirmee' },
         { key: 'cancel', label: 'Annuler', color: 'danger', nextStatus: 'annulee' }
       ],
@@ -244,6 +253,12 @@ export class FranceOrdersService {
       ],
       'en_livraison': [
         { key: 'delivered', label: 'Marquer livrée', color: 'success', nextStatus: 'livree' }
+      ],
+      'livree': [
+        { key: 'archive', label: 'Archiver', color: 'medium', nextStatus: 'archivee' }
+      ],
+      'annulee': [
+        { key: 'restore', label: 'Restaurer', color: 'primary', nextStatus: 'pending' }
       ]
     };
 
@@ -464,7 +479,7 @@ export class FranceOrdersService {
   }
 
   /**
-   * Formate les articles pour l'affichage WhatsApp
+   * Formate les articles pour l'affichage WhatsApp - FORMAT UNIVERSEL
    */
   private formatItemsForWhatsApp(items: any[]): string {
     console.log('🔍 [FranceOrders] formatItemsForWhatsApp - items:', items);
@@ -474,13 +489,54 @@ export class FranceOrdersService {
       return '• Aucun article détaillé disponible';
     }
 
-    return items.map(item => {
-      const quantity = item.quantity || 1;
-      const name = item.display_name || item.name || 'Article';
-      const price = item.price || item.total_price || 0;
+    // Utiliser le service universel pour formater les items de façon cohérente
+    const formattedItems = this.universalOrderDisplayService.formatOrderItems(items);
+    
+    return formattedItems.map(formattedItem => {
+      let itemText = `• ${formattedItem.quantity}x ${formattedItem.productName}`;
       
-      console.log(`🔍 [FranceOrders] Item: ${quantity}x ${name} - ${price}€`);
-      return `• ${quantity}x ${name} - ${this.formatPrice(price)}`;
+      // Ajouter la taille si présente
+      if (formattedItem.sizeInfo) {
+        itemText += ` ${formattedItem.sizeInfo}`;
+      }
+      
+      // Ajouter le prix
+      itemText += ` - ${this.formatPrice(formattedItem.totalPrice)}`;
+      
+      // Ajouter les configurations en lignes séparées avec emojis
+      const configDetails: string[] = [];
+      
+      // Configuration inline (viande, sauces) avec emojis
+      if (formattedItem.inlineConfiguration && formattedItem.inlineConfiguration.length > 0) {
+        const viande = formattedItem.inlineConfiguration.find(config => 
+          ['merguez', 'poulet', 'boeuf', 'agneau', 'kebab', 'cheval'].some(meat => 
+            config.toLowerCase().includes(meat)
+          )
+        );
+        if (viande) configDetails.push(`  🥩 ${viande}`);
+        
+        const sauces = formattedItem.inlineConfiguration.filter(config => 
+          !['merguez', 'poulet', 'boeuf', 'agneau', 'kebab', 'cheval'].some(meat => 
+            config.toLowerCase().includes(meat)
+          )
+        );
+        if (sauces.length > 0) configDetails.push(`  🍯 ${sauces.join(', ')}`);
+      }
+      
+      // Items additionnels (boissons, etc.)
+      if (formattedItem.additionalItems && formattedItem.additionalItems.length > 0) {
+        formattedItem.additionalItems.forEach(additional => {
+          if (additional.includes('🧊')) {
+            configDetails.push(`  🥤 ${additional.replace('🧊 ', '')}`);
+          } else {
+            configDetails.push(`  ${additional}`);
+          }
+        });
+      }
+      
+      console.log(`✅ [FranceOrders] Item formaté: ${formattedItem.quantity}x ${formattedItem.productName} - ${this.formatPrice(formattedItem.totalPrice)}`);
+      
+      return itemText + (configDetails.length > 0 ? '\n' + configDetails.join('\n') : '');
     }).join('\n');
   }
 
@@ -513,7 +569,7 @@ export class FranceOrdersService {
 
   getStatusColor(status: string): string {
     const statusColors: { [key: string]: string } = {
-      'en_attente': 'warning',
+      'pending': 'warning',
       'confirmee': 'primary',
       'preparation': 'secondary',
       'prete': 'success',
@@ -527,7 +583,7 @@ export class FranceOrdersService {
 
   getStatusText(status: string): string {
     const statusTexts: { [key: string]: string } = {
-      'en_attente': 'En attente',
+      'pending': 'En attente',
       'confirmee': 'Confirmée',
       'preparation': 'En préparation',
       'prete': 'Prête',

@@ -7,6 +7,7 @@ import { DeliveryAssignmentService } from '../../../core/services/delivery-assig
 import { DriversFranceService } from '../../../core/services/drivers-france.service';
 import { UniversalOrderDisplayService, FormattedItem } from '../../../core/services/universal-order-display.service';
 import { AddressWhatsAppService } from '../../../core/services/address-whatsapp.service';
+import { SupabaseFranceService } from '../../../core/services/supabase-france.service';
 
 @Component({
   selector: 'app-orders-france',
@@ -31,7 +32,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     private deliveryAssignmentService: DeliveryAssignmentService,
     private driversFranceService: DriversFranceService,
     private universalOrderDisplayService: UniversalOrderDisplayService,
-    private addressWhatsAppService: AddressWhatsAppService
+    private addressWhatsAppService: AddressWhatsAppService,
+    private supabaseFranceService: SupabaseFranceService
   ) { }
 
   ngOnInit() {
@@ -151,7 +153,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   private switchToStatusTab(status: string): void {
     // Mapping des statuts vers les onglets
     const statusToTab: Record<string, string> = {
-      'en_attente': 'en_attente',
+      'pending': 'pending',
       'confirmee': 'confirmee', 
       'preparation': 'preparation',
       'prete': 'prete',
@@ -533,12 +535,47 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   }
 
   /**
-   * NOUVEAU : Obtenir le nombre de livreurs notifiés (valeur statique pour l'instant)
+   * NOUVEAU : Obtenir le nombre de livreurs notifiés
    */
   getNotifiedDriversCount(order: FranceOrder): number {
-    // TODO: Récupérer le nombre réel depuis le service
-    return 3;
+    // Récupérer depuis les métadonnées de la commande si disponibles
+    if (order.notification_metadata?.drivers_notified) {
+      return order.notification_metadata.drivers_notified;
+    }
+    // Fallback: compter les actions de notification dans delivery_driver_actions
+    if (order.drivers_notified_count !== undefined) {
+      return order.drivers_notified_count;
+    }
+    
+    // TEMPORAIREMENT DÉSACTIVÉ - causait une fuite mémoire
+    // this.loadDriversNotifiedCount(order.id);
+    return 1; // Valeur par défaut temporaire
   }
+
+  /**
+   * Charger le nombre réel de livreurs notifiés depuis la base de données
+   * COMMENTÉ - causait une fuite mémoire car appelé depuis le template
+   */
+  /*
+  private async loadDriversNotifiedCount(orderId: number): Promise<void> {
+    try {
+      const { count, error } = await this.supabaseFranceService.client
+        .from('delivery_tokens')
+        .select('*', { count: 'exact', head: true })
+        .eq('order_id', orderId);
+
+      if (!error && count !== null) {
+        // Mettre à jour l'ordre dans la liste
+        const orderIndex = this.orders.findIndex(o => o.id === orderId);
+        if (orderIndex !== -1) {
+          this.orders[orderIndex].drivers_notified_count = count;
+        }
+      }
+    } catch (error) {
+      console.error('Erreur chargement drivers_notified_count:', error);
+    }
+  }
+  */
 
   /**
    * NOUVEAU : Obtenir le temps écoulé depuis la notification

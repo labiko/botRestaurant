@@ -51,6 +51,10 @@
         color: var(--ion-color-success);
       }
 
+      &.primary {
+        color: var(--ion-color-primary);
+      }
+
       &.warning {
         color: var(--ion-color-warning);
       }
@@ -119,6 +123,10 @@
       }
 
       .driver-status {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        
         .status-toggle-container {
           display: flex;
           flex-direction: column;
@@ -151,6 +159,47 @@
             &.toggle-checked {
               --background: var(--ion-color-success);
               --background-checked: var(--ion-color-success);
+            }
+          }
+        }
+
+        // NOUVEAU - Styles pour le toggle En ligne/Hors ligne
+        .online-toggle-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          min-width: 100px;
+
+          .online-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+
+            .online-icon {
+              font-size: 0.8rem;
+            }
+          }
+
+          .online-toggle {
+            transform: scale(0.8);
+            --handle-width: 16px;
+            --handle-height: 16px;
+            --track-width: 32px;
+            --track-height: 18px;
+            
+            &.toggle-checked {
+              --background: var(--ion-color-primary);
+              --background-checked: var(--ion-color-primary);
+            }
+
+            &:disabled {
+              opacity: 0.4;
             }
           }
         }

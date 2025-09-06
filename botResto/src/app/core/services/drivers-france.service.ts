@@ -10,6 +10,10 @@ export interface FranceDriver {
   phone_number: string;
   email?: string;
   is_active: boolean;
+  is_online?: boolean;  // NOUVEAU - Statut en ligne
+  current_latitude?: number;
+  current_longitude?: number;
+  last_location_update?: string;
   created_at: string;
   updated_at: string;
   // Stats calculées
@@ -170,6 +174,38 @@ export class DriversFranceService {
       return true;
     } catch (error) {
       console.error('Erreur service mise à jour statut:', error);
+      return false;
+    }
+  }
+
+  /**
+   * NOUVEAU - Mettre à jour le statut en ligne d'un livreur
+   */
+  async updateDriverOnlineStatus(driverId: number, isOnline: boolean): Promise<boolean> {
+    try {
+      const updateData: any = {
+        is_online: isOnline,
+        updated_at: new Date().toISOString()
+      };
+
+      // Si on met en ligne, mettre à jour la localisation
+      if (isOnline) {
+        updateData.last_location_update = new Date().toISOString();
+      }
+
+      const { error } = await this.supabaseFranceService.client
+        .from('france_delivery_drivers')
+        .update(updateData)
+        .eq('id', driverId);
+
+      if (error) {
+        console.error('Erreur mise à jour statut en ligne livreur:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erreur service mise à jour statut en ligne:', error);
       return false;
     }
   }

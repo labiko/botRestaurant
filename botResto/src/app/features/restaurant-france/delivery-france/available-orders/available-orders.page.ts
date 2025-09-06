@@ -12,6 +12,8 @@ import { DeliveryOrderItemsService } from '../../../../core/services/delivery-or
 import { DeliveryRefusalService } from '../../../../core/services/delivery-refusal.service';
 import { DeliveryTokenService } from '../../../../core/services/delivery-token.service';
 import { DriverSessionMonitorService } from '../../../../core/services/driver-session-monitor.service';
+import { UniversalOrderDisplayService, FormattedItem } from '../../../../core/services/universal-order-display.service';
+import { AddressWhatsAppService } from '../../../../core/services/address-whatsapp.service';
 
 @Component({
   selector: 'app-available-orders',
@@ -57,7 +59,9 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private actionSheetController: ActionSheetController,
     private deliveryRefusalService: DeliveryRefusalService,
-    private deliveryTokenService: DeliveryTokenService
+    private deliveryTokenService: DeliveryTokenService,
+    private universalOrderDisplayService: UniversalOrderDisplayService,
+    private addressWhatsAppService: AddressWhatsAppService
   ) {}
 
   ngOnInit() {
@@ -406,7 +410,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   }
 
   getDeliveryZone(address?: string): string {
-    return address ? address.substring(0, 30) + '...' : 'Adresse non spécifiée';
+    return address || 'Adresse non spécifiée';
   }
 
   formatPrice(amount: number): string {
@@ -437,11 +441,35 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
 
   // Fonctions détails articles
   hasOrderItems(order: DeliveryOrder): boolean {
-    return this.deliveryOrderItemsService.hasOrderItems(order);
+    console.log('🔍 [AvailableOrders] hasOrderItems - Order:', order.order_number);
+    console.log('🔍 [AvailableOrders] hasOrderItems - Items raw:', order.items);
+    console.log('🔍 [AvailableOrders] hasOrderItems - Items type:', typeof order.items);
+    
+    const result = this.deliveryOrderItemsService.hasOrderItems(order);
+    console.log('✅ [AvailableOrders] hasOrderItems - Result:', result);
+    return result;
   }
 
   getOrderItems(order: DeliveryOrder): any[] {
     return this.deliveryOrderItemsService.getOrderItems(order);
+  }
+
+  /**
+   * NOUVEAU - Formater les items avec le service universel (même format que restaurant)
+   */
+  getFormattedItems(order: DeliveryOrder): FormattedItem[] {
+    console.log('🔍 [AvailableOrders] getFormattedItems - Order:', order.order_number);
+    console.log('🔍 [AvailableOrders] getFormattedItems - Raw items:', order.items);
+    
+    const items = this.deliveryOrderItemsService.getOrderItems(order);
+    console.log('🔍 [AvailableOrders] getFormattedItems - Parsed items:', items);
+    console.log('🔍 [AvailableOrders] getFormattedItems - Items count:', items?.length || 0);
+    
+    const formattedItems = this.universalOrderDisplayService.formatOrderItems(items || []);
+    console.log('✅ [AvailableOrders] getFormattedItems - Formatted items:', formattedItems);
+    console.log('✅ [AvailableOrders] getFormattedItems - Formatted count:', formattedItems?.length || 0);
+    
+    return formattedItems;
   }
 
   hasSelectedOptions(selectedOptions: any): boolean {
