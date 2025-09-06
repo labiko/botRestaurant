@@ -18,6 +18,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **⚠️ IMPORTANT**: NE JAMAIS essayer de lancer le projet avec `ng serve`, `ionic serve`, ou tout autre commande de serveur de développement. Le projet est toujours déjà lancé du côté utilisateur. Ne pas utiliser les commandes Bash pour démarrer/arrêter/redémarrer des serveurs.
 
+## 🚨 COMMANDES INTERDITES - BASE DE DONNÉES
+
+**⚠️ CRITIQUE**: NE JAMAIS exécuter les commandes suivantes qui détruisent les données :
+- **`supabase db reset`** - INTERDIT ! Supprime toutes les données du projet
+- **`supabase db push --reset`** - INTERDIT ! Force la suppression des données
+- **`DROP TABLE`** ou **`TRUNCATE`** - INTERDIT ! Supprime les données existantes
+
+**✅ Commandes autorisées :**
+- `supabase db push` - Applique les migrations sans supprimer les données
+- Scripts SQL avec **transactions** (`BEGIN;` ... `COMMIT;`)
+- Requêtes `INSERT`, `UPDATE` avec conditions appropriées
+
+**🔄 En cas de problème de données :**
+- Toujours créer des scripts de **restauration** avant toute modification
+- Utiliser des **sauvegardes** avant les opérations risquées
+- Ne jamais faire de modifications destructives sans accord explicite de l'utilisateur
+
 ## 🔄 PRINCIPE DE RÉUTILISATION
 
 **⚠️ AVANT DE CRÉER UN NOUVEAU CODE** : Vérifier intégralement dans le code existant et s'assurer que la même logique n'est pas utilisée ailleurs. **PRIVILÉGIER LA RÉUTILISATION** de fonctions existantes plutôt que de dupliquer la logique.
@@ -59,7 +76,7 @@ Bot Restaurant WhatsApp - Un système de commande multi-restaurants pour Conakry
 - **Database**: Supabase PostgreSQL
 - **Architecture**: Architecture simplifiée (single file)
 
-## 📋 RÈGLES DE GESTION DES MENUS
+## 📋 RÈGLES DE GESTION DES MENUS ET CRÉATION DE SCRIPTS SQL
 
 **⚠️ IMPORTANT**: Lors de la création de fichiers de menus pour les restaurants :
 
@@ -72,6 +89,52 @@ Bot Restaurant WhatsApp - Un système de commande multi-restaurants pour Conakry
 6. **NE PAS CORRIGER** les éventuelles erreurs ou manques (ex: prix manquant)
 7. **⚠️ PRIX SUR PLACE UNIQUEMENT** - TOUJOURS prendre les prix sur place, JAMAIS les prix livraison (règle absolue)
 8. **INCLURE TOUS LES DÉTAILS** - Compositions complètes des plats (ingrédients, poids, etc.)
+
+### 💡 MÉTHODOLOGIE STANDARDISÉE POUR SCRIPTS SQL
+
+**⚠️ WORKFLOW OBLIGATOIRE**: Quand l'utilisateur fournit des menus restaurant, TOUJOURS suivre cette méthodologie :
+
+#### 1. **ANALYSE AUTOMATIQUE DES PRIX** :
+- **Règle +1€ livraison** : Prix livraison = Prix sur place + 1€
+- **Automatique** : Ne pas demander confirmation, appliquer directement
+- **Exemple** : 8€ sur place → 9€ livraison
+
+#### 2. **QUESTIONS STANDARDISÉES À POSER** :
+```
+Pour chaque menu fourni, TOUJOURS demander :
+
+1. **Workflow interactif** : "Ce produit nécessite-t-il un choix interactif ?" (OUI/NON)
+
+2. **Type de boissons** (si boisson incluse) : 
+   - "Quel format de boisson ?"
+   - Options : "33CL" ou "1L5" ou "autre"
+
+3. **Choix multiples** (si applicable) :
+   - "Quels sont les choix disponibles ?" 
+   - Exemple : viandes, sauces, accompagnements
+
+4. **Type de produit** :
+   - "simple" (aucun choix)
+   - "composite" (avec workflow interactif)
+```
+
+#### 3. **STRUCTURE SQL STANDARDISÉE** :
+```sql
+-- Toujours utiliser cette structure :
+1. BEGIN;
+2. Création catégorie
+3. Insertion produits (simple OU composite selon analyse)
+4. Configuration workflow (si composite)
+5. Éléments fixes (france_composite_items si nécessaire)
+6. Vérifications complètes
+7. COMMIT;
+```
+
+#### 4. **CONFIGURATION AUTOMATIQUE** :
+- **Prix livraison** : TOUJOURS +1€ automatiquement
+- **Display order** : Respecter l'ordre fourni (1, 2, 3...)
+- **Slug** : Générer automatiquement depuis le nom
+- **Restaurant** : pizza-yolo-77 (par défaut)
 
 ### Format standard :
 - Reprendre le texte tel quel avec TOUS les détails
@@ -133,6 +196,33 @@ deno test supabase/functions/
 
 ## Points Clés Techniques
 
+### 📄 RÈGLES SQL - TRANSACTIONS OBLIGATOIRES
+
+**⚠️ IMPORTANT**: Tous les scripts d'insertion en base de données doivent être encapsulés dans des transactions :
+
+```sql
+-- ✅ Format obligatoire pour tous les scripts SQL
+BEGIN;
+
+-- Vos requêtes d'insertion/modification ici
+INSERT INTO table_name (...) VALUES (...);
+UPDATE table_name SET ... WHERE ...;
+
+-- Vérification des résultats
+SELECT COUNT(*) FROM table_name WHERE condition;
+
+-- Si tout est correct, valider
+COMMIT;
+
+-- En cas de problème, annuler avec : ROLLBACK;
+```
+
+**Avantages :**
+- ✅ **Atomicité** : Tout réussit ou tout échoue
+- ✅ **Pas de doublons** en cas d'échec partiel
+- ✅ **Rollback facile** si problème détecté
+- ✅ **Base cohérente** à tout moment
+
 ### Base de données - Contraintes IMPORTANTES
 - **paiement_mode** accepte UNIQUEMENT : 'maintenant', 'fin_repas', 'recuperation', 'livraison'
 - Mapping obligatoire :
@@ -172,6 +262,15 @@ Avant chaque déploiement:
 
 - **Schéma complet**: `C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant\setup_database_updated.sql`
 
+## Fichiers de référence base de données
+
+- **Schéma complet**: `C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant\setup_database_updated.sql`
+- **Structure base de données**: `C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant\botResto\database_fr_structure.sql`
+
 ## Fichier bot WhatsApp
 
 - **Code principal**: `C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant\supabase\functions\webhook-whatsapp\index.ts`
+
+## 📋 RÈGLE OBLIGATOIRE SQL
+
+**⚠️ IMPORTANT**: Avant de donner TOUTE requête SQL, TOUJOURS vérifier le fichier `database_fr_structure.sql` pour connaître les VRAIES tables et colonnes. Ne jamais deviner les noms de tables.
