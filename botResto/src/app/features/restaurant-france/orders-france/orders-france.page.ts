@@ -9,6 +9,7 @@ import { UniversalOrderDisplayService, FormattedItem } from '../../../core/servi
 import { AddressWhatsAppService } from '../../../core/services/address-whatsapp.service';
 import { SupabaseFranceService } from '../../../core/services/supabase-france.service';
 import { FuseauHoraireService } from '../../../core/services/fuseau-horaire.service';
+import { DeliveryTrackingService } from '../../../core/services/delivery-tracking.service';
 
 @Component({
   selector: 'app-orders-france',
@@ -42,7 +43,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     private fuseauHoraireService: FuseauHoraireService,
     private universalOrderDisplayService: UniversalOrderDisplayService,
     private addressWhatsAppService: AddressWhatsAppService,
-    private supabaseFranceService: SupabaseFranceService
+    private supabaseFranceService: SupabaseFranceService,
+    private deliveryTrackingService: DeliveryTrackingService
   ) { }
 
   ngOnInit() {
@@ -77,6 +79,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     try {
       // Charger les commandes initiales
       await this.franceOrdersService.loadOrders(this.restaurantId);
+      // Charger l'état des assignations pending pour les commandes prêtes
+      await this.loadPendingAssignmentsState();
     } catch (error) {
       console.error('Erreur initialisation commandes:', error);
       this.isLoading = false;
@@ -494,6 +498,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     
     if (success) {
       await this.franceOrdersService.loadOrders(this.restaurantId);
+      // Recalculer l'état des assignations après rechargement
+      await this.loadPendingAssignmentsState();
       this.switchToStatusTab(newStatus);
     } else {
       this.presentToast('Erreur lors de la mise à jour du statut', 'danger');
@@ -712,6 +718,85 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     
     // Utilise le service FuseauHoraire pour un calcul précis
     return this.fuseauHoraireService.getTimeAgo(timestamp);
+  }
+
+  /**
+   * Charger l'état des assignations pending pour les commandes prêtes
+   */
+  private async loadPendingAssignmentsState(): Promise<void> {
+    try {
+      // Nettoyer d'abord les assignations expirées
+      await this.deliveryAssignmentService.cleanExpiredAssignments();
+      
+      // Vérifier pour chaque commande prête sans livreur
+      for (const order of this.orders) {
+        if (order.status === 'prete' && !order.driver_id) {
+          const assignmentState = await this.deliveryAssignmentService.checkPendingAssignment(order.id);
+          
+          // Vérifier s'il existe ANY assignation pending (même expirée)
+          const anyAssignmentState = await this.deliveryAssignmentService.checkAnyPendingAssignment(order.id);
+          
+          // Mettre à jour l'état de la commande
+          order.hasPendingAssignment = assignmentState.hasPending; // Assignations actives seulement
+          order.hasAnyAssignment = anyAssignmentState.hasAny; // N'importe quelle assignation
+          
+          // DEBUG: Log pour vérifier les valeurs
+          console.log(`🔍 [DEBUG] Commande ${order.id}:`, {
+            hasPendingAssignment: order.hasPendingAssignment,
+            hasAnyAssignment: order.hasAnyAssignment,
+            anyAssignmentState
+          });
+          order.pendingDriversCount = assignmentState.pendingDrivers.length;
+          
+          // Construire la liste des noms des livreurs
+          if (assignmentState.pendingDrivers.length > 0) {
+            order.pendingDriverNames = assignmentState.pendingDrivers
+              .map(a => {
+                const driver = a.france_delivery_drivers;
+                if (driver) {
+                  return `${driver.first_name || ''} ${driver.last_name || ''}`.trim();
+                }
+                return 'Livreur inconnu';
+              })
+              .join(', ');
+          }
+        }
+      }
+      
+      console.log('✅ [OrdersFrance] État des assignations pending chargé');
+    } catch (error) {
+      console.error('❌ [OrdersFrance] Erreur chargement assignations pending:', error);
+    }
+  }
+
+  /**
+   * Envoyer des rappels pour une commande avec assignation pending
+   */
+  async sendRemindersForOrder(order: FranceOrder): Promise<void> {
+    try {
+      console.log(`📨 [OrdersFrance] VRAIE LOGIQUE RAPPEL - Commande ${order.order_number}`);
+      console.log(`📨 [DEBUG] hasAnyAssignment: ${order.hasAnyAssignment}`);
+      console.log(`📨 [DEBUG] hasPendingAssignment: ${order.hasPendingAssignment}`);
+      
+      // ✅ UTILISER la vraie logique de rappel du tracking
+      console.log(`✅ [DEBUG] Appel deliveryTrackingService.sendReminderNotifications (réactive tokens)`);
+      
+      const result = await this.deliveryTrackingService.sendReminderNotifications(order.id);
+      
+      if (result.success) {
+        console.log('✅ [OrdersFrance] Rappels envoyés avec succès');
+        this.presentToast(result.message, 'success');
+        // Recharger l'état des assignations
+        await this.loadPendingAssignmentsState();
+      } else {
+        console.log('❌ [OrdersFrance] Échec envoi rappels:', result.message);
+        this.presentToast(result.message, 'danger');
+      }
+      
+    } catch (error) {
+      console.error('❌ [OrdersFrance] Erreur envoi rappels:', error);
+      this.presentToast('Erreur lors de l\'envoi des rappels', 'danger');
+    }
   }
 
 }

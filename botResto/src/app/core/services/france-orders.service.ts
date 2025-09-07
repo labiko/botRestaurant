@@ -69,6 +69,11 @@ export interface FranceOrder {
     last_name: string;
     phone_number: string;
   };
+  // NOUVEAU : État des assignations pending
+  hasPendingAssignment?: boolean;
+  hasAnyAssignment?: boolean; // N'importe quelle assignation pending (même expirée)
+  pendingDriversCount?: number;
+  pendingDriverNames?: string;
 }
 
 export interface OrderAction {

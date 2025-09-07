@@ -659,6 +659,144 @@ La commande peut être marquée "En livraison" quand le livreur arrive.
   }
 
   /**
+   * Vérifier s'il existe une assignation pending pour une commande
+   */
+  async checkPendingAssignment(orderId: number): Promise<{
+    hasPending: boolean;
+    pendingDrivers: any[];
+    isExpired: boolean;
+  }> {
+    try {
+      console.log(`🔍 [DeliveryAssignment] Vérification assignations pending pour commande ${orderId}`);
+      
+      // Vérifier les assignations pending non expirées (30 minutes)
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      
+      const { data, error } = await this.supabaseFranceService.client
+        .from('france_delivery_assignments')
+        .select(`
+          *,
+          france_delivery_drivers (
+            id,
+            first_name,
+            last_name,
+            phone_number
+          )
+        `)
+        .eq('order_id', orderId)
+        .eq('assignment_status', 'pending')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ [DeliveryAssignment] Erreur vérification assignations pending:', error);
+        return {
+          hasPending: false,
+          pendingDrivers: [],
+          isExpired: false
+        };
+      }
+      
+      if (!data || data.length === 0) {
+        console.log(`ℹ️ [DeliveryAssignment] Aucune assignation pending pour commande ${orderId}`);
+        return {
+          hasPending: false,
+          pendingDrivers: [],
+          isExpired: false
+        };
+      }
+      
+      // Vérifier si les assignations sont expirées
+      const nonExpiredAssignments = data.filter(assignment => 
+        new Date(assignment.created_at) > new Date(thirtyMinutesAgo)
+      );
+      
+      const isExpired = nonExpiredAssignments.length === 0;
+      
+      console.log(`✅ [DeliveryAssignment] ${data.length} assignation(s) pending trouvée(s), ${nonExpiredAssignments.length} non expirée(s)`);
+      
+      return {
+        hasPending: nonExpiredAssignments.length > 0,
+        pendingDrivers: nonExpiredAssignments,
+        isExpired: isExpired
+      };
+      
+    } catch (error) {
+      console.error('❌ [DeliveryAssignment] Erreur checkPendingAssignment:', error);
+      return {
+        hasPending: false,
+        pendingDrivers: [],
+        isExpired: false
+      };
+    }
+  }
+
+  /**
+   * Nettoyer les assignations pending expirées
+   */
+  async cleanExpiredAssignments(): Promise<number> {
+    try {
+      console.log('🧹 [DeliveryAssignment] Nettoyage des assignations expirées...');
+      
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      
+      // Mettre à jour les assignations pending expirées
+      const { data, error } = await this.supabaseFranceService.client
+        .from('france_delivery_assignments')
+        .update({ 
+          assignment_status: 'expired'
+        })
+        .eq('assignment_status', 'pending')
+        .lt('created_at', thirtyMinutesAgo)
+        .select();
+      
+      if (error) {
+        console.error('❌ [DeliveryAssignment] Erreur nettoyage assignations:', error);
+        return 0;
+      }
+      
+      const cleanedCount = data?.length || 0;
+      console.log(`✅ [DeliveryAssignment] ${cleanedCount} assignation(s) expirée(s) nettoyée(s)`);
+      
+      return cleanedCount;
+      
+    } catch (error) {
+      console.error('❌ [DeliveryAssignment] Erreur cleanExpiredAssignments:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Vérifier s'il existe n'importe quelle assignation pending pour une commande (même expirée)
+   * Utilisé pour déterminer si on doit afficher "Rappel" au lieu de "Renvoyer notification"
+   */
+  async checkAnyPendingAssignment(orderId: number): Promise<{ hasAny: boolean }> {
+    try {
+      console.log(`🔍 [DeliveryAssignment] Vérification ANY assignation pending pour commande ${orderId}`);
+      
+      const { data, error } = await this.supabaseFranceService.client
+        .from('france_delivery_assignments')
+        .select('id')
+        .eq('order_id', orderId)
+        .in('assignment_status', ['pending', 'expired'])
+        .limit(1);
+      
+      if (error) {
+        console.error('❌ [DeliveryAssignment] Erreur vérification ANY assignation pending:', error);
+        return { hasAny: false };
+      }
+      
+      const hasAny = (data && data.length > 0);
+      console.log(`📊 [DeliveryAssignment] Commande ${orderId} - ANY assignation pending: ${hasAny}`);
+      
+      return { hasAny };
+      
+    } catch (error) {
+      console.error('❌ [DeliveryAssignment] Erreur checkAnyPendingAssignment:', error);
+      return { hasAny: false };
+    }
+  }
+
+  /**
    * Arrêter le service et nettoyer les ressources
    */
   ngOnDestroy(): void {

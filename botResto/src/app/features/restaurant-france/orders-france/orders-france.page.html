@@ -223,6 +223,8 @@
         <div *ngIf="order.delivery_mode === 'livraison'" class="delivery-info">
           <div class="delivery-header">
             <h4>Informations livraison:</h4>
+            <!-- Bouton Itinéraire masqué - réservé au livreur -->
+            <!-- 
             <ion-button 
               *ngIf="order.delivery_address && order.delivery_address_coordinates"
               fill="solid" 
@@ -237,6 +239,7 @@
               <ion-icon name="navigate" slot="start"></ion-icon>
               Itinéraire
             </ion-button>
+            -->
           </div>
           
           <p *ngIf="order.delivery_address"><strong>Adresse:</strong> {{ order.delivery_address }}</p>
@@ -279,34 +282,88 @@
               </ng-template>
             </div>
             
-            <!-- CORRECTION : Afficher le statut de notification pour les commandes non assignées -->
+            <!-- NOUVEAU : Gestion intelligente des assignations pending -->
             <div *ngIf="!order.driver_id && order.status === 'prete'" class="notification-status">
-              <div class="notification-info">
-                <ion-icon name="notifications" color="primary"></ion-icon>
-                <span class="notification-text">📡 Notifié à {{ getNotifiedDriversCount(order) }} livreurs - {{ getNotificationTime(order) }}</span>
+              
+              <!-- Si assignation pending existe -->
+              <div *ngIf="order.hasPendingAssignment" class="pending-assignment-info">
+                <div class="notification-info">
+                  <ion-icon name="hourglass" color="warning"></ion-icon>
+                  <span class="notification-text">
+                    ⏳ En attente de réponse - {{ order.pendingDriversCount }} livreur(s)
+                    <small class="driver-names" *ngIf="order.pendingDriverNames">
+                      ({{ order.pendingDriverNames }})
+                    </small>
+                  </span>
+                </div>
+                
+                <!-- Bouton Rappel au lieu de Renvoyer notification -->
+                <div class="notification-actions">
+                  <ion-button 
+                    size="small" 
+                    color="primary"
+                    fill="solid"
+                    class="notification-button"
+                    (click)="sendRemindersForOrder(order)">
+                    <ion-icon name="notifications" slot="start"></ion-icon>
+                    📨 Envoyer rappel
+                  </ion-button>
+                  
+                  <ion-button 
+                    size="small" 
+                    color="tertiary"
+                    fill="clear"
+                    class="tracking-button"
+                    routerLink="/restaurant-france/delivery-france/tracking">
+                    <ion-icon name="analytics" slot="start"></ion-icon>
+                    📊 Voir détails tracking →
+                  </ion-button>
+                </div>
               </div>
               
-              <!-- Boutons d'action -->
-              <div class="notification-actions">
-                <ion-button 
-                  size="small" 
-                  color="warning"
-                  fill="outline"
-                  class="notification-button"
-                  (click)="handleDeliveryOrderReady(order, { key: 'assign', label: 'Assigner', color: 'warning', nextStatus: 'prete' })">
-                  <ion-icon name="refresh" slot="start"></ion-icon>
-                  🔄 Renvoyer notification
-                </ion-button>
+              <!-- Si pas d'assignation pending -->
+              <div *ngIf="!order.hasPendingAssignment">
+                <div class="notification-info">
+                  <ion-icon name="notifications" color="primary"></ion-icon>
+                  <span class="notification-text">📡 Notifié à {{ getNotifiedDriversCount(order) }} livreurs - {{ getNotificationTime(order) }}</span>
+                </div>
                 
-                <ion-button 
-                  size="small" 
-                  color="tertiary"
-                  fill="clear"
-                  class="tracking-button"
-                  routerLink="/restaurant-france/delivery-france/tracking">
-                  <ion-icon name="analytics" slot="start"></ion-icon>
-                  📊 Voir détails tracking →
-                </ion-button>
+                <!-- Boutons d'action normaux -->
+                <div class="notification-actions">
+                  <!-- Si ANY assignation existe (même expirée) → Bouton Rappel -->
+                  <ion-button 
+                    *ngIf="order.hasAnyAssignment"
+                    size="small" 
+                    color="primary"
+                    fill="solid"
+                    class="notification-button"
+                    (click)="sendRemindersForOrder(order)">
+                    <ion-icon name="notifications" slot="start"></ion-icon>
+                    📨 Envoyer rappel
+                  </ion-button>
+                  
+                  <!-- Si aucune assignation → Bouton Renvoyer notification -->
+                  <ion-button 
+                    *ngIf="!order.hasAnyAssignment"
+                    size="small" 
+                    color="warning"
+                    fill="outline"
+                    class="notification-button"
+                    (click)="handleDeliveryOrderReady(order, { key: 'assign', label: 'Assigner', color: 'warning', nextStatus: 'prete' })">
+                    <ion-icon name="refresh" slot="start"></ion-icon>
+                    🔄 Renvoyer notification
+                  </ion-button>
+                  
+                  <ion-button 
+                    size="small" 
+                    color="tertiary"
+                    fill="clear"
+                    class="tracking-button"
+                    routerLink="/restaurant-france/delivery-france/tracking">
+                    <ion-icon name="analytics" slot="start"></ion-icon>
+                    📊 Voir détails tracking →
+                  </ion-button>
+                </div>
               </div>
             </div>
           </div>
