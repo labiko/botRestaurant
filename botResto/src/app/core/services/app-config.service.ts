@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 
 // URL racine de production (constante)
-const PRODUCTION_BASE_URL = 'https://botresto-mrhb0w6sm-alphas-projects-d3cd7665.vercel.app';
+const PRODUCTION_BASE_URL = 'https://botresto.vercel.app';
 
 export interface AppEnvironmentConfig {
   production: boolean;
