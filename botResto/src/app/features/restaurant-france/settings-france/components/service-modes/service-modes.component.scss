@@ -1,0 +1,204 @@
+.service-modes-container {
+  padding: 0;
+}
+
+.modes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mode-card {
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  &.disabled {
+    opacity: 0.6;
+    
+    .mode-header .mode-info ion-icon {
+      color: var(--ion-color-medium) !important;
+    }
+  }
+}
+
+.mode-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  
+  .mode-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    flex: 1;
+    
+    ion-icon {
+      flex-shrink: 0;
+      margin-top: 0.25rem;
+    }
+    
+    .mode-details {
+      h3 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+      }
+      
+      p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--ion-color-medium);
+        line-height: 1.4;
+      }
+    }
+  }
+  
+  .mode-status {
+    flex-shrink: 0;
+    
+    ion-badge {
+      font-weight: 500;
+    }
+  }
+}
+
+.mode-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+    
+    ion-button {
+      margin: 0;
+    }
+  }
+  
+  ion-button {
+    --border-radius: 8px;
+    flex: 1;
+    height: 40px;
+    
+    ion-icon {
+      font-size: 1.1rem;
+    }
+  }
+}
+
+// Mode-specific configurations
+.delivery-specific,
+.dine-in-specific,
+.takeaway-specific {
+  border-top: 1px solid var(--ion-color-light-shade);
+  padding-top: 0.75rem;
+  
+  ion-item {
+    --background: transparent;
+    --padding-start: 0;
+    --padding-end: 0;
+    --border-color: transparent;
+    
+    ion-label {
+      h3 {
+        font-size: 0.95rem;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+        color: var(--ion-color-dark);
+      }
+      
+      p {
+        font-size: 0.8rem;
+        color: var(--ion-color-medium);
+        margin: 0;
+      }
+    }
+    
+    ion-button[slot="end"] {
+      --padding-start: 8px;
+      --padding-end: 8px;
+    }
+    
+    ion-note {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// Info card
+.info-card {
+  margin-top: 1.5rem;
+  border-left: 4px solid var(--ion-color-primary);
+  
+  .info-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    
+    ion-icon {
+      flex-shrink: 0;
+      font-size: 1.5rem;
+      margin-top: 0.25rem;
+    }
+    
+    h4 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--ion-color-primary);
+    }
+    
+    p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--ion-color-medium);
+      line-height: 1.5;
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .mode-card.disabled {
+    opacity: 0.5;
+  }
+  
+  .delivery-specific,
+  .dine-in-specific,
+  .takeaway-specific {
+    border-top-color: var(--ion-color-step-200);
+  }
+  
+  .info-card {
+    border-left-color: var(--ion-color-primary-tint);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .mode-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    
+    .mode-status {
+      align-self: flex-start;
+    }
+  }
+  
+  .mode-info {
+    width: 100%;
+  }
+}

@@ -1,0 +1,250 @@
+<!-- Product Management Component -->
+<div class="product-management-container">
+
+  <!-- Search and Filters -->
+  <ion-card class="filter-card">
+    <ion-card-content>
+      <div class="filter-section">
+        
+        <!-- Search Bar -->
+        <ion-searchbar
+          placeholder="Rechercher un produit..."
+          debounce="300"
+          (ionInput)="onSearchChange($event)">
+        </ion-searchbar>
+
+        <!-- Category Filter -->
+        <div class="category-filter">
+          <div class="category-nav-container">
+            <!-- Left Arrow -->
+            <ion-button 
+              fill="clear" 
+              size="small" 
+              color="primary"
+              (click)="scrollCategoriesLeft()"
+              class="nav-arrow left-arrow"
+              #leftArrow>
+              <ion-icon name="chevron-back" slot="icon-only"></ion-icon>
+            </ion-button>
+            
+            <!-- Categories Scroll Container -->
+            <div class="categories-scroll-container" #categoriesContainer>
+              <div class="category-chips">
+                <ion-chip 
+                  [color]="selectedCategory === 'all' ? 'primary' : 'medium'"
+                  (click)="onCategoryChipClick('all')"
+                  [class.selected]="selectedCategory === 'all'"
+                  class="category-chip">
+                  <ion-icon name="apps" slot="start"></ion-icon>
+                  <ion-label>Toutes</ion-label>
+                </ion-chip>
+                
+                <ion-chip 
+                  *ngFor="let category of categories" 
+                  [color]="selectedCategory === category.id.toString() ? 'primary' : 'medium'"
+                  (click)="onCategoryChipClick(category.id.toString())"
+                  [class.selected]="selectedCategory === category.id.toString()"
+                  class="category-chip">
+                  <ion-icon [name]="category.icon || 'restaurant'" slot="start"></ion-icon>
+                  <ion-label>{{ category.name }}</ion-label>
+                </ion-chip>
+              </div>
+            </div>
+            
+            <!-- Right Arrow -->
+            <ion-button 
+              fill="clear" 
+              size="small" 
+              color="primary"
+              (click)="scrollCategoriesRight()"
+              class="nav-arrow right-arrow"
+              #rightArrow>
+              <ion-icon name="chevron-forward" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Products Grid -->
+  <div class="products-grid">
+    <div *ngFor="let product of filteredProducts" class="product-item">
+      <ion-card class="product-card">
+        
+        <!-- Product Header -->
+        <ion-card-header>
+          <div class="product-header">
+            <div class="product-badges">
+              <ion-badge [color]="getProductTypeColor(product.product_type)">
+                {{ getProductTypeLabel(product.product_type) }}
+              </ion-badge>
+              <ion-badge 
+                [color]="product.is_active ? 'success' : 'danger'"
+                class="status-badge">
+                {{ product.is_active ? 'Actif' : 'Inactif' }}
+              </ion-badge>
+            </div>
+            <ion-card-title>{{ product.name }}</ion-card-title>
+            <ion-card-subtitle *ngIf="product.description">
+              {{ product.description }}
+            </ion-card-subtitle>
+          </div>
+        </ion-card-header>
+        
+        <!-- Product Content -->
+        <ion-card-content>
+          
+          <!-- Product Type Specific Content -->
+          <div [ngSwitch]="product.product_type" class="product-type-content">
+            
+            <!-- Simple Product -->
+            <div *ngSwitchCase="'simple'" class="simple-product">
+              <div class="price-row">
+                <div class="price-item">
+                  <ion-icon name="restaurant" color="primary"></ion-icon>
+                  <span class="price-label">Sur place</span>
+                  <span class="price-value">{{ product.price_on_site_base || '0' }}€</span>
+                </div>
+                <div class="price-item" *ngIf="!hideDeliveryInfo">
+                  <ion-icon name="bicycle" color="success"></ion-icon>
+                  <span class="price-label">Livraison</span>
+                  <span class="price-value">{{ product.price_delivery_base || '0' }}€</span>
+                </div>
+              </div>
+              
+              <ion-button 
+                fill="outline" 
+                size="small" 
+                expand="block"
+                color="primary"
+                (click)="onEditSimpleProductPrices(product)">
+                <ion-icon name="pencil" slot="start"></ion-icon>
+                {{ hideDeliveryInfo ? 'Modifier le prix' : 'Modifier les prix' }}
+              </ion-button>
+            </div>
+            
+            <!-- Variant Product -->
+            <div *ngSwitchCase="'variant'" class="variant-product">
+              <div class="info-row">
+                <ion-icon name="list" color="secondary"></ion-icon>
+                <span>Produit avec variantes</span>
+              </div>
+              <ion-button 
+                fill="outline" 
+                size="small" 
+                expand="block"
+                color="secondary"
+                (click)="onViewProductDetails(product)">
+                <ion-icon name="eye" slot="start"></ion-icon>
+                Voir les variantes
+              </ion-button>
+            </div>
+            
+            <!-- Modular Product -->
+            <div *ngSwitchCase="'modular'" class="modular-product">
+              <div class="info-row">
+                <ion-icon name="options" color="warning"></ion-icon>
+                <span>Produit modulaire</span>
+              </div>
+              <ion-button 
+                fill="outline" 
+                size="small" 
+                expand="block"
+                color="warning"
+                (click)="onConfigureModularProduct(product)">
+                <ion-icon name="settings" slot="start"></ion-icon>
+                Configurer modules
+              </ion-button>
+            </div>
+            
+            <!-- Composite Product -->
+            <div *ngSwitchCase="'composite'" class="composite-product">
+              <div class="workflow-info">
+                <div class="info-row">
+                  <ion-icon name="git-branch" color="tertiary"></ion-icon>
+                  <span>Produit composite</span>
+                </div>
+                <div class="workflow-status" *ngIf="product.workflow_type">
+                  <ion-chip color="tertiary" outline="true">
+                    <ion-icon name="checkmark-circle"></ion-icon>
+                    <ion-label>{{ product.workflow_type }}</ion-label>
+                  </ion-chip>
+                </div>
+              </div>
+              
+              <div class="composite-actions">
+                <ion-button 
+                  fill="outline" 
+                  size="small" 
+                  color="tertiary"
+                  (click)="onViewProductDetails(product)">
+                  <ion-icon name="eye" slot="start"></ion-icon>
+                  Détails
+                </ion-button>
+                <ion-button 
+                  fill="outline" 
+                  size="small" 
+                  color="tertiary"
+                  (click)="onConfigureWorkflow(product)">
+                  <ion-icon name="settings" slot="start"></ion-icon>
+                  Workflow
+                </ion-button>
+              </div>
+            </div>
+            
+          </div>
+
+          <!-- Drink Configuration -->
+          <div class="drink-config" *ngIf="product.product_type === 'modular'">
+            <div class="drink-info">
+              <ion-icon name="wine" color="primary"></ion-icon>
+              <span>Configuration boisson</span>
+              <ion-button 
+                fill="clear" 
+                size="small"
+                (click)="checkProductIncludesDrink(product)">
+                <ion-icon name="information-circle"></ion-icon>
+              </ion-button>
+            </div>
+          </div>
+
+          <!-- Product Actions -->
+          <div class="product-actions">
+            <ion-button 
+              fill="clear" 
+              [color]="product.is_active ? 'danger' : 'success'"
+              (click)="onToggleProductStatus(product)">
+              <ion-icon 
+                [name]="product.is_active ? 'eye-off' : 'eye'"
+                slot="start">
+              </ion-icon>
+              {{ product.is_active ? 'Désactiver' : 'Activer' }}
+            </ion-button>
+            
+            <ion-button 
+              fill="clear" 
+              color="primary"
+              (click)="onViewProductDetails(product)">
+              <ion-icon name="information-circle" slot="start"></ion-icon>
+              Détails
+            </ion-button>
+          </div>
+
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="filteredProducts.length === 0 && !isLoading" class="empty-state">
+    <ion-card>
+      <ion-card-content class="text-center">
+        <ion-icon name="restaurant" color="medium" size="large"></ion-icon>
+        <h3>Aucun produit trouvé</h3>
+        <p>{{ searchTerm ? 'Aucun produit ne correspond à votre recherche' : 'Aucun produit dans cette catégorie' }}</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+</div>

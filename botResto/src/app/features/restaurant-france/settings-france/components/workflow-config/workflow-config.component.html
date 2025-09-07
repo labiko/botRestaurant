@@ -1,0 +1,229 @@
+<!-- Workflow Configuration Component -->
+<div class="workflow-config-container">
+
+  <!-- Workflow Actions Header -->
+  <ion-card class="actions-card">
+    <ion-card-content>
+      <div class="actions-header">
+        <h2>
+          <ion-icon name="git-branch" color="tertiary"></ion-icon>
+          Configuration des Workflows
+        </h2>
+        <ion-button fill="solid" color="tertiary" (click)="onCreateWorkflow()">
+          <ion-icon name="add" slot="start"></ion-icon>
+          Nouveau Workflow
+        </ion-button>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <div class="workflow-layout">
+    
+    <!-- Workflows List -->
+    <div class="workflows-panel">
+      <ion-card class="workflows-list-card">
+        <ion-card-header>
+          <ion-card-title>Workflows Disponibles</ion-card-title>
+          <ion-card-subtitle>{{ workflows.length }} workflow(s)</ion-card-subtitle>
+        </ion-card-header>
+        
+        <ion-card-content>
+          <div *ngFor="let workflow of workflows" class="workflow-item">
+            <div 
+              class="workflow-card" 
+              [class.selected]="selectedWorkflow?.id === workflow.id"
+              (click)="onSelectWorkflow(workflow)">
+              
+              <div class="workflow-header">
+                <div class="workflow-info">
+                  <h3>{{ workflow.name }}</h3>
+                  <p *ngIf="workflow.description">{{ workflow.description }}</p>
+                  <div class="workflow-meta">
+                    <ion-chip [color]="workflow.is_active ? 'success' : 'danger'" outline="true">
+                      <ion-icon [name]="workflow.is_active ? 'checkmark-circle' : 'close-circle'"></ion-icon>
+                      <ion-label>{{ workflow.is_active ? 'Actif' : 'Inactif' }}</ion-label>
+                    </ion-chip>
+                    <ion-chip color="medium" outline="true">
+                      <ion-icon name="time"></ion-icon>
+                      <ion-label>{{ workflow.max_duration_minutes }}min</ion-label>
+                    </ion-chip>
+                  </div>
+                </div>
+              </div>
+
+              <div class="workflow-actions">
+                <ion-button 
+                  fill="clear" 
+                  size="small"
+                  [color]="workflow.is_active ? 'danger' : 'success'"
+                  (click)="onToggleWorkflowStatus(workflow); $event.stopPropagation()">
+                  <ion-icon [name]="workflow.is_active ? 'pause' : 'play'"></ion-icon>
+                </ion-button>
+                
+                <ion-button 
+                  fill="clear" 
+                  size="small"
+                  color="primary"
+                  (click)="onTestWorkflow(workflow); $event.stopPropagation()">
+                  <ion-icon name="play-circle"></ion-icon>
+                </ion-button>
+                
+                <ion-button 
+                  fill="clear" 
+                  size="small"
+                  color="secondary"
+                  (click)="onValidateWorkflow(workflow); $event.stopPropagation()">
+                  <ion-icon name="checkmark-done"></ion-icon>
+                </ion-button>
+                
+                <ion-button 
+                  fill="clear" 
+                  size="small"
+                  color="tertiary"
+                  (click)="onCloneWorkflow(workflow); $event.stopPropagation()">
+                  <ion-icon name="copy"></ion-icon>
+                </ion-button>
+                
+                <ion-button 
+                  fill="clear" 
+                  size="small"
+                  color="danger"
+                  (click)="onDeleteWorkflow(workflow); $event.stopPropagation()">
+                  <ion-icon name="trash"></ion-icon>
+                </ion-button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="workflows.length === 0" class="empty-workflows">
+            <ion-icon name="git-branch" color="medium" size="large"></ion-icon>
+            <h3>Aucun workflow</h3>
+            <p>Créez votre premier workflow pour personnaliser les interactions bot</p>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+    <!-- Workflow Details -->
+    <div class="workflow-details-panel" *ngIf="selectedWorkflow">
+      <ion-card class="workflow-details-card">
+        <ion-card-header>
+          <div class="details-header">
+            <div class="details-title">
+              <ion-card-title>{{ selectedWorkflow.name }}</ion-card-title>
+              <ion-card-subtitle>ID: {{ selectedWorkflow.workflow_id }}</ion-card-subtitle>
+            </div>
+            <ion-button 
+              fill="clear" 
+              size="small"
+              color="medium"
+              (click)="onDeselectWorkflow()">
+              <ion-icon name="close"></ion-icon>
+            </ion-button>
+          </div>
+        </ion-card-header>
+        
+        <ion-card-content>
+          
+          <!-- Workflow Info -->
+          <div class="workflow-info-section">
+            <h4>
+              <ion-icon name="information-circle" color="primary"></ion-icon>
+              Informations
+            </h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">Statut</span>
+                <ion-chip [color]="selectedWorkflow.is_active ? 'success' : 'danger'">
+                  {{ selectedWorkflow.is_active ? 'Actif' : 'Inactif' }}
+                </ion-chip>
+              </div>
+              <div class="info-item">
+                <span class="label">Durée max</span>
+                <span class="value">{{ selectedWorkflow.max_duration_minutes }} minutes</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Nb étapes</span>
+                <span class="value">{{ workflowSteps.length }}</span>
+              </div>
+              <div class="info-item" *ngIf="selectedWorkflow.description">
+                <span class="label">Description</span>
+                <span class="value">{{ selectedWorkflow.description }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Workflow Steps -->
+          <div class="workflow-steps-section" *ngIf="workflowSteps.length > 0">
+            <h4>
+              <ion-icon name="list" color="secondary"></ion-icon>
+              Étapes du Workflow
+            </h4>
+            
+            <div class="steps-timeline">
+              <div *ngFor="let step of workflowSteps; let i = index" class="step-item">
+                <div class="step-marker">
+                  <span class="step-number">{{ step.step_order }}</span>
+                </div>
+                
+                <div class="step-content">
+                  <div class="step-header">
+                    <h5>{{ step.title }}</h5>
+                    <ion-chip [color]="getStepTypeColor(step.step_type)" outline="true">
+                      {{ getStepTypeLabel(step.step_type) }}
+                    </ion-chip>
+                  </div>
+                  
+                  <p *ngIf="step.description" class="step-description">
+                    {{ step.description }}
+                  </p>
+                  
+                  <div class="step-meta">
+                    <div class="meta-item" *ngIf="step.selection_config?.selectionType">
+                      <ion-icon name="options" color="medium"></ion-icon>
+                      <span>{{ step.selection_config.selectionType }}</span>
+                    </div>
+                    
+                    <div class="meta-item" *ngIf="step.display_config?.format">
+                      <ion-icon name="grid" color="medium"></ion-icon>
+                      <span>{{ step.display_config.format }}</span>
+                    </div>
+                    
+                    <div class="meta-item" *ngIf="step.validation_rules && step.validation_rules.length > 0">
+                      <ion-icon name="shield-checkmark" color="medium"></ion-icon>
+                      <span>{{ step.validation_rules.length }} règle(s)</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="step-connector" *ngIf="i < workflowSteps.length - 1"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- No Steps State -->
+          <div *ngIf="workflowSteps.length === 0" class="no-steps">
+            <ion-icon name="construct" color="medium" size="large"></ion-icon>
+            <h3>Aucune étape configurée</h3>
+            <p>Ce workflow ne contient pas encore d'étapes</p>
+          </div>
+
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+    <!-- No Selection State -->
+    <div class="no-selection-panel" *ngIf="!selectedWorkflow && workflows.length > 0">
+      <ion-card class="no-selection-card">
+        <ion-card-content class="text-center">
+          <ion-icon name="hand-left" color="medium" size="large"></ion-icon>
+          <h3>Sélectionnez un workflow</h3>
+          <p>Cliquez sur un workflow pour voir ses détails et étapes</p>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+  </div>
+
+</div>

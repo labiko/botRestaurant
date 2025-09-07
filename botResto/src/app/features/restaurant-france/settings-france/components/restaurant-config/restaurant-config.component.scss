@@ -1,0 +1,238 @@
+// Restaurant Config Component - Using Theme Colors
+.restaurant-config-container {
+  padding: 0;
+}
+
+// Status Card with prominent styling
+.status-card {
+  margin-bottom: 1.5rem;
+  border-left: 4px solid var(--ion-color-primary);
+  
+  ion-card-header {
+    padding-bottom: 0.5rem;
+    
+    ion-card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--ion-color-primary);
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+  }
+}
+
+.status-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  
+  .status-info {
+    flex: 1;
+    
+    h3 {
+      margin: 0 0 0.25rem 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--ion-color-dark);
+    }
+    
+    p {
+      margin: 0;
+      color: var(--ion-color-medium);
+      font-size: 0.9rem;
+    }
+  }
+  
+  ion-toggle {
+    margin-left: 1rem;
+  }
+}
+
+// Main content cards
+.main-content-card {
+  margin-bottom: 1.5rem;
+  
+  ion-card-header {
+    ion-card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      
+      ion-icon {
+        font-size: 1.2rem;
+      }
+    }
+  }
+}
+
+// Form styling
+.form-grid {
+  display: grid;
+  gap: 1rem;
+  
+  ion-item {
+    --border-radius: 8px;
+    --border-width: 1px;
+    --border-color: var(--ion-color-light-shade);
+    margin-bottom: 0.5rem;
+    
+    ion-label {
+      font-weight: 500;
+      color: var(--ion-color-dark);
+    }
+  }
+}
+
+.form-actions {
+  margin-top: 1.5rem;
+  
+  ion-button {
+    --border-radius: 8px;
+    height: 44px;
+    font-weight: 500;
+  }
+}
+
+// Business hours specific styling
+.business-hours-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.day-schedule {
+  border: 1px solid var(--ion-color-light-shade);
+  border-radius: 8px;
+  overflow: hidden;
+  
+  .day-header {
+    background: var(--ion-color-light);
+    
+    ion-item {
+      --background: transparent;
+      
+      ion-label h3 {
+        margin: 0;
+        font-weight: 500;
+        color: var(--ion-color-dark);
+      }
+    }
+  }
+  
+  .time-inputs {
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    background: var(--ion-background-color);
+    
+    ion-item {
+      --border-radius: 6px;
+      margin-bottom: 0;
+    }
+  }
+}
+
+// Features section
+.features-section {
+  margin-top: 1.5rem;
+  
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+    
+    ion-icon {
+      font-size: 1.1rem;
+    }
+  }
+}
+
+.features-grid {
+  border: 1px solid var(--ion-color-light-shade);
+  border-radius: 8px;
+  overflow: hidden;
+  
+  ion-item {
+    --border-width: 0 0 1px 0;
+    --border-color: var(--ion-color-light-shade);
+    
+    &:last-child {
+      --border-width: 0;
+    }
+    
+    ion-label {
+      h3 {
+        margin: 0 0 0.25rem 0;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--ion-color-dark);
+      }
+      
+      p {
+        margin: 0;
+        font-size: 0.8rem;
+        color: var(--ion-color-medium);
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .time-inputs {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .status-toggle {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    
+    .status-info {
+      width: 100%;
+    }
+    
+    ion-toggle {
+      margin-left: 0;
+      align-self: flex-end;
+    }
+  }
+}
+
+@media (min-width: 769px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+    
+    ion-item:nth-child(4) { // Address field
+      grid-column: span 2;
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .day-schedule {
+    .day-header {
+      background: var(--ion-color-step-100);
+    }
+    
+    .time-inputs {
+      background: var(--ion-color-step-50);
+    }
+  }
+  
+  .features-grid {
+    border-color: var(--ion-color-step-200);
+    
+    ion-item {
+      --border-color: var(--ion-color-step-200);
+    }
+  }
+}

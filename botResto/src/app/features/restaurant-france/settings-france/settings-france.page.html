@@ -1,0 +1,91 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-title color="light">{{ restaurantName }}</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/restaurant-france/dashboard" color="light"></ion-back-button>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-button (click)="refreshData()" fill="clear" color="light">
+        <ion-icon name="refresh" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="settings-container">
+    
+    <!-- Navigation Tab Cards - Style EXACT Guinea -->
+    <div class="navigation-tabs">
+      <div class="tab-card" [class.active]="currentTab === 'restaurant'" (click)="switchTab('restaurant')">
+        <div class="tab-icon">
+          <ion-icon name="restaurant"></ion-icon>
+        </div>
+        <div class="tab-content">
+          <h3>Paramétrage Restaurant</h3>
+          <p>Statut, horaires et configuration</p>
+        </div>
+        <div class="tab-indicator"></div>
+      </div>
+      
+      <div class="tab-card" [class.active]="currentTab === 'products'" (click)="switchTab('products')">
+        <div class="tab-icon">
+          <ion-icon name="fast-food"></ion-icon>
+        </div>
+        <div class="tab-content">
+          <h3>Gestion Produits</h3>
+          <p>Menus, prix et disponibilité</p>
+        </div>
+        <div class="tab-indicator"></div>
+      </div>
+      
+      <div class="tab-card" [class.active]="currentTab === 'workflows'" (click)="switchTab('workflows')">
+        <div class="tab-icon">
+          <ion-icon name="git-branch"></ion-icon>
+        </div>
+        <div class="tab-content">
+          <h3>Workflows Bot</h3>
+          <p>Configuration des interactions</p>
+        </div>
+        <div class="tab-indicator"></div>
+      </div>
+      
+      <div class="tab-card" [class.active]="currentTab === 'service-modes'" (click)="switchTab('service-modes')">
+        <div class="tab-icon">
+          <ion-icon name="settings"></ion-icon>
+        </div>
+        <div class="tab-content">
+          <h3>Modes de Service</h3>
+          <p>Sur place, à emporter, livraison</p>
+        </div>
+        <div class="tab-indicator"></div>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="content-area">
+      
+      <!-- Restaurant Configuration -->
+      <div *ngIf="currentTab === 'restaurant'" class="tab-content-wrapper">
+        <app-restaurant-config></app-restaurant-config>
+      </div>
+
+      <!-- Product Management -->
+      <div *ngIf="currentTab === 'products'" class="tab-content-wrapper">
+        <app-product-management></app-product-management>
+      </div>
+
+      <!-- Workflow Configuration -->
+      <div *ngIf="currentTab === 'workflows'" class="tab-content-wrapper">
+        <app-workflow-config></app-workflow-config>
+      </div>
+
+      <!-- Service Modes Configuration -->
+      <div *ngIf="currentTab === 'service-modes'" class="tab-content-wrapper">
+        <app-service-modes></app-service-modes>
+      </div>
+
+    </div>
+
+  </div>
+</ion-content>

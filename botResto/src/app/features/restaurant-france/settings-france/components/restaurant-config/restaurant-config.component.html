@@ -1,0 +1,244 @@
+<!-- Restaurant Configuration Component -->
+<div class="restaurant-config-container">
+
+  <!-- Restaurant Status Card -->
+  <ion-card class="status-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="pulse" color="primary"></ion-icon>
+        Statut du Restaurant
+      </ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <form [formGroup]="restaurantForm">
+        <div class="status-toggle">
+          <div class="status-info">
+            <h3>Restaurant {{ restaurantForm.get('is_active')?.value ? 'OUVERT' : 'FERMÉ' }}</h3>
+            <p>{{ restaurantForm.get('is_active')?.value ? 'Les commandes sont acceptées' : 'Les commandes sont suspendues' }}</p>
+          </div>
+          <ion-toggle 
+            formControlName="is_active"
+            (ionChange)="onToggleRestaurantStatus()"
+            [color]="restaurantForm.get('is_active')?.value ? 'success' : 'medium'">
+          </ion-toggle>
+        </div>
+      </form>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Restaurant Information -->
+  <ion-card class="main-content-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="restaurant" color="primary"></ion-icon>
+        Informations Restaurant
+      </ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <form [formGroup]="restaurantForm">
+        <div class="form-grid">
+          
+          <ion-item fill="outline">
+            <ion-label position="stacked">Nom du restaurant *</ion-label>
+            <ion-input formControlName="name" type="text"></ion-input>
+          </ion-item>
+
+          <ion-item fill="outline">
+            <ion-label position="stacked">Téléphone *</ion-label>
+            <ion-input formControlName="phone" type="tel" readonly="true"></ion-input>
+          </ion-item>
+
+          <ion-item fill="outline">
+            <ion-label position="stacked">WhatsApp *</ion-label>
+            <ion-input formControlName="whatsapp_number" type="tel" readonly="true"></ion-input>
+          </ion-item>
+
+          <ion-item fill="outline">
+            <ion-label position="stacked">Adresse</ion-label>
+            <ion-textarea formControlName="address" rows="2"></ion-textarea>
+          </ion-item>
+
+          <ion-item fill="outline">
+            <ion-label position="stacked">Ville</ion-label>
+            <ion-input formControlName="city" type="text"></ion-input>
+          </ion-item>
+
+          <ion-item fill="outline">
+            <ion-label position="stacked">Code postal</ion-label>
+            <ion-input formControlName="postal_code" type="text"></ion-input>
+          </ion-item>
+
+          <ion-item fill="outline" *ngIf="!hideDeliveryInfo">
+            <ion-label position="stacked">Zone de livraison (km) *</ion-label>
+            <ion-input formControlName="delivery_zone_km" type="number" min="1"></ion-input>
+          </ion-item>
+
+          <ion-item fill="outline" *ngIf="!hideDeliveryInfo">
+            <ion-label position="stacked">Commande minimum (€) *</ion-label>
+            <ion-input formControlName="min_order_amount" type="number" min="0" step="0.10"></ion-input>
+          </ion-item>
+
+          <ion-item fill="outline" *ngIf="!hideDeliveryInfo">
+            <ion-label position="stacked">Frais de livraison (€) *</ion-label>
+            <ion-input formControlName="delivery_fee" type="number" min="0" step="0.10"></ion-input>
+          </ion-item>
+
+
+        </div>
+
+        <div class="form-actions">
+          <ion-button expand="block" fill="solid" color="primary" (click)="onSaveRestaurantConfig()">
+            <ion-icon name="save" slot="start"></ion-icon>
+            Sauvegarder les informations
+          </ion-button>
+        </div>
+      </form>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Operating Hours - NOUVELLE VERSION SIMPLE -->
+  <ion-card class="main-content-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="time" color="secondary"></ion-icon>
+        Horaires d'Ouverture
+      </ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      
+      <!-- Templates rapides -->
+      <div class="templates-section" style="margin-bottom: 20px;">
+        <h4>Templates rapides</h4>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <ion-button fill="outline" size="small" (click)="applySimpleTemplate('classic')">
+            <ion-icon name="restaurant" slot="start"></ion-icon>
+            Classique (11h-22h)
+          </ion-button>
+          <ion-button fill="outline" size="small" (click)="applySimpleTemplate('fastfood')">
+            <ion-icon name="fast-food" slot="start"></ion-icon>
+            Fast Food (10h-23h)
+          </ion-button>
+          <ion-button fill="outline" size="small" (click)="applySimpleTemplate('evening')">
+            <ion-icon name="wine" slot="start"></ion-icon>
+            Soirée (18h-2h)
+          </ion-button>
+        </div>
+      </div>
+
+      <!-- Horaires par jour - VERSION SIMPLE QUI FONCTIONNE -->
+      <div class="simple-hours-grid">
+        
+        <div class="day-row" *ngFor="let day of simpleWeekDays" [class.today]="day.isToday">
+          
+          <!-- Header du jour -->
+          <div class="day-header-row">
+            <div class="day-info">
+              <h3>{{ day.label }}</h3>
+              <span *ngIf="day.isToday" class="today-badge">Aujourd'hui</span>
+            </div>
+            <div class="day-status">
+              <ion-toggle 
+                [(ngModel)]="day.isOpen" 
+                [color]="day.isOpen ? 'success' : 'medium'">
+              </ion-toggle>
+              <span class="status-text">{{ day.isOpen ? 'Ouvert' : 'Fermé' }}</span>
+            </div>
+          </div>
+
+          <!-- Heures d'ouverture si ouvert -->
+          <div *ngIf="day.isOpen" class="day-times">
+            <div class="time-inputs">
+              <div class="time-group">
+                <ion-icon name="sunny" color="warning"></ion-icon>
+                <div>
+                  <label>Ouverture</label>
+                  <ion-input 
+                    type="time" 
+                    [(ngModel)]="day.opening"
+                    fill="outline"
+                    style="--background: #f8fafc;">
+                  </ion-input>
+                </div>
+              </div>
+              
+              <div class="time-group">
+                <ion-icon name="moon" color="medium"></ion-icon>
+                <div>
+                  <label>Fermeture</label>
+                  <ion-input 
+                    type="time" 
+                    [(ngModel)]="day.closing"
+                    fill="outline"
+                    style="--background: #f8fafc;">
+                  </ion-input>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Durée calculée -->
+            <div *ngIf="day.opening && day.closing" class="duration-info">
+              <ion-chip color="tertiary" fill="outline">
+                <ion-icon name="time-outline"></ion-icon>
+                <ion-label>{{ calculateSimpleDuration(day.opening, day.closing) }} d'ouverture</ion-label>
+              </ion-chip>
+            </div>
+          </div>
+
+          <!-- Indicateur fermé -->
+          <div *ngIf="!day.isOpen" class="closed-indicator">
+            <ion-icon name="bed" color="medium"></ion-icon>
+            <span>Jour de fermeture</span>
+          </div>
+          
+        </div>
+        
+      </div>
+
+      <!-- Bouton de sauvegarde -->
+      <div class="form-actions" style="margin-top: 24px;">
+        <ion-button expand="block" fill="solid" color="secondary" (click)="onSaveSimpleBusinessHours()">
+          <ion-icon name="save" slot="start"></ion-icon>
+          Sauvegarder les horaires
+        </ion-button>
+      </div>
+      
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Bot Configuration -->
+  <ion-card class="main-content-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="chatbubbles" color="tertiary"></ion-icon>
+        Configuration Bot WhatsApp
+      </ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <form [formGroup]="botForm">
+        
+        <ion-item fill="outline">
+          <ion-label position="stacked">Nom de marque *</ion-label>
+          <ion-input formControlName="brand_name" type="text"></ion-input>
+        </ion-item>
+
+        <ion-item fill="outline">
+          <ion-label position="stacked">Message de bienvenue *</ion-label>
+          <ion-textarea formControlName="welcome_message" rows="3"></ion-textarea>
+        </ion-item>
+
+
+        <div class="form-actions">
+          <ion-button expand="block" fill="solid" color="tertiary" (click)="onSaveBotConfig()">
+            <ion-icon name="chatbubbles" slot="start"></ion-icon>
+            Sauvegarder la configuration bot
+          </ion-button>
+        </div>
+      </form>
+    </ion-card-content>
+  </ion-card>
+
+</div>

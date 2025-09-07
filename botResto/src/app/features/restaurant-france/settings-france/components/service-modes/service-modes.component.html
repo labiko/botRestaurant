@@ -1,0 +1,108 @@
+<div class="service-modes-container">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title color="primary">
+        <ion-icon name="settings" slot="start"></ion-icon>
+        Modes de Service
+      </ion-card-title>
+      <ion-card-subtitle>
+        Configurez les modes de service disponibles pour votre restaurant
+      </ion-card-subtitle>
+    </ion-card-header>
+  </ion-card>
+
+  <div class="modes-grid">
+    <ion-card *ngFor="let mode of serviceModes" class="mode-card" [class.disabled]="!mode.is_enabled">
+      <ion-card-header>
+        <div class="mode-header">
+          <div class="mode-info">
+            <ion-icon [name]="getModeIcon(mode.service_mode)" [color]="getModeColor(mode.service_mode)" size="large"></ion-icon>
+            <div class="mode-details">
+              <h3>{{ mode.display_name }}</h3>
+              <p *ngIf="mode.description">{{ mode.description }}</p>
+            </div>
+          </div>
+          
+          <div class="mode-status">
+            <ion-badge [color]="mode.is_enabled ? 'success' : 'medium'">
+              {{ mode.is_enabled ? 'Actif' : 'Inactif' }}
+            </ion-badge>
+          </div>
+        </div>
+      </ion-card-header>
+
+      <ion-card-content>
+        <div class="mode-actions">
+          <ion-button 
+            fill="clear" 
+            [color]="mode.is_enabled ? 'danger' : 'success'"
+            (click)="toggleMode(mode)">
+            <ion-icon [name]="mode.is_enabled ? 'pause-circle' : 'play-circle'" slot="start"></ion-icon>
+            {{ mode.is_enabled ? 'Désactiver' : 'Activer' }}
+          </ion-button>
+
+          <ion-button 
+            fill="clear" 
+            color="primary"
+            (click)="editModeDetails(mode)">
+            <ion-icon name="create" slot="start"></ion-icon>
+            Modifier
+          </ion-button>
+        </div>
+
+        <!-- Mode spécifique: Livraison -->
+        <div *ngIf="mode.service_mode === 'livraison' && mode.is_enabled" class="delivery-specific">
+          <ion-item>
+            <ion-icon name="car" slot="start" color="success"></ion-icon>
+            <ion-label>
+              <h3>Configuration livraison</h3>
+              <p>Zone de livraison: {{ deliveryZoneKm }}km - Frais: {{ deliveryFee }}€ - Minimum: {{ minOrderAmount }}€</p>
+            </ion-label>
+            <ion-button fill="clear" slot="end" color="primary" (click)="editDeliveryConfig()">
+              <ion-icon name="settings" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-item>
+        </div>
+
+        <!-- Mode spécifique: Sur place -->
+        <div *ngIf="mode.service_mode === 'sur_place' && mode.is_enabled" class="dine-in-specific">
+          <ion-item>
+            <ion-icon name="restaurant" slot="start" color="primary"></ion-icon>
+            <ion-label>
+              <h3>Réservation de table</h3>
+              <p>Gestion des réservations et capacité</p>
+            </ion-label>
+          </ion-item>
+        </div>
+
+        <!-- Mode spécifique: À emporter -->
+        <div *ngIf="mode.service_mode === 'a_emporter' && mode.is_enabled" class="takeaway-specific">
+          <ion-item>
+            <ion-icon name="time" slot="start" color="warning"></ion-icon>
+            <ion-label>
+              <h3>Temps de préparation</h3>
+              <p>Estimation du temps de préparation moyen</p>
+            </ion-label>
+            <ion-note slot="end">15-20 min</ion-note>
+          </ion-item>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Instructions -->
+  <ion-card class="info-card">
+    <ion-card-content>
+      <div class="info-content">
+        <ion-icon name="information-circle" color="primary"></ion-icon>
+        <div>
+          <h4>Information importante</h4>
+          <p>
+            Les modes désactivés ne seront pas proposés aux clients dans le bot WhatsApp. 
+            Au moins un mode doit rester actif pour que le restaurant soit fonctionnel.
+          </p>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+</div>

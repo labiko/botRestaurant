@@ -1,0 +1,221 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title color="light">Configuration: {{ product?.name }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" color="light" (click)="dismiss()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="modular-config-content">
+  <form [formGroup]="configForm" *ngIf="configForm">
+    
+    <!-- Prix de base -->
+    <ion-card class="config-section">
+      <ion-card-header>
+        <ion-card-title color="primary">
+          <ion-icon name="cash" slot="start"></ion-icon>
+          Prix de base
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="price-inputs">
+          <ion-item fill="outline">
+            <ion-label position="stacked">Prix sur place (€)</ion-label>
+            <ion-input 
+              formControlName="price_on_site_base" 
+              type="number" 
+              min="0" 
+              step="0.10"
+              placeholder="0.00">
+            </ion-input>
+          </ion-item>
+          
+          <ion-item fill="outline">
+            <ion-label position="stacked">Prix livraison (€)</ion-label>
+            <ion-input 
+              formControlName="price_delivery_base" 
+              type="number" 
+              min="0" 
+              step="0.10"
+              placeholder="0.00">
+            </ion-input>
+          </ion-item>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Tailles -->
+    <ion-card class="config-section">
+      <ion-card-header>
+        <div class="section-header">
+          <ion-card-title color="warning">
+            <ion-icon name="resize" slot="start"></ion-icon>
+            Tailles ({{ sizesFormArray.length }})
+          </ion-card-title>
+          <ion-button fill="outline" color="warning" size="small" (click)="addNewSize()">
+            <ion-icon name="add" slot="start"></ion-icon>
+            Ajouter
+          </ion-button>
+        </div>
+      </ion-card-header>
+      <ion-card-content>
+        <div formArrayName="sizes">
+          <div *ngFor="let sizeForm of sizesFormArray.controls; let i = index" 
+               [formGroupName]="i" 
+               class="size-item">
+            
+            <div class="size-header">
+              <ion-input 
+                formControlName="size_name" 
+                placeholder="Nom de la taille"
+                fill="outline"
+                class="size-name-input">
+              </ion-input>
+              <ion-button 
+                fill="clear" 
+                color="danger" 
+                size="small" 
+                (click)="removeSize(i)">
+                <ion-icon name="trash" slot="icon-only"></ion-icon>
+              </ion-button>
+            </div>
+
+            <div class="size-config">
+              <ion-item fill="outline">
+                <ion-label position="stacked">Prix sur place (€)</ion-label>
+                <ion-input 
+                  formControlName="price_on_site" 
+                  type="number" 
+                  min="0" 
+                  step="0.10">
+                </ion-input>
+              </ion-item>
+              
+              <ion-item fill="outline">
+                <ion-label position="stacked">Prix livraison (€)</ion-label>
+                <ion-input 
+                  formControlName="price_delivery" 
+                  type="number" 
+                  min="0" 
+                  step="0.10">
+                </ion-input>
+              </ion-item>
+              
+              <ion-item>
+                <ion-checkbox formControlName="includes_drink" slot="start"></ion-checkbox>
+                <ion-label>Inclut une boisson</ion-label>
+              </ion-item>
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="sizesFormArray.length === 0" class="empty-state">
+          <p>Aucune taille configurée</p>
+          <ion-button fill="outline" color="warning" (click)="addNewSize()">
+            <ion-icon name="add" slot="start"></ion-icon>
+            Ajouter la première taille
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Options -->
+    <ion-card class="config-section">
+      <ion-card-header>
+        <div class="section-header">
+          <ion-card-title color="secondary">
+            <ion-icon name="options" slot="start"></ion-icon>
+            Options ({{ optionsFormArray.length }})
+          </ion-card-title>
+          <ion-button fill="outline" color="secondary" size="small" (click)="addNewOption()">
+            <ion-icon name="add" slot="start"></ion-icon>
+            Ajouter
+          </ion-button>
+        </div>
+      </ion-card-header>
+      <ion-card-content>
+        <div formArrayName="options">
+          <div *ngFor="let optionForm of optionsFormArray.controls; let i = index" 
+               [formGroupName]="i" 
+               class="option-item">
+            
+            <div class="option-header">
+              <ion-input 
+                formControlName="option_name" 
+                placeholder="Nom de l'option"
+                fill="outline"
+                class="option-name-input">
+              </ion-input>
+              <ion-button 
+                fill="clear" 
+                color="danger" 
+                size="small" 
+                (click)="removeOption(i)">
+                <ion-icon name="trash" slot="icon-only"></ion-icon>
+              </ion-button>
+            </div>
+
+            <div class="option-config">
+              <ion-item fill="outline">
+                <ion-label position="stacked">Groupe</ion-label>
+                <ion-input 
+                  formControlName="option_group" 
+                  placeholder="ex: Sauces, Extras...">
+                </ion-input>
+              </ion-item>
+              
+              <ion-item fill="outline">
+                <ion-label position="stacked">Modificateur prix (€)</ion-label>
+                <ion-input 
+                  formControlName="price_modifier" 
+                  type="number" 
+                  step="0.10">
+                </ion-input>
+              </ion-item>
+              
+              <div class="option-toggles">
+                <ion-item>
+                  <ion-checkbox formControlName="is_required" slot="start"></ion-checkbox>
+                  <ion-label>Obligatoire</ion-label>
+                </ion-item>
+                
+                <ion-item>
+                  <ion-checkbox formControlName="is_active" slot="start"></ion-checkbox>
+                  <ion-label>Active</ion-label>
+                </ion-item>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="optionsFormArray.length === 0" class="empty-state">
+          <p>Aucune option configurée</p>
+          <ion-button fill="outline" color="secondary" (click)="addNewOption()">
+            <ion-icon name="add" slot="start"></ion-icon>
+            Ajouter la première option
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+  </form>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button 
+        expand="block" 
+        color="primary" 
+        [disabled]="isLoading || !configForm?.valid"
+        (click)="saveConfiguration()">
+        <ion-icon name="save" slot="start" *ngIf="!isLoading"></ion-icon>
+        <ion-spinner name="circular" slot="start" *ngIf="isLoading"></ion-spinner>
+        {{ isLoading ? 'Sauvegarde...' : 'Sauvegarder la configuration' }}
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

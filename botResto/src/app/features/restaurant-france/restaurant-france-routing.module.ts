@@ -36,6 +36,11 @@ const routes: Routes = [
     loadChildren: () => import('./drivers-france/drivers-france.module').then( m => m.DriversFrancePageModule),
     canActivate: [RestaurantFranceGuard]
   },
+  {
+    path: 'settings',
+    loadChildren: () => import('./settings-france/settings-france.module').then(m => m.SettingsFrancePageModule),
+    canActivate: [RestaurantFranceGuard]
+  },
 ];
 
 @NgModule({

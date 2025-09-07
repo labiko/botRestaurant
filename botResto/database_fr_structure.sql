@@ -180,8 +180,8 @@ CREATE TABLE public.france_orders (
   assignment_timeout_at timestamp with time zone,
   assignment_started_at timestamp with time zone,
   CONSTRAINT france_orders_pkey PRIMARY KEY (id),
-  CONSTRAINT france_orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id),
   CONSTRAINT france_orders_driver_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
+  CONSTRAINT france_orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id),
   CONSTRAINT france_orders_delivery_address_id_fkey FOREIGN KEY (delivery_address_id) REFERENCES public.france_customer_addresses(id)
 );
 CREATE TABLE public.france_product_display_configs (
@@ -257,8 +257,8 @@ CREATE TABLE public.france_products (
   requires_steps boolean DEFAULT false,
   steps_config json,
   CONSTRAINT france_products_pkey PRIMARY KEY (id),
-  CONSTRAINT france_products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.france_menu_categories(id),
-  CONSTRAINT france_products_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
+  CONSTRAINT france_products_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id),
+  CONSTRAINT france_products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.france_menu_categories(id)
 );
 CREATE TABLE public.france_restaurant_features (
   id integer NOT NULL DEFAULT nextval('france_restaurant_features_id_seq'::regclass),
@@ -286,6 +286,8 @@ CREATE TABLE public.france_restaurants (
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   password_hash character varying NOT NULL,
+  timezone character varying DEFAULT 'Europe/Paris'::character varying,
+  country_code character varying DEFAULT 'FR'::character varying,
   CONSTRAINT france_restaurants_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.france_sessions (

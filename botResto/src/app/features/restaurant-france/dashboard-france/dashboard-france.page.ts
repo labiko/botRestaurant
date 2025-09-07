@@ -177,6 +177,13 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
   }
 
   /**
+   * Navigation vers la configuration restaurant
+   */
+  goToSettings() {
+    this.router.navigate(['/restaurant-france/settings']);
+  }
+
+  /**
    * Déconnexion
    */
   async logout() {

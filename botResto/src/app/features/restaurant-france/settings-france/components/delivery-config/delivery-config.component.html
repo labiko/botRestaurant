@@ -1,0 +1,261 @@
+<!-- Delivery Configuration Component -->
+<div class="delivery-config-container">
+
+  <!-- Delivery Settings -->
+  <ion-card class="main-content-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="bicycle" color="success"></ion-icon>
+        Configuration Livraison
+      </ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <form [formGroup]="deliveryForm">
+        <div class="form-grid">
+          
+          <ion-item fill="outline">
+            <ion-label position="stacked">Zone de livraison (km) *</ion-label>
+            <ion-input formControlName="delivery_zone_km" type="number" min="1"></ion-input>
+          </ion-item>
+
+          <ion-item fill="outline">
+            <ion-label position="stacked">Commande minimum (€) *</ion-label>
+            <ion-input formControlName="min_order_amount" type="number" min="0" step="0.10"></ion-input>
+          </ion-item>
+
+          <ion-item fill="outline">
+            <ion-label position="stacked">Frais de livraison par défaut (€) *</ion-label>
+            <ion-input formControlName="delivery_fee" type="number" min="0" step="0.10"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label>Service de livraison activé</ion-label>
+            <ion-toggle formControlName="delivery_enabled" color="success"></ion-toggle>
+          </ion-item>
+
+        </div>
+
+        <div class="form-actions">
+          <ion-button expand="block" fill="solid" color="success" (click)="onSaveDeliveryConfig()">
+            <ion-icon name="save" slot="start"></ion-icon>
+            Sauvegarder la configuration
+          </ion-button>
+        </div>
+      </form>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Delivery Zones -->
+  <ion-card class="main-content-card">
+    <ion-card-header>
+      <div class="card-header-actions">
+        <ion-card-title>
+          <ion-icon name="map" color="primary"></ion-icon>
+          Zones de Livraison
+        </ion-card-title>
+        <ion-button fill="outline" color="primary" (click)="onAddDeliveryZone()">
+          <ion-icon name="add" slot="start"></ion-icon>
+          Ajouter zone
+        </ion-button>
+      </div>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <div class="zones-grid">
+        <div *ngFor="let zone of deliveryZones" class="zone-card">
+          <div class="zone-header">
+            <h3>{{ zone.name }}</h3>
+            <ion-badge [color]="zone.is_active ? 'success' : 'danger'">
+              {{ zone.is_active ? 'Active' : 'Inactive' }}
+            </ion-badge>
+          </div>
+          
+          <div class="zone-details">
+            <div class="detail-item">
+              <ion-icon name="card" color="primary"></ion-icon>
+              <span class="label">Frais</span>
+              <span class="value">{{ zone.delivery_fee }}€</span>
+            </div>
+            
+            <div class="detail-item">
+              <ion-icon name="basket" color="secondary"></ion-icon>
+              <span class="label">Minimum</span>
+              <span class="value">{{ zone.min_order_amount }}€</span>
+            </div>
+          </div>
+          
+          <div class="zone-actions">
+            <ion-button 
+              fill="clear" 
+              size="small"
+              [color]="zone.is_active ? 'danger' : 'success'"
+              (click)="onToggleZoneStatus(zone)">
+              <ion-icon [name]="zone.is_active ? 'pause' : 'play'"></ion-icon>
+            </ion-button>
+            
+            <ion-button fill="clear" size="small" color="danger" (click)="onRemoveZone(zone)">
+              <ion-icon name="trash"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Delivery Drivers -->
+  <ion-card class="main-content-card">
+    <ion-card-header>
+      <div class="card-header-actions">
+        <ion-card-title>
+          <ion-icon name="people" color="secondary"></ion-icon>
+          Livreurs ({{ drivers.length }})
+        </ion-card-title>
+        <ion-button fill="outline" color="secondary" (click)="onCreateDriver()">
+          <ion-icon name="person-add" slot="start"></ion-icon>
+          Nouveau livreur
+        </ion-button>
+      </div>
+      <ion-card-subtitle>
+        {{ availableDrivers.length }} livreur(s) disponible(s)
+      </ion-card-subtitle>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <div class="drivers-grid">
+        <div *ngFor="let driver of drivers" class="driver-card">
+          
+          <div class="driver-header">
+            <div class="driver-info">
+              <h4>{{ driver.first_name }} {{ driver.last_name }}</h4>
+              <p>{{ driver.phone_number }}</p>
+              <p *ngIf="driver.email" class="email">{{ driver.email }}</p>
+            </div>
+            
+            <div class="driver-status">
+              <ion-chip [color]="getDriverStatusColor(driver)">
+                <ion-icon [name]="driver.is_online ? 'radio-button-on' : 'radio-button-off'"></ion-icon>
+                <ion-label>{{ getDriverStatusText(driver) }}</ion-label>
+              </ion-chip>
+            </div>
+          </div>
+
+          <div class="driver-actions">
+            <ion-button 
+              fill="outline" 
+              size="small"
+              [color]="driver.is_active ? 'danger' : 'success'"
+              (click)="onToggleDriverStatus(driver, 'is_active')">
+              <ion-icon [name]="driver.is_active ? 'person-remove' : 'person-add'"></ion-icon>
+              {{ driver.is_active ? 'Désactiver' : 'Activer' }}
+            </ion-button>
+            
+            <ion-button 
+              fill="outline" 
+              size="small"
+              [color]="driver.is_online ? 'warning' : 'success'"
+              [disabled]="!driver.is_active"
+              (click)="onToggleDriverStatus(driver, 'is_online')">
+              <ion-icon [name]="driver.is_online ? 'log-out' : 'log-in'"></ion-icon>
+              {{ driver.is_online ? 'Déconnecter' : 'Connecter' }}
+            </ion-button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Empty Drivers State -->
+      <div *ngIf="drivers.length === 0" class="empty-state">
+        <ion-icon name="people" color="medium" size="large"></ion-icon>
+        <h3>Aucun livreur</h3>
+        <p>Ajoutez des livreurs pour gérer les livraisons</p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Pending Orders -->
+  <ion-card class="main-content-card" *ngIf="pendingOrders.length > 0">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="hourglass" color="warning"></ion-icon>
+        Commandes en Attente de Livraison ({{ pendingOrders.length }})
+      </ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <div class="orders-list">
+        <div *ngFor="let order of pendingOrders" class="order-item">
+          
+          <div class="order-header">
+            <div class="order-info">
+              <h4>Commande #{{ order.order_number || order.id }}</h4>
+              <p>{{ order.customer_name || 'Client' }} - {{ order.phone_number }}</p>
+              <p class="address">{{ order.delivery_address }}</p>
+            </div>
+            
+            <div class="order-meta">
+              <ion-chip [color]="getOrderStatusColor(order.status)">
+                {{ order.status }}
+              </ion-chip>
+              <div class="amount">{{ order.total_amount }}€</div>
+            </div>
+          </div>
+
+          <div class="order-actions">
+            <ion-button 
+              fill="outline" 
+              color="success" 
+              (click)="onAssignOrderToDriver(order)"
+              [disabled]="availableDrivers.length === 0">
+              <ion-icon name="person-add" slot="start"></ion-icon>
+              Assigner un livreur
+            </ion-button>
+          </div>
+
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Recent Assignments -->
+  <ion-card class="main-content-card" *ngIf="recentAssignments.length > 0">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="list" color="tertiary"></ion-icon>
+        Assignations Récentes
+      </ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <div class="assignments-list">
+        <div *ngFor="let assignment of recentAssignments" class="assignment-item">
+          
+          <div class="assignment-info">
+            <div class="assignment-text">
+              <span class="order-ref">Commande #{{ assignment.order_id }}</span>
+              <span class="assignment-status">
+                <ion-chip [color]="getAssignmentStatusColor(assignment.assignment_status)">
+                  {{ assignment.assignment_status }}
+                </ion-chip>
+              </span>
+            </div>
+            <div class="assignment-time">
+              {{ assignment.created_at | date:'short' }}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- No Pending Orders -->
+  <ion-card class="main-content-card" *ngIf="pendingOrders.length === 0">
+    <ion-card-content class="text-center">
+      <ion-icon name="checkmark-circle" color="success" size="large"></ion-icon>
+      <h3>Aucune commande en attente</h3>
+      <p>Toutes les commandes de livraison sont assignées ou traitées</p>
+    </ion-card-content>
+  </ion-card>
+
+</div>
