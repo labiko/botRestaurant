@@ -77,10 +77,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     });
 
     try {
-      // Charger les commandes initiales
+      // ✅ OPTIMISATION : loadOrders() inclut maintenant l'état des assignations
       await this.franceOrdersService.loadOrders(this.restaurantId);
-      // Charger l'état des assignations pending pour les commandes prêtes
-      await this.loadPendingAssignmentsState();
     } catch (error) {
       console.error('Erreur initialisation commandes:', error);
       this.isLoading = false;
@@ -497,9 +495,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     const success = await this.franceOrdersService.updateOrderStatus(order.id, newStatus);
     
     if (success) {
+      // ✅ OPTIMISATION : loadOrders() inclut maintenant l'état des assignations
       await this.franceOrdersService.loadOrders(this.restaurantId);
-      // Recalculer l'état des assignations après rechargement
-      await this.loadPendingAssignmentsState();
       this.switchToStatusTab(newStatus);
     } else {
       this.presentToast('Erreur lors de la mise à jour du statut', 'danger');
@@ -786,8 +783,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       if (result.success) {
         console.log('✅ [OrdersFrance] Rappels envoyés avec succès');
         this.presentToast(result.message, 'success');
-        // Recharger l'état des assignations
-        await this.loadPendingAssignmentsState();
+        // ✅ OPTIMISATION : loadOrders() inclut maintenant l'état des assignations
+        await this.franceOrdersService.loadOrders(this.restaurantId);
       } else {
         console.log('❌ [OrdersFrance] Échec envoi rappels:', result.message);
         this.presentToast(result.message, 'danger');

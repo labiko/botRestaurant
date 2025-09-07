@@ -9,6 +9,7 @@ export interface NotificationData {
   orderId: number;
   orderNumber: string;
   customerName: string;
+  customerPhone: string;
   totalAmount: number;
   deliveryAddress: string;
   restaurantName: string;
@@ -156,6 +157,7 @@ export class DeliveryNotificationService {
           id,
           order_number,
           customer_name,
+          phone_number,
           total_amount,
           delivery_address,
           created_at,
@@ -190,6 +192,7 @@ export class DeliveryNotificationService {
         orderId: order.id,
         orderNumber: order.order_number,
         customerName: order.customer_name || 'Client',
+        customerPhone: order.phone_number || 'Non spécifié',
         totalAmount: parseFloat(order.total_amount),
         deliveryAddress: order.delivery_address || 'Adresse non spécifiée',
         restaurantName: (order.france_restaurants as any)?.name || 'Restaurant',
@@ -342,7 +345,7 @@ ${orderData.orderItems}
     return `🚨 *NOUVELLE COMMANDE DISPONIBLE* 🚨
 📋 N°${orderData.orderNumber} • ${orderData.restaurantName}${itemsSection}
 💳 *Total : ${orderData.totalAmount.toFixed(2)}€*
-👤 Client: ${orderData.customerName}  
+👤 Client: ${orderData.customerPhone}
 📍 ${orderData.deliveryAddress}
 🕒 Prête depuis ${orderData.preparationTime}
 
@@ -365,8 +368,8 @@ ${orderData.orderItems}
     return `🔄 *COMMANDE DISPONIBLE À NOUVEAU* 🔄
 📋 N°${orderData.orderNumber} • ${orderData.restaurantName}${itemsSection}
 💳 *Total : ${orderData.totalAmount.toFixed(2)}€*
-👤 Client: ${orderData.customerName}
-ℹ️ Le livreur précédent a annulé
+👤 Client: ${orderData.customerPhone}
+ℹ️ Nouvelle relance livreur
 
 ✅ *Votre lien est toujours actif:*
 ${personalizedUrl}

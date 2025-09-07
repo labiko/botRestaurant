@@ -3,8 +3,11 @@
   "name": "bot-resto-conakry",
   "builds": [
     {
-      "src": "botResto/www/**/*",
-      "use": "@vercel/static"
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "www"
+      }
     }
   ],
   "routes": [

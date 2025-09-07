@@ -130,6 +130,25 @@ export class DeliveryTokenService {
     try {
       console.log(`🔄 [DeliveryToken] Génération des tokens pour commande ${orderId}...`);
       
+      // 0. NOUVEAU : Récupérer le restaurant de la commande pour le fuseau horaire
+      const { data: orderData, error: orderError } = await this.supabaseFranceService.client
+        .from('france_orders')
+        .select('restaurant_id')
+        .eq('id', orderId)
+        .single();
+
+      if (orderError || !orderData) {
+        console.error(`❌ [DeliveryToken] Impossible de récupérer restaurant pour commande ${orderId}`);
+        return {
+          success: false,
+          tokens: [],
+          message: 'Commande introuvable'
+        };
+      }
+
+      const restaurantId = orderData.restaurant_id;
+      console.log(`🌍 [DeliveryToken] Commande ${orderId} → Restaurant ${restaurantId}`);
+      
       // 1. Récupérer les livreurs actifs
       const activeDrivers = await this.getActiveDriversForOrder(orderId);
       if (activeDrivers.length === 0) {
@@ -140,11 +159,15 @@ export class DeliveryTokenService {
         };
       }
 
-      // 2. Générer les tokens
-      const tokensToInsert = activeDrivers.map(driver => {
-        // Utiliser le service FuseauHoraireService pour calculer les expirations
-        const expiresAt = this.fuseauHoraireService.getFutureTimeForDatabase(this.CONFIG.TOKEN_EXPIRY_MINUTES);
-        const absoluteExpiresAt = this.fuseauHoraireService.getFutureTimeForDatabaseHours(this.CONFIG.TOKEN_ABSOLUTE_EXPIRY_HOURS);
+      // 2. NOUVEAU : Générer les tokens avec fuseau horaire du restaurant
+      const tokensToInsert = await Promise.all(activeDrivers.map(async (driver) => {
+        // Utiliser le fuseau horaire spécifique au restaurant
+        const expiresAt = await this.fuseauHoraireService.getRestaurantFutureTimeForDatabase(restaurantId, this.CONFIG.TOKEN_EXPIRY_MINUTES);
+        const absoluteExpiresAt = await this.fuseauHoraireService.getRestaurantFutureTimeForDatabaseHours(restaurantId, this.CONFIG.TOKEN_ABSOLUTE_EXPIRY_HOURS);
+
+        console.log(`🕐 [DeliveryToken] Restaurant ${restaurantId} - Token livreur ${driver.id}:`);
+        console.log(`   expires_at: ${expiresAt}`);
+        console.log(`   absolute_expires_at: ${absoluteExpiresAt}`);
 
         return {
           token: this.generateSecureToken(),
@@ -156,7 +179,7 @@ export class DeliveryTokenService {
           suspended: false,
           reactivated: false
         };
-      });
+      }));
 
       // 3. Insérer en base de données
       const { data: insertedTokens, error } = await this.supabaseFranceService.client
@@ -392,16 +415,14 @@ export class DeliveryTokenService {
     try {
       console.log(`🔄 [DeliveryToken] Réactivation des tokens pour commande ${orderId}...`);
 
-      // Réactiver les tokens suspendus non expirés absolument
-      const newExpiryTime = this.fuseauHoraireService.getFutureTimeForDatabase(this.CONFIG.TOKEN_EXPIRY_MINUTES);
-      
+      // CORRECTION : Utiliser les fonctions SQL du serveur pour le fuseau horaire correct
       const { data: reactivatedTokens, error } = await this.supabaseFranceService.client
         .from('delivery_tokens')
         .update({
           suspended: false,
           reactivated: true,
-          expires_at: newExpiryTime,
-          updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
+          expires_at: 'NOW() + INTERVAL \'' + this.CONFIG.TOKEN_EXPIRY_MINUTES + ' minutes\'',
+          updated_at: 'NOW()'
         })
         .eq('order_id', orderId)
         .eq('suspended', true)
@@ -449,6 +470,25 @@ export class DeliveryTokenService {
     try {
       console.log(`🔔 [DeliveryToken] Réactivation tokens pour rappels commande ${orderId}...`);
 
+      // NOUVEAU : Récupérer le restaurant de la commande pour le fuseau horaire
+      const { data: orderData, error: orderError } = await this.supabaseFranceService.client
+        .from('france_orders')
+        .select('restaurant_id')
+        .eq('id', orderId)
+        .single();
+
+      if (orderError || !orderData) {
+        console.error(`❌ [DeliveryToken] Impossible de récupérer restaurant pour commande ${orderId}`);
+        return {
+          success: false,
+          reactivatedTokens: [],
+          message: 'Commande introuvable'
+        };
+      }
+
+      const restaurantId = orderData.restaurant_id;
+      console.log(`🌍 [DeliveryToken] Rappel commande ${orderId} → Restaurant ${restaurantId}`);
+
       // DIAGNOSTIC: Vérifier les tokens existants AVANT réactivation
       const { data: existingTokens, error: checkError } = await this.supabaseFranceService.client
         .from('delivery_tokens')
@@ -458,13 +498,13 @@ export class DeliveryTokenService {
       console.log(`🔍 [DeliveryToken] DIAGNOSTIC - Tokens existants pour commande ${orderId}:`, existingTokens);
       
       if (existingTokens) {
-        const now = new Date();
+        const restaurantTime = await this.fuseauHoraireService.getRestaurantCurrentTime(restaurantId);
         existingTokens.forEach((token, index) => {
           console.log(`📝 [DeliveryToken] Token ${index + 1}:`);
           console.log(`   ID: ${token.id}, Token: ${token.token?.substring(0, 8)}...`);
           console.log(`   Créé: ${token.created_at}`);
-          console.log(`   expires_at: ${token.expires_at} (${new Date(token.expires_at) < now ? 'EXPIRÉ' : 'VALIDE'})`);
-          console.log(`   absolute_expires_at: ${token.absolute_expires_at} (${new Date(token.absolute_expires_at) < now ? 'EXPIRÉ' : 'VALIDE'})`);
+          console.log(`   expires_at: ${token.expires_at} (${new Date(token.expires_at) < restaurantTime ? 'EXPIRÉ' : 'VALIDE'})`);
+          console.log(`   absolute_expires_at: ${token.absolute_expires_at} (${new Date(token.absolute_expires_at) < restaurantTime ? 'EXPIRÉ' : 'VALIDE'})`);
           console.log(`   Utilisé: ${token.used}, Suspendu: ${token.suspended}`);
         });
       }
@@ -485,11 +525,11 @@ export class DeliveryTokenService {
       console.log(`   ISO (UTC): ${newExpiryTime.toISOString()}`);
       console.log(`   Locale: ${newExpiryTime.toLocaleString('fr-FR')}`);
       
-      // SIMPLIFIÉ : Utilisation du service FuseauHoraireService pour gérer les fuseaux horaires
-      const adjustedExpiryTime = this.fuseauHoraireService.getFutureTimeForDatabase(this.CONFIG.TOKEN_EXPIRY_MINUTES);
-      const adjustedAbsoluteExpiry = this.fuseauHoraireService.getFutureTimeForDatabaseHours(this.CONFIG.TOKEN_ABSOLUTE_EXPIRY_HOURS);
+      // NOUVEAU : Utilisation du fuseau horaire spécifique au restaurant
+      const adjustedExpiryTime = await this.fuseauHoraireService.getRestaurantFutureTimeForDatabase(restaurantId, this.CONFIG.TOKEN_EXPIRY_MINUTES);
+      const adjustedAbsoluteExpiry = await this.fuseauHoraireService.getRestaurantFutureTimeForDatabaseHours(restaurantId, this.CONFIG.TOKEN_ABSOLUTE_EXPIRY_HOURS);
       
-      console.log(`🌍 [DeliveryToken] FUSEAUX HORAIRES GÉRÉS PAR SERVICE:`);
+      console.log(`🌍 [DeliveryToken] FUSEAUX HORAIRES RESTAURANT ${restaurantId}:`);
       console.log(`   Expiration (${this.CONFIG.TOKEN_EXPIRY_MINUTES}min): ${adjustedExpiryTime}`);
       console.log(`   Expiration absolue (${this.CONFIG.TOKEN_ABSOLUTE_EXPIRY_HOURS}h): ${adjustedAbsoluteExpiry}`);
       
@@ -499,8 +539,8 @@ export class DeliveryTokenService {
           suspended: false,
           reactivated: true,
           token: this.generateSecureToken(), // 🔥 NOUVEAU TOKEN !
-          expires_at: adjustedExpiryTime, // 🔥 AVEC CORRECTION TIMEZONE !
-          absolute_expires_at: adjustedAbsoluteExpiry, // 🔥 AVEC CORRECTION TIMEZONE !
+          expires_at: adjustedExpiryTime, // 🔥 AVEC TIMEZONE RESTAURANT !
+          absolute_expires_at: adjustedAbsoluteExpiry, // 🔥 AVEC TIMEZONE RESTAURANT !
           updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
         })
         .eq('order_id', orderId)

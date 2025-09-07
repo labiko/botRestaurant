@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
+import { SupabaseFranceService } from './supabase-france.service';
 
 /**
- * Service global de gestion du fuseau horaire
- * Centralise la gestion des dates et heures selon le fuseau utilisateur
+ * Service universel de gestion des fuseaux horaires
+ * Supporte dynamiquement les fuseaux selon le restaurant
+ * Compatible France (Europe/Paris) et Guinée-Conakry (Africa/Conakry)
  */
 @Injectable({
   providedIn: 'root'
@@ -12,7 +14,10 @@ export class FuseauHoraireService {
   // Configuration par défaut : Europe/Paris (UTC+1/+2 selon saison)
   private readonly DEFAULT_TIMEZONE = 'Europe/Paris';
   
-  constructor() {}
+  // Cache des fuseaux horaires par restaurant pour performance
+  private restaurantTimezoneCache = new Map<number, string>();
+  
+  constructor(private supabaseFranceService: SupabaseFranceService) {}
 
   /**
    * Obtenir l'heure actuelle dans le fuseau configuré
@@ -34,8 +39,95 @@ export class FuseauHoraireService {
   }
 
   /**
-   * Calculer une date d'expiration future avec le fuseau horaire correct
-   * @param minutes - Nombre de minutes à ajouter à l'heure actuelle
+   * NOUVEAU : Récupérer le fuseau horaire d'un restaurant
+   */
+  async getRestaurantTimezone(restaurantId: number): Promise<string> {
+    // Vérifier le cache d'abord
+    if (this.restaurantTimezoneCache.has(restaurantId)) {
+      return this.restaurantTimezoneCache.get(restaurantId)!;
+    }
+
+    try {
+      const { data, error } = await this.supabaseFranceService.client
+        .from('france_restaurants')
+        .select('timezone')
+        .eq('id', restaurantId)
+        .single();
+
+      if (error || !data) {
+        console.warn(`⚠️ [FuseauHoraire] Impossible de récupérer timezone pour restaurant ${restaurantId}, utilisation par défaut`);
+        this.restaurantTimezoneCache.set(restaurantId, this.DEFAULT_TIMEZONE);
+        return this.DEFAULT_TIMEZONE;
+      }
+
+      const timezone = data.timezone || this.DEFAULT_TIMEZONE;
+      this.restaurantTimezoneCache.set(restaurantId, timezone);
+      console.log(`🌍 [FuseauHoraire] Restaurant ${restaurantId} → ${timezone}`);
+      return timezone;
+
+    } catch (error) {
+      console.error(`❌ [FuseauHoraire] Erreur récupération timezone restaurant ${restaurantId}:`, error);
+      return this.DEFAULT_TIMEZONE;
+    }
+  }
+
+  /**
+   * NOUVEAU : Obtenir l'heure actuelle dans le fuseau du restaurant
+   */
+  async getRestaurantCurrentTime(restaurantId: number): Promise<Date> {
+    const timezone = await this.getRestaurantTimezone(restaurantId);
+    const now = new Date();
+    
+    // Utiliser Intl.DateTimeFormat pour convertir dans le bon fuseau
+    const timeInTimezone = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).formatToParts(now);
+
+    const year = parseInt(timeInTimezone.find(part => part.type === 'year')!.value);
+    const month = parseInt(timeInTimezone.find(part => part.type === 'month')!.value) - 1;
+    const day = parseInt(timeInTimezone.find(part => part.type === 'day')!.value);
+    const hour = parseInt(timeInTimezone.find(part => part.type === 'hour')!.value);
+    const minute = parseInt(timeInTimezone.find(part => part.type === 'minute')!.value);
+    const second = parseInt(timeInTimezone.find(part => part.type === 'second')!.value);
+
+    return new Date(year, month, day, hour, minute, second);
+  }
+
+  /**
+   * NOUVEAU : Calculer une date d'expiration future selon le fuseau du restaurant
+   */
+  async getRestaurantFutureTimeForDatabase(restaurantId: number, minutes: number): Promise<string> {
+    const restaurantTime = await this.getRestaurantCurrentTime(restaurantId);
+    const future = new Date(restaurantTime.getTime() + (minutes * 60 * 1000));
+    
+    // CORRECTION : Format local timestamp pour PostgreSQL (pas UTC)
+    const year = future.getFullYear();
+    const month = String(future.getMonth() + 1).padStart(2, '0');
+    const day = String(future.getDate()).padStart(2, '0');
+    const hour = String(future.getHours()).padStart(2, '0');
+    const minute = String(future.getMinutes()).padStart(2, '0');
+    const second = String(future.getSeconds()).padStart(2, '0');
+    
+    return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+  }
+
+  /**
+   * NOUVEAU : Calculer une date d'expiration future en heures selon le fuseau du restaurant
+   */
+  async getRestaurantFutureTimeForDatabaseHours(restaurantId: number, hours: number): Promise<string> {
+    return this.getRestaurantFutureTimeForDatabase(restaurantId, hours * 60);
+  }
+
+  /**
+   * LEGACY : Calculer une date d'expiration future avec le fuseau horaire correct
+   * @deprecated Utiliser getRestaurantFutureTimeForDatabase() à la place
    */
   getFutureTimeForDatabase(minutes: number): string {
     const now = this.getCurrentTime();

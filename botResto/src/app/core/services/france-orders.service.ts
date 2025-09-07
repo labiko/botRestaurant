@@ -115,30 +115,21 @@ export class FranceOrdersService {
 
   async loadOrders(restaurantId: number): Promise<void> {
     try {
+      // ✅ PLAN INITIAL : Une seule requête optimisée avec fonction SQL
       const { data, error } = await this.supabaseFranceService.client
-        .from('france_orders')
-        .select(`
-          *,
-          delivery_address_coordinates:france_customer_addresses(
-            latitude,
-            longitude,
-            address_label
-          ),
-          assigned_driver:france_delivery_drivers!france_orders_driver_fkey(
-            id,
-            first_name,
-            last_name,
-            phone_number
-          )
-        `)
-        .eq('restaurant_id', restaurantId)
-        .order('created_at', { ascending: false });
+        .rpc('load_orders_with_assignment_state', {
+          p_restaurant_id: restaurantId
+        });
 
       if (error) {
-        console.error('Erreur chargement commandes France:', error);
-        // Initialiser avec tableau vide en cas d'erreur
-        this.ordersSubject.next([]);
-        return;
+        console.error('❌ [FranceOrders] Erreur détaillée RPC:', error);
+        console.error('❌ [FranceOrders] Message:', error.message);
+        console.error('❌ [FranceOrders] Code:', error.code);
+        console.error('❌ [FranceOrders] Details:', error.details);
+        
+        // FALLBACK : Utiliser l'ancienne méthode en cas d'erreur
+        console.log('🔄 [FranceOrders] Fallback vers ancienne requête...');
+        return this.loadOrdersFallback(restaurantId);
       }
 
       const processedOrders = data?.map((order: any) => this.processOrder(order)) || [];
@@ -244,8 +235,56 @@ export class FranceOrdersService {
       total_amount: order.total_amount, // 🧪 TEST: Afficher le vrai total_amount de la base sans recalcul
       availableActions: this.getAvailableActions(order.status),
       // Alias pour compatibilité UI avec le système de livraison
-      assigned_driver_id: order.driver_id
+      assigned_driver_id: order.driver_id,
+      // ✅ PLAN INITIAL : Propriétés d'assignation calculées par la fonction SQL
+      hasAnyAssignment: (order.assignment_count > 0) || false,
+      hasPendingAssignment: (order.pending_assignment_count > 0) || false,
+      pendingDriversCount: order.pending_assignment_count || 0,
+      pendingDriverNames: order.pending_driver_names || null
     };
+  }
+
+  /**
+   * FALLBACK : Ancienne méthode en cas d'erreur avec la fonction SQL
+   */
+  private async loadOrdersFallback(restaurantId: number): Promise<void> {
+    try {
+      console.log('🔄 [FranceOrders] Utilisation méthode fallback...');
+      
+      const { data, error } = await this.supabaseFranceService.client
+        .from('france_orders')
+        .select(`
+          *,
+          delivery_address_coordinates:france_customer_addresses(
+            latitude,
+            longitude,
+            address_label
+          ),
+          assigned_driver:france_delivery_drivers!france_orders_driver_fkey(
+            id,
+            first_name,
+            last_name,
+            phone_number
+          )
+        `)
+        .eq('restaurant_id', restaurantId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ [FranceOrders] Erreur fallback:', error);
+        this.ordersSubject.next([]);
+        return;
+      }
+
+      const processedOrders = data?.map((order: any) => this.processOrder(order)) || [];
+      console.log(`✅ [FranceOrders] Fallback réussi - ${processedOrders.length} commandes`);
+      
+      this.ordersSubject.next(processedOrders);
+      
+    } catch (error) {
+      console.error('❌ [FranceOrders] Erreur fallback:', error);
+      this.ordersSubject.next([]);
+    }
   }
 
   getAvailableActions(status: string): OrderAction[] {
@@ -262,7 +301,7 @@ export class FranceOrdersService {
         { key: 'ready', label: 'Marquer prête', color: 'primary', nextStatus: 'prete' }
       ],
       'prete': [
-        { key: 'deliver', label: 'En livraison', color: 'secondary', nextStatus: 'en_livraison' }
+        // { key: 'deliver', label: 'En livraison', color: 'secondary', nextStatus: 'en_livraison' } // BOUTON MASQUÉ - Géré par le système de livraison
       ],
       'en_livraison': [
         { key: 'delivered', label: 'Marquer livrée', color: 'success', nextStatus: 'livree' }

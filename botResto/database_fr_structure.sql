@@ -10,9 +10,9 @@ CREATE TABLE public.delivery_driver_actions (
   action_timestamp timestamp without time zone DEFAULT now(),
   details jsonb,
   CONSTRAINT delivery_driver_actions_pkey PRIMARY KEY (id),
-  CONSTRAINT delivery_driver_actions_token_id_fkey FOREIGN KEY (token_id) REFERENCES public.delivery_tokens(id),
   CONSTRAINT delivery_driver_actions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id),
-  CONSTRAINT delivery_driver_actions_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id)
+  CONSTRAINT delivery_driver_actions_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
+  CONSTRAINT delivery_driver_actions_token_id_fkey FOREIGN KEY (token_id) REFERENCES public.delivery_tokens(id)
 );
 CREATE TABLE public.delivery_order_logs (
   id integer NOT NULL DEFAULT nextval('delivery_order_logs_id_seq'::regclass),
@@ -33,8 +33,8 @@ CREATE TABLE public.delivery_refusals (
   refused_at timestamp without time zone DEFAULT now(),
   CONSTRAINT delivery_refusals_pkey PRIMARY KEY (id),
   CONSTRAINT delivery_refusals_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
-  CONSTRAINT delivery_refusals_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id),
-  CONSTRAINT delivery_refusals_token_id_fkey FOREIGN KEY (token_id) REFERENCES public.delivery_tokens(id)
+  CONSTRAINT delivery_refusals_token_id_fkey FOREIGN KEY (token_id) REFERENCES public.delivery_tokens(id),
+  CONSTRAINT delivery_refusals_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id)
 );
 CREATE TABLE public.delivery_tokens (
   id integer NOT NULL DEFAULT nextval('delivery_tokens_id_seq'::regclass),
@@ -49,8 +49,8 @@ CREATE TABLE public.delivery_tokens (
   reactivated boolean DEFAULT false,
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT delivery_tokens_pkey PRIMARY KEY (id),
-  CONSTRAINT delivery_tokens_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
-  CONSTRAINT delivery_tokens_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id)
+  CONSTRAINT delivery_tokens_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id),
+  CONSTRAINT delivery_tokens_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id)
 );
 CREATE TABLE public.france_auth_sessions (
   id bigint NOT NULL DEFAULT nextval('france_auth_sessions_id_seq'::regclass),
@@ -84,6 +84,8 @@ CREATE TABLE public.france_customer_addresses (
   is_default boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  is_active boolean DEFAULT true,
+  whatsapp_name character varying,
   CONSTRAINT france_customer_addresses_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.france_delivery_assignments (
@@ -96,8 +98,8 @@ CREATE TABLE public.france_delivery_assignments (
   expires_at timestamp with time zone,
   response_time_seconds integer,
   CONSTRAINT france_delivery_assignments_pkey PRIMARY KEY (id),
-  CONSTRAINT france_delivery_assignments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id),
-  CONSTRAINT france_delivery_assignments_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id)
+  CONSTRAINT france_delivery_assignments_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
+  CONSTRAINT france_delivery_assignments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id)
 );
 CREATE TABLE public.france_delivery_drivers (
   id bigint NOT NULL DEFAULT nextval('france_delivery_drivers_id_seq'::regclass),
@@ -176,10 +178,25 @@ CREATE TABLE public.france_orders (
   driver_assignment_status character varying DEFAULT 'none'::character varying CHECK (driver_assignment_status::text = ANY (ARRAY['none'::character varying, 'searching'::character varying, 'assigned'::character varying, 'delivered'::character varying]::text[])),
   delivery_started_at timestamp with time zone,
   assignment_timeout_at timestamp with time zone,
+  assignment_started_at timestamp with time zone,
   CONSTRAINT france_orders_pkey PRIMARY KEY (id),
+  CONSTRAINT france_orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id),
   CONSTRAINT france_orders_driver_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
-  CONSTRAINT france_orders_delivery_address_id_fkey FOREIGN KEY (delivery_address_id) REFERENCES public.france_customer_addresses(id),
-  CONSTRAINT france_orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
+  CONSTRAINT france_orders_delivery_address_id_fkey FOREIGN KEY (delivery_address_id) REFERENCES public.france_customer_addresses(id)
+);
+CREATE TABLE public.france_product_display_configs (
+  id integer NOT NULL DEFAULT nextval('france_product_display_configs_id_seq'::regclass),
+  restaurant_id integer NOT NULL,
+  product_id integer NOT NULL,
+  display_type character varying NOT NULL,
+  template_name character varying,
+  show_variants_first boolean DEFAULT false,
+  custom_header_text text,
+  custom_footer_text text,
+  emoji_icon character varying,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT france_product_display_configs_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.france_product_options (
   id integer NOT NULL DEFAULT nextval('france_product_options_id_seq'::regclass),
@@ -240,8 +257,8 @@ CREATE TABLE public.france_products (
   requires_steps boolean DEFAULT false,
   steps_config json,
   CONSTRAINT france_products_pkey PRIMARY KEY (id),
-  CONSTRAINT france_products_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id),
-  CONSTRAINT france_products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.france_menu_categories(id)
+  CONSTRAINT france_products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.france_menu_categories(id),
+  CONSTRAINT france_products_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
 );
 CREATE TABLE public.france_restaurant_features (
   id integer NOT NULL DEFAULT nextval('france_restaurant_features_id_seq'::regclass),
@@ -284,7 +301,7 @@ CREATE TABLE public.france_sessions (
 CREATE TABLE public.france_user_sessions (
   id integer NOT NULL DEFAULT nextval('france_user_sessions_id_seq'::regclass),
   phone_number character varying NOT NULL UNIQUE,
-  chat_id character varying NOT NULL,
+  chat_id character varying,
   restaurant_id integer,
   current_step character varying,
   session_data jsonb DEFAULT '{}'::jsonb,
@@ -298,6 +315,9 @@ CREATE TABLE public.france_user_sessions (
   step_data jsonb DEFAULT '{}'::jsonb,
   workflow_context jsonb DEFAULT '{}'::jsonb,
   bot_state jsonb DEFAULT '{"mode": "menu_browsing", "context": {}, "language": "fr"}'::jsonb,
+  current_workflow_id character varying,
+  workflow_data jsonb DEFAULT '{}'::jsonb,
+  workflow_step_id character varying,
   CONSTRAINT france_user_sessions_pkey PRIMARY KEY (id),
   CONSTRAINT france_user_sessions_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
 );
@@ -310,6 +330,16 @@ CREATE TABLE public.france_whatsapp_numbers (
   created_at timestamp without time zone DEFAULT now(),
   CONSTRAINT france_whatsapp_numbers_pkey PRIMARY KEY (id),
   CONSTRAINT france_whatsapp_numbers_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
+);
+CREATE TABLE public.france_workflow_templates (
+  id integer NOT NULL DEFAULT nextval('france_workflow_templates_id_seq'::regclass),
+  restaurant_id integer NOT NULL,
+  template_name character varying NOT NULL,
+  description text,
+  steps_config jsonb,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT france_workflow_templates_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.message_templates (
   id integer NOT NULL DEFAULT nextval('message_templates_id_seq'::regclass),
