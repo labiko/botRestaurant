@@ -1,11 +1,9 @@
 {
-  "buildCommand": "cd botResto && npm run build",
+  "buildCommand": "cd botResto && npm run build:vercel",
   "outputDirectory": "botResto/www",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": ".*", "dest": "/index.html" }
   ],
   "headers": [
     {
