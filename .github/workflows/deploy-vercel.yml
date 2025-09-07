@@ -42,6 +42,10 @@ jobs:
         env:
           CI: false
 
+      - name: Copy Vercel Configuration
+        run: |
+          cp vercel.json botResto/www/vercel.json
+
       - name: Deploy to Vercel (Production)
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
         uses: amondnet/vercel-action@v25
