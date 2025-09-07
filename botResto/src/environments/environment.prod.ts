@@ -1,5 +1,7 @@
 export const environment = {
   production: true,
+  // URL de production Vercel
+  productionUrl: 'https://botresto.vercel.app',
   // Configuration Guinée (existante)
   supabase: {
     url: 'https://ymlzjvposzzdgpksgvsn.supabase.co',

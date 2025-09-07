@@ -1119,7 +1119,7 @@ Bonjour *${deliveryUser.nom}*,
     }
 
     // Ajouter le lien de connexion
-    message += `\n\n🔗 *Lien de connexion :*\nhttps://botresto.vercel.app/`;
+    message += `\n\n🔗 *Lien de connexion :*\n${environment.productionUrl}/`;
 
     message += `\n\nBonne chance dans vos livraisons ! 🚴‍♂️💨`;
     

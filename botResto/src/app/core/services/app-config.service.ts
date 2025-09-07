@@ -1,9 +1,6 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 
-// URL racine de production (constante)
-const PRODUCTION_BASE_URL = 'https://botresto.vercel.app';
-
 export interface AppEnvironmentConfig {
   production: boolean;
   baseUrl: string;
@@ -68,7 +65,7 @@ export class AppConfigService {
    */
   private detectBaseUrl(): string {
     // Utiliser toujours l'URL de production pour éviter les problèmes localhost
-    return PRODUCTION_BASE_URL;
+    return environment.productionUrl;
   }
 
   /**
