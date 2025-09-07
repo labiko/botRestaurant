@@ -1,28 +1,17 @@
 {
-  "buildCommand": "cd botResto && npm run build:vercel",
-  "outputDirectory": "botResto/www",
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": "botResto/**"
+      }
+    }
+  ],
   "routes": [
     { "handle": "filesystem" },
     { "src": ".*", "dest": "/index.html" }
   ],
-  "headers": [
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/(.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))",
-      "headers": [
-        {
-          "key": "Cache-Control", 
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    }
-  ]
+  "outputDirectory": "botResto/www"
 }
