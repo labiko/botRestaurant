@@ -6,6 +6,7 @@ import {
   IMessageSender,
   MessageTemplate
 } from '../types.ts';
+import { PerformanceLogger } from './PerformanceLogger.ts';
 
 /**
  * Service d'envoi de messages WhatsApp
@@ -189,6 +190,9 @@ export class MessageSender implements IMessageSender {
   private async sendDirectMessage(phoneNumber: string, content: string): Promise<string | null> {
     console.log(`📤 [DirectSend] Envoi immédiat vers ${phoneNumber}`);
     
+    const perfLogger = PerformanceLogger.getInstance();
+    const operationId = PerformanceLogger.generateOperationId('greenapi_send');
+    
     try {
       // Nettoyer le numéro de téléphone
       const cleanPhoneNumber = this.cleanPhoneNumber(phoneNumber);
@@ -200,6 +204,12 @@ export class MessageSender implements IMessageSender {
       };
 
       console.log(`📦 [DirectSend] Payload:`, JSON.stringify(payload));
+
+      // Démarrer le suivi de performance
+      perfLogger.startOperation(operationId, `Green API sendMessage to ${cleanPhoneNumber}`, 'green_api', {
+        messageLength: content.length,
+        phoneNumber: cleanPhoneNumber
+      });
 
       // Appel API Green API
       const response = await fetch(`${this.baseUrl}/sendMessage/${this.apiToken}`, {
@@ -223,14 +233,17 @@ export class MessageSender implements IMessageSender {
 
       if (result.idMessage) {
         console.log(`✅ [DirectSend] Message envoyé, ID: ${result.idMessage}`);
+        perfLogger.endOperation(operationId); // Succès
         return result.idMessage;
       } else {
         console.error('❌ [DirectSend] Pas d\'ID message dans la réponse');
+        perfLogger.endOperation(operationId, 'Réponse API invalide');
         throw new Error('Réponse API invalide');
       }
       
     } catch (error) {
       console.error('❌ [DirectSend] Erreur sendDirectMessage:', error);
+      perfLogger.endOperation(operationId, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }

@@ -46,6 +46,13 @@ export class CompositeWorkflowExecutor {
         .order('display_order', { ascending: true });
       
       if (error || !productOptions || productOptions.length === 0) {
+        // PRIORITÉ 3: Vérifier steps_config si pas d'options dans france_product_options
+        if (product.steps_config && product.steps_config.steps && product.steps_config.steps.length > 0) {
+          console.log(`✅ [CompositeWorkflow] Utilisation steps_config pour ${product.name}`);
+          await this.handleStepsConfigWorkflow(phoneNumber, session, product);
+          return;
+        }
+        
         console.error('❌ [CompositeWorkflow] Pas d\'options trouvées:', error);
         await this.messageSender.sendMessage(phoneNumber, 
           `❌ Configuration non disponible pour ${product.name}.\nVeuillez choisir un autre produit.`);
@@ -1014,5 +1021,41 @@ export class CompositeWorkflowExecutor {
     };
     
     return displayNames[groupName.toLowerCase()] || groupName;
+  }
+
+  /**
+   * PRIORITÉ 3: Gérer les produits avec steps_config (CHICKEN BOX)
+   */
+  private async handleStepsConfigWorkflow(
+    phoneNumber: string,
+    session: any,
+    product: any
+  ): Promise<void> {
+    try {
+      const steps = product.steps_config.steps;
+      const firstStep = steps[0];
+      
+      if (firstStep.type === 'single_choice') {
+        let message = `🔧 **${product.name}**\n\n`;
+        message += `${firstStep.title}:\n\n`;
+        
+        firstStep.options.forEach((option: string, index: number) => {
+          message += `${index + 1}. ${option}\n`;
+        });
+        
+        message += `\n💡 Tapez le numéro de votre choix`;
+        
+        await this.messageSender.sendMessage(phoneNumber, message);
+        
+        // Mettre à jour la session pour le workflow steps_config
+        // TODO: Implémenter la gestion des réponses
+        console.log(`✅ [StepsConfig] Workflow affiché pour ${product.name}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ [StepsConfig] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, 
+        `❌ Erreur configuration ${product.name}.\nVeuillez réessayer.`);
+    }
   }
 }

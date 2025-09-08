@@ -264,7 +264,7 @@ export class UniversalCartFormatter {
   private formatActions(): string {
     return 'ACTIONS RAPIDES:\n' +
            '⚡ 99 = Passer commande\n' +
-           '🛒 00 = Voir panier complet\n' +
+           '🗑️ 00 = Vider panier\n' +
            '🍕 0  = Ajouter d\'autres produits';
   }
 

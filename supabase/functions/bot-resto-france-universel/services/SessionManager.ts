@@ -61,17 +61,57 @@ export class SessionManager implements ISessionManager {
   /**
    * Mettre à jour une session existante
    * SOLID - Open/Closed : Extensible pour nouveaux champs sans modification
+   * FIX: Préserver les données existantes lors des mises à jour partielles
    */
   async updateSession(sessionId: string, updates: Partial<BotSession>): Promise<void> {
     console.log(`🔄 [SessionManager] Mise à jour session: ${sessionId}`);
     console.log(`📝 [SessionManager] Champs mis à jour:`, Object.keys(updates));
     
     try {
+      // NOUVEAU: Toujours fusionner les données au lieu de les écraser
+      if (updates.sessionData) {
+        const { data: existingSession, error: fetchError } = await this.supabase
+          .from('france_user_sessions')
+          .select('session_data')
+          .eq('id', sessionId)
+          .single();
+
+        if (!fetchError && existingSession?.session_data) {
+          console.log(`🔄 [SessionManager] Fusion session_data:`, {
+            existingKeys: Object.keys(existingSession.session_data),
+            newKeys: Object.keys(updates.sessionData),
+            hasPizzaOptionsMap: !!(existingSession.session_data.pizzaOptionsMap),
+            preservingPizzaMap: !!(existingSession.session_data.pizzaOptionsMap && !updates.sessionData.pizzaOptionsMap)
+          });
+          
+          // FUSION: Préserver les données existantes non présentes dans l'update
+          updates.sessionData = {
+            ...existingSession.session_data,  // D'abord les données existantes
+            ...updates.sessionData            // Puis les nouvelles (écrasent si même clé)
+          };
+          
+          // Préserver spécifiquement pizzaOptionsMap si elle existait et n'est pas dans l'update
+          if (existingSession.session_data.pizzaOptionsMap && !updates.sessionData.pizzaOptionsMap) {
+            updates.sessionData.pizzaOptionsMap = existingSession.session_data.pizzaOptionsMap;
+            updates.sessionData.totalPizzaOptions = existingSession.session_data.totalPizzaOptions;
+            console.log(`✅ [SessionManager] PizzaOptionsMap préservée (${updates.sessionData.pizzaOptionsMap.length} options)`);
+          }
+        }
+      }
+      
       // Mapper les updates vers le format base de données
       const dbUpdates = this.mapSessionToDatabase(updates);
       
       // Ajouter timestamp de mise à jour
       dbUpdates.updated_at = new Date();
+      
+      console.log(`💾 [SessionManager] Données finales à sauver:`, {
+        sessionId,
+        updateKeys: Object.keys(dbUpdates),
+        hasSessionData: !!(dbUpdates.session_data),
+        sessionDataKeys: dbUpdates.session_data ? Object.keys(dbUpdates.session_data) : 'null'
+      });
+      
       
       const { error } = await this.supabase
         .from('france_user_sessions')
@@ -193,6 +233,14 @@ export class SessionManager implements ISessionManager {
    * SOLID - Data Transfer Object : Transformation claire des données
    */
   private mapDatabaseToSession(dbRow: any): BotSession {
+    // DEBUG: Vérifier les données récupérées depuis la base
+    console.log(`🔍 [SessionManager] Mapping session ${dbRow.id}:`, {
+      sessionDataKeys: dbRow.session_data ? Object.keys(dbRow.session_data) : 'null',
+      hasPizzaOptionsMap: !!(dbRow.session_data?.pizzaOptionsMap),
+      pizzaOptionsCount: dbRow.session_data?.pizzaOptionsMap?.length || 0,
+      updatedAt: dbRow.updated_at
+    });
+    
     return {
       id: dbRow.id?.toString() || '',
       phoneNumber: dbRow.phone_number || '',

@@ -18,6 +18,7 @@ import {
 
 import { CompositeWorkflowExecutor } from '../services/CompositeWorkflowExecutor.ts';
 import { OrderService } from '../services/OrderService.ts';
+import { PerformanceLogger } from '../services/PerformanceLogger.ts';
 import { DeliveryRadiusService } from '../services/DeliveryRadiusService.ts';
 import { AddressManagementService } from '../services/AddressManagementService.ts';
 import { GooglePlacesService } from '../services/GooglePlacesService.ts';
@@ -26,6 +27,7 @@ import { CancellationService } from '../services/CancellationService.ts';
 import { RestaurantScheduleService } from '../services/RestaurantScheduleService.ts';
 import { TimezoneService, RestaurantContext } from '../services/TimezoneService.ts';
 import { DeliveryModesService, ServiceMode } from '../services/DeliveryModesService.ts';
+import { PizzaDisplayService } from '../services/PizzaDisplayService.ts';
 
 /**
  * Orchestrateur principal du bot universel
@@ -41,6 +43,7 @@ export class UniversalBot implements IMessageHandler {
   private timezoneService: TimezoneService;
   private deliveryModesService: DeliveryModesService;
   private deliveryRadiusService: DeliveryRadiusService;
+  private pizzaDisplayService: PizzaDisplayService;
   private currentRestaurantContext: RestaurantContext | null = null;
   private supabaseUrl: string;
   private supabaseKey: string;
@@ -63,6 +66,13 @@ export class UniversalBot implements IMessageHandler {
     
     // Initialiser le service de validation du rayon de livraison
     this.deliveryRadiusService = new DeliveryRadiusService(this.supabaseUrl, this.supabaseKey);
+    
+    // Initialiser le service d'affichage unifié des pizzas
+    this.pizzaDisplayService = new PizzaDisplayService(
+      messageSender,
+      this.supabaseUrl,
+      this.supabaseKey
+    );
     
     // Initialiser le service de workflow composite
     this.compositeWorkflowExecutor = new CompositeWorkflowExecutor(
@@ -1096,6 +1106,14 @@ export class UniversalBot implements IMessageHandler {
     console.log(`🛒 [ProductSelection] État session actuel:`, session.currentState);
     console.log(`🛒 [ProductSelection] Session complète:`, JSON.stringify(session.sessionData, null, 2));
     
+    // RÉUTILISATION: Vérifier les actions rapides 99, 00 avant parseInt
+    const choice = message.trim();
+    if (choice === '99' || choice === '00') {
+      console.log(`⚡ [ProductSelection] Action rapide détectée: ${choice} - Délégation à handleCartActions`);
+      await this.handleCartActions(phoneNumber, session, message);
+      return;
+    }
+    
     const productNumber = parseInt(message.trim());
     const products = session.sessionData?.products || [];
     
@@ -1126,16 +1144,89 @@ export class UniversalBot implements IMessageHandler {
       return;
     }
     
-    // Vérifier la validité du choix
-    if (isNaN(productNumber) || productNumber < 1 || productNumber > products.length) {
-      console.log(`❌ [ProductSelection] Choix invalide: ${productNumber}`);
+    // Vérifier la validité du choix - Support affichage unifié des pizzas
+    let maxValidChoice = products.length;
+    
+    // Si c'est un affichage unifié de pizzas, accepter les choix étendus
+    const hasPizzaMap = session.sessionData?.pizzaOptionsMap || session.workflowData?.pizzaOptionsMap;
+    if (hasPizzaMap) {
+      maxValidChoice = session.sessionData?.totalPizzaOptions || session.workflowData?.totalPizzaOptions || products.length;
+      console.log(`🍕 [ProductSelection] Mode pizza unifié - Accepte jusqu'à ${maxValidChoice}`);
+    }
+    
+    if (isNaN(productNumber) || productNumber < 1 || productNumber > maxValidChoice) {
+      console.log(`❌ [ProductSelection] Choix invalide: ${productNumber} (max: ${maxValidChoice})`);
       await this.messageSender.sendMessage(phoneNumber, 
-        `❌ Choix invalide. Choisissez entre 1 et ${products.length}.\n↩️ Tapez 0 pour revenir au menu.`);
+        `❌ Choix invalide. Choisissez entre 1 et ${maxValidChoice}.\n↩️ Tapez 0 pour revenir au menu.`);
       return;
+    }
+    
+    // DEBUG: Vérifier les données de session pour pizza unifié
+    console.log(`🔍 [ProductSelection] DEBUG Session:`, {
+      hasPizzaMap: !!session.sessionData?.pizzaOptionsMap,
+      mapLength: session.sessionData?.pizzaOptionsMap?.length || 0,
+      totalOptions: session.sessionData?.totalPizzaOptions,
+      productNumber: productNumber,
+      sessionKeys: Object.keys(session.sessionData || {}),
+      sessionId: session.id
+    });
+
+    // Gérer la sélection en mode pizza unifié - Vérifier sessionData ET workflowData
+    const pizzaOptionsMap = session.sessionData?.pizzaOptionsMap || session.workflowData?.pizzaOptionsMap;
+    const totalPizzaOptions = session.sessionData?.totalPizzaOptions || session.workflowData?.totalPizzaOptions;
+    
+    // CORRECTION: Vérifier qu'on est réellement dans une catégorie pizza avant d'utiliser le mapping
+    const selectedCategoryId = session.sessionData?.selectedCategoryId;
+    const isPizzaCategory = selectedCategoryId && (selectedCategoryId.toString().includes('pizza') || selectedCategoryId.toString().includes('Pizzas'));
+    
+    if (pizzaOptionsMap && isPizzaCategory) {
+      console.log(`🍕 [ProductSelection] Recherche option ${productNumber} dans mapping pizza (catégorie: ${selectedCategoryId})`);
+      
+      // CORRECTION: Vérifier les actions spéciales AVANT de chercher dans le mapping pizza
+      if (productNumber === 0 || productNumber === 99) {
+        console.log(`⚡ [ProductSelection] Action spéciale détectée en mode pizza: ${productNumber}`);
+        // Ne pas traiter comme une pizza, laisser passer au code normal
+      } else {
+        const pizzaOption = pizzaOptionsMap.find(opt => opt.optionNumber === productNumber);
+        
+        if (pizzaOption) {
+          console.log(`✅ [ProductSelection] Pizza unifié trouvée: ${pizzaOption.pizzaName} ${pizzaOption.sizeName}`);
+          
+          // Ajouter directement la pizza avec taille au panier
+          await this.addPizzaDirectToCart(phoneNumber, session, pizzaOption);
+          return;
+        } else {
+          console.log(`❌ [ProductSelection] Option ${productNumber} non trouvée dans mapping pizza`);
+        }
+      }
+    } else {
+      if (pizzaOptionsMap) {
+        console.log(`🔄 [ProductSelection] PizzaOptionsMap ignorée - catégorie actuelle: ${selectedCategoryId} (pas une catégorie pizza)`);
+      }
+      console.log(`🛒 [ProductSelection] Utilisation système classique pour produits standards`);
     }
     
     const selectedProduct = products[productNumber - 1];
     console.log(`✅ [ProductSelection] Produit sélectionné: ${selectedProduct.name} (ID: ${selectedProduct.id})`);
+    
+    // CORRECTION: Re-requête le produit complet avec steps_config
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    
+    const { data: fullProduct } = await supabase
+      .from('france_products')
+      .select('*')
+      .eq('id', selectedProduct.id)
+      .single();
+    
+    if (fullProduct) {
+      // Utiliser le produit complet avec steps_config
+      Object.assign(selectedProduct, fullProduct);
+      console.log(`✅ [ProductSelection] Produit complet rechargé avec steps_config:`, !!fullProduct.steps_config);
+    }
     
     // DÉBOGAGE : Afficher toutes les propriétés du produit
     console.log(`🔍 [ProductSelection] Propriétés du produit:`, {
@@ -1143,7 +1234,8 @@ export class UniversalBot implements IMessageHandler {
       requires_steps: selectedProduct.requires_steps,
       workflow_type: selectedProduct.workflow_type,
       type: selectedProduct.type,
-      product_type: selectedProduct.product_type
+      product_type: selectedProduct.product_type,
+      has_steps_config: !!selectedProduct.steps_config
     });
     
     // Vérifier si le produit nécessite des étapes (workflow composite)
@@ -1250,7 +1342,48 @@ export class UniversalBot implements IMessageHandler {
       
       console.log(`✅ [ShowProducts] ${products.length} produits trouvés`);
       
-      // 3. NOUVELLE LOGIQUE UNIVERSELLE : Si UN SEUL produit avec variantes, affichage direct
+      // 3. NOUVEAU : Vérifier si cette catégorie doit utiliser l'affichage unifié
+      // Charger la config du restaurant si nécessaire
+      await this.pizzaDisplayService.loadRestaurantConfig(restaurant.id);
+      
+      if (this.pizzaDisplayService.shouldUseUnifiedDisplay(category.slug)) {
+        console.log(`🍕 [ShowProducts] Catégorie ${category.slug} utilise l'affichage unifié`);
+        
+        // Déterminer le type de contexte
+        const isMenuCategory = category.slug.includes('menu') || category.name.toLowerCase().includes('menu');
+        const context = isMenuCategory ? 'menu_list' : 'category_list';
+        
+        // Utiliser le service spécialisé pour l'affichage
+        await this.pizzaDisplayService.displayPizzas(
+          phoneNumber,
+          session,
+          context,
+          {
+            pizzas: isMenuCategory ? undefined : products,
+            menus: isMenuCategory ? products : undefined,
+            restaurantName: restaurant.name,
+            deliveryMode: session.sessionData?.deliveryMode || 'sur_place'
+          }
+        );
+        
+        // Mettre à jour la session pour gérer la sélection
+        const updatedData = {
+          ...session.sessionData,
+          currentCategoryId: categoryId,
+          currentCategoryName: category.name,
+          products: products,
+          deliveryMode: session.sessionData?.deliveryMode || 'sur_place'
+        };
+        
+        await this.sessionManager.updateSession(session.id, {
+          botState: 'SELECTING_PRODUCTS',
+          sessionData: updatedData
+        });
+        
+        return; // Sortir pour éviter l'affichage classique
+      }
+      
+      // 3.2 LOGIQUE EXISTANTE PRÉSERVÉE : Si UN SEUL produit avec variantes, affichage direct
       if (products.length === 1) {
         const product = products[0];
         const hasVariants = (product.france_product_sizes && product.france_product_sizes.length > 0) ||
@@ -1265,7 +1398,7 @@ export class UniversalBot implements IMessageHandler {
         }
       }
       
-      // 4. Logique classique : Construire la liste des produits  
+      // 4. Logique classique PRÉSERVÉE : Construire la liste des produits  
       const deliveryMode = session.sessionData?.deliveryMode || 'sur_place';
       console.log(`📍 [ShowProducts] Mode de livraison: ${deliveryMode}`);
       console.log(`📍 [ShowProducts] Session complète:`, JSON.stringify(session.sessionData, null, 2));
@@ -1432,14 +1565,45 @@ export class UniversalBot implements IMessageHandler {
     
     switch (choice) {
       case '99': // Passer commande
+        // Vérifier si panier non vide
+        if (!session.cart || Object.keys(session.cart).length === 0) {
+          await this.messageSender.sendMessage(phoneNumber, 
+            '🛒 Votre panier est vide.\nAjoutez des produits avant de commander.');
+          return;
+        }
         await this.handleOrderCreation(phoneNumber, session);
         break;
         
-      case '00': // Voir panier complet
-        // TODO: Implémenter l'affichage détaillé du panier
+      case '00': // Vider panier
+        await this.sessionManager.updateSession(phoneNumber, {
+          botState: session.botState,
+          sessionData: {
+            ...session.sessionData,
+            cart: [],
+            totalPrice: 0
+          }
+        });
         await this.messageSender.sendMessage(phoneNumber,
-          '🛒 Affichage du panier détaillé...\n(Fonctionnalité en cours de développement)'
+          '🗑️ Panier vidé avec succès !'
         );
+        
+        // Afficher les catégories après vidage
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+        const supabase = createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        );
+        
+        const { data: restaurant } = await supabase
+          .from('france_restaurants')
+          .select('*')
+          .eq('id', session.restaurantId)
+          .single();
+        
+        if (restaurant) {
+          const deliveryMode = session.sessionData?.deliveryMode || 'sur_place';
+          await this.showMenuAfterDeliveryModeChoice(phoneNumber, restaurant, deliveryMode);
+        }
         break;
         
       case '0': // Ajouter d'autres produits
@@ -1447,13 +1611,25 @@ export class UniversalBot implements IMessageHandler {
         if (categoryId) {
           await this.showCategoryProducts(phoneNumber, session, categoryId);
         } else {
-          await this.showRestaurantMenu(phoneNumber, session);
+          // Récupérer les données restaurant
+          const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+          const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+          const { data: restaurant } = await supabase
+            .from('france_restaurants')
+            .select('*')
+            .eq('id', session.restaurantId)
+            .single();
+          
+          if (restaurant) {
+            const deliveryMode = session.sessionData?.deliveryMode || 'sur_place';
+            await this.showMenuAfterDeliveryModeChoice(phoneNumber, restaurant, deliveryMode);
+          }
         }
         break;
         
       default:
         await this.messageSender.sendMessage(phoneNumber,
-          '❌ Choix invalide.\n\n*ACTIONS RAPIDES:*\n⚡ 99 = Passer commande\n🛒 00 = Voir panier complet\n🍕 0  = Ajouter d\'autres produits'
+          '❌ Choix invalide.\n\n*ACTIONS RAPIDES:*\n⚡ 99 = Passer commande\n🗑️ 00 = Vider panier\n🍕 0  = Ajouter d\'autres produits'
         );
         // Garder le même état pour réessayer
         break;
@@ -1940,11 +2116,16 @@ export class UniversalBot implements IMessageHandler {
    * Gérer les actions après configuration produit (1=Ajouter, 2=Recommencer, 0=Retour)
    */
   private async handleWorkflowActions(phoneNumber: string, session: any, message: string): Promise<void> {
+    const startTime = Date.now();
+    console.log(`⏱️ [PERF] handleWorkflowActions START - Message: "${message}", Time: ${new Date().toISOString()}`);
+    
     const choice = message.trim();
     
     switch (choice) {
       case '1': // Ajouter au panier
+        console.log(`⏱️ [PERF] Calling handleQuantityInput - ${Date.now() - startTime}ms elapsed`);
         await this.handleQuantityInput(phoneNumber, session, '1');
+        console.log(`⏱️ [PERF] handleQuantityInput completed - ${Date.now() - startTime}ms total`);
         break;
         
       case '2': // Recommencer
@@ -1966,7 +2147,19 @@ export class UniversalBot implements IMessageHandler {
         if (categoryId) {
           await this.showCategoryProducts(phoneNumber, session, categoryId);
         } else {
-          await this.showRestaurantMenu(phoneNumber, session);
+          // Récupérer les données restaurant
+          const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+          const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+          const { data: restaurant } = await supabase
+            .from('france_restaurants')
+            .select('*')
+            .eq('id', session.restaurantId)
+            .single();
+          
+          if (restaurant) {
+            const deliveryMode = session.sessionData?.deliveryMode || 'sur_place';
+            await this.showMenuAfterDeliveryModeChoice(phoneNumber, restaurant, deliveryMode);
+          }
         }
         break;
         
@@ -1983,10 +2176,14 @@ export class UniversalBot implements IMessageHandler {
    * SOLID : Single Responsibility - Gestion quantité uniquement
    */
   private async handleQuantityInput(phoneNumber: string, session: any, message: string): Promise<void> {
+    const startTime = Date.now();
+    console.log(`⏱️ [PERF] handleQuantityInput START - Time: ${new Date().toISOString()}`);
     console.log(`📦 [QuantityInput] Message reçu: "${message}"`);
     
     const quantity = parseInt(message.trim());
     const selectedProduct = session.sessionData?.selectedProduct;
+    
+    console.log(`⏱️ [PERF] Product check - ${Date.now() - startTime}ms elapsed`);
     
     if (!selectedProduct) {
       console.error('❌ [QuantityInput] Pas de produit sélectionné');
@@ -2021,6 +2218,7 @@ export class UniversalBot implements IMessageHandler {
     }
     
     // Ajouter au panier
+    console.log(`⏱️ [PERF] Building cart - ${Date.now() - startTime}ms elapsed`);
     const rawCart = session.sessionData?.cart || [];
     const cart = Array.isArray(rawCart) ? rawCart : [];
     cart.push({
@@ -2037,8 +2235,10 @@ export class UniversalBot implements IMessageHandler {
     const cartTotal = cart.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
     
     // Utiliser le formatter universel pour le message
+    console.log(`⏱️ [PERF] Importing UniversalCartFormatter - ${Date.now() - startTime}ms elapsed`);
     const { UniversalCartFormatter } = await import('../services/UniversalCartFormatter.ts');
     const formatter = new UniversalCartFormatter();
+    console.log(`⏱️ [PERF] UniversalCartFormatter imported - ${Date.now() - startTime}ms elapsed`);
     
     // Formater le message avec le nouveau standard universel
     const confirmMessage = formatter.formatAdditionMessage(
@@ -2046,8 +2246,10 @@ export class UniversalBot implements IMessageHandler {
       cart,
       quantity
     );
+    console.log(`⏱️ [PERF] Message formatted - ${Date.now() - startTime}ms elapsed`);
     
     await this.messageSender.sendMessage(phoneNumber, confirmMessage);
+    console.log(`⏱️ [PERF] WhatsApp message sent - ${Date.now() - startTime}ms elapsed`);
     
     // Mettre à jour la session
     const updatedData = {
@@ -2059,12 +2261,15 @@ export class UniversalBot implements IMessageHandler {
       awaitingCartActions: true
     };
     
+    console.log(`⏱️ [PERF] Starting session update - ${Date.now() - startTime}ms elapsed`);
     await this.sessionManager.updateSession(session.id, {
       botState: 'AWAITING_CART_ACTIONS',
       sessionData: updatedData
     });
+    console.log(`⏱️ [PERF] Session updated - ${Date.now() - startTime}ms elapsed`);
     
     console.log(`✅ [QuantityInput] Produit ajouté au panier, état -> CART_OPTIONS`);
+    console.log(`⏱️ [PERF] handleQuantityInput COMPLETE - ${Date.now() - startTime}ms TOTAL`);
   }
   
   /**
@@ -2230,6 +2435,64 @@ export class UniversalBot implements IMessageHandler {
     } catch (error) {
       console.error('❌ [OutOfZoneChoice] Erreur:', error);
       await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors du traitement. Veuillez réessayer.');
+    }
+  }
+  /**
+   * Ajouter une pizza directement au panier (format unifié)
+   * Préserve la logique existante du panier
+   */
+  private async addPizzaDirectToCart(phoneNumber: string, session: any, pizzaOption: any): Promise<void> {
+    try {
+      console.log(`🛒 [PizzaDirectCart] Ajout pizza: ${pizzaOption.pizzaName} ${pizzaOption.sizeName}`);
+      
+      // Construire la description du produit
+      const productDescription = `${pizzaOption.pizzaName} - Taille: ${pizzaOption.sizeName}`;
+      
+      // Ajouter au panier - même logique que le système existant
+      const rawCart = session.sessionData?.cart || [];
+      const cart = Array.isArray(rawCart) ? rawCart : [];
+      
+      cart.push({
+        productId: pizzaOption.pizzaId,
+        productName: pizzaOption.pizzaName,
+        productDescription: productDescription,
+        sizeId: pizzaOption.sizeId,
+        sizeName: pizzaOption.sizeName,
+        unitPrice: pizzaOption.price,
+        quantity: 1,
+        totalPrice: pizzaOption.price,
+        addedAt: new Date().toISOString()
+      });
+      
+      // Calculer le nouveau total
+      const currentTotal = session.sessionData?.totalPrice || 0;
+      const newTotal = currentTotal + pizzaOption.price;
+      
+      // Mettre à jour la session
+      const updatedSessionData = {
+        ...session.sessionData,
+        cart: cart,
+        totalPrice: newTotal
+      };
+      
+      await this.sessionManager.updateSession(session.id, {
+        botState: 'SELECTING_PRODUCTS',
+        sessionData: updatedSessionData
+      });
+      
+      // Message de confirmation
+      await this.messageSender.sendMessage(phoneNumber, 
+        `✅ Ajouté au panier !\n🍕 ${pizzaOption.pizzaName} ${pizzaOption.sizeName}\n💰 ${pizzaOption.price} EUR\n\n` +
+        `📊 Total panier: ${newTotal} EUR\n\n` +
+        `*Que souhaitez-vous faire ?*\n` +
+        `🗑️ 00 = Vider panier\n` +
+        `⚡ 99 = Passer commande\n` +
+        `🍕 0  = Continuer vos achats`
+      );
+      
+    } catch (error) {
+      console.error('❌ [PizzaDirectCart] Erreur ajout panier:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de l\'ajout au panier. Veuillez réessayer.');
     }
   }
 }

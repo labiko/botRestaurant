@@ -84,7 +84,7 @@ export class CartManagementExecutor extends BaseExecutor {
                 nextStep: 'VIEWING_MENU',
                 outputData: { action: 'CONTINUE_SHOPPING' }
             },
-            '0000': {
+            '00': {
                 success: true,
                 errors: [],
                 nextStep: 'clear_cart',

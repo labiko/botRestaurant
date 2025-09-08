@@ -32,8 +32,8 @@ CREATE TABLE public.delivery_refusals (
   custom_reason text,
   refused_at timestamp without time zone DEFAULT now(),
   CONSTRAINT delivery_refusals_pkey PRIMARY KEY (id),
-  CONSTRAINT delivery_refusals_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
   CONSTRAINT delivery_refusals_token_id_fkey FOREIGN KEY (token_id) REFERENCES public.delivery_tokens(id),
+  CONSTRAINT delivery_refusals_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
   CONSTRAINT delivery_refusals_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id)
 );
 CREATE TABLE public.delivery_tokens (
@@ -98,8 +98,8 @@ CREATE TABLE public.france_delivery_assignments (
   expires_at timestamp with time zone,
   response_time_seconds integer,
   CONSTRAINT france_delivery_assignments_pkey PRIMARY KEY (id),
-  CONSTRAINT france_delivery_assignments_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
-  CONSTRAINT france_delivery_assignments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id)
+  CONSTRAINT france_delivery_assignments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id),
+  CONSTRAINT france_delivery_assignments_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id)
 );
 CREATE TABLE public.france_delivery_drivers (
   id bigint NOT NULL DEFAULT nextval('france_delivery_drivers_id_seq'::regclass),
@@ -180,9 +180,9 @@ CREATE TABLE public.france_orders (
   assignment_timeout_at timestamp with time zone,
   assignment_started_at timestamp with time zone,
   CONSTRAINT france_orders_pkey PRIMARY KEY (id),
-  CONSTRAINT france_orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id),
   CONSTRAINT france_orders_delivery_address_id_fkey FOREIGN KEY (delivery_address_id) REFERENCES public.france_customer_addresses(id),
-  CONSTRAINT france_orders_driver_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id)
+  CONSTRAINT france_orders_driver_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
+  CONSTRAINT france_orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
 );
 CREATE TABLE public.france_product_display_configs (
   id integer NOT NULL DEFAULT nextval('france_product_display_configs_id_seq'::regclass),
@@ -304,6 +304,8 @@ CREATE TABLE public.france_restaurants (
   country_code character varying DEFAULT 'FR'::character varying,
   hide_delivery_info boolean DEFAULT false,
   is_exceptionally_closed boolean DEFAULT false,
+  latitude numeric,
+  longitude numeric,
   CONSTRAINT france_restaurants_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.france_sessions (

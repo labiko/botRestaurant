@@ -183,10 +183,7 @@ async function handleHealth(request: Request): Promise<Response> {
   console.log('🏥 [Health] Check santé du service');
   
   try {
-    // Test des connexions
-    const connections = await BotFactory.testConnections();
-    
-    // Obtenir statistiques du bot
+    // Obtenir statistiques du bot (sans test connexions pour éviter rate limit)
     const bot = getBotInstance();
     // TODO: Ajouter méthodes getStats() aux services
     
@@ -194,11 +191,11 @@ async function handleHealth(request: Request): Promise<Response> {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       version: '2.0.0-universal',
-      connections,
+      connections: { note: 'Connexions testées à la première utilisation' },
       // stats: botStats
     };
 
-    const isHealthy = Object.values(connections).every(Boolean);
+    const isHealthy = true; // Assume healthy sans tests connexions
     
     return new Response(JSON.stringify(healthData, null, 2), {
       status: isHealthy ? 200 : 503,
@@ -417,18 +414,8 @@ async function handleRequest(request: Request): Promise<Response> {
 console.log('🚀 [Startup] Démarrage Bot Restaurant France Universel v2.0.0');
 console.log('🏗️ [Startup] Architecture SOLID avec configuration multi-restaurants');
 
-// Test des connexions au démarrage
-console.log('🔗 [Startup] Test des connexions...');
-const connectionTests = await BotFactory.testConnections();
-
-const allConnectionsOk = Object.values(connectionTests).every(Boolean);
-if (!allConnectionsOk) {
-  console.error('❌ [Startup] Certaines connexions ont échoué');
-  console.error('🔗 [Startup] État connexions:', connectionTests);
-  console.error('⚠️ [Startup] Le service va démarrer mais peut être instable');
-} else {
-  console.log('✅ [Startup] Toutes les connexions sont opérationnelles');
-}
+// Démarrage direct sans test des connexions (évite rate limit Green API)
+console.log('✅ [Startup] Démarrage direct - connexions testées à la première utilisation');
 
 // Pré-charger l'instance du bot
 console.log('🤖 [Startup] Pré-chargement de l\'instance du bot...');

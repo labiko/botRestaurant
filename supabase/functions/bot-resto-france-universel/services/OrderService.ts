@@ -83,23 +83,29 @@ export class OrderService {
    * Créer une commande en base de données
    */
   async createOrder(orderData: OrderData): Promise<any> {
+    const startTime = Date.now();
     try {
+      console.log(`⏱️ [PERF] createOrder START - Time: ${new Date().toISOString()}`);
       console.log(`📦 [OrderService] Création commande...`);
       console.log(`💰 [OrderService] Total: ${orderData.total_amount}€`);
       
+      console.log(`⏱️ [PERF] Starting Supabase INSERT france_orders - ${Date.now() - startTime}ms elapsed`);
       // Insérer la commande
       const { data: order, error } = await this.supabase
         .from('france_orders')
         .insert(orderData)
         .select()
         .single();
+      console.log(`⏱️ [PERF] Supabase INSERT completed - ${Date.now() - startTime}ms elapsed`);
       
       if (error) {
         console.error('❌ [OrderService] Erreur insertion:', error);
+        console.log(`⏱️ [PERF] createOrder FAILED - ${Date.now() - startTime}ms`);
         throw error;
       }
       
       console.log(`✅ [OrderService] Commande créée: #${order.order_number}`);
+      console.log(`⏱️ [PERF] createOrder SUCCESS - ${Date.now() - startTime}ms TOTAL`);
       return order;
       
     } catch (error) {
@@ -309,6 +315,8 @@ export class OrderService {
     deliveryMode: string,
     deliveryAddress?: any
   ): Promise<any> {
+    const startTime = Date.now();
+    console.log(`⏱️ [PERF] createOrderWorkflow START - Time: ${new Date().toISOString()}`);
     try {
       console.log(`📦 [OrderWorkflow] Début pour: ${phoneNumber}`);
       
