@@ -86,6 +86,7 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
       min_order_amount: [0],
       delivery_fee: [2.50],
       is_active: [true],
+      is_exceptionally_closed: [false],
       timezone: ['Europe/Paris', [Validators.required]]
     });
 
@@ -349,6 +350,52 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
                   // Revert to original status on error
                   this.restaurantForm.patchValue({ is_active: currentStatus }, { emitEvent: false });
                   this.presentToast('Erreur lors de la mise à jour du statut', 'danger');
+                }
+              });
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  async onToggleExceptionalClosure() {
+    const newStatus = this.restaurantForm.get('is_exceptionally_closed')?.value;
+    
+    const alert = await this.alertController.create({
+      header: 'Fermeture exceptionnelle',
+      message: newStatus 
+        ? '⚠️ Voulez-vous fermer exceptionnellement le restaurant ?\n\nCette fermeture aura priorité sur les horaires d\'ouverture.' 
+        : 'Voulez-vous désactiver la fermeture exceptionnelle ?',
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel',
+          handler: () => {
+            // Revert to previous state
+            this.restaurantForm.patchValue({ is_exceptionally_closed: !newStatus }, { emitEvent: false });
+          }
+        },
+        {
+          text: 'Confirmer',
+          handler: () => {
+            this.restaurantConfigService.updateExceptionalClosureStatus(this.restaurantId, newStatus)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: () => {
+                  this.presentToast(
+                    newStatus 
+                      ? '⚠️ Fermeture exceptionnelle activée' 
+                      : '✅ Fermeture exceptionnelle désactivée', 
+                    newStatus ? 'warning' : 'success'
+                  );
+                },
+                error: (error) => {
+                  console.error('Error updating exceptional closure status:', error);
+                  // Revert on error
+                  this.restaurantForm.patchValue({ is_exceptionally_closed: !newStatus }, { emitEvent: false });
+                  this.presentToast('Erreur lors de la mise à jour de la fermeture exceptionnelle', 'danger');
                 }
               });
           }

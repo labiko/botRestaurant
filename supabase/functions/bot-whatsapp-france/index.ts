@@ -9,6 +9,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // Services pour gestion des adresses de livraison
 import { GooglePlacesService } from './services/google-places.service.ts';
 import { AddressManagementService } from './services/address-management.service.ts';
+import { RestaurantScheduleService } from './services/restaurant-schedule.service.ts';
 import type { 
   CustomerAddress, 
   GooglePlaceResult, 
@@ -27,6 +28,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Initialisation des services d'adresses
 const googlePlaces = new GooglePlacesService();
 const addressManager = new AddressManagementService(supabase);
+const scheduleService = new RestaurantScheduleService();
 
 // Configuration délai d'expiration des sessions
 const SESSION_EXPIRE_MINUTES = 240; // 4 heures (240 minutes) - était 30 minutes
@@ -247,7 +249,6 @@ async function findRestaurantByPhone(phoneNumber: string) {
         .from('france_restaurants')
         .select('*')
         .or(`phone.eq.${format},whatsapp_number.eq.${format}`)
-        .eq('is_active', true)
         .single();
       
       if (restaurant) {
@@ -269,10 +270,25 @@ async function handleDirectRestaurantAccess(phoneNumber: string, restaurant: any
   try {
     console.log(`🎯 Accès direct restaurant: ${restaurant.name}`);
     
-    // Premier message : Bienvenue personnalisé
+    // 🚨 VÉRIFICATION DES HORAIRES avec le service dédié
+    const scheduleResult = scheduleService.checkRestaurantSchedule(restaurant);
+    
+    if (!scheduleResult.isOpen) {
+      // Restaurant fermé - Utiliser le service pour générer le message
+      const closedMessage = scheduleService.getScheduleMessage(scheduleResult, restaurant.name);
+      
+      await whatsapp.sendMessage(phoneNumber, closedMessage);
+      
+      // Optionnel : Permettre la consultation du menu
+      await showScheduleAndMenu(phoneNumber, restaurant, scheduleResult);
+      return;
+    }
+    
+    // Restaurant ouvert - Flux normal avec message personnalisé
     const welcomeMessage = `🇫🇷 Bonjour ! Bienvenue chez ${restaurant.name} !
 
 🍕 ${restaurant.description || 'Découvrez notre délicieux menu'}
+✅ Ouvert jusqu'à ${scheduleResult.currentSchedule?.closing}
 
 📍 ${restaurant.address || 'Restaurant disponible'}`;
 
@@ -304,6 +320,35 @@ Tapez le numéro de votre choix.`;
     console.error('❌ Erreur accès direct restaurant:', error);
     await whatsapp.sendMessage(phoneNumber, '❌ Erreur lors de l\'accès au restaurant.');
   }
+}
+
+/**
+ * Affiche les horaires et permet la consultation du menu même si fermé
+ */
+async function showScheduleAndMenu(phoneNumber: string, restaurant: any, scheduleResult: any) {
+  // Afficher les horaires complets
+  const fullSchedule = scheduleService.getFormattedSchedule(restaurant.business_hours);
+  await whatsapp.sendMessage(phoneNumber, fullSchedule);
+  
+  // Optionnel: Permettre la consultation du menu
+  const menuMessage = `📖 Vous pouvez consulter notre menu :
+  
+🍽️ Tapez "menu" pour voir nos spécialités
+📞 Tapez "contact" pour nous joindre
+🔄 Tapez "horaires" pour revoir nos horaires`;
+  
+  await whatsapp.sendMessage(phoneNumber, menuMessage);
+}
+
+/**
+ * Commande pour afficher les horaires à tout moment
+ */
+async function handleScheduleRequest(phoneNumber: string, restaurant: any) {
+  const scheduleResult = scheduleService.checkRestaurantSchedule(restaurant);
+  const message = scheduleService.getScheduleMessage(scheduleResult, restaurant.name);
+  const fullSchedule = scheduleService.getFormattedSchedule(restaurant.business_hours);
+  
+  await whatsapp.sendMessage(phoneNumber, `${message}\n\n${fullSchedule}`);
 }
 
 // Gestionnaire principal
@@ -1454,6 +1499,20 @@ async function handleSessionMessage(phoneNumber: string, session: any, message: 
   if (normalizedMessage === 'annuler') {
     await SimpleSession.deleteAllForPhone(phoneNumber);
     await whatsapp.sendMessage(phoneNumber, '❌ Commande annulée. Tapez le numéro du restaurant pour recommencer.');
+    return;
+  }
+
+  // Commande pour afficher les horaires
+  if (normalizedMessage.includes('horaire')) {
+    const restaurant = await supabase
+      .from('france_restaurants')
+      .select('*')
+      .eq('id', session.context.selectedRestaurantId)
+      .single();
+      
+    if (restaurant.data) {
+      await handleScheduleRequest(phoneNumber, restaurant.data);
+    }
     return;
   }
 

@@ -34,6 +34,10 @@ export class ServiceModesComponent implements OnInit, OnDestroy {
   deliveryFee: number = 2.50;
   minOrderAmount: number = 0;
   
+  // Inline editing state
+  isEditingDeliveryZone: boolean = false;
+  tempDeliveryZoneKm: number = 5;
+  
   // Mock restaurant ID - should come from auth service
   restaurantId = 1;
 
@@ -247,6 +251,62 @@ export class ServiceModesComponent implements OnInit, OnDestroy {
           console.error('Error loading restaurant config:', error);
         }
       });
+  }
+
+  startEditDeliveryZone() {
+    this.isEditingDeliveryZone = true;
+    this.tempDeliveryZoneKm = this.deliveryZoneKm;
+    
+    // Focus the input after view update
+    setTimeout(() => {
+      const input = document.querySelector('.inline-input ion-input') as HTMLIonInputElement;
+      if (input) {
+        input.setFocus();
+      }
+    }, 100);
+  }
+
+  cancelEditDeliveryZone() {
+    this.isEditingDeliveryZone = false;
+    this.tempDeliveryZoneKm = this.deliveryZoneKm;
+  }
+
+  async saveDeliveryZone() {
+    if (!this.tempDeliveryZoneKm || this.tempDeliveryZoneKm <= 0 || this.tempDeliveryZoneKm > 50) {
+      await this.presentToast('La zone de livraison doit être entre 1 et 50 km', 'warning');
+      return;
+    }
+
+    if (this.tempDeliveryZoneKm === this.deliveryZoneKm) {
+      this.isEditingDeliveryZone = false;
+      return;
+    }
+
+    const loading = await this.loadingController.create({
+      message: 'Mise à jour...'
+    });
+    await loading.present();
+
+    try {
+      const deliveryConfig = {
+        delivery_zone_km: parseInt(this.tempDeliveryZoneKm.toString()),
+        delivery_fee: this.deliveryFee,
+        min_order_amount: this.minOrderAmount
+      };
+
+      await this.restaurantConfigService.updateDeliveryConfig(this.restaurantId, deliveryConfig).toPromise();
+      
+      this.deliveryZoneKm = deliveryConfig.delivery_zone_km;
+      this.isEditingDeliveryZone = false;
+      
+      await this.presentToast('Zone de livraison mise à jour', 'success');
+    } catch (error) {
+      console.error('Error updating delivery zone:', error);
+      await this.presentToast('Erreur lors de la mise à jour', 'danger');
+      this.tempDeliveryZoneKm = this.deliveryZoneKm; // Revert
+    } finally {
+      loading.dismiss();
+    }
   }
 
   async editDeliveryConfig() {

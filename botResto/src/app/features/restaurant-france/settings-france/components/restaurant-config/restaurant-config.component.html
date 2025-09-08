@@ -1,29 +1,38 @@
 <!-- Restaurant Configuration Component -->
 <div class="restaurant-config-container">
 
-  <!-- Restaurant Status Card -->
-  <ion-card class="status-card">
+
+  <!-- Exceptional Closure Card -->
+  <ion-card class="exceptional-closure-card">
     <ion-card-header>
       <ion-card-title>
-        <ion-icon name="pulse" color="primary"></ion-icon>
-        Statut du Restaurant
+        <ion-icon name="warning" color="warning"></ion-icon>
+        Fermeture Exceptionnelle
       </ion-card-title>
+      <ion-card-subtitle>
+        Fermer temporairement le restaurant (priorité sur les horaires)
+      </ion-card-subtitle>
     </ion-card-header>
     
     <ion-card-content>
       <form [formGroup]="restaurantForm">
-        <div class="status-toggle">
-          <div class="status-info">
-            <h3>Restaurant {{ restaurantForm.get('is_active')?.value ? 'OUVERT' : 'FERMÉ' }}</h3>
-            <p>{{ restaurantForm.get('is_active')?.value ? 'Les commandes sont acceptées' : 'Les commandes sont suspendues' }}</p>
+        <div class="exceptional-closure-toggle">
+          <div class="closure-info">
+            <h3>{{ restaurantForm.get('is_exceptionally_closed')?.value ? 'FERMÉ EXCEPTIONNELLEMENT' : 'Ouvert selon horaires' }}</h3>
+            <p>{{ restaurantForm.get('is_exceptionally_closed')?.value ? 'Le restaurant est temporairement fermé' : 'Suivre les horaires d\'ouverture normaux' }}</p>
           </div>
           <ion-toggle 
-            formControlName="is_active"
-            (ionChange)="onToggleRestaurantStatus()"
-            [color]="restaurantForm.get('is_active')?.value ? 'success' : 'medium'">
+            formControlName="is_exceptionally_closed"
+            (ionChange)="onToggleExceptionalClosure()"
+            [color]="restaurantForm.get('is_exceptionally_closed')?.value ? 'warning' : 'medium'">
           </ion-toggle>
         </div>
       </form>
+
+      <ion-note class="priority-note" *ngIf="restaurantForm.get('is_exceptionally_closed')?.value">
+        <ion-icon name="information-circle" color="warning"></ion-icon>
+        Cette fermeture a la priorité sur les horaires d'ouverture. Le bot affichera "Fermeture exceptionnelle" même pendant les heures d'ouverture.
+      </ion-note>
     </ion-card-content>
   </ion-card>
 
@@ -199,7 +208,7 @@
 
       <!-- Bouton de sauvegarde -->
       <div class="form-actions" style="margin-top: 24px;">
-        <ion-button expand="block" fill="solid" color="secondary" (click)="onSaveSimpleBusinessHours()">
+        <ion-button expand="block" fill="solid" color="success" (click)="onSaveSimpleBusinessHours()">
           <ion-icon name="save" slot="start"></ion-icon>
           Sauvegarder les horaires
         </ion-button>

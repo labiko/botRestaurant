@@ -12,6 +12,7 @@ import { ConfigurationManager } from './services/ConfigurationManager.ts';
 import { WorkflowExecutor } from './services/WorkflowExecutor.ts';
 import { ProductQueryService } from './services/ProductQueryService.ts';
 import { MessageSender } from './services/MessageSender.ts';
+import { RestaurantScheduleService } from './services/RestaurantScheduleService.ts';
 
 // Import des types
 import { ApiResponse } from './types.ts';
@@ -55,6 +56,7 @@ class BotFactory {
     const configManager = new ConfigurationManager(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const productQueryService = new ProductQueryService(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const messageSender = new MessageSender(GREEN_API_TOKEN, GREEN_API_INSTANCE_ID);
+    const scheduleService = new RestaurantScheduleService();
     
     // 2. Créer les services composés
     console.log('🔧 [BotFactory] Création services composés...');
@@ -66,7 +68,8 @@ class BotFactory {
       sessionManager,
       configManager,
       workflowExecutor,
-      messageSender
+      messageSender,
+      scheduleService
     );
     
     console.log('✅ [BotFactory] Bot universel assemblé avec succès');

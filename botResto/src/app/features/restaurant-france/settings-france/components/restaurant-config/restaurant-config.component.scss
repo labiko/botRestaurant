@@ -3,10 +3,11 @@
   padding: 0;
 }
 
-// Status Card with prominent styling
-.status-card {
+
+// Exceptional closure card with warning styling
+.exceptional-closure-card {
   margin-bottom: 1.5rem;
-  border-left: 4px solid var(--ion-color-primary);
+  border-left: 4px solid var(--ion-color-warning);
   
   ion-card-header {
     padding-bottom: 0.5rem;
@@ -15,19 +16,25 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      color: var(--ion-color-primary);
+      color: var(--ion-color-warning);
       font-size: 1.1rem;
       font-weight: 600;
+    }
+    
+    ion-card-subtitle {
+      color: var(--ion-color-medium);
+      font-size: 0.85rem;
+      margin-top: 0.25rem;
     }
   }
 }
 
-.status-toggle {
+.exceptional-closure-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
   
-  .status-info {
+  .closure-info {
     flex: 1;
     
     h3 {
@@ -46,6 +53,25 @@
   
   ion-toggle {
     margin-left: 1rem;
+  }
+}
+
+.priority-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(var(--ion-color-warning-rgb), 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(var(--ion-color-warning-rgb), 0.3);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--ion-color-warning-shade);
+  
+  ion-icon {
+    margin-top: 0.1rem;
+    font-size: 1rem;
   }
 }
 
@@ -190,12 +216,13 @@
     grid-template-columns: 1fr !important;
   }
   
-  .status-toggle {
+  
+  .exceptional-closure-toggle {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
     
-    .status-info {
+    .closure-info {
       width: 100%;
     }
     

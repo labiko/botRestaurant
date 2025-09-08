@@ -18,10 +18,14 @@ import {
 
 import { CompositeWorkflowExecutor } from '../services/CompositeWorkflowExecutor.ts';
 import { OrderService } from '../services/OrderService.ts';
+import { DeliveryRadiusService } from '../services/DeliveryRadiusService.ts';
 import { AddressManagementService } from '../services/AddressManagementService.ts';
 import { GooglePlacesService } from '../services/GooglePlacesService.ts';
 import { WhatsAppContactService } from '../services/WhatsAppContactService.ts';
 import { CancellationService } from '../services/CancellationService.ts';
+import { RestaurantScheduleService } from '../services/RestaurantScheduleService.ts';
+import { TimezoneService, RestaurantContext } from '../services/TimezoneService.ts';
+import { DeliveryModesService, ServiceMode } from '../services/DeliveryModesService.ts';
 
 /**
  * Orchestrateur principal du bot universel
@@ -34,6 +38,10 @@ export class UniversalBot implements IMessageHandler {
   private googlePlacesService: GooglePlacesService;
   private whatsappContactService: WhatsAppContactService;
   private cancellationService: CancellationService;
+  private timezoneService: TimezoneService;
+  private deliveryModesService: DeliveryModesService;
+  private deliveryRadiusService: DeliveryRadiusService;
+  private currentRestaurantContext: RestaurantContext | null = null;
   private supabaseUrl: string;
   private supabaseKey: string;
   
@@ -41,10 +49,20 @@ export class UniversalBot implements IMessageHandler {
     private sessionManager: ISessionManager,
     private configManager: IRestaurantConfigManager,
     private workflowExecutor: IWorkflowExecutor,
-    private messageSender: IMessageSender
+    private messageSender: IMessageSender,
+    private scheduleService: RestaurantScheduleService
   ) {
     this.supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     this.supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    // Initialiser le service de timezone
+    this.timezoneService = new TimezoneService();
+    
+    // Initialiser le service de modes de livraison
+    this.deliveryModesService = new DeliveryModesService(this.supabaseUrl, this.supabaseKey);
+    
+    // Initialiser le service de validation du rayon de livraison
+    this.deliveryRadiusService = new DeliveryRadiusService(this.supabaseUrl, this.supabaseKey);
     
     // Initialiser le service de workflow composite
     this.compositeWorkflowExecutor = new CompositeWorkflowExecutor(
@@ -82,10 +100,17 @@ export class UniversalBot implements IMessageHandler {
    */
   async handleMessage(phoneNumber: string, message: string): Promise<void> {
     try {
-      console.log(`🤖 [UniversalBot] Message reçu de ${phoneNumber}: "${message}"`);
+      console.log(`🤖 [MESSAGE_DEBUG] === MESSAGE REÇU ===`);
+      console.log(`🤖 [MESSAGE_DEBUG] De: ${phoneNumber}`);
+      console.log(`🤖 [MESSAGE_DEBUG] Message: "${message}"`);
+      console.log(`🤖 [MESSAGE_DEBUG] Type: ${typeof message}`);
+      console.log(`🤖 [MESSAGE_DEBUG] Longueur: ${message.length}`);
       
       // PRIORITÉ 1: Détection numéro téléphone restaurant (accès QR code)
-      if (this.isPhoneNumberFormat(message)) {
+      const isPhone = this.isPhoneNumberFormat(message);
+      console.log(`🤖 [MESSAGE_DEBUG] Est un téléphone: ${isPhone}`);
+      
+      if (isPhone) {
         console.log('📱 Format téléphone détecté:', message);
         const restaurant = await this.findRestaurantByPhone(message);
         
@@ -125,6 +150,9 @@ export class UniversalBot implements IMessageHandler {
       
       if (session && session.restaurantId) {
         // L'utilisateur a une session active avec restaurant sélectionné
+        // Charger le contexte restaurant pour cette session
+        await this.loadAndSetRestaurantContext(session.restaurantId);
+        
         await this.handleSessionMessage(phoneNumber, session, message);
         return;
       }
@@ -486,7 +514,10 @@ export class UniversalBot implements IMessageHandler {
    */
   private async findRestaurantByPhone(phoneNumber: string): Promise<any> {
     try {
-      console.log('🔍 Recherche restaurant avec numéro:', phoneNumber);
+      console.log('🔍 [PHONE_DEBUG] === RECHERCHE RESTAURANT ===');
+      console.log('🔍 [PHONE_DEBUG] Numéro reçu:', phoneNumber);
+      console.log('🔍 [PHONE_DEBUG] Type:', typeof phoneNumber);
+      console.log('🔍 [PHONE_DEBUG] Longueur:', phoneNumber.length);
       
       // Essayer différents formats de normalisation
       const formats = [
@@ -494,6 +525,8 @@ export class UniversalBot implements IMessageHandler {
         `+33${phoneNumber.substring(1)}`, // Format international (ex: +330177123456)
         `33${phoneNumber.substring(1)}` // Format sans + (ex: 330177123456)
       ];
+      
+      console.log('🔍 [PHONE_DEBUG] Formats à tester:', formats);
       
       // Import temporaire de supabase
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
@@ -503,16 +536,18 @@ export class UniversalBot implements IMessageHandler {
       );
       
       for (const format of formats) {
-        console.log('🔍 Test format:', format);
-        const { data: restaurant } = await supabase
+        console.log('🔍 [PHONE_DEBUG] Test format:', format);
+        const { data: restaurant, error } = await supabase
           .from('france_restaurants')
           .select('*')
           .or(`phone.eq.${format},whatsapp_number.eq.${format}`)
-          .eq('is_active', true)
           .single();
         
+        console.log('🔍 [PHONE_DEBUG] Résultat requête pour', format, ':', { restaurant: restaurant?.name || 'null', error: error?.message || 'none' });
+        
         if (restaurant) {
-          console.log('✅ Restaurant trouvé:', restaurant.name);
+          console.log('✅ [PHONE_DEBUG] Restaurant trouvé:', restaurant.name);
+          console.log('✅ [PHONE_DEBUG] Restaurant data:', JSON.stringify(restaurant, null, 2));
           return restaurant;
         }
       }
@@ -526,26 +561,140 @@ export class UniversalBot implements IMessageHandler {
   }
 
   /**
+   * Définir le contexte restaurant pour tous les services
+   */
+  private setRestaurantContext(restaurant: any): void {
+    if (restaurant) {
+      this.currentRestaurantContext = this.timezoneService.createContext(restaurant);
+      this.timezoneService.setCurrentContext(restaurant);
+      console.log(`🌍 [Context] Restaurant context défini: ${restaurant.name} - Timezone: ${this.currentRestaurantContext.timezone}`);
+    }
+  }
+  
+  /**
+   * Charger et définir le contexte restaurant depuis un ID
+   */
+  private async loadAndSetRestaurantContext(restaurantId: number): Promise<void> {
+    try {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+      const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+      
+      const { data: restaurant } = await supabase
+        .from('france_restaurants')
+        .select('*')
+        .eq('id', restaurantId)
+        .single();
+      
+      if (restaurant) {
+        this.setRestaurantContext(restaurant);
+      }
+    } catch (error) {
+      console.error(`❌ [Context] Erreur chargement restaurant ${restaurantId}:`, error);
+    }
+  }
+  
+  /**
+   * Obtenir le contexte restaurant actuel
+   */
+  private getRestaurantContext(): RestaurantContext | null {
+    return this.currentRestaurantContext;
+  }
+  
+  /**
    * Gérer l'accès direct à un restaurant
    */
   private async handleDirectRestaurantAccess(phoneNumber: string, restaurant: any): Promise<void> {
     try {
-      console.log(`🎯 Accès direct restaurant: ${restaurant.name}`);
+      console.log(`🎯 [DirectAccess] === DÉBUT ACCÈS DIRECT RESTAURANT ===`);
+      console.log(`🎯 [DirectAccess] Restaurant: ${restaurant.name}`);
+      
+      // Définir le contexte restaurant pour tous les calculs temporels
+      this.setRestaurantContext(restaurant);
+      
+      // AFFICHER L'HEURE ACTUELLE POUR DIAGNOSTIC
+      const now = new Date();
+      console.log(`⏰ [HEURE_DEBUG] === DIAGNOSTIC FUSEAU HORAIRE ===`);
+      console.log(`⏰ [HEURE_DEBUG] Date système brute: ${now.toString()}`);
+      console.log(`⏰ [HEURE_DEBUG] Date ISO: ${now.toISOString()}`);
+      console.log(`⏰ [HEURE_DEBUG] Heure locale système: ${now.toLocaleString('fr-FR')}`);
+      console.log(`⏰ [HEURE_DEBUG] Heure Paris: ${now.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}`);
+      console.log(`⏰ [HEURE_DEBUG] Timezone offset: ${now.getTimezoneOffset()} minutes`);
+      console.log(`⏰ [HEURE_DEBUG] Jour de la semaine: ${now.getDay()} (0=dimanche)`);
+      
+      console.log(`🎯 [DirectAccess] Données restaurant:`, JSON.stringify(restaurant, null, 2));
+      
+      // 🚨 VÉRIFICATION DES HORAIRES avec le service dédié
+      console.log(`🚨 [DirectAccess] APPEL du service des horaires...`);
+      console.log(`🚨 [DirectAccess] Service disponible: ${!!this.scheduleService}`);
+      
+      const scheduleResult = this.scheduleService.checkRestaurantSchedule(restaurant);
+      
+      console.log(`🚨 [DirectAccess] RÉSULTAT service horaires:`, JSON.stringify(scheduleResult, null, 2));
+      console.log(`🚨 [DirectAccess] Restaurant ouvert: ${scheduleResult.isOpen}`);
+      console.log(`🚨 [DirectAccess] Statut: ${scheduleResult.status}`);
+      
+      if (!scheduleResult.isOpen) {
+        console.log(`🚫 [DirectAccess] Restaurant fermé - Envoi message de fermeture`);
+        // Restaurant fermé - Utiliser le service pour générer le message
+        const closedMessage = this.scheduleService.getScheduleMessage(scheduleResult, restaurant.name);
+        console.log(`🚫 [DirectAccess] Message de fermeture: ${closedMessage}`);
+        
+        await this.messageSender.sendMessage(phoneNumber, closedMessage);
+        return;
+      }
+      
+      console.log(`✅ [DirectAccess] Restaurant ouvert - Procédure d'accueil`)
       
       // Premier message : Bienvenue personnalisé
       const welcomeMessage = `🇫🇷 Bonjour ! Bienvenue chez ${restaurant.name} !\n🍕 ${restaurant.description || 'Découvrez notre délicieux menu'}\n📍 ${restaurant.address || 'Restaurant disponible'}`;
       await this.messageSender.sendMessage(phoneNumber, welcomeMessage);
       
-      // Deuxième message : Choix du mode de livraison
-      const deliveryModeMessage = `🚚 **Choisissez votre mode :**\n📍 1 - Sur place\n📦 2 - À emporter\n🚚 3 - Livraison\nTapez le numéro de votre choix.`;
+      // Charger les modes de livraison disponibles depuis la base de données
+      console.log('🚚 [DirectAccess] Chargement des modes de livraison...');
+      const availableModes = await this.deliveryModesService.getAvailableModes(restaurant.id);
+      console.log(`🚚 [DirectAccess] Modes disponibles: ${availableModes.map(m => m.mode).join(', ')}`);
+      
+      // Deuxième message : Choix du mode de livraison (dynamique)
+      const deliveryModeMessage = this.deliveryModesService.formatModesMessage(availableModes);
       await this.messageSender.sendMessage(phoneNumber, deliveryModeMessage);
       
-      // Créer session avec état CHOOSING_DELIVERY_MODE
-      await this.createSessionForRestaurant(phoneNumber, restaurant);
-      console.log('✅ [DirectAccess] Session créée pour choix mode livraison');
+      // Créer session avec état CHOOSING_DELIVERY_MODE et stocker les modes disponibles
+      console.log('📝 [DirectAccess] Création de la session...');
+      const session = await this.createSessionForRestaurant(phoneNumber, restaurant);
+      console.log('📝 [DirectAccess] Session créée:', { 
+        sessionId: session?.id, 
+        restaurantId: session?.restaurantId,
+        sessionData: session?.sessionData 
+      });
+      
+      if (!session || !session.id) {
+        console.error('❌ [DirectAccess] Session non créée ou invalide');
+        throw new Error('Impossible de créer la session');
+      }
+      
+      // Stocker les modes disponibles dans la session pour validation ultérieure
+      console.log('📝 [DirectAccess] Mise à jour session avec modes disponibles...');
+      try {
+        await this.sessionManager.updateSession(session.id, {
+          sessionData: {
+            ...session.sessionData,
+            availableModes: availableModes.map(m => m.mode)
+          }
+        });
+        console.log('✅ [DirectAccess] Session mise à jour avec modes:', availableModes.map(m => m.mode));
+      } catch (updateError) {
+        console.error('❌ [DirectAccess] Erreur mise à jour session:', updateError);
+        throw updateError;
+      }
+      
+      console.log('✅ [DirectAccess] Session créée pour choix mode livraison avec modes disponibles');
       
     } catch (error) {
-      console.error('❌ [DirectAccess] Erreur:', error);
+      console.error('❌ [DirectAccess] Erreur détaillée:', {
+        message: error.message,
+        stack: error.stack,
+        error: error
+      });
       await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de l\'accès au restaurant.');
     }
   }
@@ -553,8 +702,10 @@ export class UniversalBot implements IMessageHandler {
   /**
    * Créer une session pour un restaurant (équivalent de SimpleSession.create)
    */
-  private async createSessionForRestaurant(phoneNumber: string, restaurant: any): Promise<void> {
+  private async createSessionForRestaurant(phoneNumber: string, restaurant: any): Promise<any> {
     try {
+      console.log('🔧 [CreateSession] Début création session pour:', phoneNumber);
+      
       // Import temporaire de supabase
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       const supabase = createClient(
@@ -563,16 +714,22 @@ export class UniversalBot implements IMessageHandler {
       );
       
       // Supprimer les sessions existantes
-      await supabase
+      console.log('🔧 [CreateSession] Suppression sessions existantes...');
+      const deleteResult = await supabase
         .from('france_user_sessions')
         .delete()
         .eq('phone_number', phoneNumber);
+      
+      if (deleteResult.error) {
+        console.error('❌ [CreateSession] Erreur suppression:', deleteResult.error);
+      }
       
       // Créer nouvelle session avec l'état CHOOSING_DELIVERY_MODE
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + SESSION_DURATION_MINUTES); // 2 heures d'expiration
       
-      await supabase
+      console.log('🔧 [CreateSession] Création nouvelle session...');
+      const { data: newSession, error } = await supabase
         .from('france_user_sessions')
         .insert({
           phone_number: phoneNumber,
@@ -587,11 +744,26 @@ export class UniversalBot implements IMessageHandler {
           cart_items: [],
           total_amount: 0,
           expires_at: expiresAt
-        });
-        
-      console.log(`✅ [CreateSession] Session créée pour restaurant ${restaurant.name}`);
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ [CreateSession] Erreur création session:', error);
+        throw error;
+      }
+      
+      console.log(`✅ [CreateSession] Session créée pour restaurant ${restaurant.name}:`, {
+        id: newSession?.id,
+        restaurantId: newSession?.restaurant_id,
+        state: newSession?.bot_state
+      });
+      
+      return newSession;
+      
     } catch (error) {
       console.error('❌ [CreateSession] Erreur création session:', error);
+      throw error;
     }
   }
 
@@ -727,6 +899,10 @@ export class UniversalBot implements IMessageHandler {
         await this.handleAddressConfirmation(phoneNumber, session, message);
         break;
         
+      case 'AWAITING_OUT_OF_ZONE_CHOICE':
+        await this.handleOutOfZoneChoice(phoneNumber, session, message);
+        break;
+        
       default:
         console.log(`⚠️ [SessionMessage] État non géré: ${session.botState}`);
         await this.messageSender.sendMessage(phoneNumber, 
@@ -740,23 +916,23 @@ export class UniversalBot implements IMessageHandler {
    */
   private async handleDeliveryModeChoice(phoneNumber: string, session: any, message: string): Promise<void> {
     const modeChoice = parseInt(message.trim());
-    let deliveryMode = '';
     
-    switch (modeChoice) {
-      case 1:
-        deliveryMode = 'sur_place';
-        break;
-      case 2:
-        deliveryMode = 'a_emporter';
-        break;
-      case 3:
-        deliveryMode = 'livraison';
-        break;
-      default:
-        await this.messageSender.sendMessage(phoneNumber, 
-          `❌ Choix invalide. Tapez 1, 2 ou 3 :\n📍 1 - Sur place\n📦 2 - À emporter\n🚚 3 - Livraison`);
-        return;
+    // Récupérer les modes disponibles depuis la session
+    const availableModes = session.sessionData?.availableModes || ['sur_place', 'a_emporter', 'livraison'];
+    console.log(`🚚 [DeliveryMode] Modes disponibles: ${availableModes.join(', ')}`);
+    
+    // Valider que le choix est dans la plage valide
+    if (modeChoice < 1 || modeChoice > availableModes.length || isNaN(modeChoice)) {
+      // Recharger les modes pour afficher le bon message d'erreur
+      const modesForError = await this.deliveryModesService.getAvailableModes(session.restaurantId);
+      const errorMessage = `❌ Choix invalide. ${this.deliveryModesService.formatModesMessage(modesForError)}`;
+      await this.messageSender.sendMessage(phoneNumber, errorMessage);
+      return;
     }
+    
+    // Mapper le choix au mode correspondant (index - 1)
+    const deliveryMode = availableModes[modeChoice - 1];
+    console.log(`✅ [DeliveryMode] Mode sélectionné: ${deliveryMode}`);
     
     // Récupérer les infos restaurant
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
@@ -822,14 +998,23 @@ export class UniversalBot implements IMessageHandler {
     const session = await this.sessionManager.getSession(phoneNumber);
     if (session) {
       console.log('📦 [showMenuAfterDeliveryModeChoice] Mise à jour session vers VIEWING_MENU');
+      console.log(`🔍 [SESSION] Mode sélectionné: ${deliveryMode}`);
       
       const updatedData = {
         ...session.sessionData,
         categories: categories,
         deliveryMode: deliveryMode,
+        selectedServiceMode: deliveryMode, // NOUVEAU: Ajout pour validation rayon
         cart: session.sessionData?.cart || {},
         totalPrice: session.sessionData?.totalPrice || 0
       };
+      
+      console.log(`✅ [SESSION] Données session mises à jour:`, {
+        deliveryMode: updatedData.deliveryMode,
+        selectedServiceMode: updatedData.selectedServiceMode,
+        hasCategories: !!updatedData.categories,
+        cartItems: Object.keys(updatedData.cart || {}).length
+      });
       
       await this.sessionManager.updateSession(session.id, {
         botState: 'VIEWING_MENU',
@@ -1282,17 +1467,27 @@ export class UniversalBot implements IMessageHandler {
   private async handleOrderCreation(phoneNumber: string, session: any): Promise<void> {
     try {
       console.log(`📦 [OrderCreation] Début création commande pour: ${phoneNumber}`);
+      console.log(`🚨 [DEBUG-OrderCreation] Session complète:`, JSON.stringify(session, null, 2));
       
       const cart = session.sessionData?.cart || [];
-      const restaurantId = session.sessionData?.selectedRestaurantId;
+      const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
       const deliveryMode = session.sessionData?.deliveryMode;
       
+      console.log(`🚨 [DEBUG-OrderCreation] cart:`, JSON.stringify(cart, null, 2));
+      console.log(`🚨 [DEBUG-OrderCreation] restaurantId:`, restaurantId);
+      console.log(`🚨 [DEBUG-OrderCreation] deliveryMode:`, deliveryMode);
+      console.log(`🚨 [DEBUG-OrderCreation] session.restaurant_id (table):`, session.restaurant_id);
+      console.log(`🚨 [DEBUG-OrderCreation] Toutes les clés sessionData:`, Object.keys(session.sessionData || {}));
+      
       if (!cart || cart.length === 0) {
+        console.log(`❌ [DEBUG-OrderCreation] PANIER VIDE - cart.length: ${cart?.length}`);
         await this.messageSender.sendMessage(phoneNumber, '❌ Votre panier est vide. Ajoutez des produits avant de commander.');
         return;
       }
       
       if (!restaurantId) {
+        console.log(`❌ [DEBUG-OrderCreation] RESTAURANT NON SÉLECTIONNÉ - restaurantId: ${restaurantId}`);
+        console.log(`❌ [DEBUG-OrderCreation] Alternative session.restaurant_id: ${session.restaurant_id}`);
         await this.messageSender.sendMessage(phoneNumber, '❌ Restaurant non sélectionné. Recommencez votre commande.');
         await this.deleteSession(phoneNumber);
         return;
@@ -1403,7 +1598,8 @@ export class UniversalBot implements IMessageHandler {
   private async processOrderWithMode(phoneNumber: string, session: any, deliveryMode: string): Promise<void> {
     try {
       const cart = session.sessionData?.cart || [];
-      const restaurantId = session.sessionData?.selectedRestaurantId;
+      // CORRECTION: Même logique de fallback que pour les commandes
+      const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
       
       // Déléguer la création au service dédié
       const order = await this.orderService.createOrderWorkflow(
@@ -1587,6 +1783,69 @@ export class UniversalBot implements IMessageHandler {
   private async saveNewAddressAndProcess(phoneNumber: string, session: any, address: any): Promise<void> {
     try {
       const cleanPhone = phoneNumber.replace('@c.us', '');
+      // CORRECTION: Même logique de fallback que pour les commandes
+      const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
+      
+      // NOUVEAU: Validation du rayon de livraison (uniquement pour le mode livraison)
+      if (session.sessionData?.selectedServiceMode === 'livraison') {
+        console.log('🔍 [SaveAddress] === DÉBUT VALIDATION RAYON LIVRAISON ===');
+        console.log('🔍 [SaveAddress] Mode de service détecté: LIVRAISON');
+        console.log(`🔍 [SaveAddress] Restaurant ID: ${restaurantId}`);
+        console.log(`🔍 [SaveAddress] Session data:`, JSON.stringify(session.sessionData, null, 2));
+        console.log(`🔍 [SaveAddress] Adresse geometry:`, JSON.stringify(address.geometry, null, 2));
+        
+        const radiusValidation = await this.deliveryRadiusService.validateAddressInRadius(
+          restaurantId,
+          address.geometry.location.lat,
+          address.geometry.location.lng
+        );
+        
+        console.log(`🔍 [SaveAddress] Résultat validation:`, JSON.stringify(radiusValidation, null, 2));
+        
+        if (!radiusValidation.isInRadius) {
+          console.log('❌ [SaveAddress] ADRESSE HORS ZONE DÉTECTÉE');
+          console.log(`❌ [SaveAddress] Distance: ${radiusValidation.distanceKm}km > ${radiusValidation.maxRadiusKm}km`);
+          
+          // Adresse hors zone - Informer le client et proposer alternatives
+          const message = `❌ **Désolé, cette adresse est hors de notre zone de livraison**\n\n` +
+                         `📍 Distance: ${radiusValidation.distanceKm}km\n` +
+                         `🚚 Zone maximum: ${radiusValidation.maxRadiusKm}km\n\n` +
+                         `*Que souhaitez-vous faire ?*\n` +
+                         `1️⃣ Essayer une autre adresse\n` +
+                         `2️⃣ Commander à emporter\n\n` +
+                         `💡 *Tapez 1 ou 2*`;
+          
+          console.log(`📱 [SaveAddress] Envoi message hors zone:`, message);
+          await this.messageSender.sendMessage(phoneNumber, message);
+          
+          // Mettre à jour la session pour gérer la réponse
+          await this.sessionManager.updateSession(session.id, {
+            botState: 'AWAITING_OUT_OF_ZONE_CHOICE',
+            sessionData: {
+              ...session.sessionData,
+              outOfZoneAddress: address,
+              radiusValidation: radiusValidation
+            }
+          });
+          
+          return; // Arrêter le processus jusqu'à la réponse du client
+        }
+        
+        // Adresse dans la zone - Informer le client
+        console.log('✅ [SaveAddress] ADRESSE DANS LA ZONE VALIDÉE');
+        console.log(`✅ [SaveAddress] Distance: ${radiusValidation.distanceKm}km ≤ ${radiusValidation.maxRadiusKm}km`);
+        
+        if (radiusValidation.distanceKm > 0) {
+          const successMessage = `✅ **Adresse validée !**\n📍 Distance: ${radiusValidation.distanceKm}km`;
+          console.log(`📱 [SaveAddress] Envoi message succès:`, successMessage);
+          await this.messageSender.sendMessage(phoneNumber, successMessage);
+        }
+        
+        console.log('🔍 [SaveAddress] === FIN VALIDATION RAYON LIVRAISON ===');
+      } else {
+        console.log('ℹ️ [SaveAddress] Mode de service NON-LIVRAISON - Validation rayon ignorée');
+        console.log(`ℹ️ [SaveAddress] Mode actuel: ${session.sessionData?.selectedServiceMode || 'UNDEFINED'}`);
+      }
       
       // Générer un label automatique
       const existingAddresses = await this.addressService.getCustomerAddresses(cleanPhone);
@@ -1623,7 +1882,8 @@ export class UniversalBot implements IMessageHandler {
   private async processOrderWithAddress(phoneNumber: string, session: any, address: any): Promise<void> {
     try {
       const cart = session.sessionData?.cart || [];
-      const restaurantId = session.sessionData?.selectedRestaurantId;
+      // CORRECTION: Même logique de fallback que pour les commandes
+      const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
       
       // Déléguer la création au service dédié
       const order = await this.orderService.createOrderWorkflow(
@@ -1882,6 +2142,94 @@ export class UniversalBot implements IMessageHandler {
       await this.messageSender.sendMessage(phoneNumber, 
         '❌ Erreur lors de l\'annulation. Veuillez réessayer.'
       );
+    }
+  }
+
+  /**
+   * Gérer le choix du client quand son adresse est hors de la zone de livraison
+   */
+  private async handleOutOfZoneChoice(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      console.log('🔄 [OutOfZoneChoice] === DÉBUT GESTION CHOIX HORS ZONE ===');
+      console.log(`🔄 [OutOfZoneChoice] Message reçu: "${message}"`);
+      console.log(`🔄 [OutOfZoneChoice] Session data:`, JSON.stringify(session.sessionData, null, 2));
+      
+      const choice = parseInt(message.trim());
+      console.log(`🔄 [OutOfZoneChoice] Choix parsé: ${choice} (type: ${typeof choice})`);
+      
+      if (choice === 1) {
+        console.log('🔄 [OutOfZoneChoice] CHOIX 1: Essayer une autre adresse');
+        // Essayer une autre adresse
+        await this.messageSender.sendMessage(phoneNumber, 
+          '📝 *Saisissez votre nouvelle adresse complète*\n\n💡 *Exemple : 15 rue de la Paix, 75001 Paris*'
+        );
+        
+        await this.sessionManager.updateSession(session.id, {
+          botState: 'AWAITING_NEW_ADDRESS',
+          sessionData: {
+            ...session.sessionData,
+            outOfZoneAddress: undefined,
+            radiusValidation: undefined
+          }
+        });
+        
+      } else if (choice === 2) {
+        console.log('🔄 [OutOfZoneChoice] CHOIX 2: Commander à emporter');
+        
+        // Commander à emporter
+        await this.messageSender.sendMessage(phoneNumber, 
+          '🛍️ *Parfait ! Passons à l\'emporter*'
+        );
+        
+        // Mettre à jour le mode de service en emporter
+        await this.sessionManager.updateSession(session.id, {
+          sessionData: {
+            ...session.sessionData,
+            selectedServiceMode: 'a_emporter',
+            outOfZoneAddress: undefined,
+            radiusValidation: undefined
+          }
+        });
+        
+        // Traiter directement la commande en emporter
+        const cart = session.sessionData?.cart || [];
+        // CORRECTION: Même logique de fallback que pour les commandes
+        const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
+        
+        const order = await this.orderService.createOrderWorkflow(
+          phoneNumber,
+          cart,
+          restaurantId,
+          'a_emporter',
+          null // Pas d'adresse pour emporter
+        );
+        
+        const restaurantName = await this.getRestaurantName(restaurantId);
+        const confirmationMessage = this.orderService.buildOrderConfirmationMessage(
+          order,
+          restaurantName,
+          'a_emporter',
+          null
+        );
+        
+        await this.messageSender.sendMessage(phoneNumber, confirmationMessage);
+        await this.deleteSession(phoneNumber);
+        
+      } else {
+        console.log(`🔄 [OutOfZoneChoice] CHOIX INVALIDE: ${choice}`);
+        console.log(`🔄 [OutOfZoneChoice] Message original: "${message}"`);
+        
+        // Choix invalide
+        await this.messageSender.sendMessage(phoneNumber, 
+          '❌ Réponse invalide.\n\n*Tapez :*\n1️⃣ pour essayer une autre adresse\n2️⃣ pour commander à emporter'
+        );
+      }
+      
+      console.log('🔄 [OutOfZoneChoice] === FIN GESTION CHOIX HORS ZONE ===');
+      
+    } catch (error) {
+      console.error('❌ [OutOfZoneChoice] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors du traitement. Veuillez réessayer.');
     }
   }
 }

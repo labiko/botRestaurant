@@ -18,6 +18,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **⚠️ IMPORTANT**: NE JAMAIS essayer de lancer le projet avec `ng serve`, `ionic serve`, ou tout autre commande de serveur de développement. Le projet est toujours déjà lancé du côté utilisateur. Ne pas utiliser les commandes Bash pour démarrer/arrêter/redémarrer des serveurs.
 
+## 🌍 BOT UNIVERSEL PAR DÉFAUT
+
+**⚠️ IMPORTANT**: Sauf indication contraire explicite de l'utilisateur, TOUJOURS travailler sur le **bot WhatsApp universel** :
+- **Fichier principal** : `supabase/functions/bot-resto-france-universel/index.ts`
+- **Services universels** : `supabase/functions/bot-resto-france-universel/services/`
+- **Tables universelles** : `restaurants`, `menu_items`, etc.
+- **Deploy universel** : `supabase functions deploy bot-resto-france-universel`
+
+Le bot universel est la version de production active qui gère tous les pays. Ne travailler sur les bots spécifiques que si l'utilisateur le demande explicitement.
+
 ## 🚨 COMMANDES INTERDITES - BASE DE DONNÉES
 
 **⚠️ CRITIQUE**: NE JAMAIS exécuter les commandes suivantes qui détruisent les données :

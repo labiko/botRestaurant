@@ -17,6 +17,7 @@ export interface RestaurantConfig {
   min_order_amount: number;
   delivery_fee: number;
   is_active: boolean;
+  is_exceptionally_closed?: boolean;
   business_hours: any;
   timezone: string;
   country_code: string;
@@ -122,6 +123,22 @@ export class RestaurantConfigService {
       this.supabase
         .from('france_restaurants')
         .update({ is_active: isActive })
+        .eq('id', restaurantId)
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+      })
+    );
+  }
+
+  /**
+   * Met à jour le statut de fermeture exceptionnelle du restaurant
+   */
+  updateExceptionalClosureStatus(restaurantId: number, isExceptionallyClosed: boolean): Observable<void> {
+    return from(
+      this.supabase
+        .from('france_restaurants')
+        .update({ is_exceptionally_closed: isExceptionallyClosed })
         .eq('id', restaurantId)
     ).pipe(
       map(({ error }) => {

@@ -138,6 +138,77 @@
   }
 }
 
+// Inline editing styles
+.delivery-zone-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  
+  .label {
+    font-size: 0.9rem;
+    color: var(--ion-color-medium);
+    white-space: nowrap;
+  }
+  
+  .zone-value {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ion-color-primary);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    
+    &:hover {
+      background-color: var(--ion-color-primary-tint);
+      border-color: var(--ion-color-primary);
+    }
+  }
+  
+  .inline-input {
+    width: 80px;
+    min-height: 32px;
+    
+    ion-input {
+      --background: var(--ion-color-light);
+      --border-radius: 6px;
+      --padding-start: 0.5rem;
+      --padding-end: 0.5rem;
+      border: 1px solid var(--ion-color-primary);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+  }
+  
+  ion-button {
+    --padding-start: 0.5rem;
+    --padding-end: 0.5rem;
+    --height: 28px;
+    
+    ion-icon {
+      font-size: 1rem;
+    }
+  }
+}
+
+// Dark mode support for inline editing
+@media (prefers-color-scheme: dark) {
+  .delivery-zone-inline {
+    .zone-value {
+      &:hover {
+        background-color: var(--ion-color-primary-shade);
+      }
+    }
+    
+    .inline-input ion-input {
+      --background: var(--ion-color-step-100);
+      border-color: var(--ion-color-primary-tint);
+    }
+  }
+}
+
 // Info card
 .info-card {
   margin-top: 1.5rem;

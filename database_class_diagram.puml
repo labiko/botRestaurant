@@ -1,0 +1,448 @@
+@startuml Database_Class_Diagram
+
+!define RESTAURANT_COLOR #E3F2FD
+!define ORDER_COLOR #F3E5F5
+!define DELIVERY_COLOR #E8F5E8
+!define CONFIG_COLOR #FFF3E0
+!define AUTH_COLOR #FAFAFA
+
+package "Restaurant Core" <<Rectangle>> {
+    
+    class FranceRestaurants <<RESTAURANT_COLOR>> {
+        +id: int <<PK>>
+        +name: string
+        +slug: string <<unique>>
+        +address: text
+        +city: string
+        +phone: string
+        +latitude: decimal
+        +longitude: decimal
+        +is_active: boolean
+        +timezone: string
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getActiveRestaurants()
+        +findBySlug(slug: string)
+    }
+    
+    class FranceMenuCategories <<RESTAURANT_COLOR>> {
+        +id: int <<PK>>
+        +restaurant_id: int <<FK>>
+        +name: string
+        +slug: string
+        +icon: string
+        +display_order: int
+        +is_active: boolean
+        +created_at: timestamp
+        --
+        +getByRestaurant(restaurantId: int)
+    }
+    
+    class FranceProducts <<RESTAURANT_COLOR>> {
+        +id: int <<PK>>
+        +restaurant_id: int <<FK>>
+        +category_id: int <<FK>>
+        +name: string
+        +description: text
+        +composition: text
+        +price_on_site_base: decimal
+        +price_delivery_base: decimal
+        +product_type: string
+        +is_active: boolean
+        +display_order: int
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getByCategory(categoryId: int)
+        +getActiveProducts()
+    }
+    
+    class FranceProductSizes <<RESTAURANT_COLOR>> {
+        +id: int <<PK>>
+        +product_id: int <<FK>>
+        +size_name: string
+        +price_on_site: decimal
+        +price_delivery: decimal
+        +includes_drink: boolean
+        +display_order: int
+        --
+        +getByProduct(productId: int)
+    }
+    
+    class FranceProductVariants <<RESTAURANT_COLOR>> {
+        +id: int <<PK>>
+        +product_id: int <<FK>>
+        +variant_name: string
+        +price_on_site: decimal
+        +price_delivery: decimal
+        +quantity: int
+        +unit: string
+        +is_active: boolean
+        +display_order: int
+        --
+        +getActiveVariants(productId: int)
+    }
+    
+    class FranceProductOptions <<RESTAURANT_COLOR>> {
+        +id: int <<PK>>
+        +product_id: int <<FK>>
+        +option_group: string
+        +option_name: string
+        +price_modifier: decimal
+        +is_required: boolean
+        +max_selections: int
+        +display_order: int
+        +group_order: int
+        +is_active: boolean
+        --
+        +getWorkflowOptions(productId: int)
+    }
+    
+    class FranceCompositeItems <<RESTAURANT_COLOR>> {
+        +id: int <<PK>>
+        +composite_product_id: int <<FK>>
+        +component_name: string
+        +quantity: int
+        +unit: string
+        --
+        +getComponents(productId: int)
+    }
+}
+
+package "Orders & Sessions" <<Rectangle>> {
+    
+    class FranceOrders <<ORDER_COLOR>> {
+        +id: int <<PK>>
+        +restaurant_id: int <<FK>>
+        +phone_number: string
+        +customer_name: string
+        +items: jsonb
+        +total_amount: decimal
+        +order_status: string
+        +payment_mode: string
+        +service_mode: string
+        +delivery_address_id: bigint <<FK>>
+        +driver_id: bigint <<FK>>
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +createOrder()
+        +updateStatus(status: string)
+        +getByRestaurant(restaurantId: int)
+    }
+    
+    class FranceUserSessions <<ORDER_COLOR>> {
+        +id: int <<PK>>
+        +phone_number: string <<unique>>
+        +chat_id: string
+        +restaurant_id: int <<FK>>
+        +current_step: string
+        +bot_state: string
+        +session_data: jsonb
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getActiveSession(phoneNumber: string)
+        +updateState(state: string, data: jsonb)
+        +clearSession()
+    }
+    
+    class FranceCustomerAddresses <<ORDER_COLOR>> {
+        +id: bigint <<PK>>
+        +phone_number: string
+        +address_label: string
+        +full_address: text
+        +google_place_id: string
+        +latitude: decimal
+        +longitude: decimal
+        +is_default: boolean
+        +is_active: boolean
+        +whatsapp_name: string
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getByPhone(phoneNumber: string)
+        +setDefault(addressId: bigint)
+    }
+    
+    class FranceSessions <<ORDER_COLOR>> {
+        +id: uuid <<PK>>
+        +phone_whatsapp: string
+        +state: string
+        +context: jsonb
+        +expires_at: timestamp
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getActiveSession(phone: string)
+        +cleanExpiredSessions()
+    }
+}
+
+package "Delivery System" <<Rectangle>> {
+    
+    class FranceDeliveryDrivers <<DELIVERY_COLOR>> {
+        +id: bigint <<PK>>
+        +restaurant_id: int <<FK>>
+        +first_name: string
+        +last_name: string
+        +phone_number: string <<unique>>
+        +is_available: boolean
+        +is_active: boolean
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getAvailableDrivers(restaurantId: int)
+        +updateAvailability(available: boolean)
+    }
+    
+    class FranceDeliveryAssignments <<DELIVERY_COLOR>> {
+        +id: int <<PK>>
+        +order_id: int <<FK>>
+        +driver_id: int <<FK>>
+        +assignment_status: string
+        +created_at: timestamp
+        +responded_at: timestamp
+        +expires_at: timestamp
+        +response_time_seconds: int
+        --
+        +assignToDriver(orderId: int, driverId: int)
+        +updateResponse(status: string)
+    }
+    
+    class DeliveryTokens <<DELIVERY_COLOR>> {
+        +id: int <<PK>>
+        +token: string <<unique>>
+        +order_id: int <<FK>>
+        +driver_id: int <<FK>>
+        +created_at: timestamp
+        +expires_at: timestamp
+        +absolute_expires_at: timestamp
+        +used: boolean
+        +suspended: boolean
+        +reactivated: boolean
+        +updated_at: timestamp
+        --
+        +generateToken(orderId: int, driverId: int)
+        +validateToken(token: string)
+    }
+    
+    class DeliveryDriverActions <<DELIVERY_COLOR>> {
+        +id: int <<PK>>
+        +order_id: int <<FK>>
+        +driver_id: int <<FK>>
+        +token_id: int <<FK>>
+        +action_type: string
+        +action_timestamp: timestamp
+        +details: jsonb
+        --
+        +logAction(action: string, details: jsonb)
+        +getActionHistory(orderId: int)
+    }
+    
+    class FranceDriverLocations <<DELIVERY_COLOR>> {
+        +id: int <<PK>>
+        +driver_id: int <<FK>>
+        +latitude: decimal
+        +longitude: decimal
+        +accuracy_meters: int
+        +speed_kmh: decimal
+        +created_at: timestamp
+        --
+        +updateLocation(driverId: int, lat: decimal, lng: decimal)
+        +getLastLocation(driverId: int)
+    }
+}
+
+package "Configuration & Templates" <<Rectangle>> {
+    
+    class FranceWorkflowTemplates <<CONFIG_COLOR>> {
+        +id: int <<PK>>
+        +restaurant_id: int <<FK>>
+        +template_name: string
+        +description: text
+        +steps_config: jsonb
+        +is_active: boolean
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getByRestaurant(restaurantId: int)
+        +getByName(templateName: string)
+    }
+    
+    class FranceProductDisplayConfigs <<CONFIG_COLOR>> {
+        +id: int <<PK>>
+        +restaurant_id: int <<FK>>
+        +product_id: int <<FK>>
+        +display_type: string
+        +template_name: string
+        +emoji_icon: string
+        +custom_header_text: text
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getProductConfig(productId: int)
+    }
+    
+    class FranceRestaurantServiceModes <<CONFIG_COLOR>> {
+        +id: int <<PK>>
+        +restaurant_id: int <<FK>>
+        +service_mode: string
+        +is_enabled: boolean
+        +display_name: string
+        +description: text
+        +display_order: int
+        +config: jsonb
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getEnabledModes(restaurantId: int)
+    }
+    
+    class FranceRestaurantFeatures <<CONFIG_COLOR>> {
+        +id: int <<PK>>
+        +restaurant_id: int <<FK>>
+        +feature_type: string
+        +is_enabled: boolean
+        +config: json
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getFeatures(restaurantId: int)
+        +isFeatureEnabled(restaurantId: int, feature: string)
+    }
+    
+    class MessageTemplates <<CONFIG_COLOR>> {
+        +id: int <<PK>>
+        +restaurant_id: int <<FK>>
+        +template_key: string
+        +language: string
+        +template_content: text
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getTemplate(key: string, lang: string)
+    }
+}
+
+package "Authentication & WhatsApp" <<Rectangle>> {
+    
+    class FranceAuthSessions <<AUTH_COLOR>> {
+        +id: bigint <<PK>>
+        +user_id: int
+        +user_type: string
+        +session_token: string <<unique>>
+        +expires_at: timestamp
+        +created_at: timestamp
+        +last_accessed: timestamp
+        +ip_address: inet
+        +user_agent: text
+        --
+        +createSession(userId: int, userType: string)
+        +validateSession(token: string)
+    }
+    
+    class FranceWhatsappNumbers <<AUTH_COLOR>> {
+        +id: int <<PK>>
+        +restaurant_id: int <<FK>>
+        +whatsapp_number: string
+        +description: string
+        +is_active: boolean
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getByRestaurant(restaurantId: int)
+    }
+    
+    class RestaurantBotConfigs <<AUTH_COLOR>> {
+        +id: int <<PK>>
+        +restaurant_id: int <<FK>>
+        +config_name: string
+        +brand_name: string
+        +welcome_message: text
+        +created_at: timestamp
+        +updated_at: timestamp
+        --
+        +getBotConfig(restaurantId: int)
+    }
+}
+
+' ===================================
+' RELATIONS - Restaurant Core
+' ===================================
+FranceRestaurants ||--o{ FranceMenuCategories : "has categories"
+FranceRestaurants ||--o{ FranceProducts : "has products"
+FranceMenuCategories ||--o{ FranceProducts : "contains"
+
+FranceProducts ||--o{ FranceProductSizes : "has sizes"
+FranceProducts ||--o{ FranceProductVariants : "has variants"  
+FranceProducts ||--o{ FranceProductOptions : "has options"
+FranceProducts ||--o{ FranceCompositeItems : "composed of"
+
+' ===================================
+' RELATIONS - Orders & Sessions
+' ===================================
+FranceRestaurants ||--o{ FranceOrders : "receives"
+FranceRestaurants ||--o{ FranceUserSessions : "manages sessions"
+
+FranceOrders }|--|| FranceCustomerAddresses : "delivered to"
+FranceOrders }|--|| FranceDeliveryDrivers : "assigned to"
+
+' ===================================
+' RELATIONS - Delivery System  
+' ===================================
+FranceRestaurants ||--o{ FranceDeliveryDrivers : "employs"
+FranceOrders ||--o{ FranceDeliveryAssignments : "has assignments"
+FranceDeliveryDrivers ||--o{ FranceDeliveryAssignments : "receives"
+
+FranceOrders ||--o{ DeliveryTokens : "generates"
+FranceDeliveryDrivers ||--o{ DeliveryTokens : "receives tokens"
+
+FranceOrders ||--o{ DeliveryDriverActions : "triggers actions"
+FranceDeliveryDrivers ||--o{ DeliveryDriverActions : "performs"
+DeliveryTokens ||--o{ DeliveryDriverActions : "authorizes"
+
+FranceDeliveryDrivers ||--o{ FranceDriverLocations : "has locations"
+
+' ===================================
+' RELATIONS - Configuration
+' ===================================
+FranceRestaurants ||--o{ FranceWorkflowTemplates : "configures"
+FranceRestaurants ||--o{ FranceProductDisplayConfigs : "customizes display"
+FranceProducts ||--o{ FranceProductDisplayConfigs : "has display config"
+
+FranceRestaurants ||--o{ FranceRestaurantServiceModes : "supports modes"
+FranceRestaurants ||--o{ FranceRestaurantFeatures : "has features"
+FranceRestaurants ||--o{ MessageTemplates : "uses templates"
+
+' ===================================
+' RELATIONS - Authentication & WhatsApp
+' ===================================
+FranceRestaurants ||--o{ FranceWhatsappNumbers : "has numbers"
+FranceRestaurants ||--o{ RestaurantBotConfigs : "configured with"
+
+note top of FranceRestaurants : **Central Entity**\nHub principal du système\nGère tous les restaurants
+note top of FranceOrders : **Order Management**\nGestion complète des commandes\navec workflow de livraison
+note top of FranceDeliveryDrivers : **Delivery System**\nSystème de livraison complet\navec géolocalisation
+
+skinparam class {
+    BackgroundColor<<RESTAURANT_COLOR>> RESTAURANT_COLOR
+    BackgroundColor<<ORDER_COLOR>> ORDER_COLOR  
+    BackgroundColor<<DELIVERY_COLOR>> DELIVERY_COLOR
+    BackgroundColor<<CONFIG_COLOR>> CONFIG_COLOR
+    BackgroundColor<<AUTH_COLOR>> AUTH_COLOR
+    
+    BorderColor Black
+    ArrowColor Black
+    FontSize 10
+    FontName Arial
+}
+
+skinparam package {
+    BackgroundColor White
+    BorderColor Black
+    FontStyle bold
+}
+
+@enduml
