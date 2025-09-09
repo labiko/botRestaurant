@@ -27,16 +27,26 @@ export class PizzaDisplayService {
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);
       
-      // Récupérer la configuration via la vue
-      const { data, error } = await supabase
-        .from('v_restaurant_pizza_display_config')
-        .select('*')
-        .eq('restaurant_id', restaurantId)
-        .single();
+      // Essayer de récupérer la configuration via la vue (si elle existe)
+      try {
+        const { data, error } = await supabase
+          .from('v_restaurant_pizza_display_config')
+          .select('*')
+          .eq('restaurant_id', restaurantId)
+          .single();
+        
+        if (!error && data) {
+          this.displayConfig = data.display_config;
+          this.restaurantSettings = data.custom_settings;
+          console.log(`✅ [PizzaDisplay] Configuration spécifique chargée pour restaurant ${restaurantId}`);
+          return data.use_unified_display || false;
+        }
+      } catch (viewError) {
+        console.log(`⚠️ [PizzaDisplay] Vue v_restaurant_pizza_display_config n'existe pas`);
+      }
       
-      if (error || !data) {
-        console.log(`⚠️ [PizzaDisplay] Pas de config spécifique pour restaurant ${restaurantId}, utilisation config par défaut`);
-        // Charger la config par défaut
+      // Essayer la table france_workflow_templates (si elle existe)
+      try {
         const { data: defaultConfig } = await supabase
           .from('france_workflow_templates')
           .select('steps_config')
@@ -44,15 +54,19 @@ export class PizzaDisplayService {
           .eq('template_name', 'pizza_unified_display_default')
           .single();
         
-        this.displayConfig = defaultConfig?.steps_config || this.getDefaultConfig();
-        return true;
+        if (defaultConfig?.steps_config) {
+          this.displayConfig = defaultConfig.steps_config;
+          console.log(`✅ [PizzaDisplay] Configuration par défaut chargée depuis france_workflow_templates`);
+          return true;
+        }
+      } catch (templateError) {
+        console.log(`⚠️ [PizzaDisplay] Table france_workflow_templates n'existe pas ou pas de config`);
       }
       
-      this.displayConfig = data.display_config;
-      this.restaurantSettings = data.custom_settings;
-      
-      console.log(`✅ [PizzaDisplay] Configuration chargée pour restaurant ${restaurantId}`);
-      return data.use_unified_display || false;
+      // Utiliser la config par défaut intégrée
+      console.log(`⚠️ [PizzaDisplay] Pas de config spécifique pour restaurant ${restaurantId}, utilisation config par défaut`);
+      this.displayConfig = this.getDefaultConfig();
+      return true;
       
     } catch (error) {
       console.error('❌ [PizzaDisplay] Erreur chargement config:', error);
@@ -69,7 +83,9 @@ export class PizzaDisplayService {
       enabled: true,
       show_separator: true,
       global_numbering: true,
-      separator_line: "━━━━━━━━━━━━━━━━━━━━━"
+      separator_line: "━━━━━━━━━━━━━━━━━━━━━",
+      apply_to_categories: ["pizzas"],
+      apply_to_menu_categories: ["menu-pizza", "Menu Pizza", "menu_pizza", "menus"]
     };
   }
   
@@ -80,9 +96,15 @@ export class PizzaDisplayService {
     if (!this.displayConfig?.enabled) return false;
     
     const pizzaCategories = this.displayConfig.apply_to_categories || ['pizzas'];
-    const menuCategories = this.displayConfig.apply_to_menu_categories || ['menu-pizza'];
+    const menuCategories = this.displayConfig.apply_to_menu_categories || ['menu-pizza', 'Menu Pizza', 'menu_pizza'];
     
-    return pizzaCategories.includes(categorySlug) || menuCategories.includes(categorySlug);
+    // DÉTECTION UNIVERSELLE : Toute catégorie contenant "menu" OU "pizza" dans le slug
+    const isUniversalCategory = categorySlug.toLowerCase().includes('menu') || 
+                               categorySlug.toLowerCase().includes('pizza');
+    
+    return pizzaCategories.includes(categorySlug) || 
+           menuCategories.includes(categorySlug) ||
+           isUniversalCategory;
   }
   
   /**
@@ -208,7 +230,7 @@ export class PizzaDisplayService {
 
   /**
    * Format 2: Menus composites dans la catégorie "Menu Pizza"
-   * Affiche les 4 menus (MENU 1, 2, 3, 4)
+   * Utilise le MÊME template que les pizzas individuelles
    */
   private async displayPizzaMenus(
     phoneNumber: string,
@@ -216,41 +238,60 @@ export class PizzaDisplayService {
     data: { menus: any[], restaurantName: string, deliveryMode: string }
   ): Promise<void> {
     try {
-      // Construire le message d'en-tête
+      // Construire le message d'en-tête avec actions au début (MÊME FORMAT que pizzas)
       let message = `📋 📋 Menu Pizza\n`;
       message += `📍 ${data.restaurantName}\n\n`;
+      message += `ACTIONS RAPIDES:\n`;
+      message += `⚡ 99 = Passer commande | 🗑️ 00 = Vider panier | 🍕 0 = Ajouter d'autres produits\n\n`;
       
-      // Pour chaque menu
-      for (let i = 0; i < data.menus.length; i++) {
-        const menu = data.menus[i];
+      let globalIndex = 1; // Numérotation globale comme les pizzas
+      const menuOptionsMap: any[] = []; // Créer le mapping pour synchronisation exacte
+      
+      // Pour chaque menu (MÊME LOGIQUE que displayIndividualPizzas)
+      for (const menu of data.menus) {
         message += `━━━━━━━━━━━━━━━━━━━━━\n`;
         
-        // Nom du menu (déjà avec emoji 📋)
-        message += `🎯 *${menu.name}*\n`;
+        // Nom du menu (enlever l'emoji du nom car il est déjà présent)
+        const menuName = menu.name.replace(/^[^\s]+\s/, ''); // Enlève le premier emoji
+        message += `🎯 *📋 ${menuName}*\n`;
         
-        // Description du menu
+        // Description du menu (utiliser le champ description existant)
         if (menu.description) {
           message += `🧾 ${menu.description}\n\n`;
         }
         
-        // Prix (identique sur place et livraison pour les menus)
-        const price = data.deliveryMode === 'livraison'
+        // Prix selon le mode (MÊME LOGIQUE que pizzas)
+        const price = data.deliveryMode === 'livraison' 
           ? (menu.price_delivery_base || menu.price_on_site_base)
           : menu.price_on_site_base;
         
-        message += `💰 ${price} EUR - Tapez ${i + 1}\n\n`;
+        message += `💰 Choisissez votre menu:\n`;
+        
+        // CRÉER LE MAPPING EN MÊME TEMPS QUE L'AFFICHAGE (comme pizzas)
+        menuOptionsMap.push({
+          optionNumber: globalIndex,
+          pizzaId: menu.id, // Réutiliser la même structure
+          pizzaName: menu.name,
+          sizeId: null, // Pas de taille pour les menus
+          sizeName: 'MENU',
+          price: price
+        });
+        
+        message += `   🔸 MENU (${price} EUR) - Tapez ${globalIndex}\n`;
+        globalIndex++;
+        
+        message += '\n';
       }
       
-      // Footer avec instructions
+      // Footer avec instructions (MÊME FORMAT que pizzas)
       message += `━━━━━━━━━━━━━━━━━━━━━\n`;
-      message += `💡 Tapez le numéro du menu souhaité\n\n`;
-      message += `ACTIONS RAPIDES:\n`;
-      message += `⚡ 99 = Passer commande\n`;
-      message += `🗑️ 00 = Vider panier\n`;
-      message += `🍕 0  = Ajouter d'autres produits`;
+      message += `💡 Tapez le numéro de votre choix`;
       
       // Envoyer le message formaté
       await this.messageSender.sendMessage(phoneNumber, message);
+      
+      // Mettre à jour la session avec le mapping créé localement (MÊME LOGIQUE que pizzas)
+      await this.updateSessionWithDirectMapping(session, menuOptionsMap, globalIndex - 1);
       
     } catch (error) {
       console.error('❌ [PizzaDisplay] Erreur affichage menus:', error);

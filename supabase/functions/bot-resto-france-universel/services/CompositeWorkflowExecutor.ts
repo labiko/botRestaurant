@@ -15,6 +15,36 @@ export class CompositeWorkflowExecutor {
   ) {}
 
   /**
+   * Workflow spécifique pour les menus pizza
+   * Gère la sélection multiple de pizzas et les composants additionnels
+   */
+  async startMenuPizzaWorkflow(
+    phoneNumber: string,
+    product: any,
+    session: any
+  ): Promise<void> {
+    console.log(`🍕 [MenuPizza] Démarrage pour: ${product.name}`);
+    
+    try {
+        const menuConfig = product.steps_config?.menu_config;
+        if (!menuConfig) {
+            throw new Error('Configuration du menu manquante');
+        }
+
+        // Initialiser le workflow dans la session
+        await this.initializeMenuWorkflow(phoneNumber, session, product, menuConfig);
+        
+        // Démarrer avec le premier composant
+        await this.processNextMenuComponent(phoneNumber, session, 0);
+        
+    } catch (error) {
+        console.error('❌ [MenuPizza] Erreur:', error);
+        await this.messageSender.sendMessage(phoneNumber, 
+            '❌ Erreur lors de la configuration du menu. Tapez "resto" pour recommencer.');
+    }
+  }
+
+  /**
    * Démarrer un workflow composite
    * SOLID : Open/Closed - Extensible pour nouveaux workflows sans modification
    */
@@ -47,10 +77,33 @@ export class CompositeWorkflowExecutor {
       
       if (error || !productOptions || productOptions.length === 0) {
         // PRIORITÉ 3: Vérifier steps_config si pas d'options dans france_product_options
-        if (product.steps_config && product.steps_config.steps && product.steps_config.steps.length > 0) {
+        console.log(`🔍 [DEBUG-STEPS-CHICKEN-BOX] Produit: ${product.name}`);
+        console.log(`🔍 [DEBUG-STEPS-CHICKEN-BOX] steps_config brut:`, product.steps_config);
+        console.log(`🔍 [DEBUG-STEPS-CHICKEN-BOX] Type steps_config:`, typeof product.steps_config);
+        
+        // Convertir steps_config en objet si c'est un string JSON
+        let stepsConfig = product.steps_config;
+        if (typeof stepsConfig === 'string') {
+          try {
+            stepsConfig = JSON.parse(stepsConfig);
+            console.log(`🔄 [DEBUG-STEPS-CHICKEN-BOX] steps_config parsé:`, stepsConfig);
+          } catch (parseError) {
+            console.error(`❌ [DEBUG-STEPS-CHICKEN-BOX] Erreur parsing JSON:`, parseError);
+          }
+        }
+        
+        if (stepsConfig && stepsConfig.steps && stepsConfig.steps.length > 0) {
           console.log(`✅ [CompositeWorkflow] Utilisation steps_config pour ${product.name}`);
-          await this.handleStepsConfigWorkflow(phoneNumber, session, product);
+          // Utiliser l'objet parsé
+          const productWithParsedConfig = { ...product, steps_config: stepsConfig };
+          await this.handleStepsConfigWorkflow(phoneNumber, session, productWithParsedConfig);
           return;
+        } else {
+          console.log(`❌ [DEBUG-STEPS-CHICKEN-BOX] steps_config invalide:`, {
+            hasStepsConfig: !!stepsConfig,
+            hasSteps: !!(stepsConfig && stepsConfig.steps),
+            stepsLength: stepsConfig && stepsConfig.steps ? stepsConfig.steps.length : 0
+          });
         }
         
         console.error('❌ [CompositeWorkflow] Pas d\'options trouvées:', error);
@@ -363,6 +416,108 @@ export class CompositeWorkflowExecutor {
   }
   
   /**
+   * Retour aux catégories - Reset session et affichage menu
+   */
+  private async returnToCategories(phoneNumber: string, session: any): Promise<void> {
+    console.log(`🔙 [returnToCategories] Retour aux catégories demandé`);
+    
+    try {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+      const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+
+      // Reset session state vers AWAITING_MENU_CHOICE
+      const updatedData = {
+        ...session.sessionData,
+        selectedProduct: null,
+        availableVariants: null,
+        compositeWorkflow: null
+      };
+
+      await supabase
+        .from('france_user_sessions')
+        .update({
+          bot_state: 'AWAITING_MENU_CHOICE',
+          session_data: updatedData
+        })
+        .eq('id', session.id);
+
+      // DUPLICATION EXACTE de showMenuAfterDeliveryModeChoice()
+      const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
+      const deliveryMode = session.sessionData?.deliveryMode;
+      
+      // Récupérer l'objet restaurant depuis la BDD
+      const restaurant = await supabase
+        .from('france_restaurants')
+        .select('*')
+        .eq('id', restaurantId)
+        .single();
+      
+      if (!restaurant.data) {
+        console.error('❌ [returnToCategories] Restaurant non trouvé pour ID:', restaurantId);
+        await this.messageSender.sendMessage(phoneNumber, '❌ Restaurant non trouvé. Tapez "resto" pour recommencer.');
+        return;
+      }
+      
+      // Chargement dynamique des catégories depuis la BDD
+      const { data: categories, error: catError } = await supabase
+        .from('france_menu_categories')
+        .select('*')
+        .eq('restaurant_id', restaurant.data.id)
+        .eq('is_active', true)
+        .order('display_order');
+
+      if (catError || !categories || categories.length === 0) {
+        console.error('❌ Erreur catégories:', catError);
+        await this.messageSender.sendMessage(phoneNumber, `❌ Menu temporairement indisponible pour ${restaurant.data.name}.\n\n💡 Contactez le restaurant directement ou réessayez plus tard.`);
+        return;
+      }
+
+      // Construction dynamique du menu
+      let menuText = `🍽️ *MENU ${restaurant.data.name.toUpperCase()}*\n`;
+      
+      // Afficher le mode choisi
+      const modeEmoji = deliveryMode === 'sur_place' ? '📍' : deliveryMode === 'a_emporter' ? '📦' : '🚚';
+      const modeText = deliveryMode === 'sur_place' ? 'Sur place' : deliveryMode === 'a_emporter' ? 'À emporter' : 'Livraison';
+      menuText += `${modeEmoji} *Mode: ${modeText}*\n\n`;
+      
+      categories.forEach((category, index) => {
+        const displayNumber = `${index + 1}.`;
+        menuText += `${displayNumber} ${category.icon || '🍽️'} ${category.name}\n`;
+      });
+      
+      menuText += '\nTapez le numéro de votre choix pour voir les produits.';
+
+      await this.messageSender.sendMessage(phoneNumber, menuText);
+      
+      // Mettre à jour la session vers VIEWING_MENU (comme dans showMenuAfterDeliveryModeChoice)
+      const updatedSessionData = {
+        ...session.sessionData,
+        categories: categories,
+        deliveryMode: deliveryMode,
+        selectedServiceMode: deliveryMode,
+        cart: session.sessionData?.cart || {},
+        totalPrice: session.sessionData?.totalPrice || 0,
+        selectedProduct: null,
+        availableVariants: null,
+        compositeWorkflow: null
+      };
+      
+      await supabase
+        .from('france_user_sessions')
+        .update({
+          bot_state: 'VIEWING_MENU',
+          session_data: updatedSessionData
+        })
+        .eq('id', session.id);
+      console.log(`✅ [returnToCategories] Menu catégories affiché`);
+
+    } catch (error) {
+      console.error('❌ [returnToCategories] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors du retour au menu. Tapez "resto" pour recommencer.');
+    }
+  }
+
+  /**
    * Traitement universel sélection de variante
    * 100% UNIVERSEL - Utilise les nouvelles tables de configuration
    */
@@ -371,6 +526,12 @@ export class CompositeWorkflowExecutor {
     session: any,
     message: string
   ): Promise<void> {
+    // Traitement spécial pour "0" - retour aux catégories
+    if (message.trim() === '0') {
+      await this.returnToCategories(phoneNumber, session);
+      return;
+    }
+
     const choice = parseInt(message.trim());
     const availableVariants = session.sessionData?.availableVariants;
     
@@ -579,6 +740,12 @@ export class CompositeWorkflowExecutor {
     console.log(`🚨 [UniversalWorkflow] Message reçu: "${message}"`);
     console.log(`🚨 [UniversalWorkflow] Session complète:`, JSON.stringify(session.sessionData, null, 2));
     
+    // Vérifier si c'est un workflow menu pizza
+    if (session.sessionData?.menuPizzaWorkflow) {
+        await this.handleMenuPizzaResponse(phoneNumber, session, message);
+        return;
+    }
+    
     const workflowData = session.sessionData?.universalWorkflow;
     
     if (!workflowData) {
@@ -587,6 +754,13 @@ export class CompositeWorkflowExecutor {
       await this.messageSender.sendMessage(phoneNumber, 
         '❌ Erreur de session. Veuillez recommencer.');
       return;
+    }
+    
+    // AVANT parseUserSelection, ajouter :
+    const choice = message.trim();
+    if (choice === '99' || choice === '00' || choice === '0') {
+      // Déléguer aux actions existantes
+      return await this.handleCartActions(phoneNumber, session, message);
     }
     
     const currentStep = workflowData.currentStep;
@@ -827,37 +1001,66 @@ export class CompositeWorkflowExecutor {
     // Construire le récapitulatif
     let recap = `📝 *RÉCAPITULATIF ${workflowData.productName.toUpperCase()}*\n\n`;
     
-    for (const [groupName, selections] of Object.entries(workflowData.selections)) {
-      const items = (selections as any[]).map(s => s.option_name).join(', ');
-      const emoji = this.getGroupEmoji(groupName);
-      recap += `${emoji} ${this.getGroupDisplayName(groupName)}: ${items}\n`;
+    // Si c'est un produit avec steps_config (CHICKEN BOX, etc.)
+    if (workflowData.originalStepsConfig && workflowData.originalStepsConfig.final_format) {
+      // Utiliser le format final défini dans steps_config
+      let finalDescription = workflowData.originalStepsConfig.final_format;
+      
+      // Remplacer les placeholders par les sélections
+      for (const [groupName, selections] of Object.entries(workflowData.selections)) {
+        const selectedValue = (selections as any[])[0]?.name || '';
+        finalDescription = finalDescription.replace(`{${groupName}}`, selectedValue);
+      }
+      
+      recap += `🍟 ${finalDescription}\n`;
+    } else {
+      // Format standard pour les autres produits
+      for (const [groupName, selections] of Object.entries(workflowData.selections)) {
+        const items = (selections as any[]).map(s => s.option_name || s.name).join(', ');
+        const emoji = this.getGroupEmoji(groupName);
+        recap += `${emoji} ${this.getGroupDisplayName(groupName)}: ${items}\n`;
+      }
     }
     
     recap += `\n💰 Prix unitaire: ${workflowData.productPrice}€\n`;
-    recap += `\n📦 Combien en voulez-vous ?\nTapez le nombre souhaité (1-99)`;
+    recap += `\n📝 Ex: 1 pour 1 produit, 1,1 pour 2 fois le même produit`;
     
     await this.messageSender.sendMessage(phoneNumber, recap);
     
-    // Mettre à jour la session
+    // Ajouter directement au panier avec quantité 1
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(this.supabaseUrl, this.supabaseKey);
     
+    // Simuler handleQuantityInput avec quantité 1
+    const selectedProduct = {
+      id: workflowData.productId,
+      name: workflowData.productName,
+      price: workflowData.productPrice,
+      configuration: workflowData.selections
+    };
+    
+    const rawCart = session.sessionData?.cart || [];
+    const cart = Array.isArray(rawCart) ? rawCart : [];
+    cart.push({
+      productId: selectedProduct.id,
+      productName: selectedProduct.name,
+      quantity: 1,
+      unitPrice: selectedProduct.price,
+      totalPrice: selectedProduct.price,
+      configuration: selectedProduct.configuration
+    });
+    
     const updatedData = {
       ...session.sessionData,
-      selectedProduct: {
-        id: workflowData.productId,
-        name: workflowData.productName,
-        price: workflowData.productPrice,
-        configuration: workflowData.selections
-      },
-      compositeWorkflow: null,
-      awaitingQuantity: true
+      cart: cart,
+      selectedProduct: null,
+      compositeWorkflow: null
     };
     
     await supabase
       .from('france_user_sessions')
       .update({
-        bot_state: 'AWAITING_QUANTITY',
+        bot_state: 'SELECTING_PRODUCTS',
         session_data: updatedData
       })
       .eq('id', session.id);
@@ -1000,6 +1203,41 @@ export class CompositeWorkflowExecutor {
     
     return emojis[groupName.toLowerCase()] || '📋';
   }
+
+  /**
+   * Récupérer les options par groupe depuis france_product_options
+   */
+  private async getOptionsByGroup(productId: number, optionGroup: string, filterVariant?: string): Promise<any[]> {
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+
+    let query = supabase
+      .from('france_product_options')
+      .select('*')
+      .eq('product_id', productId)
+      .eq('option_group', optionGroup)
+      .eq('is_active', true)
+      .order('display_order');
+
+    if (filterVariant) {
+      query = query.ilike('option_name', `%${filterVariant}%`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('❌ [getOptionsByGroup] Erreur requête:', error);
+      return [];
+    }
+
+    return (data || []).map((option, index) => ({
+      id: option.id,
+      name: option.option_name,
+      option_name: option.option_name,
+      price_modifier: option.price_modifier || 0,
+      is_available: true
+    }));
+  }
   
   /**
    * Obtenir le nom d'affichage pour un groupe
@@ -1033,29 +1271,505 @@ export class CompositeWorkflowExecutor {
   ): Promise<void> {
     try {
       const steps = product.steps_config.steps;
-      const firstStep = steps[0];
       
-      if (firstStep.type === 'single_choice') {
-        let message = `🔧 **${product.name}**\n\n`;
-        message += `${firstStep.title}:\n\n`;
+      // Transformer steps_config en optionGroups compatible avec le système existant
+      const optionGroups = await Promise.all(steps.map(async (step: any, stepIndex: number) => {
+        // Extraire le nom du groupe depuis le titre (ex: "Choisissez votre viande" -> "viande")
+        let groupName = `step_${stepIndex + 1}`;
+        if (step.title.toLowerCase().includes('viande')) {
+          groupName = 'viande';
+        } else if (step.title.toLowerCase().includes('boisson')) {
+          groupName = 'boisson';
+        }
         
-        firstStep.options.forEach((option: string, index: number) => {
-          message += `${index + 1}. ${option}\n`;
-        });
+        // Système hybride : DB si option_group défini, sinon steps_config.options
+        let options;
+        if (step.option_group) {
+          // Requête dynamique depuis france_product_options
+          options = await this.getOptionsByGroup(product.id, step.option_group, step.filter_variant);
+        } else {
+          // Fallback : utiliser step.options sans numérotation (déjà incluse)
+          options = step.options.map((optionName: string, optIndex: number) => ({
+            id: optIndex + 1,
+            name: optionName,
+            option_name: optionName,
+            price_modifier: step.price_modifier || 0,
+            is_available: true
+          }));
+        }
         
-        message += `\n💡 Tapez le numéro de votre choix`;
-        
-        await this.messageSender.sendMessage(phoneNumber, message);
-        
-        // Mettre à jour la session pour le workflow steps_config
-        // TODO: Implémenter la gestion des réponses
-        console.log(`✅ [StepsConfig] Workflow affiché pour ${product.name}`);
-      }
+        return {
+          groupName: groupName,
+          displayName: step.title,
+          type: step.type || 'single_choice',
+          required: true,
+          minSelections: 1,
+          maxSelections: 1,
+          options: options
+        };
+      }));
+      
+      // Créer workflowData compatible avec le système existant
+      const workflowData = {
+        productId: product.id,
+        productName: product.name,
+        productPrice: product.price,
+        currentStep: 0,
+        totalSteps: optionGroups.length,
+        optionGroups: optionGroups,
+        selections: {},
+        completed: false,
+        // Garder une référence au steps_config original pour le format final
+        originalStepsConfig: product.steps_config
+      };
+      
+      console.log(`🍟 [StepsConfig] Workflow transformé pour ${product.name}:`, {
+        totalSteps: workflowData.totalSteps,
+        groups: optionGroups.map(g => g.groupName)
+      });
+      
+      // Utiliser showUniversalWorkflowStep pour afficher la première étape
+      await this.showUniversalWorkflowStep(phoneNumber, session, workflowData, 0);
       
     } catch (error) {
       console.error('❌ [StepsConfig] Erreur:', error);
       await this.messageSender.sendMessage(phoneNumber, 
         `❌ Erreur configuration ${product.name}.\nVeuillez réessayer.`);
+    }
+  }
+
+  // ============================================
+  // MÉTHODES POUR LE WORKFLOW MENU PIZZA
+  // ============================================
+
+  /**
+   * Initialiser le workflow menu pizza dans la session
+   */
+  private async initializeMenuWorkflow(phoneNumber: string, session: any, product: any, menuConfig: any): Promise<void> {
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+
+    // Créer les données du workflow
+    const workflowData = {
+      product: product,
+      menuConfig: menuConfig,
+      currentComponent: 0,
+      selections: {},
+      waitingFor: null,
+      expectedQuantity: null,
+      selectionMode: null
+    };
+
+    // Mettre à jour la session
+    await supabase
+      .from('france_user_sessions')
+      .update({
+        bot_state: 'MENU_PIZZA_WORKFLOW',
+        session_data: {
+          ...session.sessionData,
+          menuPizzaWorkflow: workflowData
+        }
+      })
+      .eq('id', session.id);
+
+    console.log(`✅ [MenuPizza] Workflow initialisé pour ${product.name}`);
+  }
+
+  /**
+   * Traiter le composant suivant du menu
+   */
+  private async processNextMenuComponent(phoneNumber: string, session: any, componentIndex: number): Promise<void> {
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+
+    // Récupérer les données de session actualisées
+    const { data: sessionData } = await supabase
+      .from('france_user_sessions')
+      .select('*')
+      .eq('phone_number', phoneNumber)
+      .single();
+
+    const menuConfig = sessionData.session_data.menuPizzaWorkflow.menuConfig;
+    const components = menuConfig.components;
+    
+    if (componentIndex >= components.length) {
+        // Tous les composants traités - finaliser
+        await this.finalizeMenuOrder(phoneNumber, sessionData);
+        return;
+    }
+    
+    const component = components[componentIndex];
+    
+    switch (component.type) {
+        case 'pizza_selection':
+            await this.showPizzaSelection(phoneNumber, sessionData, component, componentIndex);
+            break;
+            
+        case 'beverage_selection':
+            await this.showBeverageSelection(phoneNumber, sessionData, component, componentIndex);
+            break;
+            
+        case 'side_selection':
+            await this.showSideSelection(phoneNumber, sessionData, component, componentIndex);
+            break;
+            
+        default:
+            console.error(`Type de composant inconnu: ${component.type}`);
+    }
+  }
+
+  /**
+   * Afficher la sélection de pizzas
+   */
+  private async showPizzaSelection(phoneNumber: string, session: any, component: any, componentIndex: number): Promise<void> {
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+    
+    // Récupérer les pizzas disponibles
+    const { data: pizzas } = await supabase
+        .from('france_products')
+        .select('*')
+        .eq('restaurant_id', session.session_data.selectedRestaurantId || session.restaurant_id)
+        .eq('category_id', 2) // ID catégorie Pizzas
+        .eq('is_active', true)
+        .order('display_order');
+    
+    // Récupérer les prix selon la taille
+    const size = component.size; // junior/senior/mega
+    const { data: variants } = await supabase
+        .from('france_product_variants')
+        .select('*')
+        .in('product_id', pizzas.map(p => p.id))
+        .eq('size', size);
+    
+    // Construire le message
+    let message = `🍕 ${component.title}\n`;
+    message += `Prix du menu: ${session.session_data.menuPizzaWorkflow.menuConfig.price}€\n\n`;
+    message += `PIZZAS DISPONIBLES (Taille ${size}):\n`;
+    
+    pizzas.forEach((pizza, index) => {
+        const variant = variants.find(v => v.product_id === pizza.id);
+        const price = variant?.price_on_site || 0;
+        message += `${index + 1}. ${pizza.name} - ${price}€\n`;
+    });
+    
+    message += `\n📝 ${component.instruction}`;
+    
+    // Mettre à jour la session pour attendre la réponse
+    await this.updateMenuSession(phoneNumber, session, {
+        currentComponent: componentIndex,
+        waitingFor: 'pizza_selection',
+        availablePizzas: pizzas,
+        pizzaVariants: variants,
+        expectedQuantity: component.quantity,
+        selectionMode: component.selection_mode
+    });
+    
+    await this.messageSender.sendMessage(phoneNumber, message);
+  }
+
+  /**
+   * Mettre à jour la session du menu
+   */
+  private async updateMenuSession(phoneNumber: string, session: any, updates: any): Promise<void> {
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+
+    await supabase
+      .from('france_user_sessions')
+      .update({
+        session_data: {
+          ...session.session_data,
+          menuPizzaWorkflow: {
+            ...session.session_data.menuPizzaWorkflow,
+            ...updates
+          }
+        }
+      })
+      .eq('id', session.id);
+  }
+
+  /**
+   * Finaliser la commande du menu
+   */
+  private async finalizeMenuOrder(phoneNumber: string, session: any): Promise<void> {
+    const workflow = session.session_data.menuPizzaWorkflow;
+    const selections = workflow.selections;
+    
+    // Construire le récapitulatif
+    let recap = `✅ ${workflow.product.name} - Confirmation\n\n`;
+    recap += `Votre menu:\n`;
+    
+    // Pizzas
+    if (selections.pizzas) {
+        selections.pizzas.forEach((pizza: any, i: number) => {
+            recap += `• Pizza ${i + 1}: ${pizza.name} (${pizza.size})\n`;
+        });
+    }
+    
+    // Boissons
+    if (selections.beverages) {
+        selections.beverages.forEach((bev: any) => {
+            recap += `• Boisson: ${bev.name}\n`;
+        });
+    }
+    
+    // Accompagnements
+    if (selections.sides) {
+        recap += `• Accompagnement: ${selections.sides.name}\n`;
+    }
+    
+    recap += `\nPrix total du menu: ${workflow.menuConfig.price}€\n`;
+    recap += `\nConfirmer l'ajout au panier?\n`;
+    recap += `1. ✅ Oui, ajouter au panier\n`;
+    recap += `2. ❌ Non, recommencer`;
+    
+    // Mettre à jour pour attendre confirmation
+    await this.updateMenuSession(phoneNumber, session, {
+      waitingFor: 'confirmation'
+    });
+    
+    await this.messageSender.sendMessage(phoneNumber, recap);
+  }
+
+  /**
+   * Gérer les réponses du workflow menu pizza
+   */
+  private async handleMenuPizzaResponse(phoneNumber: string, session: any, message: string): Promise<void> {
+    const workflow = session.sessionData.menuPizzaWorkflow;
+    const waitingFor = workflow.waitingFor;
+    
+    switch (waitingFor) {
+        case 'pizza_selection':
+            await this.processPizzaSelectionResponse(phoneNumber, session, message);
+            break;
+            
+        case 'beverage_selection':
+            await this.processBeverageSelectionResponse(phoneNumber, session, message);
+            break;
+            
+        case 'side_selection':
+            await this.processSideSelectionResponse(phoneNumber, session, message);
+            break;
+            
+        case 'confirmation':
+            await this.processMenuConfirmation(phoneNumber, session, message);
+            break;
+    }
+  }
+
+  /**
+   * Traiter la sélection de pizzas
+   */
+  private async processPizzaSelectionResponse(phoneNumber: string, session: any, message: string): Promise<void> {
+    const workflow = session.sessionData.menuPizzaWorkflow;
+    const expectedQuantity = workflow.expectedQuantity;
+    const selectionMode = workflow.selectionMode;
+    
+    let selections = [];
+    
+    if (selectionMode === 'multiple') {
+        // Parser "1,3,5" en tableau [1, 3, 5]
+        selections = message.split(',').map((s: string) => parseInt(s.trim()));
+        
+        // Valider le nombre
+        if (selections.length !== expectedQuantity) {
+            await this.messageSender.sendMessage(phoneNumber,
+                `❌ Vous devez choisir exactement ${expectedQuantity} pizzas.\n` +
+                `Exemple: ${Array.from({length: expectedQuantity}, (_, i) => i + 1).join(',')}`);
+            return;
+        }
+    } else {
+        // Sélection simple
+        selections = [parseInt(message.trim())];
+    }
+    
+    // Valider les numéros
+    const availablePizzas = workflow.availablePizzas;
+    for (const selection of selections) {
+        if (isNaN(selection) || selection < 1 || selection > availablePizzas.length) {
+            await this.messageSender.sendMessage(phoneNumber,
+                `❌ Choix invalide: ${selection}. Choisissez entre 1 et ${availablePizzas.length}.`);
+            return;
+        }
+    }
+    
+    // Stocker les sélections
+    const selectedPizzas = selections.map((index: number) => {
+        const pizza = availablePizzas[index - 1];
+        const variant = workflow.pizzaVariants.find((v: any) => v.product_id === pizza.id);
+        return {
+            id: pizza.id,
+            name: pizza.name,
+            size: workflow.currentComponent.size,
+            price: variant?.price_on_site || 0
+        };
+    });
+    
+    // Ajouter au workflow
+    if (!workflow.selections) workflow.selections = {};
+    workflow.selections.pizzas = selectedPizzas;
+    
+    // Passer au composant suivant
+    await this.processNextMenuComponent(phoneNumber, session, workflow.currentComponent + 1);
+  }
+
+  /**
+   * Afficher sélection de boissons
+   */
+  private async showBeverageSelection(phoneNumber: string, session: any, component: any, componentIndex: number): Promise<void> {
+    let message = `🥤 ${component.title}\n\n`;
+    
+    component.options.forEach((option: any, index: number) => {
+        message += `${index + 1}. ${option.name}\n`;
+    });
+    
+    message += `\nTapez le numéro de votre choix`;
+    
+    // Mettre à jour la session
+    await this.updateMenuSession(phoneNumber, session, {
+        currentComponent: componentIndex,
+        waitingFor: 'beverage_selection',
+        availableOptions: component.options,
+        expectedQuantity: component.quantity || 1,
+        selectionMode: component.selection_mode || 'single'
+    });
+    
+    await this.messageSender.sendMessage(phoneNumber, message);
+  }
+
+  /**
+   * Afficher sélection d'accompagnements
+   */
+  private async showSideSelection(phoneNumber: string, session: any, component: any, componentIndex: number): Promise<void> {
+    let message = `🍗 ${component.title}\n\n`;
+    
+    component.options.forEach((option: any, index: number) => {
+        message += `${index + 1}. ${option.name}\n`;
+    });
+    
+    message += `\nTapez le numéro de votre choix`;
+    
+    // Mettre à jour la session
+    await this.updateMenuSession(phoneNumber, session, {
+        currentComponent: componentIndex,
+        waitingFor: 'side_selection',
+        availableOptions: component.options,
+        expectedQuantity: component.quantity || 1,
+        selectionMode: component.selection_mode || 'single'
+    });
+    
+    await this.messageSender.sendMessage(phoneNumber, message);
+  }
+
+  /**
+   * Traiter sélection de boissons
+   */
+  private async processBeverageSelectionResponse(phoneNumber: string, session: any, message: string): Promise<void> {
+    const workflow = session.sessionData.menuPizzaWorkflow;
+    const choice = parseInt(message.trim());
+    const availableOptions = workflow.availableOptions;
+    
+    if (isNaN(choice) || choice < 1 || choice > availableOptions.length) {
+        await this.messageSender.sendMessage(phoneNumber,
+            `❌ Choix invalide. Tapez un numéro entre 1 et ${availableOptions.length}.`);
+        return;
+    }
+    
+    const selectedOption = availableOptions[choice - 1];
+    
+    // Ajouter aux sélections
+    if (!workflow.selections) workflow.selections = {};
+    if (!workflow.selections.beverages) workflow.selections.beverages = [];
+    workflow.selections.beverages.push(selectedOption);
+    
+    // Passer au composant suivant
+    await this.processNextMenuComponent(phoneNumber, session, workflow.currentComponent + 1);
+  }
+
+  /**
+   * Traiter sélection d'accompagnements
+   */
+  private async processSideSelectionResponse(phoneNumber: string, session: any, message: string): Promise<void> {
+    const workflow = session.sessionData.menuPizzaWorkflow;
+    const choice = parseInt(message.trim());
+    const availableOptions = workflow.availableOptions;
+    
+    if (isNaN(choice) || choice < 1 || choice > availableOptions.length) {
+        await this.messageSender.sendMessage(phoneNumber,
+            `❌ Choix invalide. Tapez un numéro entre 1 et ${availableOptions.length}.`);
+        return;
+    }
+    
+    const selectedOption = availableOptions[choice - 1];
+    
+    // Ajouter aux sélections
+    if (!workflow.selections) workflow.selections = {};
+    workflow.selections.sides = selectedOption;
+    
+    // Passer au composant suivant
+    await this.processNextMenuComponent(phoneNumber, session, workflow.currentComponent + 1);
+  }
+
+  /**
+   * Confirmer et ajouter au panier
+   */
+  private async processMenuConfirmation(phoneNumber: string, session: any, message: string): Promise<void> {
+    const choice = message.trim();
+    
+    if (choice === '1') {
+        // Ajouter au panier
+        const workflow = session.sessionData.menuPizzaWorkflow;
+        const cartItem = {
+            id: workflow.product.id,
+            name: workflow.product.name,
+            price: workflow.menuConfig.price,
+            quantity: 1,
+            type: 'menu_pizza',
+            details: workflow.selections,
+            deliveryMode: session.sessionData.deliveryMode
+        };
+        
+        // Ajouter au panier existant
+        const cart = session.sessionData.cart || {};
+        const itemKey = `menu_${workflow.product.id}_${Date.now()}`;
+        cart[itemKey] = cartItem;
+        
+        // Calculer le total
+        const totalPrice = Object.values(cart).reduce((sum: number, item: any) => 
+            sum + (item.price * item.quantity), 0);
+        
+        // Sauvegarder
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+        const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+        
+        await supabase
+          .from('france_user_sessions')
+          .update({
+            bot_state: 'VIEWING_CART',
+            session_data: {
+              ...session.sessionData,
+              cart: cart,
+              totalPrice: totalPrice,
+              menuPizzaWorkflow: null // Nettoyer le workflow
+            }
+          })
+          .eq('id', session.id);
+        
+        await this.messageSender.sendMessage(phoneNumber,
+            `✅ ${workflow.product.name} ajouté au panier!\n\n` +
+            `Que voulez-vous faire?\n` +
+            `1. Continuer mes achats\n` +
+            `2. Voir le panier (99)\n` +
+            `3. Vider le panier (00)`);
+            
+    } else if (choice === '2') {
+        // Recommencer
+        const workflow = session.sessionData.menuPizzaWorkflow;
+        await this.startMenuPizzaWorkflow(phoneNumber, workflow.product, session);
+    } else {
+        await this.messageSender.sendMessage(phoneNumber,
+            `❌ Choix invalide. Tapez 1 pour confirmer ou 2 pour recommencer.`);
     }
   }
 }

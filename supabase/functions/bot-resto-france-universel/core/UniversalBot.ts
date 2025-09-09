@@ -1265,6 +1265,26 @@ export class UniversalBot implements IMessageHandler {
       }
     }
     
+    // AVANT la vérification des pizzas - Vérifier workflow menu pizza
+    // Détection UNIVERSELLE des Menu Pizza par catégorie ou workflow_type
+    const isMenuPizzaCategory = session.sessionData?.currentCategoryName === 'Menu Pizza' ||
+                               session.sessionData?.currentCategorySlug === 'menu-pizza' ||
+                               session.sessionData?.currentCategorySlug === 'menu_pizza';
+    
+    const isMenuPizzaWorkflow = selectedProduct.workflow_type === 'menu_pizza_selection';
+    
+    if (isMenuPizzaCategory || isMenuPizzaWorkflow) {
+        console.log('🍕 [MenuPizza] Démarrage workflow menu pizza pour produit:', selectedProduct.name);
+        
+        // Démarrer le workflow menu pizza
+        await this.compositeWorkflowExecutor.startMenuPizzaWorkflow(
+            phoneNumber,
+            selectedProduct,
+            session
+        );
+        return;
+    }
+
     if (isComposite) {
       console.log(`🔄 [ProductSelection] Produit composite détecté: ${selectedProduct.workflow_type || selectedProduct.type || 'variants'}`);
       
@@ -1273,23 +1293,19 @@ export class UniversalBot implements IMessageHandler {
       return;
     }
     
-    // Produit simple - Demander la quantité
-    console.log('📦 [ProductSelection] Produit simple - Demande de quantité');
+    // Produit simple - Stocker et traiter avec quantité 1
+    console.log('📦 [ProductSelection] Produit simple - Traitement direct avec quantité 1');
     
-    // Stocker le produit sélectionné dans la session
-    const updatedData = {
-      ...session.sessionData,
-      selectedProduct: selectedProduct,
-      awaitingQuantity: true
+    // Créer session temporaire avec selectedProduct
+    const tempSession = {
+      ...session,
+      sessionData: {
+        ...session.sessionData,
+        selectedProduct: selectedProduct
+      }
     };
     
-    await this.sessionManager.updateSession(session.id, {
-      botState: 'AWAITING_QUANTITY',
-      sessionData: updatedData
-    });
-    
-    await this.messageSender.sendMessage(phoneNumber, 
-      `📦 *${selectedProduct.name}*\n💰 Prix unitaire: ${selectedProduct.price}€\n\n📝 Combien en voulez-vous ?\nTapez le nombre souhaité (1-99)`);
+    await this.handleQuantityInput(phoneNumber, tempSession, '1');
   }
   
   /**
@@ -1528,6 +1544,7 @@ export class UniversalBot implements IMessageHandler {
       });
       
       menuText += '\n💡 Tapez le numéro du produit souhaité';
+      menuText += '\n📝 Ex: 1 pour 1 produit, 1,1 pour 2 fois le même produit';
       menuText += '\n↩️ Tapez 0 pour revenir au menu principal';
       
       await this.messageSender.sendMessage(phoneNumber, menuText);
