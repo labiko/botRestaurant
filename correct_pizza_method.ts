@@ -1,0 +1,201 @@
+  private async showSizeVariantSelection(
+    phoneNumber: string,
+    session: any,
+    product: any,
+    supabase: any
+  ): Promise<void> {
+    // 1. Récupérer les informations du restaurant et la configuration d'affichage
+    const [restaurantResult, displayConfigResult, sizesResult, variantsResult] = await Promise.all([
+      supabase
+        .from('france_restaurants')
+        .select('name')
+        .eq('id', session.restaurantId)
+        .single(),
+      
+      supabase
+        .from('france_product_display_configs')
+        .select('*')
+        .eq('product_id', product.id)
+        .single(),
+        
+      supabase
+        .from('france_product_sizes')
+        .select('*')
+        .eq('product_id', product.id)
+        .order('display_order'),
+        
+      supabase
+        .from('france_product_variants')
+        .select('*')
+        .eq('product_id', product.id)
+        .eq('is_active', true)
+        .order('display_order')
+    ]);
+    
+    const restaurant = restaurantResult.data;
+    const displayConfig = displayConfigResult.data;
+    const sizes = sizesResult.data || [];
+    const variants = variantsResult.data || [];
+    
+    // Récupérer le mode de livraison depuis la session
+    const deliveryMode = session.sessionData?.deliveryMode || 'sur_place';
+    console.log(`🔍 [SizeVariants] Mode de livraison: ${deliveryMode}`);
+    
+    // Utiliser sizes en priorité si disponible (format adapté pour tailles TACOS)
+    let allVariants = sizes.length > 0 ? sizes : variants;
+    
+    // FILTRER selon le mode de livraison choisi
+    let finalVariants = [];
+    if (sizes.length > 0) {
+      // Grouper les tailles par size_name et prendre le bon prix selon le mode
+      const sizeGroups = new Map();
+      
+      sizes.forEach(size => {
+        const key = size.size_name;
+        if (!sizeGroups.has(key)) {
+          sizeGroups.set(key, []);
+        }
+        sizeGroups.get(key).push(size);
+      });
+      
+      // Pour chaque taille, prendre la variante avec le bon prix
+      sizeGroups.forEach((sizeList, sizeName) => {
+        // Trier par prix croissant
+        sizeList.sort((a, b) => a.price_on_site - b.price_on_site);
+        
+        // Sélectionner la bonne variante selon le mode
+        let selectedSize;
+        if (deliveryMode === 'livraison') {
+          // Prendre la variante avec prix livraison (généralement la plus chère)
+          selectedSize = sizeList.find(s => s.price_delivery > s.price_on_site) || sizeList[sizeList.length - 1];
+        } else {
+          // Prendre la variante avec prix sur place (généralement la moins chère)
+          selectedSize = sizeList[0];
+        }
+        
+        finalVariants.push({
+          ...selectedSize,
+          variant_name: selectedSize.size_name,
+          has_drink_included: selectedSize.includes_drink,
+          variant_type: 'size'
+        });
+        
+        console.log(`✅ [SizeFilter] ${sizeName}: ${deliveryMode === 'livraison' ? selectedSize.price_delivery : selectedSize.price_on_site}€`);
+      });
+      
+      // Trier par display_order
+      finalVariants.sort((a, b) => a.display_order - b.display_order);
+    } else {
+      // Pour les variantes classiques, adapter les colonnes
+      finalVariants = allVariants.map(variant => ({
+        ...variant,
+        variant_name: variant.variant_name || variant.name,
+        variant_type: 'variant'
+      }));
+    }
+    
+    if (finalVariants.length === 0) {
+      // Fallback vers workflow standard si pas de variantes configurées
+      return this.startStandardWorkflow(phoneNumber, session, product, supabase);
+    }
+    
+    // 2. Récupérer le template de workflow si configuré
+    let workflowTemplate = null;
+    if (displayConfig?.template_name) {
+      const { data: template } = await supabase
+        .from('france_workflow_templates')
+        .select('*')
+        .eq('restaurant_id', session.restaurantId)
+        .eq('template_name', displayConfig.template_name)
+        .single();
+      
+      workflowTemplate = template;
+    }
+    
+    // 3. Construire le message selon la configuration universelle
+    const config = workflowTemplate?.steps_config || {};
+    const emoji = displayConfig?.emoji_icon || '🍽';
+    const restaurantName = restaurant?.name || 'Restaurant';
+    
+    let message = `${emoji} ${product.name}\n`;
+    
+    if (config.show_restaurant_name !== false) {
+      message += `📍 ${restaurantName}\n`;
+    }
+    
+    if (config.show_separator !== false) {
+      message += '\n━━━━━━━━━━━━━━━━━━━━━\n';
+    }
+    
+    message += `🎯 *${product.name.toUpperCase()}*\n\n`;
+    
+    const variantTitle = config.variant_selection?.title || displayConfig?.custom_header_text || '💰 Choisissez votre taille:';
+    message += `${variantTitle}\n`;
+    
+    // 4. Lister les variantes selon la configuration
+    const format = config.variant_selection?.format || '🔸 {variant_name} ({price} EUR) - Tapez {index}';
+    
+    finalVariants.forEach((variant, index) => {
+      // Utiliser le prix selon le mode de livraison
+      const price = deliveryMode === 'livraison' ? 
+        (variant.price_delivery || variant.price_on_site + 1) : 
+        (variant.price_on_site || variant.base_price);
+      
+      let variantLine = format
+        .replace('{variant_name}', variant.variant_name)
+        .replace('{price}', price)
+        .replace('{index}', (index + 1).toString());
+      
+      message += `   ${variantLine}`;
+      
+      if (config.variant_selection?.show_drink_note && variant.has_drink_included) {
+        message += ' (+ boisson)';
+      }
+      
+      message += '\n';
+    });
+    
+    message += '\n\n💡 Choisissez votre option: tapez le numéro\n';
+    message += `Ex: 1 = ${finalVariants[0]?.variant_name}\n`;
+    message += '(Chaque produit sera configuré individuellement)\n\n';
+    
+    // 5. Footer selon configuration
+    const footerOptions = config.footer_options || [
+      '🔙 Tapez "0" pour les catégories',
+      '🛒 Tapez "00" pour voir votre commande', 
+      '❌ Tapez "annuler" pour arrêter'
+    ];
+    
+    footerOptions.forEach(option => {
+      message += `${option}\n`;
+    });
+
+    await this.messageSender.sendMessage(phoneNumber, message);
+    
+    // Mettre à jour la session avec les variantes configurées
+    const updatedData = {
+      ...session.sessionData,
+      variantSelection: true,
+      selectedProduct: product,
+      availableVariants: finalVariants,
+      displayConfig: displayConfig,
+      workflowTemplate: workflowTemplate,
+      awaitingVariantSelection: true
+    };
+    
+    await supabase
+      .from('france_user_sessions')
+      .update({
+        bot_state: 'AWAITING_SIZE_SELECTION',
+        session_data: updatedData
+      })
+      .eq('id', session.id);
+  }
+  
+  /**
+   * Méthode fallback pour workflow standard
+   */
+  private async startStandardWorkflow(
+    phoneNumber: string,
+    session: any,
+    product: any,

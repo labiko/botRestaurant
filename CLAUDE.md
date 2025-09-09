@@ -28,22 +28,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Le bot universel est la version de production active qui gère tous les pays. Ne travailler sur les bots spécifiques que si l'utilisateur le demande explicitement.
 
-## 🚨 COMMANDES INTERDITES - BASE DE DONNÉES
+## 🚨 COMMANDES INTERDITES - BASE DE DONNÉES ET FICHIERS
 
 **⚠️ CRITIQUE**: NE JAMAIS exécuter les commandes suivantes qui détruisent les données :
 - **`supabase db reset`** - INTERDIT ! Supprime toutes les données du projet
 - **`supabase db push --reset`** - INTERDIT ! Force la suppression des données
 - **`DROP TABLE`** ou **`TRUNCATE`** - INTERDIT ! Supprime les données existantes
+- **NE JAMAIS exécuter de requêtes SQL directement en base** - INTERDIT ! Toujours donner le SQL à l'utilisateur
+- **`rm`** - INTERDIT ! Ne jamais supprimer de fichiers automatiquement
+- **`del`** - INTERDIT ! Ne jamais supprimer de fichiers automatiquement
 
 **✅ Commandes autorisées :**
 - `supabase db push` - Applique les migrations sans supprimer les données
 - Scripts SQL avec **transactions** (`BEGIN;` ... `COMMIT;`)
 - Requêtes `INSERT`, `UPDATE` avec conditions appropriées
+- **UNIQUEMENT FOURNIR LE CODE SQL** pour que l'utilisateur l'exécute
 
 **🔄 En cas de problème de données :**
 - Toujours créer des scripts de **restauration** avant toute modification
 - Utiliser des **sauvegardes** avant les opérations risquées
 - Ne jamais faire de modifications destructives sans accord explicite de l'utilisateur
+- **Ne jamais exécuter directement** - Toujours donner le SQL à copier/coller
 
 ## 🔄 PRINCIPE DE RÉUTILISATION
 
