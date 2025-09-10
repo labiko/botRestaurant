@@ -175,6 +175,21 @@ p {
   }
 }
 
+// CSS pour la modale de gestion des catégories
+.category-management-modal {
+  --width: 90vw !important;
+  --max-width: 800px !important;
+  --height: 85vh !important;
+  --max-height: 800px !important;
+  
+  .modal-wrapper {
+    width: var(--width) !important;
+    max-width: var(--max-width) !important;
+    height: var(--height) !important;
+    max-height: var(--max-height) !important;
+  }
+}
+
 // Styles pour la modale moderne d'ajout de livreur
 .add-driver-modal {
   --width: 90%;

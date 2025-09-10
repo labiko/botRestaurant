@@ -1,0 +1,129 @@
+<ion-header>
+  <ion-toolbar color="secondary">
+    <ion-title>Gestion des Catégories</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="onCancel()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="category-management-content">
+  
+  <!-- Add Category Section -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="add-circle" color="success"></ion-icon>
+        Nouvelle Catégorie
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <form [formGroup]="categoryForm" (ngSubmit)="onAddCategory()">
+        <ion-item>
+          <ion-label position="stacked">Nom de la catégorie *</ion-label>
+          <ion-input formControlName="name" placeholder="Ex: WRAPS"></ion-input>
+        </ion-item>
+        
+        <ion-item>
+          <ion-label position="stacked">Icône</ion-label>
+          <ion-input formControlName="icon" placeholder="Ex: 🌯"></ion-input>
+        </ion-item>
+        
+        <ion-item>
+          <ion-label position="stacked">Ordre d'affichage</ion-label>
+          <ion-input formControlName="display_order" type="number" placeholder="25"></ion-input>
+        </ion-item>
+        
+        <ion-item>
+          <ion-label>Active</ion-label>
+          <ion-toggle formControlName="is_active" color="success"></ion-toggle>
+        </ion-item>
+        
+        <div style="margin-top: 16px;">
+          <ion-button 
+            type="submit" 
+            expand="block" 
+            color="success"
+            [disabled]="categoryForm.invalid || isLoading">
+            <ion-icon name="add" slot="start"></ion-icon>
+            Ajouter la catégorie
+          </ion-button>
+        </div>
+      </form>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Categories List -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="list" color="primary"></ion-icon>
+        Catégories Existantes ({{ categories.length }})
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      
+      <div *ngFor="let category of categories; trackBy: trackByCategory" class="category-item">
+        <ion-item>
+          <div slot="start" class="category-info">
+            <span class="category-icon">{{ category.icon || '📁' }}</span>
+            <div class="category-details">
+              <h3>{{ category.name }}</h3>
+              <p>Ordre: {{ category.display_order }}</p>
+            </div>
+          </div>
+          
+          <ion-chip 
+            slot="end" 
+            [color]="category.is_active ? 'success' : 'danger'"
+            style="margin-right: 8px;">
+            {{ category.is_active ? 'Actif' : 'Inactif' }}
+          </ion-chip>
+          
+          <ion-button 
+            fill="clear" 
+            color="primary"
+            (click)="onEditCategory(category)"
+            slot="end">
+            <ion-icon name="pencil" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <ion-button 
+            fill="clear" 
+            [color]="category.is_active ? 'danger' : 'success'"
+            (click)="onToggleCategoryStatus(category)"
+            slot="end">
+            <ion-icon [name]="category.is_active ? 'eye-off' : 'eye'" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-item>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="categories.length === 0 && !isLoading" class="empty-categories">
+        <ion-icon name="folder-open" color="medium" size="large"></ion-icon>
+        <h3>Aucune catégorie</h3>
+        <p>Les catégories s'afficheront ici</p>
+      </div>
+      
+      <!-- Loading -->
+      <div *ngIf="isLoading" class="loading-state">
+        <ion-spinner></ion-spinner>
+        <p>Chargement...</p>
+      </div>
+      
+    </ion-card-content>
+  </ion-card>
+
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <div style="padding: 16px;">
+      <ion-button expand="block" color="medium" (click)="onCancel()">
+        Fermer
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

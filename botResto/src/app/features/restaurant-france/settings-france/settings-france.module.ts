@@ -11,6 +11,7 @@ import { RestaurantConfigComponent } from './components/restaurant-config/restau
 import { ProductManagementComponent } from './components/product-management/product-management.component';
 import { ModularConfigModalComponent } from './components/product-management/modular-config-modal.component';
 import { UniversalProductModalComponent } from './components/product-management/universal-product-modal.component';
+import { CategoryManagementModalComponent } from './components/product-management/category-management-modal.component';
 import { WorkflowConfigComponent } from './components/workflow-config/workflow-config.component';
 import { ServiceModesComponent } from './components/service-modes/service-modes.component';
 
@@ -28,6 +29,7 @@ import { ServiceModesComponent } from './components/service-modes/service-modes.
     ProductManagementComponent,
     ModularConfigModalComponent,
     UniversalProductModalComponent,
+    CategoryManagementModalComponent,
     WorkflowConfigComponent,
     ServiceModesComponent
   ]

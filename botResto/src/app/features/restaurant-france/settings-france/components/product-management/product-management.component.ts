@@ -4,6 +4,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ModularConfigModalComponent } from './modular-config-modal.component';
 import { UniversalProductModalComponent } from './universal-product-modal.component';
+import { CategoryManagementModalComponent } from './category-management-modal.component';
 
 import { 
   ProductManagementService, 
@@ -665,6 +666,21 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
       loading.dismiss();
       this.presentToast('Erreur lors du chargement des détails', 'danger');
     }
+  }
+
+  async openCategoryManagement() {
+    const modal = await this.modalController.create({
+      component: CategoryManagementModalComponent,
+      backdropDismiss: false,
+      cssClass: 'category-management-modal'
+    });
+
+    modal.onDidDismiss().then(() => {
+      // Recharger les catégories et produits pour refléter les changements
+      this.loadData();
+    });
+
+    return await modal.present();
   }
 
   async onConfigureWorkflow(product: FranceProduct) {

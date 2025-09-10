@@ -6,12 +6,23 @@
     <ion-card-content>
       <div class="filter-section">
         
-        <!-- Search Bar -->
-        <ion-searchbar
-          placeholder="Rechercher un produit..."
-          debounce="300"
-          (ionInput)="onSearchChange($event)">
-        </ion-searchbar>
+        <!-- Search Bar with Category Management Button -->
+        <div class="search-row" style="display: flex; gap: 10px; align-items: center;">
+          <ion-searchbar
+            placeholder="Rechercher un produit..."
+            debounce="300"
+            (ionInput)="onSearchChange($event)"
+            style="flex: 1;">
+          </ion-searchbar>
+          
+          <ion-button 
+            fill="solid" 
+            color="secondary"
+            (click)="openCategoryManagement()">
+            <ion-icon name="grid" slot="start"></ion-icon>
+            Gérer les catégories
+          </ion-button>
+        </div>
 
         <!-- Category Filter -->
         <div class="category-filter">
