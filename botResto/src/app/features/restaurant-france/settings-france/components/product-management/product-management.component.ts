@@ -3,6 +3,7 @@ import { AlertController, LoadingController, ToastController, ModalController } 
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ModularConfigModalComponent } from './modular-config-modal.component';
+import { UniversalProductModalComponent } from './universal-product-modal.component';
 
 import { 
   ProductManagementService, 
@@ -505,6 +506,65 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
     });
 
     await alert.present();
+  }
+
+  /**
+   * Nouvelle fonction pour ouvrir la modale universelle adaptative
+   */
+  async onEditProduct(product: FranceProduct) {
+    console.log('🔧 [ProductManagement] Ouverture modale universelle pour:', product.name);
+    
+    const modal = await this.modalController.create({
+      component: UniversalProductModalComponent,
+      componentProps: {
+        product: product
+      },
+      backdropDismiss: false,
+      cssClass: 'universal-product-modal'
+    });
+
+    modal.onDidDismiss().then((result) => {
+      if (result.role === 'save' && result.data) {
+        console.log('💾 [ProductManagement] Sauvegarde des modifications:', result.data);
+        this.saveProductChanges(product, result.data);
+      } else {
+        console.log('❌ [ProductManagement] Modification annulée');
+      }
+    });
+
+    return await modal.present();
+  }
+
+  /**
+   * Sauvegarder les modifications du produit selon son type
+   */
+  private async saveProductChanges(originalProduct: FranceProduct, updatedData: any) {
+    const loading = await this.loadingController.create({
+      message: 'Sauvegarde en cours...'
+    });
+    await loading.present();
+
+    try {
+      // Utiliser updateCompleteProduct pour sauvegarder toutes les informations
+      console.log('💾 [ProductManagement] Sauvegarde complète du produit ID:', originalProduct.id);
+      console.log('📝 [ProductManagement] Données à sauvegarder:', updatedData);
+      
+      await this.productManagementService.updateProduct(
+        originalProduct.id,
+        updatedData
+      ).toPromise();
+
+      // Mettre à jour les données localement
+      Object.assign(originalProduct, updatedData);
+      
+      await loading.dismiss();
+      await this.presentToast('Produit mis à jour avec succès', 'success');
+      
+    } catch (error) {
+      await loading.dismiss();
+      console.error('❌ [ProductManagement] Erreur sauvegarde:', error);
+      await this.presentToast('Erreur lors de la sauvegarde', 'danger');
+    }
   }
 
   async onViewProductDetails(product: FranceProduct) {

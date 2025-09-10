@@ -546,6 +546,9 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
         day.closing = businessHours[day.key].closing || '22:00';
       }
     });
+    
+    // Réappliquer la détection du jour actuel après le chargement des données
+    this.initializeSimpleHours();
   }
 
   calculateSimpleDuration(opening: string, closing: string): string {

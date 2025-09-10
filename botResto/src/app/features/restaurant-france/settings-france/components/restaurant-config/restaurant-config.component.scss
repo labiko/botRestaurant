@@ -243,6 +243,170 @@
   }
 }
 
+// ======================================
+// STYLES POUR AFFICHAGE JOUR ACTUEL ENCADRÉ
+// ======================================
+
+.simple-hours-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.day-row {
+  border: 1px solid var(--ion-color-light-shade);
+  border-radius: 8px;
+  padding: 1rem;
+  background: var(--ion-background-color);
+  transition: all 0.3s ease;
+  
+  // ENCADREMENT SPÉCIAL POUR LE JOUR ACTUEL
+  &.today {
+    border: 2px solid var(--ion-color-success);
+    background: linear-gradient(135deg, rgba(var(--ion-color-success-rgb), 0.05), rgba(var(--ion-color-success-rgb), 0.02));
+    box-shadow: 0 4px 12px rgba(var(--ion-color-success-rgb), 0.15);
+    transform: translateY(-2px);
+  }
+  
+  .day-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    
+    .day-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      
+      h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--ion-color-dark);
+      }
+      
+      .today-badge {
+        background: var(--ion-color-success);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(var(--ion-color-success-rgb), 0.3);
+        animation: pulse-today 2s infinite;
+      }
+    }
+    
+    .day-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      
+      .status-text {
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+    }
+  }
+  
+  .day-times {
+    .time-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      
+      .time-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        
+        ion-icon {
+          font-size: 1.2rem;
+          margin-top: 1.5rem; // Align with input
+        }
+        
+        div {
+          flex: 1;
+          
+          label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--ion-color-medium);
+          }
+        }
+      }
+    }
+    
+    .duration-info {
+      text-align: center;
+    }
+  }
+  
+  .closed-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem 0;
+    color: var(--ion-color-medium);
+    font-style: italic;
+  }
+}
+
+// Animation pour le badge "AUJOURD'HUI"
+@keyframes pulse-today {
+  0% {
+    box-shadow: 0 2px 4px rgba(var(--ion-color-success-rgb), 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 8px rgba(var(--ion-color-success-rgb), 0.5);
+  }
+  100% {
+    box-shadow: 0 2px 4px rgba(var(--ion-color-success-rgb), 0.3);
+  }
+}
+
+// Templates section styling
+.templates-section {
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+  }
+}
+
+// Responsive pour les nouvelles grilles
+@media (max-width: 768px) {
+  .day-row {
+    .day-header-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+      
+      .day-info {
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .day-status {
+        align-self: flex-end;
+      }
+    }
+    
+    .day-times .time-inputs {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
 // Dark mode support
 @media (prefers-color-scheme: dark) {
   .day-schedule {
@@ -260,6 +424,16 @@
     
     ion-item {
       --border-color: var(--ion-color-step-200);
+    }
+  }
+  
+  // Dark mode pour les nouveaux éléments
+  .day-row {
+    background: var(--ion-color-step-50);
+    border-color: var(--ion-color-step-200);
+    
+    &.today {
+      background: linear-gradient(135deg, rgba(var(--ion-color-success-rgb), 0.1), rgba(var(--ion-color-success-rgb), 0.05));
     }
   }
 }

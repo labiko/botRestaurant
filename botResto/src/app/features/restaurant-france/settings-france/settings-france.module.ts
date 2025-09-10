@@ -10,6 +10,7 @@ import { SettingsFrancePage } from './settings-france.page';
 import { RestaurantConfigComponent } from './components/restaurant-config/restaurant-config.component';
 import { ProductManagementComponent } from './components/product-management/product-management.component';
 import { ModularConfigModalComponent } from './components/product-management/modular-config-modal.component';
+import { UniversalProductModalComponent } from './components/product-management/universal-product-modal.component';
 import { WorkflowConfigComponent } from './components/workflow-config/workflow-config.component';
 import { ServiceModesComponent } from './components/service-modes/service-modes.component';
 
@@ -26,6 +27,7 @@ import { ServiceModesComponent } from './components/service-modes/service-modes.
     RestaurantConfigComponent,
     ProductManagementComponent,
     ModularConfigModalComponent,
+    UniversalProductModalComponent,
     WorkflowConfigComponent,
     ServiceModesComponent
   ]

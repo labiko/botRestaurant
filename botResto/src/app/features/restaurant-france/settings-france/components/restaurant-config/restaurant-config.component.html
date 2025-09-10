@@ -51,7 +51,7 @@
           
           <ion-item fill="outline">
             <ion-label position="stacked">Nom du restaurant *</ion-label>
-            <ion-input formControlName="name" type="text"></ion-input>
+            <ion-input formControlName="name" type="text" readonly="true"></ion-input>
           </ion-item>
 
           <ion-item fill="outline">
@@ -66,32 +66,32 @@
 
           <ion-item fill="outline">
             <ion-label position="stacked">Adresse</ion-label>
-            <ion-textarea formControlName="address" rows="2"></ion-textarea>
+            <ion-textarea formControlName="address" rows="2" readonly="true"></ion-textarea>
           </ion-item>
 
           <ion-item fill="outline">
             <ion-label position="stacked">Ville</ion-label>
-            <ion-input formControlName="city" type="text"></ion-input>
+            <ion-input formControlName="city" type="text" readonly="true"></ion-input>
           </ion-item>
 
           <ion-item fill="outline">
             <ion-label position="stacked">Code postal</ion-label>
-            <ion-input formControlName="postal_code" type="text"></ion-input>
+            <ion-input formControlName="postal_code" type="text" readonly="true"></ion-input>
           </ion-item>
 
           <ion-item fill="outline" *ngIf="!hideDeliveryInfo">
             <ion-label position="stacked">Zone de livraison (km) *</ion-label>
-            <ion-input formControlName="delivery_zone_km" type="number" min="1"></ion-input>
+            <ion-input formControlName="delivery_zone_km" type="number" min="1" readonly="true"></ion-input>
           </ion-item>
 
           <ion-item fill="outline" *ngIf="!hideDeliveryInfo">
             <ion-label position="stacked">Commande minimum (€) *</ion-label>
-            <ion-input formControlName="min_order_amount" type="number" min="0" step="0.10"></ion-input>
+            <ion-input formControlName="min_order_amount" type="number" min="0" step="0.10" readonly="true"></ion-input>
           </ion-item>
 
           <ion-item fill="outline" *ngIf="!hideDeliveryInfo">
             <ion-label position="stacked">Frais de livraison (€) *</ion-label>
-            <ion-input formControlName="delivery_fee" type="number" min="0" step="0.10"></ion-input>
+            <ion-input formControlName="delivery_fee" type="number" min="0" step="0.10" readonly="true"></ion-input>
           </ion-item>
 
 
@@ -217,8 +217,8 @@
     </ion-card-content>
   </ion-card>
 
-  <!-- Bot Configuration -->
-  <ion-card class="main-content-card">
+  <!-- Bot Configuration - MASQUÉ -->
+  <ion-card class="main-content-card" style="display: none;">
     <ion-card-header>
       <ion-card-title>
         <ion-icon name="chatbubbles" color="tertiary"></ion-icon>

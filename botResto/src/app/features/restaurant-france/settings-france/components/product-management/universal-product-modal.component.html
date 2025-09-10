@@ -1,0 +1,204 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>
+      <ion-icon name="pencil" slot="start"></ion-icon>
+      Modifier le produit
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="onCancel()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="modal-content">
+    
+    <!-- En-tête produit -->
+    <div class="product-header">
+      <h2>{{ product?.name || 'Nouveau produit' }}</h2>
+      <ion-badge [color]="product?.product_type === 'simple' ? 'success' : 'primary'">
+        {{ product?.product_type || 'simple' }}
+      </ion-badge>
+    </div>
+
+    <form [formGroup]="productForm">
+      
+      <!-- Onglets adaptatifs -->
+      <ion-segment [(ngModel)]="selectedTab" [ngModelOptions]="{standalone: true}">
+        <ion-segment-button value="info" *ngIf="showInfoTab">
+          <ion-icon name="information-circle"></ion-icon>
+          <ion-label>Informations</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="pricing" *ngIf="showPricingTab">
+          <ion-icon name="pricetag"></ion-icon>
+          <ion-label>Prix</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="workflow" *ngIf="showWorkflowTab">
+          <ion-icon name="git-branch"></ion-icon>
+          <ion-label>Workflow</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="config" *ngIf="showConfigTab">
+          <ion-icon name="settings"></ion-icon>
+          <ion-label>Configuration</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+
+      <!-- Contenu des onglets -->
+      <div class="tab-content">
+        
+        <!-- Onglet Informations -->
+        <div *ngIf="selectedTab === 'info'" class="tab-panel">
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>
+                <ion-icon name="information-circle" color="primary"></ion-icon>
+                Informations générales
+              </ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              
+              <ion-item>
+                <ion-label position="stacked">Nom du produit *</ion-label>
+                <ion-input formControlName="name" type="text" placeholder="Ex: BOLOGNAISE"></ion-input>
+              </ion-item>
+              
+              <ion-item>
+                <ion-label position="stacked">Description</ion-label>
+                <ion-textarea formControlName="description" rows="2" placeholder="Description optionnelle"></ion-textarea>
+              </ion-item>
+              
+              <ion-item>
+                <ion-label position="stacked">Composition détaillée</ion-label>
+                <ion-textarea formControlName="composition" rows="3" placeholder="Ex: TAGLIATELLES, SAUCE TOMATE, VIANDE DE BŒUF HACHÉE"></ion-textarea>
+              </ion-item>
+              
+              <div class="form-row">
+                <ion-item>
+                  <ion-label position="stacked">Ordre d'affichage</ion-label>
+                  <ion-input formControlName="display_order" type="number" min="0"></ion-input>
+                </ion-item>
+                
+                <ion-item>
+                  <ion-label>Statut</ion-label>
+                  <ion-toggle formControlName="is_active" color="success"></ion-toggle>
+                  <ion-note slot="end">{{ productForm.get('is_active')?.value ? 'Actif' : 'Inactif' }}</ion-note>
+                </ion-item>
+              </div>
+              
+            </ion-card-content>
+          </ion-card>
+        </div>
+
+        <!-- Onglet Prix -->
+        <div *ngIf="selectedTab === 'pricing'" class="tab-panel">
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>
+                <ion-icon name="pricetag" color="success"></ion-icon>
+                Gestion des prix
+              </ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              
+              <ion-item>
+                <ion-label position="stacked">Prix sur place (€) *</ion-label>
+                <ion-input formControlName="price_on_site_base" type="number" step="0.01" min="0" placeholder="8.50"></ion-input>
+              </ion-item>
+              
+              <ion-item>
+                <ion-label position="stacked">Prix livraison (€) *</ion-label>
+                <ion-input formControlName="price_delivery_base" type="number" step="0.01" min="0" placeholder="8.50"></ion-input>
+              </ion-item>
+              
+              <ion-note color="medium">
+                <ion-icon name="information-circle"></ion-icon>
+                Les prix sont en euros et doivent être supérieurs à 0
+              </ion-note>
+              
+            </ion-card-content>
+          </ion-card>
+        </div>
+
+        <!-- Onglet Workflow (conditionnel) -->
+        <div *ngIf="selectedTab === 'workflow' && showWorkflowTab" class="tab-panel">
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>
+                <ion-icon name="git-branch" color="warning"></ion-icon>
+                Configuration Workflow
+              </ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              
+              <ion-item>
+                <ion-label position="stacked">Type de produit</ion-label>
+                <ion-select formControlName="product_type">
+                  <ion-select-option value="simple">Simple</ion-select-option>
+                  <ion-select-option value="composite">Composite</ion-select-option>
+                  <ion-select-option value="variant">Variant</ion-select-option>
+                  <ion-select-option value="modular">Modulaire</ion-select-option>
+                </ion-select>
+              </ion-item>
+              
+              <ion-item>
+                <ion-label position="stacked">Type de workflow</ion-label>
+                <ion-input formControlName="workflow_type" placeholder="Ex: pizza, menu, boisson"></ion-input>
+              </ion-item>
+              
+              <ion-item>
+                <ion-label>Étapes requises</ion-label>
+                <ion-toggle formControlName="requires_steps"></ion-toggle>
+                <ion-note slot="end">{{ productForm.get('requires_steps')?.value ? 'Oui' : 'Non' }}</ion-note>
+              </ion-item>
+              
+            </ion-card-content>
+          </ion-card>
+        </div>
+
+        <!-- Onglet Configuration JSON (conditionnel) -->
+        <div *ngIf="selectedTab === 'config' && showConfigTab" class="tab-panel">
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>
+                <ion-icon name="settings" color="tertiary"></ion-icon>
+                Configuration avancée
+              </ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              
+              <ion-item>
+                <ion-label position="stacked">Configuration JSON</ion-label>
+                <ion-textarea formControlName="steps_config" rows="10" placeholder='{"steps": [], "options": {}}'></ion-textarea>
+              </ion-item>
+              
+              <ion-note color="warning">
+                <ion-icon name="warning"></ion-icon>
+                Configuration avancée - Format JSON requis
+              </ion-note>
+              
+            </ion-card-content>
+          </ion-card>
+        </div>
+
+      </div>
+    </form>
+
+  </div>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button fill="clear" color="medium" (click)="onCancel()">
+        <ion-icon name="close" slot="start"></ion-icon>
+        Annuler
+      </ion-button>
+      <ion-button fill="solid" color="primary" (click)="onSave()" [disabled]="productForm.invalid">
+        <ion-icon name="checkmark" slot="start"></ion-icon>
+        Sauvegarder
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

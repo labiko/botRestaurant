@@ -1627,16 +1627,8 @@ export class UniversalBot implements IMessageHandler {
         
         console.log(`💰 [ShowProducts] ${product.name}: sur place ${priceOnSite}€, livraison ${priceDelivery}€, mode ${deliveryMode}, prix actif ${activePrice}€`);
         
-        // Ajouter la description si disponible
-        let productLine = `${displayNumber} *${product.name}*`;
-        if (product.description) {
-          productLine += ` - ${product.description}`;
-        }
-        if (priceText) {
-          productLine += ` - ${priceText}`;
-        }
-        
-        menuText += `${productLine}\n`;
+        // Utilisation du nouveau format avec séparateurs
+        menuText += this.formatProductWithSeparators(product, index, category.icon, activePrice);
         
         // Stocker le produit pour la session
         productList.push({
@@ -2621,6 +2613,35 @@ export class UniversalBot implements IMessageHandler {
       console.error('❌ [PizzaDirectCart] Erreur ajout panier:', error);
       await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de l\'ajout au panier. Veuillez réessayer.');
     }
+  }
+
+  /**
+   * Formate un produit avec le nouveau style de séparateurs et emojis
+   */
+  private formatProductWithSeparators(
+    product: any, 
+    index: number, 
+    categoryIcon: string, 
+    activePrice: number
+  ): string {
+    let productBlock = '';
+    
+    // Séparateur
+    productBlock += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    
+    // Nom avec icônes
+    const cleanName = product.name.replace(/^[^\s]+\s/, ''); // Enlève emoji existant
+    productBlock += `🎯 ${categoryIcon} ${categoryIcon} ${cleanName.toUpperCase()}\n`;
+    
+    // Composition si disponible
+    if (product.composition) {
+      productBlock += `🧾 ${product.composition.toUpperCase()}\n`;
+    }
+    
+    // Prix et action
+    productBlock += `💰 ${activePrice} EUR - Tapez ${index + 1}\n\n`;
+    
+    return productBlock;
   }
 }
 
