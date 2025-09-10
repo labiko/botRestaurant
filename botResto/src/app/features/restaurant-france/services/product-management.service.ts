@@ -427,13 +427,18 @@ export class ProductManagementService {
    * Utilise la fonction SQL update_composite_items
    */
   updateCompositeProduct(productId: number, productUpdates: Partial<FranceProduct>, compositeItems: CompositeItem[]): Observable<void> {
-    return from(
-      this.supabase.rpc('update_composite_items', {
-        p_product_id: productId,
-        p_product_updates: productUpdates,
-        p_composite_items: compositeItems
-      })
-    ).pipe(
+    // D'abord mettre à jour le produit principal
+    return this.updateProduct(productId, productUpdates).pipe(
+      switchMap(() => {
+        // Ensuite mettre à jour les éléments composites
+        // La fonction SQL attend: p_product_id en premier, p_items en second
+        return from(
+          this.supabase.rpc('update_composite_items', {
+            p_product_id: productId,
+            p_items: compositeItems
+          })
+        );
+      }),
       map(({ error }) => {
         if (error) throw error;
       })
