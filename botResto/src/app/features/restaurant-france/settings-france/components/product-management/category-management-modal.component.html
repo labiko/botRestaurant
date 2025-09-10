@@ -1,5 +1,5 @@
 <ion-header>
-  <ion-toolbar color="secondary">
+  <ion-toolbar color="primary">
     <ion-title>Gestion des Catégories</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="onCancel()">
@@ -15,7 +15,7 @@
   <ion-card>
     <ion-card-header>
       <ion-card-title>
-        <ion-icon name="add-circle" color="success"></ion-icon>
+        <ion-icon name="add-circle" color="primary"></ion-icon>
         Nouvelle Catégorie
       </ion-card-title>
     </ion-card-header>
@@ -38,14 +38,14 @@
         
         <ion-item>
           <ion-label>Active</ion-label>
-          <ion-toggle formControlName="is_active" color="success"></ion-toggle>
+          <ion-toggle formControlName="is_active" color="primary"></ion-toggle>
         </ion-item>
         
         <div style="margin-top: 16px;">
           <ion-button 
             type="submit" 
             expand="block" 
-            color="success"
+            color="primary"
             [disabled]="categoryForm.invalid || isLoading">
             <ion-icon name="add" slot="start"></ion-icon>
             Ajouter la catégorie
@@ -121,7 +121,7 @@
 <ion-footer>
   <ion-toolbar>
     <div style="padding: 16px;">
-      <ion-button expand="block" color="medium" (click)="onCancel()">
+      <ion-button expand="block" color="primary" fill="outline" (click)="onCancel()">
         Fermer
       </ion-button>
     </div>
