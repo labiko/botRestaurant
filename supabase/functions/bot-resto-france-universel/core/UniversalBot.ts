@@ -61,6 +61,11 @@ export class UniversalBot implements IMessageHandler {
     // Initialiser le service de timezone
     this.timezoneService = new TimezoneService();
     
+    // Configurer SessionManager pour utiliser la même instance TimezoneService
+    if (this.sessionManager && typeof this.sessionManager.setTimezoneService === 'function') {
+      this.sessionManager.setTimezoneService(this.timezoneService);
+    }
+    
     // Initialiser le service de modes de livraison
     this.deliveryModesService = new DeliveryModesService(this.supabaseUrl, this.supabaseKey);
     
@@ -618,9 +623,6 @@ export class UniversalBot implements IMessageHandler {
       console.log(`🎯 [DirectAccess] === DÉBUT ACCÈS DIRECT RESTAURANT ===`);
       console.log(`🎯 [DirectAccess] Restaurant: ${restaurant.name}`);
       
-      // Définir le contexte restaurant pour tous les calculs temporels
-      this.setRestaurantContext(restaurant);
-      
       // AFFICHER L'HEURE ACTUELLE POUR DIAGNOSTIC
       const now = new Date();
       console.log(`⏰ [HEURE_DEBUG] === DIAGNOSTIC FUSEAU HORAIRE ===`);
@@ -668,43 +670,69 @@ export class UniversalBot implements IMessageHandler {
       const deliveryModeMessage = this.deliveryModesService.formatModesMessage(availableModes);
       await this.messageSender.sendMessage(phoneNumber, deliveryModeMessage);
       
-      // Créer session avec état CHOOSING_DELIVERY_MODE et stocker les modes disponibles
-      console.log('📝 [DirectAccess] Création de la session...');
-      const session = await this.createSessionForRestaurant(phoneNumber, restaurant);
-      console.log('📝 [DirectAccess] Session créée:', { 
-        sessionId: session?.id, 
-        restaurantId: session?.restaurantId,
-        sessionData: session?.sessionData 
-      });
+      // ⚡ DÉFINIR LE CONTEXTE RESTAURANT AVANT TOUTE OPÉRATION DE SESSION
+      console.log('⚡ [CONTEXT_SETUP] Définition contexte restaurant...');
+      this.setRestaurantContext(restaurant);
+      console.log('✅ [CONTEXT_SETUP] Contexte restaurant défini');
       
-      if (!session || !session.id) {
-        console.error('❌ [DirectAccess] Session non créée ou invalide');
-        throw new Error('Impossible de créer la session');
+      // 🎯 [STEP1] Suppression des sessions existantes
+      console.log('🔍 [DEBUG_RESTAURANT_ACCESS] === STEP1 DÉBUT ===');
+      console.log('🎯 [STEP1] Suppression sessions utilisateur existantes...');
+      try {
+        await this.sessionManager.deleteSessionsByPhone(phoneNumber);
+        console.log('✅ [STEP1] Sessions supprimées avec succès');
+        console.log('🔍 [DEBUG_RESTAURANT_ACCESS] === STEP1 SUCCÈS ===');
+      } catch (deleteError) {
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] === STEP1 ÉCHEC ===');
+        console.error('❌ [STEP1] Erreur suppression sessions:', deleteError);
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] deleteError.message:', deleteError?.message);
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] deleteError.stack:', deleteError?.stack);
+        throw deleteError;
       }
       
-      // Stocker les modes disponibles dans la session pour validation ultérieure
-      console.log('📝 [DirectAccess] Mise à jour session avec modes disponibles...');
+      // 🎯 [STEP2] Création nouvelle session restaurant
+      console.log('🔍 [DEBUG_RESTAURANT_ACCESS] === STEP2 DÉBUT ===');
+      console.log('🎯 [STEP2] Création nouvelle session restaurant...');
+      console.log('🔍 [DEBUG_RESTAURANT_ACCESS] Restaurant data:', JSON.stringify({
+        id: restaurant.id,
+        name: restaurant.name,
+        timezone: restaurant.timezone
+      }));
+      let session;
       try {
-        await this.sessionManager.updateSession(session.id, {
-          sessionData: {
-            ...session.sessionData,
+        session = await this.sessionManager.createSessionForRestaurant(
+          phoneNumber,
+          restaurant,
+          'CHOOSING_DELIVERY_MODE',
+          {
+            selectedRestaurantId: restaurant.id,
+            selectedRestaurantName: restaurant.name,
             availableModes: availableModes.map(m => m.mode)
           }
-        });
-        console.log('✅ [DirectAccess] Session mise à jour avec modes:', availableModes.map(m => m.mode));
-      } catch (updateError) {
-        console.error('❌ [DirectAccess] Erreur mise à jour session:', updateError);
-        throw updateError;
+        );
+        console.log('✅ [STEP2] Session restaurant créée:', session.id);
+        console.log('🔍 [DEBUG_RESTAURANT_ACCESS] === STEP2 SUCCÈS ===');
+      } catch (createError) {
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] === STEP2 ÉCHEC ===');
+        console.error('❌ [STEP2] Erreur création session:', createError);
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] createError.message:', createError?.message);
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] createError.stack:', createError?.stack);
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] createError.name:', createError?.name);
+        throw createError;
       }
       
-      console.log('✅ [DirectAccess] Session créée pour choix mode livraison avec modes disponibles');
+      console.log('✅ [STEP3] Session créée pour choix mode livraison avec modes disponibles');
       
     } catch (error) {
+      console.error('🚨 [DEBUG_RESTAURANT_ACCESS] === ERREUR GLOBALE ===');
       console.error('❌ [DirectAccess] Erreur détaillée:', {
         message: error.message,
         stack: error.stack,
         error: error
       });
+      console.error('🚨 [DEBUG_RESTAURANT_ACCESS] error.name:', error?.name);
+      console.error('🚨 [DEBUG_RESTAURANT_ACCESS] error.cause:', error?.cause);
+      console.error('🚨 [DEBUG_RESTAURANT_ACCESS] typeof error:', typeof error);
       await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de l\'accès au restaurant.');
     }
   }
@@ -713,32 +741,70 @@ export class UniversalBot implements IMessageHandler {
    * Créer une session pour un restaurant (équivalent de SimpleSession.create)
    */
   private async createSessionForRestaurant(phoneNumber: string, restaurant: any): Promise<any> {
+    console.log('🔥 [DEBUT_CREATE_SESSION] Début createSessionForRestaurant pour:', phoneNumber, 'restaurant:', restaurant.name);
+    console.log('🚀 [VERSION_2024_12_20] Nouvelle version avec debug détaillé');
+    console.log('🔥 [STEP0] Juste avant le try');
     try {
-      console.log('🔧 [CreateSession] Début création session pour:', phoneNumber);
-      
+      console.log('🔥 [STEP1] Dans le try, avant import supabase...');
       // Import temporaire de supabase
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
+      console.log('🔥 [STEP2] Import réussi, création client...');
+      
+      // Utiliser les valeurs stockées dans la classe
+      console.log('🔥 [STEP3] Variables de classe, URL:', this.supabaseUrl ? 'OK' : 'MANQUANTE', 'Key:', this.supabaseKey ? 'OK' : 'MANQUANTE');
+      console.log('🔥 [STEP3.1] URL complète:', this.supabaseUrl);
+      console.log('🔥 [STEP3.2] Key (premiers chars):', this.supabaseKey?.substring(0, 20) + '...');
+      
+      let supabase;
+      try {
+        console.log('🔥 [STEP3.3] Tentative createClient...');
+        supabase = createClient(this.supabaseUrl, this.supabaseKey);
+        console.log('🔥 [STEP4] Client supabase créé avec succès');
+      } catch (createError) {
+        console.error('💥 [ERREUR_CREATE_CLIENT]:', createError);
+        console.error('💥 [ERREUR_CREATE_CLIENT] Message:', createError.message);
+        console.error('💥 [ERREUR_CREATE_CLIENT] Stack:', createError.stack);
+        throw createError;
+      }
       
       // Supprimer les sessions existantes
-      console.log('🔧 [CreateSession] Suppression sessions existantes...');
+      console.log('🔧 [DeleteSession] Tentative suppression pour phoneNumber:', phoneNumber);
+      
+      // D'abord vérifier si des sessions existent
+      const { data: existingSessions, error: selectError } = await supabase
+        .from('france_user_sessions')
+        .select('*')
+        .eq('phone_number', phoneNumber);
+        
+      console.log('🔧 [DeleteSession] Sessions existantes trouvées:', existingSessions?.length || 0);
+      if (existingSessions && existingSessions.length > 0) {
+        console.log('🔧 [DeleteSession] Détail sessions:', existingSessions);
+      }
+      
       const deleteResult = await supabase
         .from('france_user_sessions')
         .delete()
         .eq('phone_number', phoneNumber);
       
+      console.log('🔧 [DeleteSession] Résultat suppression:', deleteResult);
+      
       if (deleteResult.error) {
         console.error('❌ [CreateSession] Erreur suppression:', deleteResult.error);
+      } else {
+        console.log('✅ [DeleteSession] Suppression réussie');
+        
+        // Vérifier si suppression effective
+        const { data: remainingSessions } = await supabase
+          .from('france_user_sessions')
+          .select('*')
+          .eq('phone_number', phoneNumber);
+        console.log('🔧 [DeleteSession] Sessions restantes après suppression:', remainingSessions?.length || 0);
       }
       
       // Créer nouvelle session avec l'état CHOOSING_DELIVERY_MODE
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + SESSION_DURATION_MINUTES); // 2 heures d'expiration
       
-      console.log('🔧 [CreateSession] Création nouvelle session...');
       const { data: newSession, error } = await supabase
         .from('france_user_sessions')
         .insert({
@@ -746,14 +812,15 @@ export class UniversalBot implements IMessageHandler {
           chat_id: phoneNumber,
           restaurant_id: restaurant.id,
           current_step: 'CHOOSING_DELIVERY_MODE',
-          bot_state: 'CHOOSING_DELIVERY_MODE',
-          session_data: {
+          session_data: JSON.stringify({
             selectedRestaurantId: restaurant.id,
             selectedRestaurantName: restaurant.name
-          },
-          cart_items: [],
+          }),
+          cart_items: JSON.stringify([]),
           total_amount: 0,
-          expires_at: expiresAt
+          expires_at: expiresAt,
+          workflow_data: JSON.stringify({}),
+          workflow_step_id: null
         })
         .select()
         .single();
@@ -762,12 +829,6 @@ export class UniversalBot implements IMessageHandler {
         console.error('❌ [CreateSession] Erreur création session:', error);
         throw error;
       }
-      
-      console.log(`✅ [CreateSession] Session créée pour restaurant ${restaurant.name}:`, {
-        id: newSession?.id,
-        restaurantId: newSession?.restaurant_id,
-        state: newSession?.bot_state
-      });
       
       return newSession;
       
@@ -829,6 +890,12 @@ export class UniversalBot implements IMessageHandler {
    * Maintient la compatibilité exacte avec le workflow existant
    */
   private async handleSessionMessage(phoneNumber: string, session: any, message: string): Promise<void> {
+    console.log(`🔍 DEBUG_MENU: === DÉBUT handleSessionMessage ===`);
+    console.log(`🔍 DEBUG_MENU: Message reçu: "${message}"`);
+    console.log(`🔍 DEBUG_MENU: Session ID: ${session.id}`);
+    console.log(`🔍 DEBUG_MENU: Session currentState: ${session.currentState}`);
+    console.log(`🔍 DEBUG_MENU: Session sessionData:`, session.sessionData ? JSON.stringify(session.sessionData, null, 2) : 'null');
+    
     const normalizedMessage = message.toLowerCase().trim();
     
     // Commandes globales
@@ -867,6 +934,11 @@ export class UniversalBot implements IMessageHandler {
         
       case 'COMPOSITE_WORKFLOW_STEP':
         await this.compositeWorkflowExecutor.handleWorkflowStepResponse(phoneNumber, session, message);
+        break;
+        
+      case 'MENU_PIZZA_WORKFLOW':
+        console.log(`🔍 DEBUG_MENU: Traitement MENU_PIZZA_WORKFLOW avec message: "${message}"`);
+        await this.compositeWorkflowExecutor.handleMenuPizzaResponse(phoneNumber, session, message);
         break;
         
       case 'AWAITING_SIZE_SELECTION':
@@ -914,7 +986,10 @@ export class UniversalBot implements IMessageHandler {
         break;
         
       default:
-        console.log(`⚠️ [SessionMessage] État non géré: ${session.botState}`);
+        console.log(`🔍 DEBUG_MENU: ERREUR - État session non géré: "${session.botState}"`);
+        console.log(`🔍 DEBUG_MENU: ERREUR - currentState: "${session.currentState}"`);
+        console.log(`🔍 DEBUG_MENU: ERREUR - Message: "${message}"`);
+        console.log(`🔍 DEBUG_MENU: ERREUR - sessionData:`, session.sessionData);
         await this.messageSender.sendMessage(phoneNumber, 
           `❌ État de session non reconnu.\nTapez le numéro du restaurant pour recommencer.`);
         break;
@@ -1175,34 +1250,55 @@ export class UniversalBot implements IMessageHandler {
     const pizzaOptionsMap = session.sessionData?.pizzaOptionsMap || session.workflowData?.pizzaOptionsMap;
     const totalPizzaOptions = session.sessionData?.totalPizzaOptions || session.workflowData?.totalPizzaOptions;
     
-    // CORRECTION: Vérifier qu'on est réellement dans une catégorie pizza avant d'utiliser le mapping
-    const selectedCategoryId = session.sessionData?.selectedCategoryId;
-    const isPizzaCategory = selectedCategoryId && (selectedCategoryId.toString().includes('pizza') || selectedCategoryId.toString().includes('Pizzas'));
-    
-    if (pizzaOptionsMap && isPizzaCategory) {
-      console.log(`🍕 [ProductSelection] Recherche option ${productNumber} dans mapping pizza (catégorie: ${selectedCategoryId})`);
-      
-      // CORRECTION: Vérifier les actions spéciales AVANT de chercher dans le mapping pizza
+    // 🔧 SOLUTION 1 : Détection spéciale Menu Pizza avec discriminant universel
+    if (pizzaOptionsMap) {
+      // Vérifier les actions spéciales AVANT le mapping
       if (productNumber === 0 || productNumber === 99) {
-        console.log(`⚡ [ProductSelection] Action spéciale détectée en mode pizza: ${productNumber}`);
-        // Ne pas traiter comme une pizza, laisser passer au code normal
+        console.log(`⚡ [ProductSelection] Action spéciale détectée: ${productNumber}`);
+        // Laisser passer au code normal
       } else {
-        const pizzaOption = pizzaOptionsMap.find(opt => opt.optionNumber === productNumber);
+        const selectedOption = pizzaOptionsMap.find(opt => opt.optionNumber === productNumber);
         
-        if (pizzaOption) {
-          console.log(`✅ [ProductSelection] Pizza unifié trouvée: ${pizzaOption.pizzaName} ${pizzaOption.sizeName}`);
+        if (selectedOption) {
+          console.log(`✅ [ProductSelection] Option trouvée: ${selectedOption.pizzaName} (type: ${selectedOption.type})`);
           
-          // Ajouter directement la pizza avec taille au panier
-          await this.addPizzaDirectToCart(phoneNumber, session, pizzaOption);
-          return;
+          // DÉTECTION SPÉCIALE MENU PIZZA
+          if (selectedOption.type === 'menu_pizza') {
+            console.log(`📋 [ProductSelection] Menu Pizza détecté: ${selectedOption.pizzaName}`);
+            
+            // Récupérer le produit complet depuis la base
+            const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+            const supabase = createClient(
+              Deno.env.get('SUPABASE_URL')!,
+              Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+            );
+            
+            const { data: fullProduct } = await supabase
+              .from('france_products')
+              .select('*')
+              .eq('id', selectedOption.pizzaId)
+              .single();
+            
+            if (fullProduct) {
+              // Démarrer le workflow Menu Pizza
+              await this.compositeWorkflowExecutor.startMenuPizzaWorkflow(
+                phoneNumber,
+                fullProduct,
+                session
+              );
+              return;
+            }
+          } else if (selectedOption.type === 'individual_pizza') {
+            console.log(`🍕 [ProductSelection] Pizza individuelle: ${selectedOption.pizzaName} ${selectedOption.sizeName}`);
+            // Pizza individuelle (comportement existant)
+            await this.addPizzaDirectToCart(phoneNumber, session, selectedOption);
+            return;
+          }
         } else {
-          console.log(`❌ [ProductSelection] Option ${productNumber} non trouvée dans mapping pizza`);
+          console.log(`❌ [ProductSelection] Option ${productNumber} non trouvée dans mapping`);
         }
       }
     } else {
-      if (pizzaOptionsMap) {
-        console.log(`🔄 [ProductSelection] PizzaOptionsMap ignorée - catégorie actuelle: ${selectedCategoryId} (pas une catégorie pizza)`);
-      }
       console.log(`🛒 [ProductSelection] Utilisation système classique pour produits standards`);
     }
     

@@ -28,10 +28,18 @@ export class TimezoneService {
       timezone,
       
       /**
-       * Obtenir l'heure actuelle dans le timezone du restaurant
+       * Obtenir l'heure actuelle (retourne Date UTC, le formatage se fait ailleurs)
        */
       getCurrentTime(): Date {
-        return new Date();
+        console.log('🔍 [DEBUG_TIMEZONE_SERVICE] === DÉBUT getCurrentTime ===');
+        console.log('🔍 [DEBUG_TIMEZONE_SERVICE] timezone configuré:', timezone);
+        
+        const now = new Date();
+        console.log('🔍 [DEBUG_TIMEZONE_SERVICE] Date retournée:', now.toISOString());
+        console.log('🔍 [DEBUG_TIMEZONE_SERVICE] Formatage dans timezone restaurant:', this.formatTime(now));
+        console.log('✅ [DEBUG_TIMEZONE_SERVICE] getCurrentTime terminé');
+        
+        return now;
       },
       
       /**

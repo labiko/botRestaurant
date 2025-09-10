@@ -201,7 +201,8 @@ export class PizzaDisplayService {
               pizzaName: pizza.name,
               sizeId: size.id,
               sizeName: size.size_name,
-              price: price
+              price: price,
+              type: 'individual_pizza' // DISCRIMINANT UNIVERSEL
             });
             
             message += `   🔸 ${size.size_name} (${price} EUR) - Tapez ${globalIndex}\n`;
@@ -274,7 +275,8 @@ export class PizzaDisplayService {
           pizzaName: menu.name,
           sizeId: null, // Pas de taille pour les menus
           sizeName: 'MENU',
-          price: price
+          price: price,
+          type: 'menu_pizza' // DISCRIMINANT UNIVERSEL
         });
         
         message += `   🔸 MENU (${price} EUR) - Tapez ${globalIndex}\n`;

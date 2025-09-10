@@ -12,6 +12,7 @@ import {
   BotState, 
   WorkflowData 
 } from '../types.ts';
+import { TimezoneService } from './TimezoneService.ts';
 
 /**
  * Gestionnaire de sessions avec persistance complète
@@ -20,9 +21,101 @@ import {
 export class SessionManager implements ISessionManager {
   
   private supabase: SupabaseClient;
+  private timezoneService: TimezoneService | null = null;
 
   constructor(supabaseUrl: string, supabaseServiceRoleKey: string) {
     this.supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+  }
+
+  /**
+   * Définir l'instance TimezoneService partagée
+   */
+  setTimezoneService(timezoneService: TimezoneService): void {
+    this.timezoneService = timezoneService;
+  }
+
+  /**
+   * Obtenir l'heure actuelle dans le bon fuseau horaire
+   * Utilise le contexte global du TimezoneService configuré pour le restaurant
+   */
+  private getCurrentTime(): Date {
+    console.log('🔍 [DEBUG_TIMEZONE] === DÉBUT getCurrentTime ===');
+    
+    if (!this.timezoneService) {
+      console.error('🚨 [DEBUG_TIMEZONE] === ERREUR - TimezoneService null ===');
+      throw new Error('TimezoneService non défini - appeler setTimezoneService() d\'abord');
+    }
+    
+    const currentContext = this.timezoneService.getCurrentContext();
+    console.log('🔍 [DEBUG_TIMEZONE] currentContext:', !!currentContext);
+    if (currentContext) {
+      console.log('🔍 [DEBUG_TIMEZONE_CALL] === APPEL getCurrentTime() ===');
+      console.log('🔍 [DEBUG_TIMEZONE_CALL] Type de currentContext:', typeof currentContext);
+      console.log('🔍 [DEBUG_TIMEZONE_CALL] currentContext.timezone:', currentContext.timezone);
+      console.log('🔍 [DEBUG_TIMEZONE_CALL] Juste avant appel getCurrentTime()');
+      
+      const time = currentContext.getCurrentTime();
+      
+      console.log('🔍 [DEBUG_TIMEZONE_CALL] Juste après appel getCurrentTime()');
+      
+      // LOGS DÉTAILLÉS POUR DIAGNOSTIC
+      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] === ANALYSE COMPLÈTE TIME ===');
+      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] time.toISOString():', time.toISOString());
+      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] time.toString():', time.toString());
+      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] time.getTime():', time.getTime());
+      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] time.getTimezoneOffset():', time.getTimezoneOffset());
+      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] time.getHours():', time.getHours());
+      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] time.getMinutes():', time.getMinutes());
+      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] Context timezone:', currentContext.timezone);
+      
+      console.log('🔍 [DEBUG_TIMEZONE] === SUCCÈS getCurrentTime ===');
+      return time;
+    }
+    console.error('🚨 [DEBUG_TIMEZONE] === ERREUR - Pas de contexte ===');
+    throw new Error('Aucun contexte restaurant défini - TimezoneService non initialisé');
+  }
+
+  /**
+   * Générer un timestamp formaté pour la base de données dans la timezone du restaurant
+   */
+  private getCurrentTimestamp(): string {
+    console.log('🔍 [DEBUG_TIMESTAMP_FLOW] === DÉBUT getCurrentTimestamp ===');
+    
+    if (!this.timezoneService) {
+      console.error('❌ [DEBUG_TIMESTAMP] TimezoneService non configuré, utilisation UTC');
+      return new Date().toISOString().replace('T', ' ').replace('Z', '');
+    }
+
+    const context = this.timezoneService.getCurrentContext();
+    if (!context) {
+      console.error('❌ [DEBUG_TIMESTAMP] Context restaurant non trouvé, utilisation UTC');
+      return new Date().toISOString().replace('T', ' ').replace('Z', '');
+    }
+
+    const now = new Date();
+    console.log('🔍 [DEBUG_TIMESTAMP] Date UTC:', now.toISOString());
+    console.log('🔍 [DEBUG_TIMESTAMP] Timezone restaurant:', context.timezone);
+
+    // Utiliser Intl.DateTimeFormat pour formater dans la timezone du restaurant
+    const formatter = new Intl.DateTimeFormat('sv-SE', { // sv-SE donne YYYY-MM-DD HH:mm:ss
+      timeZone: context.timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+
+    const formatted = formatter.format(now);
+    const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+    const timestamp = `${formatted}.${milliseconds}`;
+    
+    console.log('🔍 [DEBUG_TIMESTAMP_FINAL] Timestamp formaté avec timezone restaurant:', timestamp);
+    console.log('🔍 [DEBUG_TIMESTAMP_FLOW] === FIN getCurrentTimestamp ===');
+    
+    return timestamp;
   }
 
   /**
@@ -38,7 +131,7 @@ export class SessionManager implements ISessionManager {
         .from('france_user_sessions')
         .select('*')
         .eq('phone_number', phoneNumber)
-        .gt('expires_at', new Date().toISOString())
+        .gt('expires_at', this.getCurrentTime().toISOString())
         .single();
 
       if (existingSession && !error) {
@@ -103,7 +196,7 @@ export class SessionManager implements ISessionManager {
       const dbUpdates = this.mapSessionToDatabase(updates);
       
       // Ajouter timestamp de mise à jour
-      dbUpdates.updated_at = new Date();
+      dbUpdates.updated_at = this.getCurrentTime();
       
       console.log(`💾 [SessionManager] Données finales à sauver:`, {
         sessionId,
@@ -154,7 +247,7 @@ export class SessionManager implements ISessionManager {
           },
           cart_items: [],
           total_amount: 0,
-          updated_at: new Date()
+          updated_at: this.getCurrentTime()
         })
         .eq('phone_number', phoneNumber);
 
@@ -188,7 +281,7 @@ export class SessionManager implements ISessionManager {
         restaurant_id: defaultRestaurantId,
         bot_state: {
           mode: 'menu_browsing' as const,
-          lastInteraction: new Date(),
+          lastInteraction: this.getCurrentTime(),
           language: 'fr',
           context: {}
         },
@@ -204,8 +297,8 @@ export class SessionManager implements ISessionManager {
         cart_items: [],
         total_amount: 0,
         expires_at: new Date(Date.now() + SESSION_DURATION_MINUTES * 60 * 1000), // 2 heures
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: this.getCurrentTime(),
+        updated_at: this.getCurrentTime()
       };
 
       const { data: newSession, error } = await this.supabase
@@ -247,7 +340,7 @@ export class SessionManager implements ISessionManager {
       restaurantId: dbRow.restaurant_id || 1,
       botState: dbRow.bot_state || {
         mode: 'menu_browsing',
-        lastInteraction: new Date(),
+        lastInteraction: this.getCurrentTime(),
         language: 'fr',
         context: {}
       },
@@ -350,7 +443,7 @@ export class SessionManager implements ISessionManager {
       const { data, error } = await this.supabase
         .from('france_user_sessions')
         .delete()
-        .lt('expires_at', new Date().toISOString())
+        .lt('expires_at', this.getCurrentTime().toISOString())
         .select('id');
 
       if (error) {
@@ -383,7 +476,7 @@ export class SessionManager implements ISessionManager {
         .from('france_user_sessions')
         .update({ 
           expires_at: newExpiresAt,
-          updated_at: new Date()
+          updated_at: this.getCurrentTime()
         })
         .eq('id', sessionId);
 
@@ -414,7 +507,7 @@ export class SessionManager implements ISessionManager {
       const { data, error } = await this.supabase
         .from('france_user_sessions')
         .select('bot_state, restaurant_id')
-        .gt('expires_at', new Date().toISOString());
+        .gt('expires_at', this.getCurrentTime().toISOString());
 
       if (error) {
         console.error('❌ [SessionManager] Erreur stats sessions:', error);
@@ -442,6 +535,97 @@ export class SessionManager implements ISessionManager {
     } catch (error) {
       console.error('❌ [SessionManager] Erreur getActiveSessionsStats:', error);
       return { totalActive: 0, byMode: {}, byRestaurant: {} };
+    }
+  }
+
+  /**
+   * Supprimer toutes les sessions d'un utilisateur par téléphone
+   * SOLID - Single Responsibility : Suppression complète des sessions utilisateur
+   */
+  async deleteSessionsByPhone(phoneNumber: string): Promise<void> {
+    console.log('🔍 [DEBUG_SESSION_DELETE] === DÉBUT SUPPRESSION ===');
+    console.log(`🗑️ [SessionManager] Suppression sessions pour: ${phoneNumber}`);
+    
+    try {
+      const { error } = await this.supabase
+        .from('france_user_sessions')
+        .delete()
+        .eq('phone_number', phoneNumber);
+
+      if (error) {
+        console.error('🚨 [DEBUG_SESSION_DELETE] === ERREUR SUPABASE ===');
+        console.error('❌ [SessionManager] Erreur suppression sessions:', error);
+        console.error('🚨 [DEBUG_SESSION_DELETE] error.message:', error?.message);
+        console.error('🚨 [DEBUG_SESSION_DELETE] error.code:', error?.code);
+        throw error;
+      }
+
+      console.log(`✅ [SessionManager] Sessions supprimées pour: ${phoneNumber}`);
+      console.log('🔍 [DEBUG_SESSION_DELETE] === SUCCÈS SUPPRESSION ===');
+      
+    } catch (error) {
+      console.error('🚨 [DEBUG_SESSION_DELETE] === ERREUR CATCH ===');
+      console.error('❌ [SessionManager] Erreur deleteSessionsByPhone:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Créer une session pour un restaurant spécifique
+   * SOLID - Factory Pattern : Création centralisée des sessions restaurant
+   */
+  async createSessionForRestaurant(
+    phoneNumber: string, 
+    restaurant: any, 
+    currentStep: string,
+    sessionData: any = {}
+  ): Promise<BotSession> {
+    console.log(`📝 [SessionManager] Création session restaurant pour: ${phoneNumber}`);
+    console.log(`📝 [SessionManager] Restaurant: ${restaurant.name} (ID: ${restaurant.id})`);
+    
+    try {
+      const expiresAt = this.getCurrentTime();
+      expiresAt.setMinutes(expiresAt.getMinutes() + SESSION_DURATION_MINUTES);
+      
+      const { data: newSession, error } = await this.supabase
+        .from('france_user_sessions')
+        .insert({
+          phone_number: phoneNumber,
+          chat_id: phoneNumber,
+          restaurant_id: restaurant.id,
+          current_step: currentStep,
+          session_data: JSON.stringify(sessionData),
+          bot_state: {
+            mode: 'delivery_mode_selection',
+            context: 'restaurant_access'
+          },
+          workflow_data: {
+            workflowId: 'restaurant_onboarding',
+            currentStepId: currentStep,
+            stepHistory: [],
+            selectedItems: {},
+            validationErrors: []
+          },
+          cart_items: [],
+          total_amount: 0,
+          expires_at: expiresAt,
+          created_at: this.getCurrentTimestamp(),
+          updated_at: this.getCurrentTimestamp()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ [SessionManager] Erreur création session restaurant:', error);
+        throw error;
+      }
+
+      console.log(`✅ [SessionManager] Session restaurant créée: ${newSession.id}`);
+      return this.mapDatabaseToSession(newSession);
+      
+    } catch (error) {
+      console.error('❌ [SessionManager] Erreur createSessionForRestaurant:', error);
+      throw error;
     }
   }
 }
