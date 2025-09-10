@@ -3,7 +3,7 @@
 // Persistance complète de l'état et contexte utilisateur
 
 // ⏱️ Configuration durée de session
-const SESSION_DURATION_MINUTES = 120; // 2 heures - Durée raisonnable pour commandes livraison
+const SESSION_DURATION_MINUTES = 240; // 4 heures - TEMPORAIRE pour test décalage horaire
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { 
@@ -39,83 +39,17 @@ export class SessionManager implements ISessionManager {
    * Utilise le contexte global du TimezoneService configuré pour le restaurant
    */
   private getCurrentTime(): Date {
-    console.log('🔍 [DEBUG_TIMEZONE] === DÉBUT getCurrentTime ===');
-    
-    if (!this.timezoneService) {
-      console.error('🚨 [DEBUG_TIMEZONE] === ERREUR - TimezoneService null ===');
-      throw new Error('TimezoneService non défini - appeler setTimezoneService() d\'abord');
-    }
-    
-    const currentContext = this.timezoneService.getCurrentContext();
-    console.log('🔍 [DEBUG_TIMEZONE] currentContext:', !!currentContext);
-    if (currentContext) {
-      console.log('🔍 [DEBUG_TIMEZONE_CALL] === APPEL getCurrentTime() ===');
-      console.log('🔍 [DEBUG_TIMEZONE_CALL] Type de currentContext:', typeof currentContext);
-      console.log('🔍 [DEBUG_TIMEZONE_CALL] currentContext.timezone:', currentContext.timezone);
-      console.log('🔍 [DEBUG_TIMEZONE_CALL] Juste avant appel getCurrentTime()');
-      
-      const time = currentContext.getCurrentTime();
-      
-      console.log('🔍 [DEBUG_TIMEZONE_CALL] Juste après appel getCurrentTime()');
-      
-      // LOGS DÉTAILLÉS POUR DIAGNOSTIC
-      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] === ANALYSE COMPLÈTE TIME ===');
-      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] time.toISOString():', time.toISOString());
-      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] time.toString():', time.toString());
-      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] time.getTime():', time.getTime());
-      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] time.getTimezoneOffset():', time.getTimezoneOffset());
-      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] time.getHours():', time.getHours());
-      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] time.getMinutes():', time.getMinutes());
-      console.log('🔍 [DEBUG_TIMEZONE_DETAIL] Context timezone:', currentContext.timezone);
-      
-      console.log('🔍 [DEBUG_TIMEZONE] === SUCCÈS getCurrentTime ===');
-      return time;
-    }
-    console.error('🚨 [DEBUG_TIMEZONE] === ERREUR - Pas de contexte ===');
-    throw new Error('Aucun contexte restaurant défini - TimezoneService non initialisé');
+    // VERSION SIMPLIFIÉE - On utilise directement UTC pour éviter les régressions
+    // Le TimezoneService sera réactivé plus tard quand le workflow de base sera stable
+    return new Date();
   }
 
   /**
-   * Générer un timestamp formaté pour la base de données dans la timezone du restaurant
+   * Générer un timestamp formaté pour la base de données
    */
   private getCurrentTimestamp(): string {
-    console.log('🔍 [DEBUG_TIMESTAMP_FLOW] === DÉBUT getCurrentTimestamp ===');
-    
-    if (!this.timezoneService) {
-      console.error('❌ [DEBUG_TIMESTAMP] TimezoneService non configuré, utilisation UTC');
-      return new Date().toISOString().replace('T', ' ').replace('Z', '');
-    }
-
-    const context = this.timezoneService.getCurrentContext();
-    if (!context) {
-      console.error('❌ [DEBUG_TIMESTAMP] Context restaurant non trouvé, utilisation UTC');
-      return new Date().toISOString().replace('T', ' ').replace('Z', '');
-    }
-
-    const now = new Date();
-    console.log('🔍 [DEBUG_TIMESTAMP] Date UTC:', now.toISOString());
-    console.log('🔍 [DEBUG_TIMESTAMP] Timezone restaurant:', context.timezone);
-
-    // Utiliser Intl.DateTimeFormat pour formater dans la timezone du restaurant
-    const formatter = new Intl.DateTimeFormat('sv-SE', { // sv-SE donne YYYY-MM-DD HH:mm:ss
-      timeZone: context.timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
-
-    const formatted = formatter.format(now);
-    const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
-    const timestamp = `${formatted}.${milliseconds}`;
-    
-    console.log('🔍 [DEBUG_TIMESTAMP_FINAL] Timestamp formaté avec timezone restaurant:', timestamp);
-    console.log('🔍 [DEBUG_TIMESTAMP_FLOW] === FIN getCurrentTimestamp ===');
-    
-    return timestamp;
+    // VERSION SIMPLIFIÉE - UTC direct
+    return new Date().toISOString().replace('T', ' ').replace('Z', '');
   }
 
   /**
@@ -136,6 +70,13 @@ export class SessionManager implements ISessionManager {
 
       if (existingSession && !error) {
         console.log(`✅ [SessionManager] Session existante trouvée: ${existingSession.id}`);
+        console.log(`🔍 [SESSION_DEBUG] Session DB brute:`, {
+          id: existingSession.id,
+          bot_state: existingSession.bot_state,
+          bot_state_type: typeof existingSession.bot_state,
+          current_step: existingSession.current_step,
+          restaurant_id: existingSession.restaurant_id
+        });
         return this.mapDatabaseToSession(existingSession);
       }
 
@@ -593,12 +534,9 @@ export class SessionManager implements ISessionManager {
           phone_number: phoneNumber,
           chat_id: phoneNumber,
           restaurant_id: restaurant.id,
-          current_step: currentStep,
+          current_step: 'CHOOSING_DELIVERY_MODE',
           session_data: JSON.stringify(sessionData),
-          bot_state: {
-            mode: 'delivery_mode_selection',
-            context: 'restaurant_access'
-          },
+          bot_state: 'CHOOSING_DELIVERY_MODE',
           workflow_data: {
             workflowId: 'restaurant_onboarding',
             currentStepId: currentStep,

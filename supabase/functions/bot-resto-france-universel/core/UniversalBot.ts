@@ -159,8 +159,13 @@ export class UniversalBot implements IMessageHandler {
       
       console.log('🔄 [SESSION_GET] Session récupérée:', {
         sessionExists: !!session,
+        sessionId: session?.id,
         botState: session?.botState,
-        restaurantId: session?.restaurantId
+        botStateType: typeof session?.botState,
+        restaurantId: session?.restaurantId,
+        currentStep: (session as any)?.currentStep,
+        message: message,
+        phoneNumber: phoneNumber
       });
       
       if (session && session.restaurantId) {
@@ -1033,14 +1038,20 @@ export class UniversalBot implements IMessageHandler {
       .single();
     
     if (restaurant.data) {
-      await this.showMenuAfterDeliveryModeChoice(phoneNumber, restaurant.data, deliveryMode);
+      await this.showMenuAfterDeliveryModeChoice(phoneNumber, restaurant.data, deliveryMode, session);
+      
+      // ✅ MAINTENANT on peut mettre à jour bot_state vers VIEWING_MENU
+      await this.sessionManager.updateSession(session.id, {
+        botState: 'VIEWING_MENU'
+      });
+      console.log('✅ [DeliveryMode] Session mise à jour vers VIEWING_MENU après affichage du menu');
     }
   }
   
   /**
    * Afficher le menu après choix du mode de livraison
    */
-  private async showMenuAfterDeliveryModeChoice(phoneNumber: string, restaurant: any, deliveryMode: string): Promise<void> {
+  private async showMenuAfterDeliveryModeChoice(phoneNumber: string, restaurant: any, deliveryMode: string, existingSession?: any): Promise<void> {
     // Import temporaire de supabase
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(
@@ -1080,7 +1091,8 @@ export class UniversalBot implements IMessageHandler {
     await this.messageSender.sendMessage(phoneNumber, menuText);
     
     // Mettre à jour la session vers VIEWING_MENU avec le mode de livraison
-    const session = await this.sessionManager.getSession(phoneNumber);
+    // Utiliser la session existante si fournie, sinon la récupérer
+    const session = existingSession || await this.sessionManager.getSession(phoneNumber);
     if (session) {
       console.log('📦 [showMenuAfterDeliveryModeChoice] Mise à jour session vers VIEWING_MENU');
       console.log(`🔍 [SESSION] Mode sélectionné: ${deliveryMode}`);
@@ -1101,8 +1113,10 @@ export class UniversalBot implements IMessageHandler {
         cartItems: Object.keys(updatedData.cart || {}).length
       });
       
+      // ✅ CORRECTION: Ne pas changer bot_state ici car c'est après handleDeliveryModeChoice
+      // bot_state sera mis à jour vers VIEWING_MENU une fois que l'utilisateur aura fait son choix
       await this.sessionManager.updateSession(session.id, {
-        botState: 'VIEWING_MENU',
+        // botState: 'VIEWING_MENU', // ← SUPPRIMÉ: on garde CHOOSING_DELIVERY_MODE
         sessionData: updatedData
       });
     }
@@ -1679,7 +1693,7 @@ export class UniversalBot implements IMessageHandler {
     switch (choice) {
       case '99': // Passer commande
         // Vérifier si panier non vide
-        if (!session.cart || Object.keys(session.cart).length === 0) {
+        if (!session.sessionData?.cart || Object.keys(session.sessionData.cart).length === 0) {
           await this.messageSender.sendMessage(phoneNumber, 
             '🛒 Votre panier est vide.\nAjoutez des produits avant de commander.');
           return;
