@@ -110,29 +110,20 @@
   }
 }
 
-// Large Modal Configuration - Maximisée pour beaucoup d'espace
+// Large Modal Configuration - Même taille que universal-product-modal
 :host ::ng-deep .large-modal {
-  --width: 98vw;
-  --max-width: 1600px;
-  --height: 98vh;
-  --max-height: 1200px;
-  
-  @media (max-width: 768px) {
-    --width: 100vw;
-    --height: 100vh;
-    --border-radius: 0;
-  }
-  
-  @media (min-width: 1400px) {
-    --width: 96vw;
-    --height: 96vh;
-    --max-height: 1400px;
-  }
+  --width: 95vw;
+  --max-width: 1200px;
+  --height: 90vh;
+  --max-height: 900px;
   
   .modal-wrapper {
+    width: var(--width) !important;
+    max-width: var(--max-width) !important;
+    height: var(--height) !important;
+    max-height: var(--max-height) !important;
     border-radius: 8px;
     overflow: hidden;
-    height: 100%;
   }
   
   ion-content {

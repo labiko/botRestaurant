@@ -193,7 +193,7 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
         details: details,
         hideDeliveryInfo: this.hideDeliveryInfo
       },
-      cssClass: 'large-modal',
+      cssClass: 'universal-product-modal',
       backdropDismiss: false
     });
 

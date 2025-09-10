@@ -177,10 +177,10 @@ p {
 
 // CSS pour la modale de gestion des catégories
 .category-management-modal {
-  --width: 90vw !important;
-  --max-width: 800px !important;
-  --height: 85vh !important;
-  --max-height: 800px !important;
+  --width: 95vw !important;
+  --max-width: 1200px !important;
+  --height: 90vh !important;
+  --max-height: 900px !important;
   
   .modal-wrapper {
     width: var(--width) !important;

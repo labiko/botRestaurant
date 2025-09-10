@@ -29,10 +29,10 @@ export class ModularConfigModalComponent implements OnInit {
   }
 
   private initializeForm() {
-    // Prix de base - toujours inclure les deux champs comme demandé
+    // Prix de base - afficher les vraies valeurs ou vide si pas définies
     this.configForm = this.formBuilder.group({
-      price_on_site_base: [this.product.price_on_site_base || 0],
-      price_delivery_base: [this.product.price_delivery_base || 0],
+      price_on_site_base: [this.product.price_on_site_base || ''],
+      price_delivery_base: [this.product.price_delivery_base || ''],
       sizes: this.formBuilder.array([]),
       options: this.formBuilder.array([])
     });
