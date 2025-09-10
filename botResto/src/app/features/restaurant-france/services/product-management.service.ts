@@ -357,6 +357,90 @@ export class ProductManagementService {
   }
 
   /**
+   * Ajoute un élément composite à un produit
+   */
+  addCompositeItem(compositeItem: Omit<CompositeItem, 'id'>): Observable<CompositeItem> {
+    return from(
+      this.supabase
+        .from('france_composite_items')
+        .insert(compositeItem)
+        .select()
+        .single()
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return data as CompositeItem;
+      })
+    );
+  }
+
+  /**
+   * Met à jour un élément composite
+   */
+  updateCompositeItem(itemId: number, updates: Partial<CompositeItem>): Observable<void> {
+    return from(
+      this.supabase
+        .from('france_composite_items')
+        .update(updates)
+        .eq('id', itemId)
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+      })
+    );
+  }
+
+  /**
+   * Supprime un élément composite
+   */
+  deleteCompositeItem(itemId: number): Observable<void> {
+    return from(
+      this.supabase
+        .from('france_composite_items')
+        .delete()
+        .eq('id', itemId)
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+      })
+    );
+  }
+
+  /**
+   * Supprime tous les éléments composites d'un produit
+   */
+  deleteAllCompositeItems(productId: number): Observable<void> {
+    return from(
+      this.supabase
+        .from('france_composite_items')
+        .delete()
+        .eq('composite_product_id', productId)
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+      })
+    );
+  }
+
+  /**
+   * Met à jour complètement un produit composite avec ses éléments
+   * Utilise la fonction SQL update_composite_items
+   */
+  updateCompositeProduct(productId: number, productUpdates: Partial<FranceProduct>, compositeItems: CompositeItem[]): Observable<void> {
+    return from(
+      this.supabase.rpc('update_composite_items', {
+        p_product_id: productId,
+        p_product_updates: productUpdates,
+        p_composite_items: compositeItems
+      })
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+      })
+    );
+  }
+
+  /**
    * Crée une nouvelle catégorie de menu
    */
   createMenuCategory(restaurantId: number, category: Omit<MenuCategory, 'id'>): Observable<MenuCategory> {

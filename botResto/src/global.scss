@@ -160,6 +160,21 @@ p {
   --max-height: 900px !important;
 }
 
+// CSS pour la modale universelle des produits
+.universal-product-modal {
+  --width: 95vw !important;
+  --max-width: 1200px !important;
+  --height: 90vh !important;
+  --max-height: 900px !important;
+  
+  .modal-wrapper {
+    width: var(--width) !important;
+    max-width: var(--max-width) !important;
+    height: var(--height) !important;
+    max-height: var(--max-height) !important;
+  }
+}
+
 // Styles pour la modale moderne d'ajout de livreur
 .add-driver-modal {
   --width: 90%;

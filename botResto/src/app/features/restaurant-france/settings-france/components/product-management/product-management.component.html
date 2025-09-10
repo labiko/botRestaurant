@@ -178,6 +178,14 @@
                   fill="outline" 
                   size="small" 
                   color="tertiary"
+                  (click)="onEditProduct(product)">
+                  <ion-icon name="pencil" slot="start"></ion-icon>
+                  Modifier
+                </ion-button>
+                <ion-button 
+                  fill="outline" 
+                  size="small" 
+                  color="tertiary"
                   (click)="onViewProductDetails(product)">
                   <ion-icon name="eye" slot="start"></ion-icon>
                   Détails

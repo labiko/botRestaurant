@@ -35,6 +35,10 @@
           <ion-icon name="pricetag"></ion-icon>
           <ion-label>Prix</ion-label>
         </ion-segment-button>
+        <ion-segment-button value="components" *ngIf="showComponentsTab">
+          <ion-icon name="layers"></ion-icon>
+          <ion-label>Composants</ion-label>
+        </ion-segment-button>
         <ion-segment-button value="workflow" *ngIf="showWorkflowTab">
           <ion-icon name="git-branch"></ion-icon>
           <ion-label>Workflow</ion-label>
@@ -116,6 +120,71 @@
                 <ion-icon name="information-circle"></ion-icon>
                 Les prix sont en euros et doivent être supérieurs à 0
               </ion-note>
+              
+            </ion-card-content>
+          </ion-card>
+        </div>
+
+        <!-- Onglet Composants (conditionnel) -->
+        <div *ngIf="selectedTab === 'components' && showComponentsTab" class="tab-panel">
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>
+                <ion-icon name="layers" color="tertiary"></ion-icon>
+                Gestion des composants
+              </ion-card-title>
+              <ion-card-subtitle>
+                Gérez les éléments qui composent ce produit
+              </ion-card-subtitle>
+            </ion-card-header>
+            <ion-card-content>
+              
+              <!-- Liste des composants -->
+              <div class="components-list">
+                <ion-item *ngFor="let component of compositeItems; let i = index" class="component-item">
+                  <div slot="start" class="component-index">
+                    {{ i + 1 }}
+                  </div>
+                  
+                  <ion-label>
+                    <h3>{{ component.component_name }}</h3>
+                    <p>Quantité: {{ component.quantity }} {{ component.unit }}</p>
+                  </ion-label>
+                  
+                  <ion-button 
+                    fill="clear" 
+                    color="primary"
+                    slot="end"
+                    (click)="editCompositeItem(component, i)">
+                    <ion-icon name="pencil" slot="icon-only"></ion-icon>
+                  </ion-button>
+                  
+                  <ion-button 
+                    fill="clear" 
+                    color="danger"
+                    slot="end"
+                    (click)="removeCompositeItem(i)">
+                    <ion-icon name="trash" slot="icon-only"></ion-icon>
+                  </ion-button>
+                </ion-item>
+                
+                <!-- État vide -->
+                <div *ngIf="compositeItems.length === 0" class="empty-components">
+                  <ion-icon name="layers-outline" color="medium"></ion-icon>
+                  <p>Aucun composant ajouté</p>
+                  <ion-note>Ajoutez des composants pour définir la composition de ce produit</ion-note>
+                </div>
+              </div>
+              
+              <!-- Bouton ajouter -->
+              <ion-button 
+                expand="block" 
+                fill="outline" 
+                color="success"
+                (click)="addCompositeItem()">
+                <ion-icon name="add" slot="start"></ion-icon>
+                Ajouter un composant
+              </ion-button>
               
             </ion-card-content>
           </ion-card>

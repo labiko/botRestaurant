@@ -545,20 +545,39 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
     await loading.present();
 
     try {
-      // Utiliser updateCompleteProduct pour sauvegarder toutes les informations
       console.log('💾 [ProductManagement] Sauvegarde complète du produit ID:', originalProduct.id);
       console.log('📝 [ProductManagement] Données à sauvegarder:', updatedData);
       
-      await this.productManagementService.updateProduct(
-        originalProduct.id,
-        updatedData
-      ).toPromise();
+      // Si produit composite avec composants, utiliser la fonction SQL spéciale
+      if (originalProduct.product_type === 'composite' && updatedData.compositeItems) {
+        console.log('🔧 [ProductManagement] Mise à jour produit composite avec composants');
+        
+        // Extraire les composants
+        const compositeItems = updatedData.compositeItems;
+        delete updatedData.compositeItems;
+        
+        // Utiliser la fonction SQL update_composite_product_complete via RPC
+        await this.productManagementService.updateCompositeProduct(
+          originalProduct.id,
+          updatedData,
+          compositeItems
+        ).toPromise();
+      } else {
+        // Mise à jour standard pour les autres types
+        await this.productManagementService.updateProduct(
+          originalProduct.id,
+          updatedData
+        ).toPromise();
+      }
 
       // Mettre à jour les données localement
       Object.assign(originalProduct, updatedData);
       
       await loading.dismiss();
       await this.presentToast('Produit mis à jour avec succès', 'success');
+      
+      // Recharger les produits pour avoir les données fraîches
+      this.loadProducts();
       
     } catch (error) {
       await loading.dismiss();

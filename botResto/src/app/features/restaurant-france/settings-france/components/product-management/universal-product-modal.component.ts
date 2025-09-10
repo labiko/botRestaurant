@@ -1,11 +1,13 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ModalController, AlertController } from '@ionic/angular';
+import { ProductManagementService, CompositeItem } from '../../../services/product-management.service';
 
 interface ModalConfig {
   showBasicInfo: boolean;
   showPricing: boolean;
   showComposition: boolean;
+  showComponents: boolean;
   showWorkflow: boolean;
   showSteps: boolean;
   showJsonConfig: boolean;
@@ -25,17 +27,20 @@ export class UniversalProductModalComponent implements OnInit {
     showBasicInfo: true,
     showPricing: true,
     showComposition: true,
+    showComponents: false,
     showWorkflow: false,
     showSteps: false,
     showJsonConfig: false
   };
   
   selectedTab = 'info';
+  compositeItems: CompositeItem[] = [];
 
   constructor(
     private fb: FormBuilder,
     private modalController: ModalController,
-    private alertController: AlertController
+    private alertController: AlertController,
+    private productManagementService: ProductManagementService
   ) {
     this.initializeForm();
   }
@@ -44,6 +49,7 @@ export class UniversalProductModalComponent implements OnInit {
     console.log('🔍 [UniversalModal] Produit reçu:', this.product);
     this.analyzeProduct();
     this.populateForm();
+    this.loadCompositeItems();
   }
 
   private initializeForm() {
@@ -75,6 +81,7 @@ export class UniversalProductModalComponent implements OnInit {
       showBasicInfo: true,
       showPricing: true,
       showComposition: true,
+      showComponents: false,
       showWorkflow: false,
       showSteps: false,
       showJsonConfig: false
@@ -83,6 +90,7 @@ export class UniversalProductModalComponent implements OnInit {
     // Adaptation selon le type de produit
     if (this.product.product_type === 'composite') {
       console.log('✅ [UniversalModal] Produit composite détecté - activation workflow');
+      this.modalConfig.showComponents = true;
       this.modalConfig.showWorkflow = true;
     }
     
@@ -150,6 +158,12 @@ export class UniversalProductModalComponent implements OnInit {
 
     console.log('💾 [UniversalModal] Sauvegarde des données:', formData);
 
+    // Ajouter les composants si produit composite
+    if (this.product.product_type === 'composite') {
+      formData.compositeItems = this.compositeItems;
+      console.log('📦 [UniversalModal] Composants inclus:', this.compositeItems);
+    }
+
     // Retourner les données mises à jour
     this.modalController.dismiss(formData, 'save');
   }
@@ -162,6 +176,131 @@ export class UniversalProductModalComponent implements OnInit {
   // Getters pour les templates
   get showInfoTab() { return this.modalConfig.showBasicInfo; }
   get showPricingTab() { return this.modalConfig.showPricing; }
+  get showComponentsTab() { return this.modalConfig.showComponents; }
   get showWorkflowTab() { return this.modalConfig.showWorkflow; }
   get showConfigTab() { return this.modalConfig.showJsonConfig; }
+
+  // Méthodes pour gérer les composants
+  private async loadCompositeItems() {
+    if (!this.product || this.product.product_type !== 'composite') {
+      return;
+    }
+
+    console.log('📦 [UniversalModal] Chargement des éléments composites pour le produit:', this.product.id);
+    
+    this.productManagementService.getCompositeItems(this.product.id).subscribe({
+      next: (items) => {
+        this.compositeItems = items || [];
+        console.log('✅ [UniversalModal] Éléments composites chargés:', this.compositeItems);
+      },
+      error: (error) => {
+        console.error('❌ [UniversalModal] Erreur chargement composants:', error);
+        this.compositeItems = [];
+      }
+    });
+  }
+
+  async addCompositeItem() {
+    const alert = await this.alertController.create({
+      header: 'Ajouter un composant',
+      inputs: [
+        {
+          name: 'component_name',
+          type: 'text',
+          placeholder: 'Nom du composant (ex: Burger)'
+        },
+        {
+          name: 'quantity',
+          type: 'number',
+          placeholder: 'Quantité',
+          min: 0,
+          value: 1
+        },
+        {
+          name: 'unit',
+          type: 'text',
+          placeholder: 'Unité (ex: pièce, portion, cl)',
+          value: 'pièce'
+        }
+      ],
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        },
+        {
+          text: 'Ajouter',
+          handler: (data) => {
+            if (data.component_name && data.quantity > 0) {
+              const newItem: CompositeItem = {
+                id: Date.now(), // ID temporaire
+                composite_product_id: this.product.id,
+                component_name: data.component_name,
+                quantity: parseFloat(data.quantity),
+                unit: data.unit || 'pièce'
+              };
+              this.compositeItems.push(newItem);
+              console.log('✅ [UniversalModal] Composant ajouté:', newItem);
+            }
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  async editCompositeItem(item: CompositeItem, index: number) {
+    const alert = await this.alertController.create({
+      header: 'Modifier le composant',
+      inputs: [
+        {
+          name: 'component_name',
+          type: 'text',
+          value: item.component_name,
+          placeholder: 'Nom du composant'
+        },
+        {
+          name: 'quantity',
+          type: 'number',
+          value: item.quantity,
+          placeholder: 'Quantité',
+          min: 0
+        },
+        {
+          name: 'unit',
+          type: 'text',
+          value: item.unit,
+          placeholder: 'Unité'
+        }
+      ],
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        },
+        {
+          text: 'Enregistrer',
+          handler: (data) => {
+            if (data.component_name && data.quantity > 0) {
+              this.compositeItems[index] = {
+                ...item,
+                component_name: data.component_name,
+                quantity: parseFloat(data.quantity),
+                unit: data.unit || 'pièce'
+              };
+              console.log('✅ [UniversalModal] Composant modifié:', this.compositeItems[index]);
+            }
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  removeCompositeItem(index: number) {
+    this.compositeItems.splice(index, 1);
+    console.log('🗑️ [UniversalModal] Composant supprimé à l\'index:', index);
+  }
 }
