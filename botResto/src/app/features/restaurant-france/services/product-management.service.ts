@@ -336,6 +336,33 @@ export class ProductManagementService {
   }
 
   /**
+   * Crée une nouvelle taille pour un produit
+   */
+  createProductSize(productId: number, sizeData: Omit<ProductSize, 'id'>): Observable<ProductSize> {
+    const newSize = {
+      product_id: productId,
+      size_name: sizeData.size_name,
+      price_on_site: sizeData.price_on_site,
+      price_delivery: sizeData.price_delivery,
+      includes_drink: sizeData.includes_drink,
+      display_order: sizeData.display_order || 0
+    };
+
+    return from(
+      this.supabase
+        .from('france_product_sizes')
+        .insert(newSize)
+        .select()
+        .single()
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return data as ProductSize;
+      })
+    );
+  }
+
+  /**
    * Met à jour la configuration workflow d'un produit
    */
   updateProductWorkflow(productId: number, workflowType: string, requiresSteps: boolean, stepsConfig?: any): Observable<void> {

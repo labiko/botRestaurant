@@ -16,6 +16,13 @@ export class ModularConfigModalComponent implements OnInit {
 
   configForm!: FormGroup;
   isLoading = false;
+  
+  // Système d'onglets
+  activeTab: 'sizes' | 'drinks' | 'meats' | 'sauces' | 'options' = 'sizes';
+  
+  // Boissons dynamiques basées sur le produit
+  availableDrinks: string[] = [];
+  drinkSizes: string[] = [];
 
   constructor(
     private modalController: ModalController,
@@ -26,6 +33,7 @@ export class ModularConfigModalComponent implements OnInit {
 
   ngOnInit() {
     this.initializeForm();
+    this.extractDrinkInformation();
   }
 
   private initializeForm() {
@@ -64,7 +72,15 @@ export class ModularConfigModalComponent implements OnInit {
     // Initialiser les options
     if (this.details.options) {
       const optionsArray = this.configForm.get('options') as FormArray;
+      
+      // Debug : voir les groupes d'options
+      console.log('🔍 [Options] Groupes détectés:', 
+        [...new Set(this.details.options.map((opt: any) => opt.option_group))]
+      );
+      
       this.details.options.forEach((option: any) => {
+        console.log(`📝 [Option] ${option.option_name} - Groupe: "${option.option_group}"`);
+        
         optionsArray.push(this.formBuilder.group({
           id: [option.id],
           option_name: [option.option_name],
@@ -83,6 +99,84 @@ export class ModularConfigModalComponent implements OnInit {
 
   get optionsFormArray() {
     return this.configForm.get('options') as FormArray;
+  }
+
+  // Méthodes de filtrage par groupe (insensible à la casse)
+  private filterOptionsByGroup(options: any[], group: string): any[] {
+    return options.filter(opt => {
+      const optGroup = opt.option_group?.toLowerCase() || '';
+      return optGroup.includes(group.toLowerCase());
+    });
+  }
+
+  get meatOptions() { 
+    // Cherche 'viande' ou 'meat' dans le groupe
+    return this.optionsFormArray.value?.filter((opt: any) => {
+      const group = opt.option_group?.toLowerCase() || '';
+      return group.includes('viande') || group.includes('meat') || group.includes('protéine');
+    }) || [];
+  }
+  
+  get sauceOptions() { 
+    // Cherche 'sauce' ou 'condiment' dans le groupe
+    return this.optionsFormArray.value?.filter((opt: any) => {
+      const group = opt.option_group?.toLowerCase() || '';
+      return group.includes('sauce') || group.includes('condiment');
+    }) || [];
+  }
+  
+  get otherOptions() { 
+    // Exclut viandes et sauces
+    return this.optionsFormArray.value?.filter((opt: any) => {
+      const group = opt.option_group?.toLowerCase() || '';
+      return !group.includes('viande') && !group.includes('meat') && 
+             !group.includes('sauce') && !group.includes('condiment') &&
+             !group.includes('protéine');
+    }) || [];
+  }
+
+  // Navigation onglets
+  setActiveTab(tab: string | number | undefined) {
+    if (tab && typeof tab === 'string' && (tab === 'sizes' || tab === 'drinks' || tab === 'meats' || tab === 'sauces' || tab === 'options')) {
+      this.activeTab = tab as 'sizes' | 'drinks' | 'meats' | 'sauces' | 'options';
+    }
+  }
+
+  // Extraire les informations de boissons depuis les tailles existantes
+  private extractDrinkInformation() {
+    if (!this.details?.sizes) return;
+
+    // Collecter les tailles de boissons depuis les includes_drink des tailles
+    const drinkSizesSet = new Set<string>();
+    
+    this.details.sizes.forEach((size: any) => {
+      if (size.includes_drink) {
+        // Pour TACOS, typiquement c'est 33CL, pour les gros menus peut être 1L5
+        // On peut inférer depuis le nom de la taille ou avoir une logique
+        if (size.size_name?.includes('M') || size.size_name?.includes('MENU M')) {
+          drinkSizesSet.add('33CL');
+        } else if (size.size_name?.includes('L') || size.size_name?.includes('XL')) {
+          drinkSizesSet.add('1L5');
+        } else {
+          drinkSizesSet.add('33CL'); // Par défaut
+        }
+      }
+    });
+
+    this.drinkSizes = Array.from(drinkSizesSet);
+    
+    // Types de boissons standards (pourrait venir de la base de données)
+    this.availableDrinks = [
+      'Coca Cola',
+      'Fanta',
+      'Sprite', 
+      'Eau',
+      'Oasis',
+      'Ice Tea'
+    ];
+
+    console.log('🥤 [DrinkExtraction] Tailles détectées:', this.drinkSizes);
+    console.log('🥤 [DrinkExtraction] Boissons disponibles:', this.availableDrinks);
   }
 
   async saveConfiguration() {
@@ -135,9 +229,42 @@ export class ModularConfigModalComponent implements OnInit {
           });
         });
       } else {
-        // Create new size - would need createProductSize method
-        console.log('New size creation not implemented yet:', size);
-        return Promise.resolve(true);
+        // Create new size
+        console.log('✅ [SaveSizes] Création nouvelle taille:', size.size_name);
+        console.log('📝 [SaveSizes] Données à envoyer:', {
+          product_id: this.product.id,
+          size_name: size.size_name,
+          price_on_site: size.price_on_site,
+          price_delivery: size.price_delivery,
+          includes_drink: size.includes_drink,
+          display_order: 0
+        });
+        
+        return new Promise((resolve, reject) => {
+          this.productManagementService.createProductSize(this.product.id, {
+            product_id: this.product.id,
+            size_name: size.size_name,
+            price_on_site: Number(size.price_on_site), // S'assurer que c'est un nombre
+            price_delivery: size.price_delivery ? Number(size.price_delivery) : undefined, // S'assurer que c'est un nombre ou undefined
+            includes_drink: Boolean(size.includes_drink), // S'assurer que c'est un boolean
+            display_order: 0
+          }).subscribe({
+            next: (result) => {
+              console.log('✅ [SaveSizes] Taille créée avec succès:', result);
+              resolve(true);
+            },
+            error: (error: any) => {
+              console.error('❌ [SaveSizes] Erreur création taille détaillée:', {
+                error: error,
+                message: error?.message,
+                details: error?.details,
+                hint: error?.hint,
+                code: error?.code
+              });
+              reject(error);
+            }
+          });
+        });
       }
     });
 
@@ -162,13 +289,37 @@ export class ModularConfigModalComponent implements OnInit {
 
   addNewSize() {
     const sizesArray = this.configForm.get('sizes') as FormArray;
-    sizesArray.push(this.formBuilder.group({
+    
+    // Héritage intelligent : copier la première taille comme template
+    let templateSize = null;
+    if (sizesArray.length > 0) {
+      templateSize = sizesArray.at(0)?.value;
+    }
+    
+    // Déterminer le nouveau nom de menu
+    const currentSizes = sizesArray.controls.map(control => control.get('size_name')?.value);
+    const menuLetters = ['M', 'L', 'XL', 'XXL', 'XXXL'];
+    let newMenuName = 'MENU M'; // par défaut
+    
+    // Trouver la prochaine taille disponible
+    for (const letter of menuLetters) {
+      const menuName = `MENU ${letter}`;
+      if (!currentSizes.includes(menuName)) {
+        newMenuName = menuName;
+        break;
+      }
+    }
+    
+    // Si template existe, hériter de ses propriétés
+    const newSize = {
       id: [null],
-      size_name: ['Nouvelle taille'],
-      price_on_site: [0],
-      price_delivery: [0],
-      includes_drink: [false]
-    }));
+      size_name: [newMenuName],
+      price_on_site: [templateSize ? templateSize.price_on_site + 2 : 7], // +2€ par défaut
+      price_delivery: [templateSize ? templateSize.price_delivery + 2 : 8], // +2€ par défaut  
+      includes_drink: [templateSize ? templateSize.includes_drink : true] // même config boisson
+    };
+    
+    sizesArray.push(this.formBuilder.group(newSize));
   }
 
   removeSize(index: number) {

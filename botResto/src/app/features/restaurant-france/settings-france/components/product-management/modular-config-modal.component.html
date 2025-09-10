@@ -47,17 +47,40 @@
       </ion-card-content>
     </ion-card>
 
-    <!-- Tailles -->
-    <ion-card class="config-section">
+    <!-- Navigation Onglets -->
+    <div class="tabs-navigation">
+      <ion-segment [(ngModel)]="activeTab" [ngModelOptions]="{standalone: true}" (ionChange)="setActiveTab($event.detail.value)" scrollable>
+        <ion-segment-button value="sizes">
+          <ion-label>📏 Tailles</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="drinks">
+          <ion-label>🥤 Boissons</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="meats">
+          <ion-label>🥩 Viandes</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="sauces">
+          <ion-label>🌶️ Sauces</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="options">
+          <ion-label>⚙️ Options</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <!-- Contenu des onglets -->
+    
+    <!-- Onglet Tailles -->
+    <ion-card class="config-section" *ngIf="activeTab === 'sizes'">
       <ion-card-header>
         <div class="section-header">
           <ion-card-title color="warning">
             <ion-icon name="resize" slot="start"></ion-icon>
-            Tailles ({{ sizesFormArray.length }})
+            📏 Tailles ({{ sizesFormArray.length }})
           </ion-card-title>
-          <ion-button fill="outline" color="warning" size="small" (click)="addNewSize()">
+          <ion-button fill="outline" color="primary" size="small" (click)="addNewSize()">
             <ion-icon name="add" slot="start"></ion-icon>
-            Ajouter
+            + Ajouter Menu
           </ion-button>
         </div>
       </ion-card-header>
@@ -70,7 +93,7 @@
             <div class="size-header">
               <ion-input 
                 formControlName="size_name" 
-                placeholder="Nom de la taille"
+                placeholder="Nom du menu"
                 fill="outline"
                 class="size-name-input">
               </ion-input>
@@ -114,84 +137,177 @@
         
         <div *ngIf="sizesFormArray.length === 0" class="empty-state">
           <p>Aucune taille configurée</p>
-          <ion-button fill="outline" color="warning" (click)="addNewSize()">
+          <ion-button fill="outline" color="primary" (click)="addNewSize()">
             <ion-icon name="add" slot="start"></ion-icon>
-            Ajouter la première taille
+            + Ajouter Menu
           </ion-button>
         </div>
       </ion-card-content>
     </ion-card>
 
-    <!-- Options -->
-    <ion-card class="config-section">
+    <!-- Onglet Boissons -->
+    <ion-card class="config-section" *ngIf="activeTab === 'drinks'">
       <ion-card-header>
-        <div class="section-header">
-          <ion-card-title color="secondary">
-            <ion-icon name="options" slot="start"></ion-icon>
-            Options ({{ optionsFormArray.length }})
-          </ion-card-title>
-          <ion-button fill="outline" color="secondary" size="small" (click)="addNewOption()">
-            <ion-icon name="add" slot="start"></ion-icon>
-            Ajouter
-          </ion-button>
-        </div>
+        <ion-card-title color="tertiary">
+          <ion-icon name="wine" slot="start"></ion-icon>
+          🥤 Configuration Boissons
+        </ion-card-title>
       </ion-card-header>
       <ion-card-content>
-        <div formArrayName="options">
-          <div *ngFor="let optionForm of optionsFormArray.controls; let i = index" 
-               [formGroupName]="i" 
-               class="option-item">
-            
-            <div class="option-header">
-              <ion-input 
-                formControlName="option_name" 
-                placeholder="Nom de l'option"
-                fill="outline"
-                class="option-name-input">
-              </ion-input>
-              <ion-button 
-                fill="clear" 
-                color="danger" 
-                size="small" 
-                (click)="removeOption(i)">
-                <ion-icon name="trash" slot="icon-only"></ion-icon>
-              </ion-button>
-            </div>
-
-            <div class="option-config">
-              <ion-item fill="outline">
-                <ion-label position="stacked">Groupe</ion-label>
-                <ion-input 
-                  formControlName="option_group" 
-                  placeholder="ex: Sauces, Extras...">
-                </ion-input>
-              </ion-item>
-              
-              <ion-item fill="outline">
-                <ion-label position="stacked">Modificateur prix (€)</ion-label>
-                <ion-input 
-                  formControlName="price_modifier" 
-                  type="number" 
-                  step="0.10">
-                </ion-input>
-              </ion-item>
-              
-              <div class="option-toggles">
+        <div class="drinks-config">
+          <p class="section-description">
+            Boissons disponibles pour <strong>{{ product?.name }}</strong>
+            <span *ngIf="drinkSizes.length > 0"> - Tailles détectées: {{ drinkSizes.join(', ') }}</span>
+          </p>
+          
+          <!-- Si aucune taille avec boisson n'est trouvée -->
+          <div *ngIf="drinkSizes.length === 0" class="no-drinks-info">
+            <ion-item color="warning">
+              <ion-icon name="warning" slot="start"></ion-icon>
+              <ion-label>Aucune taille avec boisson configurée pour ce produit</ion-label>
+            </ion-item>
+          </div>
+          
+          <!-- Boissons dynamiques basées sur les tailles détectées -->
+          <div class="drink-types" *ngIf="drinkSizes.length > 0">
+            <div *ngFor="let drinkSize of drinkSizes" class="drink-size-group">
+              <h4>Boissons {{ drinkSize }}</h4>
+              <div *ngFor="let drink of availableDrinks" class="drink-item">
                 <ion-item>
-                  <ion-checkbox formControlName="is_required" slot="start"></ion-checkbox>
-                  <ion-label>Obligatoire</ion-label>
-                </ion-item>
-                
-                <ion-item>
-                  <ion-checkbox formControlName="is_active" slot="start"></ion-checkbox>
-                  <ion-label>Active</ion-label>
+                  <ion-checkbox checked="true" slot="start"></ion-checkbox>
+                  <ion-label>{{ drink }} {{ drinkSize }}</ion-label>
                 </ion-item>
               </div>
             </div>
           </div>
+          
+          <ion-button fill="outline" color="tertiary" class="add-drink-type" *ngIf="drinkSizes.length > 0">
+            <ion-icon name="add" slot="start"></ion-icon>
+            Ajouter un type de boisson
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Onglet Viandes -->
+    <ion-card class="config-section" *ngIf="activeTab === 'meats'">
+      <ion-card-header>
+        <ion-card-title color="danger">
+          <ion-icon name="nutrition" slot="start"></ion-icon>
+          🥩 Viandes & Protéines
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="meats-config">
+          <p class="section-description">Configuration des viandes disponibles pour <strong>{{ product?.name }}</strong></p>
+          
+          <div class="meat-items" *ngIf="meatOptions.length > 0">
+            <div *ngFor="let meat of meatOptions; let i = index" class="meat-item">
+              <ion-item>
+                <ion-checkbox [checked]="meat.is_active" slot="start"></ion-checkbox>
+                <ion-label>
+                  <h3>{{ meat.option_name }}</h3>
+                  <p>{{ meat.is_required ? 'Obligatoire' : 'Optionnel' }} - Prix: {{ meat.price_modifier > 0 ? '+' + meat.price_modifier + '€' : 'Inclus' }}</p>
+                </ion-label>
+                <ion-button fill="clear" color="medium" slot="end">
+                  <ion-icon name="create" slot="icon-only"></ion-icon>
+                </ion-button>
+              </ion-item>
+            </div>
+          </div>
+          
+          <div *ngIf="meatOptions.length === 0" class="empty-state">
+            <p>Aucune viande configurée</p>
+          </div>
+          
+          <ion-button fill="outline" color="danger" class="add-meat-button">
+            <ion-icon name="add" slot="start"></ion-icon>
+            Ajouter une viande
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Onglet Sauces -->
+    <ion-card class="config-section" *ngIf="activeTab === 'sauces'">
+      <ion-card-header>
+        <ion-card-title color="warning">
+          <ion-icon name="water" slot="start"></ion-icon>
+          🌶️ Sauces & Condiments
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="sauces-config">
+          <p class="section-description">Configuration des sauces disponibles pour <strong>{{ product?.name }}</strong></p>
+          
+          <div class="sauce-items" *ngIf="sauceOptions.length > 0">
+            <div *ngFor="let sauce of sauceOptions; let i = index" class="sauce-item">
+              <ion-item>
+                <ion-checkbox [checked]="sauce.is_active" slot="start"></ion-checkbox>
+                <ion-label>
+                  <h3>{{ sauce.option_name }}</h3>
+                  <p>{{ sauce.is_required ? 'Obligatoire' : 'Optionnel' }} - Prix: {{ sauce.price_modifier > 0 ? '+' + sauce.price_modifier + '€' : 'Gratuit' }}</p>
+                </ion-label>
+                <ion-button fill="clear" color="medium" slot="end">
+                  <ion-icon name="create" slot="icon-only"></ion-icon>
+                </ion-button>
+              </ion-item>
+            </div>
+          </div>
+          
+          <div *ngIf="sauceOptions.length === 0" class="empty-state">
+            <p>Aucune sauce configurée</p>
+          </div>
+          
+          <ion-button fill="outline" color="warning" class="add-sauce-button">
+            <ion-icon name="add" slot="start"></ion-icon>
+            Ajouter une sauce
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Onglet Options -->
+    <ion-card class="config-section" *ngIf="activeTab === 'options'">
+      <ion-card-header>
+        <div class="section-header">
+          <ion-card-title color="secondary">
+            <ion-icon name="options" slot="start"></ion-icon>
+            ⚙️ Autres Options ({{ otherOptions.length }})
+          </ion-card-title>
+          <ion-button fill="outline" color="secondary" size="small" (click)="addNewOption()">
+            <ion-icon name="add" slot="start"></ion-icon>
+            Ajouter Option
+          </ion-button>
+        </div>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="options-summary">
+          <div class="option-group-info">
+            <p><strong>Légumes & Accompagnements:</strong> Salade, Tomates, Oignons, Frites, Supplément Fromage</p>
+          </div>
         </div>
         
-        <div *ngIf="optionsFormArray.length === 0" class="empty-state">
+        <div class="other-options-list">
+          <div *ngFor="let option of otherOptions; let i = index" class="option-item">
+            <ion-item>
+              <ion-checkbox [checked]="option.is_active" slot="start"></ion-checkbox>
+              <ion-label>
+                <h3>{{ option.option_name }}</h3>
+                <p>
+                  Groupe: {{ option.option_group }} - 
+                  {{ option.is_required ? 'Obligatoire' : 'Optionnel' }} - 
+                  Prix: {{ option.price_modifier > 0 ? '+' + option.price_modifier + '€' : 'Inclus' }}
+                </p>
+              </ion-label>
+              <ion-button fill="clear" color="medium" slot="end">
+                <ion-icon name="create" slot="icon-only"></ion-icon>
+              </ion-button>
+            </ion-item>
+          </div>
+        </div>
+        
+        <div *ngIf="otherOptions.length === 0" class="empty-state">
           <p>Aucune option configurée</p>
           <ion-button fill="outline" color="secondary" (click)="addNewOption()">
             <ion-icon name="add" slot="start"></ion-icon>
