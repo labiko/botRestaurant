@@ -94,7 +94,8 @@ export class CartManagementExecutor extends BaseExecutor {
                 success: true,
                 errors: [],
                 nextStep: 'VIEWING_MENU',
-                outputData: { action: 'RETURN_MENU' }
+                outputData: { action: 'RETURN_MENU' },
+                shouldUpdateSession: true
             }
         };
         

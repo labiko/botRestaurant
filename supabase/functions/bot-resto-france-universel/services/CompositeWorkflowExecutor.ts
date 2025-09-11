@@ -439,7 +439,7 @@ export class CompositeWorkflowExecutor {
   /**
    * Retour aux catégories - Reset session et affichage menu
    */
-  private async returnToCategories(phoneNumber: string, session: any): Promise<void> {
+  async returnToCategories(phoneNumber: string, session: any): Promise<void> {
     console.log(`🔙 [returnToCategories] Retour aux catégories demandé`);
     
     try {
@@ -480,12 +480,20 @@ export class CompositeWorkflowExecutor {
       }
       
       // Chargement dynamique des catégories depuis la BDD
+      console.log(`🔍 [CATBUG_DEBUG] Restaurant ID utilisé: ${restaurant.data.id}`);
+      
       const { data: categories, error: catError } = await supabase
         .from('france_menu_categories')
         .select('*')
         .eq('restaurant_id', restaurant.data.id)
         .eq('is_active', true)
         .order('display_order');
+
+      console.log(`🔍 [CATBUG_DEBUG] Catégories récupérées depuis BDD: ${categories ? categories.length : 'null'}`);
+      if (categories) {
+        console.log(`🔍 [CATBUG_DEBUG] Premières catégories: ${categories.slice(0, 5).map(c => c.name).join(', ')}`);
+        console.log(`🔍 [CATBUG_DEBUG] Dernières catégories: ${categories.slice(-3).map(c => c.name).join(', ')}`);
+      }
 
       if (catError || !categories || categories.length === 0) {
         console.error('❌ Erreur catégories:', catError);
@@ -523,13 +531,51 @@ export class CompositeWorkflowExecutor {
         compositeWorkflow: null
       };
       
-      await supabase
+      console.log(`🔍 [CATBUG_DEBUG] AVANT sauvegarde session - categories.length: ${categories.length}`);
+      console.log(`🔍 [CATBUG_DEBUG] updatedSessionData.categories.length: ${updatedSessionData.categories.length}`);
+      console.log(`🔍 [CATBUG_DEBUG] Dernières categories dans updatedSessionData: ${updatedSessionData.categories.slice(-3).map(c => c.name).join(', ')}`);
+      
+      console.log(`🔄 [STATE_DEBUG] AVANT mise à jour état - Ancien état: ${session.botState}`);
+      console.log(`🔄 [STATE_DEBUG] Transition vers: VIEWING_MENU`);
+      
+      const { error: updateError } = await supabase
         .from('france_user_sessions')
         .update({
           bot_state: 'VIEWING_MENU',
           session_data: updatedSessionData
         })
         .eq('id', session.id);
+        
+      if (updateError) {
+        console.error(`❌ [CATBUG_DEBUG] Erreur sauvegarde session:`, updateError);
+        console.error(`❌ [STATE_DEBUG] Échec transition état vers VIEWING_MENU`);
+      } else {
+        console.log(`✅ [CATBUG_DEBUG] Session sauvegardée avec ${categories.length} catégories`);
+        console.log(`✅ [STATE_DEBUG] État transitionné vers VIEWING_MENU`);
+      }
+      
+      // Vérifier ce qui a été vraiment sauvegardé
+      const { data: verifySession } = await supabase
+        .from('france_user_sessions')
+        .select('bot_state, session_data')
+        .eq('id', session.id)
+        .single();
+        
+      if (verifySession) {
+        const savedCategories = verifySession.session_data?.categories || [];
+        const savedState = verifySession.bot_state;
+        
+        console.log(`🔍 [CATBUG_DEBUG] APRÈS sauvegarde - categories sauvegardées: ${savedCategories.length}`);
+        console.log(`🔍 [STATE_DEBUG] APRÈS sauvegarde - état sauvegardé: ${savedState}`);
+        
+        if (savedCategories.length !== categories.length) {
+          console.error(`❌ [CATBUG_DEBUG] PROBLÈME ! ${categories.length} catégories envoyées mais ${savedCategories.length} sauvegardées`);
+        }
+        if (savedState !== 'VIEWING_MENU') {
+          console.error(`❌ [STATE_DEBUG] PROBLÈME ! État attendu: VIEWING_MENU, État sauvegardé: ${savedState}`);
+        }
+      }
+      
       console.log(`✅ [returnToCategories] Menu catégories affiché`);
 
     } catch (error) {
@@ -849,8 +895,10 @@ export class CompositeWorkflowExecutor {
   ): Promise<void> {
     console.log(`🚨 [DEBUG-showWorkflowStep] ENTRÉE - stepIndex: ${stepIndex}`);
     console.log(`🚨 [DEBUG-showWorkflowStep] optionGroups.length: ${workflowData.optionGroups.length}`);
+    console.log(`🔍 [DEBUG-showWorkflowStep] optionGroups:`, workflowData.optionGroups.map(g => g.groupName));
     
     const optionGroup = workflowData.optionGroups[stepIndex];
+    
     console.log(`🚨 [DEBUG-showWorkflowStep] optionGroup:`, optionGroup ? `${optionGroup.groupName}` : 'undefined');
     
     if (!optionGroup) {
@@ -942,7 +990,14 @@ export class CompositeWorkflowExecutor {
     
     // Passer à l'étape suivante (avec délai pour éviter spam)
     await new Promise(resolve => setTimeout(resolve, 500));
-    await this.showWorkflowStep(phoneNumber, session, workflowData, workflowData.currentStep);
+    
+    // CORRECTION : Vérifier si le workflow est terminé avant d'appeler showWorkflowStep
+    if (workflowData.currentStep >= workflowData.optionGroups.length) {
+      console.log(`✅ [Workflow] Workflow terminé - Appel completeUniversalWorkflow`);
+      await this.completeUniversalWorkflow(phoneNumber, session, workflowData);
+    } else {
+      await this.showWorkflowStep(phoneNumber, session, workflowData, workflowData.currentStep);
+    }
   }
   
   /**

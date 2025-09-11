@@ -275,6 +275,24 @@ export class UniversalBot implements IMessageHandler {
     if (result.success) {
       console.log('✅ [Workflow] Étape réussie');
       
+      // 🔧 [CATBUG_FIX] Gestion des actions spéciales
+      if (result.outputData?.action === 'RETURN_MENU') {
+        console.log('🔄 [CATBUG_FIX] Action RETURN_MENU détectée - transition vers VIEWING_MENU');
+        
+        // Transition d'état directe vers VIEWING_MENU
+        await this.sessionManager.updateSession(session.id, {
+          bot_state: 'VIEWING_MENU'
+        });
+        
+        // Appeler la logique de retour aux catégories via CompositeWorkflowExecutor
+        if (this.compositeWorkflowExecutor) {
+          await this.compositeWorkflowExecutor.returnToCategories(session.phoneNumber, { ...session, bot_state: 'VIEWING_MENU' });
+        }
+        
+        console.log('✅ [CATBUG_FIX] Transition RETURN_MENU complétée');
+        return; // Sortir immédiatement, pas de traitement supplémentaire
+      }
+      
       // Mettre à jour la session si nécessaire
       if (result.shouldUpdateSession) {
         await this.updateSessionFromResult(session, result);
@@ -926,14 +944,17 @@ export class UniversalBot implements IMessageHandler {
         break;
         
       case 'VIEWING_MENU':
+        console.log(`🔄 [STATE_DEBUG] Routage vers handleMenuNavigation - État: VIEWING_MENU`);
         await this.handleMenuNavigation(phoneNumber, session, message);
         break;
         
       case 'VIEWING_CATEGORY':
+        console.log(`🔄 [STATE_DEBUG] Routage vers handleCategoryNavigation - État: VIEWING_CATEGORY`);
         await this.handleCategoryNavigation(phoneNumber, session, message);
         break;
         
       case 'SELECTING_PRODUCTS':
+        console.log(`🔄 [STATE_DEBUG] Routage vers ProductSelection - État: SELECTING_PRODUCTS`);
         await this.handleProductSelection(phoneNumber, session, message);
         break;
         
@@ -1139,6 +1160,14 @@ export class UniversalBot implements IMessageHandler {
     console.log(`🔍 [handleMenuNavigation] État de session: ${session.botState}`);
     console.log(`🔍 [handleMenuNavigation] Session data keys:`, Object.keys(session.sessionData || {}));
     
+    // DIAGNOSTIC: Vérifier incohérence d'état
+    console.log(`🔄 [STATE_DEBUG] État de session actuel: ${session.botState}`);
+    console.log(`🔄 [STATE_DEBUG] État attendu pour handleMenuNavigation: VIEWING_MENU`);
+    if (session.botState !== 'VIEWING_MENU') {
+      console.error(`❌ [STATE_DEBUG] INCOHÉRENCE DÉTECTÉE ! handleMenuNavigation appelé mais état = ${session.botState}`);
+      console.error(`❌ [STATE_DEBUG] Ceci pourrait expliquer les problèmes de validation`);
+    }
+    
     if (isNaN(categoryNumber)) {
       console.log(`❌ [handleMenuNavigation] Message n'est pas un nombre valide: "${message}"`);
       await this.messageSender.sendMessage(phoneNumber, 
@@ -1170,9 +1199,10 @@ export class UniversalBot implements IMessageHandler {
         console.error(`❌ [handleMenuNavigation] Restaurant non trouvé pour ID: ${session.restaurantId}`);
       }
     } else {
-      console.log(`❌ [handleMenuNavigation] Choix invalide: ${categoryNumber}, doit être entre 1 et ${categories.length}`);
+      console.error(`❌ [CATBUG_DEBUG] ÉCHEC - Numéro invalide: ${categoryNumber}. Categories en session: ${categories.length}`);
+      console.error(`❌ [CATBUG_DEBUG] PROBLÈME IDENTIFIÉ - Menu affiche plus de categories que la session n'en contient !`);
       await this.messageSender.sendMessage(phoneNumber, 
-        `❌ Choix invalide. Choisissez entre 1 et ${categories.length}.`);
+        `❌ Choix invalide. Choisissez entre 1 et ${categories.length}.\n↩ Tapez 0 pour revenir au menu.`);
     }
   }
   
@@ -1229,6 +1259,12 @@ export class UniversalBot implements IMessageHandler {
       if (restaurant) {
         const deliveryMode = session.sessionData?.deliveryMode || 'sur_place';
         await this.showMenuAfterDeliveryModeChoice(phoneNumber, restaurant, deliveryMode);
+        
+        // ✅ APRÈS affichage menu, mettre à jour état vers VIEWING_MENU pour permettre navigation
+        await this.sessionManager.updateSession(session.id, {
+          botState: 'VIEWING_MENU'
+        });
+        console.log('✅ [ProductSelection] État mis à jour vers VIEWING_MENU après retour menu "0"');
       }
       return;
     }
@@ -1398,9 +1434,24 @@ export class UniversalBot implements IMessageHandler {
     if (isComposite) {
       console.log(`🔄 [ProductSelection] Produit composite détecté: ${selectedProduct.workflow_type || selectedProduct.type || 'variants'}`);
       
-      // Lancer le workflow composite universel
-      await this.compositeWorkflowExecutor.startCompositeWorkflow(phoneNumber, selectedProduct, session);
-      return;
+      try {
+        // Lancer le workflow composite universel
+        console.log(`🚀 [ProductSelection] Tentative de démarrage workflow composite pour: ${selectedProduct.name}`);
+        await this.compositeWorkflowExecutor.startCompositeWorkflow(phoneNumber, selectedProduct, session);
+        console.log(`✅ [ProductSelection] Workflow composite démarré avec succès pour: ${selectedProduct.name}`);
+        return;
+      } catch (error) {
+        console.error(`❌ [ProductSelection] ERREUR lors du démarrage workflow composite pour ${selectedProduct.name}:`, error);
+        console.error(`📋 [ProductSelection] Stack trace:`, error.stack);
+        console.error(`📋 [ProductSelection] Détails produit:`, {
+          id: selectedProduct.id,
+          name: selectedProduct.name,
+          product_type: selectedProduct.product_type,
+          workflow_type: selectedProduct.workflow_type,
+          requires_steps: selectedProduct.requires_steps
+        });
+        throw error; // Re-lancer l'erreur pour qu'elle remonte
+      }
     }
     
     // Produit simple - Stocker et traiter avec quantité 1
@@ -1723,6 +1774,12 @@ export class UniversalBot implements IMessageHandler {
           const deliveryMode = session.sessionData?.deliveryMode || 'sur_place';
           await this.showMenuAfterDeliveryModeChoice(phoneNumber, restaurant, deliveryMode);
         }
+        
+        // ✅ APRÈS vidage et affichage menu, mettre à jour état vers VIEWING_MENU pour permettre navigation
+        await this.sessionManager.updateSession(session.id, {
+          botState: 'VIEWING_MENU'
+        });
+        console.log('✅ [CartActions] État mis à jour vers VIEWING_MENU après vidage panier "00"');
         break;
         
       case '0': // Ajouter d'autres produits
@@ -1744,6 +1801,12 @@ export class UniversalBot implements IMessageHandler {
             await this.showMenuAfterDeliveryModeChoice(phoneNumber, restaurant, deliveryMode);
           }
         }
+        
+        // ✅ APRÈS affichage, mettre à jour état vers VIEWING_MENU pour permettre navigation
+        await this.sessionManager.updateSession(session.id, {
+          botState: 'VIEWING_MENU'
+        });
+        console.log('✅ [CartActions] État mis à jour vers VIEWING_MENU après action "0"');
         break;
         
       default:
