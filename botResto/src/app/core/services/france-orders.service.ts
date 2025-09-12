@@ -63,7 +63,7 @@ export interface FranceOrder {
   };
   drivers_notified_count?: number;
   // NOUVEAU : Données du livreur assigné
-  assigned_driver?: {
+  delivery_driver?: {
     id: number;
     first_name: string;
     last_name: string;
@@ -123,9 +123,9 @@ export class FranceOrdersService {
 
       if (error) {
         console.error('❌ [FranceOrders] Erreur détaillée RPC:', error);
-        console.error('❌ [FranceOrders] Message:', error.message);
-        console.error('❌ [FranceOrders] Code:', error.code);
-        console.error('❌ [FranceOrders] Details:', error.details);
+        console.error('❌ [FranceOrders] Message:', error?.message);
+        console.error('❌ [FranceOrders] Code:', error?.code);
+        console.error('❌ [FranceOrders] Details:', error?.details);
         
         // FALLBACK : Utiliser l'ancienne méthode en cas d'erreur
         console.log('🔄 [FranceOrders] Fallback vers ancienne requête...');
@@ -148,9 +148,6 @@ export class FranceOrdersService {
   }
 
   private processOrder(order: any): FranceOrder {
-    // 🔍 LOGS DIAGNOSTICS: Analyser l'order brut de la BDD
-    console.log('🔍 [processOrder] Order brut reçu de la BDD:', JSON.stringify(order, null, 2));
-    
     // Extraire les items du format complexe du bot
     let processedItems: any[] = [];
     
@@ -249,7 +246,7 @@ export class FranceOrdersService {
    */
   private async loadOrdersFallback(restaurantId: number): Promise<void> {
     try {
-      console.log('🔄 [FranceOrders] Utilisation méthode fallback...');
+      console.log('🔄 REGRESSION_DEBUG - Using FALLBACK method with JOIN...');
       
       const { data, error } = await this.supabaseFranceService.client
         .from('france_orders')
@@ -260,7 +257,7 @@ export class FranceOrdersService {
             longitude,
             address_label
           ),
-          assigned_driver:france_delivery_drivers!france_orders_driver_fkey(
+          delivery_driver:france_delivery_drivers(
             id,
             first_name,
             last_name,

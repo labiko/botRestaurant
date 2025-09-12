@@ -50,6 +50,41 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   ngOnInit() {
     this.initializeOrders();
     this.startAutoRefresh();
+    
+    // Debug pour analyser les conditions d'affichage livreur - sera appelé après loadOrders
+    this.debugDriverDisplay();
+  }
+
+  // Debug pour analyser les conditions d'affichage livreur
+  debugDriverDisplay() {
+    setTimeout(() => {
+      this.orders.forEach((order: FranceOrder) => {
+        if (order.status === 'prete' || order.status === 'en_livraison') {
+          console.log('🔍 DRIVER_DISPLAY_DEBUG - Order ' + order.id + ':', {
+            status: order.status,
+            driver_id: order.driver_id,
+            driver_assignment_status: order.driver_assignment_status,
+            has_delivery_driver: !!order.delivery_driver,
+            delivery_driver_data: order.delivery_driver,
+            condition_result: !!(order.driver_id && order.driver_assignment_status === 'assigned')
+          });
+        }
+      });
+    }, 2000); // Attendre 2s que les commandes se chargent
+  }
+
+  // DEBUG TEMPORAIRE - Appelé automatiquement
+  debugAllOrders() {
+    const order1209 = this.orders.find((o: any) => o.order_number === '1209-0013');
+    
+    console.log('🎯 SEARCH_1209_DEBUG - Total commandes:', this.orders.length);
+    console.log('🎯 SEARCH_1209_DEBUG - Commande 1209-0013 trouvée:', !!order1209);
+    if (order1209) {
+      console.log('🎯 SEARCH_1209_DEBUG - Détails 1209:', order1209);
+    } else {
+      // Afficher toutes les commandes pour voir ce qu'on a
+      console.log('🎯 SEARCH_1209_DEBUG - Liste des commandes:', this.orders.map((o: any) => o.order_number));
+    }
   }
 
   ngOnDestroy() {
@@ -73,6 +108,9 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       this.orders = await this.addressWhatsAppService.enrichOrdersWithWhatsAppNames(orders);
       
       console.log('✅ [OrdersPage] Commandes enrichies:', this.orders.length);
+      
+      // DEBUG TEMPORAIRE - Chercher 1209-0013
+      this.debugAllOrders();
       this.isLoading = false;
     });
 
@@ -352,6 +390,30 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Récupérer le nom du livreur assigné
+   */
+  getDriverName(order: FranceOrder): string {
+    if (order.delivery_driver) {
+      const firstName = order.delivery_driver.first_name || '';
+      const lastName = order.delivery_driver.last_name || '';
+      return `${firstName} ${lastName}`.trim() || 'Livreur';
+    }
+    
+    return 'Livreur assigné';
+  }
+
+  /**
+   * Récupérer le téléphone du livreur assigné
+   */
+  getDriverPhone(order: FranceOrder): string {
+    if (order.delivery_driver?.phone_number) {
+      return order.delivery_driver.phone_number;
+    }
+    
+    return '';
+  }
+
   // ========== NOUVELLES MÉTHODES POUR SYSTÈME DE LIVRAISON AUTOMATIQUE ==========
 
   /**
@@ -584,21 +646,27 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    * Obtenir le statut d'assignation pour affichage
    */
   getAssignmentStatusText(order: FranceOrder): string {
-    if (!order.driver_id || !order.assigned_driver) {
+    // Utiliser les champs qui existent vraiment en base
+    if (!order.driver_id || order.driver_assignment_status !== 'assigned') {
       return 'Non assignée';
     }
     
-    // Utiliser le prénom depuis la base de données
-    const firstName = order.assigned_driver.first_name || 'Livreur';
-    let statusText = `${firstName} • 📞 ${order.assigned_driver.phone_number}`;
-    
-    // Ajouter le temps écoulé si la livraison a commencé
-    if (order.delivery_started_at && order.status === 'en_livraison') {
-      const minutesAgo = this.franceOrdersService.getDeliveryStartedMinutesAgo(order.delivery_started_at);
-      statusText += ` • Livraison commencée il y a ${minutesAgo} min`;
+    // Commande assignée - utiliser les données du livreur
+    if (order.delivery_driver) {
+      const firstName = order.delivery_driver.first_name || 'Livreur';
+      let statusText = `${firstName} • 📞 ${order.delivery_driver.phone_number}`;
+      
+      // Ajouter le temps écoulé si la livraison a commencé
+      if (order.delivery_started_at && order.status === 'en_livraison') {
+        const minutesAgo = this.franceOrdersService.getDeliveryStartedMinutesAgo(order.delivery_started_at);
+        statusText += ` • En route depuis ${minutesAgo} min`;
+      }
+      
+      return statusText;
     }
     
-    return statusText;
+    // Fallback si pas de données livreur
+    return `Livreur #${order.driver_id} • 📞 En cours...`;
   }
 
   /**

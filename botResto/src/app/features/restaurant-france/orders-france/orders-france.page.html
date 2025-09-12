@@ -257,30 +257,43 @@
           
           <!-- NOUVEAU : Statut d'assignation livreur - VERSION MODERNE -->
           <div class="assignment-status" *ngIf="order.status === 'prete' || order.status === 'en_livraison'">
-            <div class="assignment-row">
-              <span><strong>Assignation:</strong></span>
-              <div class="driver-info-badge" *ngIf="order.driver_id && order.assigned_driver; else noDriverBadge">
-                <div class="driver-avatar">
-                  <ion-icon name="person" class="driver-icon"></ion-icon>
+            <div class="driver-info-badge modern" *ngIf="order.driver_id && order.driver_assignment_status === 'assigned'; else noDriverBadge">
+                <div class="driver-main-info">
+                  <div class="driver-identity">
+                    <div class="modern-avatar">
+                      <ion-avatar class="driver-avatar">
+                        <ion-icon name="person" class="avatar-icon"></ion-icon>
+                      </ion-avatar>
+                    </div>
+                    <div class="driver-name-section">
+                      <div class="driver-name">{{ order.pendingDriverNames || 'Livreur assigné' }}</div>
+                      <div class="assignment-status">
+                        <ion-icon name="checkmark-circle" color="success" size="small"></ion-icon>
+                        <span>Livreur assigné</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="driver-contact">
+                    <a href="tel:{{ order.phone_number }}" class="phone-button" *ngIf="order.phone_number">
+                      <ion-icon name="call" class="phone-icon"></ion-icon>
+                      <span class="phone-text">{{ order.phone_number }}</span>
+                    </a>
+                  </div>
                 </div>
-                <div class="driver-details">
-                  <div class="driver-name">{{ order.assigned_driver.first_name || 'Livreur' }}</div>
-                  <div class="driver-phone">
-                    <ion-icon name="call" class="phone-icon"></ion-icon>
-                    {{ order.assigned_driver.phone_number }}
-                  </div>
-                  <div class="delivery-status" *ngIf="order.delivery_started_at && order.status === 'en_livraison'">
-                    <div class="pulse-dot"></div>
-                    <span class="status-text">En route depuis {{ franceOrdersService.getDeliveryStartedMinutesAgo(order.delivery_started_at) }} min</span>
-                  </div>
+                <div class="assignment-meta">
+                  <ion-icon name="time-outline" size="small" color="medium"></ion-icon>
+                  <span class="assignment-time">Assigné {{ getNotificationTime(order) }}</span>
+                </div>
+                <div class="delivery-status" *ngIf="order.delivery_started_at && order.status === 'en_livraison'">
+                  <div class="pulse-dot"></div>
+                  <span class="status-text">En route depuis {{ franceOrdersService.getDeliveryStartedMinutesAgo(order.delivery_started_at) }} min</span>
                 </div>
               </div>
-              <ng-template #noDriverBadge>
-                <ion-badge color="warning" class="assignment-badge">
-                  Non assignée
-                </ion-badge>
-              </ng-template>
-            </div>
+            <ng-template #noDriverBadge>
+              <ion-badge color="warning" class="assignment-badge">
+                Non assignée
+              </ion-badge>
+            </ng-template>
             
             <!-- NOUVEAU : Gestion intelligente des assignations pending -->
             <div *ngIf="!order.driver_id && order.status === 'prete'" class="notification-status">
