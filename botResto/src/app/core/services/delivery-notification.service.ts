@@ -115,7 +115,11 @@ export class DeliveryNotificationService {
       }
 
       // 3. Mettre à jour le champ assignment_started_at pour marquer le début des rappels
-      const currentTime = this.fuseauHoraireService.getCurrentTimeForDatabase();
+      // Utiliser le service FuseauHoraire qui récupère automatiquement l'ID du restaurant de la session
+      const debugResult = await this.fuseauHoraireService.debugCurrentUserTimezone();
+      const currentTime = debugResult.formattedTime;
+      console.log(`🕒 [DEBUG] Heure générée avec fuseau restaurant ${debugResult.restaurantId}: ${currentTime}`);
+      
       const { error: updateError } = await this.supabaseFranceService.client
         .from('france_orders')
         .update({ 

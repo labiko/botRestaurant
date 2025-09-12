@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { SupabaseFranceService } from './supabase-france.service';
+import { AuthFranceService } from '../../features/restaurant-france/auth-france/services/auth-france.service';
 
 /**
  * Service universel de gestion des fuseaux horaires
@@ -17,7 +18,10 @@ export class FuseauHoraireService {
   // Cache des fuseaux horaires par restaurant pour performance
   private restaurantTimezoneCache = new Map<number, string>();
   
-  constructor(private supabaseFranceService: SupabaseFranceService) {}
+  constructor(
+    private supabaseFranceService: SupabaseFranceService,
+    private authFranceService: AuthFranceService
+  ) {}
 
   /**
    * Obtenir l'heure actuelle dans le fuseau configuré
@@ -240,5 +244,48 @@ export class FuseauHoraireService {
     console.log('- Heure UTC:', now.toUTCString());
     console.log('- Offset (min):', now.getTimezoneOffset());
     console.log('- Pour BDD:', this.getCurrentTimeForDatabase());
+  }
+
+  /**
+   * DEBUG : Tester le fuseau horaire du restaurant de l'utilisateur connecté
+   */
+  async debugCurrentUserTimezone(): Promise<{restaurantId: number, timezone: string, currentTime: string, formattedTime: string, user: any}> {
+    console.log(`🔍 [DEBUG] === Test fuseau horaire pour utilisateur connecté ===`);
+    
+    try {
+      // 1. Récupérer l'utilisateur connecté
+      const currentUser = this.authFranceService.getCurrentUser();
+      const restaurantId = currentUser?.restaurantId || 1; // Fallback sur 1
+      
+      console.log(`👤 [DEBUG] Utilisateur connecté:`, currentUser);
+      console.log(`🏪 [DEBUG] Restaurant ID récupéré: ${restaurantId}`);
+      
+      // 2. Récupérer le fuseau horaire du restaurant
+      const timezone = await this.getRestaurantTimezone(restaurantId);
+      console.log(`🌍 [DEBUG] Fuseau horaire récupéré: ${timezone}`);
+      
+      // 3. Obtenir l'heure actuelle dans ce fuseau
+      const restaurantTime = await this.getRestaurantCurrentTime(restaurantId);
+      console.log(`🕒 [DEBUG] Heure actuelle dans ${timezone}:`, restaurantTime);
+      
+      // 4. Formater pour la base de données
+      const formattedTime = await this.getRestaurantFutureTimeForDatabase(restaurantId, 0); // 0 minutes = maintenant
+      console.log(`💾 [DEBUG] Heure formatée pour BDD: ${formattedTime}`);
+      
+      const result = {
+        restaurantId,
+        timezone,
+        currentTime: restaurantTime.toString(),
+        formattedTime,
+        user: currentUser
+      };
+      
+      console.log(`✅ [DEBUG] Résultat complet:`, result);
+      return result;
+      
+    } catch (error) {
+      console.error(`❌ [DEBUG] Erreur debug fuseau horaire utilisateur:`, error);
+      throw error;
+    }
   }
 }
