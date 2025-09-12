@@ -58,7 +58,9 @@ export class UniversalOrderDisplayService {
    */
   private getProductName(item: any): string {
     // Priorité au nouveau format universel du bot
-    return item.productName || item.name || item.display_name || 'Produit';
+    const productName = item.productName || item.name || item.display_name || 'Produit';
+    const categoryName = item.categoryName || '';
+    return categoryName ? `${productName} (${categoryName})` : productName;
   }
 
   /**
