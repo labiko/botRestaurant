@@ -296,7 +296,7 @@
             </ng-template>
             
             <!-- NOUVEAU : Gestion intelligente des assignations pending -->
-            <div *ngIf="!order.driver_id && order.status === 'prete'" class="notification-status">
+            <div class="notification-status">
               
               <!-- Si assignation pending existe -->
               <div *ngIf="order.hasPendingAssignment" class="pending-assignment-info">
