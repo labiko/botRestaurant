@@ -280,6 +280,7 @@ export class UniversalBot implements IMessageHandler {
         console.log('🔄 [CATBUG_FIX] Action RETURN_MENU détectée - transition vers VIEWING_MENU');
         
         // Transition d'état directe vers VIEWING_MENU
+        console.log('📝 [UPDATE_SESSION_01] UniversalBot ligne 283');
         await this.sessionManager.updateSession(session.id, {
           bot_state: 'VIEWING_MENU'
         });
@@ -370,6 +371,7 @@ export class UniversalBot implements IMessageHandler {
     }
 
     // Mettre à jour la session
+    console.log('📝 [UPDATE_SESSION_02] UniversalBot ligne 373');
     await this.sessionManager.updateSession(session.id, {
       botState: { ...session.botState, mode: 'workflow_active' },
       currentWorkflowId: workflow.workflowId,
@@ -474,6 +476,7 @@ export class UniversalBot implements IMessageHandler {
     }
 
     if (Object.keys(updates).length > 0) {
+      console.log('📝 [UPDATE_SESSION_03] UniversalBot ligne 477');
       await this.sessionManager.updateSession(session.id, updates);
     }
   }
@@ -1118,14 +1121,25 @@ export class UniversalBot implements IMessageHandler {
       console.log('📦 [showMenuAfterDeliveryModeChoice] Mise à jour session vers VIEWING_MENU');
       console.log(`🔍 [SESSION] Mode sélectionné: ${deliveryMode}`);
       
+      console.log('🔍 [CORRUPTION_DEBUG] SOURCE session.sessionData - Type:', typeof session.sessionData);
+      console.log('🔍 [CORRUPTION_DEBUG] SOURCE session.sessionData - Data:', JSON.stringify(session.sessionData).substring(0, 100) + '...');
+      
+      // ✅ CORRUPTION FIX: Parser le JSON si c'est un string avant le spread
+      const sessionData = typeof session.sessionData === 'string' ? JSON.parse(session.sessionData) : session.sessionData;
+      console.log('🔍 [CORRUPTION_DEBUG] APRÈS JSON.parse ligne 1125 - Type:', typeof sessionData);
+      console.log('🔍 [CORRUPTION_DEBUG] APRÈS JSON.parse ligne 1125 - Data:', JSON.stringify(sessionData).substring(0, 100) + '...');
+      
       const updatedData = {
-        ...session.sessionData,
+        ...sessionData,
         categories: categories,
         deliveryMode: deliveryMode,
         selectedServiceMode: deliveryMode, // NOUVEAU: Ajout pour validation rayon
-        cart: session.sessionData?.cart || {},
-        totalPrice: session.sessionData?.totalPrice || 0
+        cart: sessionData?.cart || {},
+        totalPrice: sessionData?.totalPrice || 0
       };
+      
+      console.log('🔍 [CORRUPTION_DEBUG] APRÈS spread ligne 1128 - Type:', typeof updatedData);
+      console.log('🔍 [CORRUPTION_DEBUG] APRÈS spread ligne 1128 - Data:', JSON.stringify(updatedData).substring(0, 100) + '...');
       
       console.log(`✅ [SESSION] Données session mises à jour:`, {
         deliveryMode: updatedData.deliveryMode,
@@ -1136,10 +1150,16 @@ export class UniversalBot implements IMessageHandler {
       
       // ✅ CORRECTION: Ne pas changer bot_state ici car c'est après handleDeliveryModeChoice
       // bot_state sera mis à jour vers VIEWING_MENU une fois que l'utilisateur aura fait son choix
+      console.log('🔍 [CORRUPTION_DEBUG] AVANT update UniversalBot ligne 1141 - Type:', typeof updatedData);
+      console.log('🔍 [CORRUPTION_DEBUG] AVANT update UniversalBot ligne 1141 - Data:', JSON.stringify(updatedData).substring(0, 100) + '...');
+      
+      console.log('📝 [UPDATE_SESSION_04] UniversalBot ligne 1153 - CRITIQUE');
       await this.sessionManager.updateSession(session.id, {
         // botState: 'VIEWING_MENU', // ← SUPPRIMÉ: on garde CHOOSING_DELIVERY_MODE
-        sessionData: updatedData
+        sessionData: updatedData  // ✅ CORRECTION FINALE: Passer l'objet directement, SessionManager gère JSON.stringify
       });
+      
+      console.log('✅ [CORRUPTION_DEBUG] APRÈS update UniversalBot ligne 1141 - Terminé');
     }
   }
   
@@ -1460,10 +1480,13 @@ export class UniversalBot implements IMessageHandler {
     // Créer session temporaire avec selectedProduct
     const tempSession = {
       ...session,
-      sessionData: {
-        ...session.sessionData,
-        selectedProduct: selectedProduct
-      }
+      sessionData: (() => {
+        console.log('🚨 [SPREAD_DEBUG_001] UniversalBot ligne 1480');
+        return {
+          ...session.sessionData,
+          selectedProduct: selectedProduct
+        };
+      })()
     };
     
     await this.handleQuantityInput(phoneNumber, tempSession, '1');
@@ -1544,6 +1567,7 @@ export class UniversalBot implements IMessageHandler {
         );
         
         // Mettre à jour la session pour gérer la sélection
+        console.log('🚨 [SPREAD_DEBUG_002] UniversalBot ligne 1564');
         const updatedData = {
           ...session.sessionData,
           currentCategoryId: categoryId,
@@ -1705,6 +1729,7 @@ export class UniversalBot implements IMessageHandler {
       // 4. Mettre à jour la session avec les produits et l'état
       console.log('📝 [ShowProducts] Mise à jour session avec produits');
       
+      console.log('🚨 [SPREAD_DEBUG_003] UniversalBot ligne 1725');
       const updatedData = {
         ...session.sessionData,
         currentCategoryId: categoryId,
@@ -1747,11 +1772,14 @@ export class UniversalBot implements IMessageHandler {
       case '00': // Vider panier
         await this.sessionManager.updateSession(phoneNumber, {
           botState: session.botState,
-          sessionData: {
-            ...session.sessionData,
-            cart: [],
-            totalPrice: 0
-          }
+          sessionData: (() => {
+            console.log('🚨 [SPREAD_DEBUG_004] UniversalBot ligne 1767');
+            return {
+              ...session.sessionData,
+              cart: [],
+              totalPrice: 0
+            };
+          })()
         });
         await this.messageSender.sendMessage(phoneNumber,
           '🗑️ Panier vidé avec succès !'
@@ -1931,10 +1959,13 @@ export class UniversalBot implements IMessageHandler {
       
       await this.sessionManager.updateSession(session.id, {
         botState: 'AWAITING_ADDRESS_CHOICE',
-        sessionData: {
-          ...session.sessionData,
-          existingAddresses
-        }
+        sessionData: (() => {
+          console.log('🚨 [SPREAD_DEBUG_005] UniversalBot ligne 1951');
+          return {
+            ...session.sessionData,
+            existingAddresses
+          };
+        })()
       });
     } else {
       // Première adresse
@@ -2434,6 +2465,7 @@ export class UniversalBot implements IMessageHandler {
     console.log(`⏱️ [PERF] WhatsApp message sent - ${Date.now() - startTime}ms elapsed`);
     
     // Mettre à jour la session
+    console.log('🚨 [SPREAD_DEBUG_006] UniversalBot ligne 2454');
     const updatedData = {
       ...session.sessionData,
       cart: cart,

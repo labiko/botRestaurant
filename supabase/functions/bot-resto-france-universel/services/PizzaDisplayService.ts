@@ -3,6 +3,7 @@
 // Ce service NE MODIFIE PAS le comportement existant des autres produits
 
 import { IMessageSender } from '../types.ts';
+import { SessionManager } from './SessionManager.ts';
 
 /**
  * Service UNIVERSEL pour l'affichage unifié des pizzas
@@ -11,12 +12,15 @@ import { IMessageSender } from '../types.ts';
 export class PizzaDisplayService {
   private displayConfig: any = null;
   private restaurantSettings: any = null;
+  private sessionManager: SessionManager;
   
   constructor(
     private messageSender: IMessageSender,
     private supabaseUrl: string,
     private supabaseKey: string
-  ) {}
+  ) {
+    this.sessionManager = new SessionManager(supabaseUrl, supabaseKey);
+  }
 
   /**
    * Charger la configuration d'affichage pour un restaurant
@@ -381,8 +385,7 @@ export class PizzaDisplayService {
     console.log(`🔧 [PizzaDisplay] DÉBUT updateSessionWithDirectMapping - ${pizzaOptionsMap.length} options`);
     
     try {
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+      // ✅ CENTRALISATION: Utilisation de SessionManager au lieu d'accès direct DB
       
       console.log(`🍕 [PizzaDisplay] Mapping créé avec ${pizzaOptionsMap.length} options:`, 
                   pizzaOptionsMap.slice(0, 3).map(opt => `${opt.optionNumber}: ${opt.pizzaName} ${opt.sizeName}`));
@@ -415,30 +418,18 @@ export class PizzaDisplayService {
           hasPizzaMap: !!updatedSessionData.pizzaOptionsMap
         });
         
-        // Utiliser directement Supabase pour mettre à jour la session + champ dédié
-        const { data, error } = await supabase
-          .from('france_user_sessions')
-          .update({
-            session_data: updatedSessionData,
-            workflow_data: {
-              ...session.workflowData,
-              pizzaOptionsMap: pizzaOptionsMap,
-              totalPizzaOptions: totalOptions
-            },
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', session.id)
-          .select('session_data, workflow_data'); // Récupérer les données après update
+        // ✅ CENTRALISATION: Remplacer accès direct DB par SessionManager
+        console.log('📝 [PizzaDisplayService:422] Mise à jour session via SessionManager');
+        await this.sessionManager.updateSession(session.id, {
+          sessionData: updatedSessionData,
+          workflowData: {
+            ...session.workflowData,
+            pizzaOptionsMap: pizzaOptionsMap,
+            totalPizzaOptions: totalOptions
+          }
+        });
         
-        if (error) {
-          console.error('💥 [PizzaDisplay] Erreur SQL mise à jour:', error);
-        } else {
-          console.log(`✅ [PizzaDisplay] Session mise à jour avec ${totalOptions} options de pizza`);
-          console.log(`🔍 [PizzaDisplay] Données sauvées:`, {
-            returnedData: data?.[0]?.session_data ? Object.keys(data[0].session_data) : 'null',
-            hasPizzaMapAfter: !!(data?.[0]?.session_data?.pizzaOptionsMap)
-          });
-        }
+        console.log(`✅ [PizzaDisplay] Session mise à jour avec ${totalOptions} options de pizza`);
       } else {
         console.log(`❌ [PizzaDisplay] Session invalide:`, { hasSession: !!session, sessionId: session?.id });
       }
@@ -497,14 +488,11 @@ export class PizzaDisplayService {
           totalPizzaOptions: totalOptions
         };
         
-        // Utiliser directement Supabase pour mettre à jour la session
-        await supabase
-          .from('france_user_sessions')
-          .update({
-            session_data: updatedSessionData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', session.id);
+        // ✅ CENTRALISATION: Remplacer accès direct DB par SessionManager
+        console.log('📝 [PizzaDisplayService:492] Mise à jour session via SessionManager');
+        await this.sessionManager.updateSession(session.id, {
+          sessionData: updatedSessionData
+        });
         
         console.log(`✅ [PizzaDisplay] Session mise à jour avec ${totalOptions} options de pizza`);
       }

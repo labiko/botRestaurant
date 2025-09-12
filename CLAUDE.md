@@ -286,6 +286,15 @@ Avant chaque déploiement:
 
 - **Code principal**: `C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant\supabase\functions\webhook-whatsapp\index.ts`
 
+## 🚫 RÈGLE DE MODIFICATION DE CODE
+
+**⚠️ CRITIQUE**: Ne JAMAIS modifier le code directement sans validation préalable :
+
+1. **TOUJOURS proposer un plan détaillé** avant toute modification
+2. **Attendre la validation** explicite de l'utilisateur 
+3. **Expliquer clairement** ce qui va être modifié et pourquoi
+4. **Ne jamais modifier** sans accord préalable, même pour des corrections évidentes
+
 ## 📋 RÈGLE OBLIGATOIRE SQL
 
 **⚠️ IMPORTANT**: Avant de donner TOUTE requête SQL, TOUJOURS vérifier le fichier `database_fr_structure.sql` pour connaître les VRAIES tables et colonnes. Ne jamais deviner les noms de tables.

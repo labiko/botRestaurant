@@ -2,17 +2,23 @@
 // SOLID : Single Responsibility - Gestion des workflows composites uniquement
 
 import { IMessageSender } from '../types.ts';
+import { SessionManager } from './SessionManager.ts';
 
 /**
  * Exécuteur de workflows composites (TACOS, PIZZAS avec suppléments, etc.)
  * SOLID : Strategy Pattern - Différentes stratégies selon le type de produit
  */
 export class CompositeWorkflowExecutor {
+  private sessionManager: SessionManager; // ✅ AJOUT: Instance SessionManager pour centralisation
+
   constructor(
     private messageSender: IMessageSender,
     private supabaseUrl: string,
     private supabaseKey: string
-  ) {}
+  ) {
+    // Initialiser SessionManager pour éviter les accès directs DB
+    this.sessionManager = new SessionManager(supabaseUrl, supabaseKey);
+  }
 
   /**
    * Workflow spécifique pour les menus pizza
@@ -377,6 +383,7 @@ export class CompositeWorkflowExecutor {
     await this.messageSender.sendMessage(phoneNumber, message);
     
     // Mettre à jour la session avec les variantes configurées
+    console.log('🚨 [SPREAD_DEBUG_007] CompositeWorkflowExecutor ligne 381');
     const updatedData = {
       ...session.sessionData,
       variantSelection: true,
@@ -387,13 +394,12 @@ export class CompositeWorkflowExecutor {
       awaitingVariantSelection: true
     };
     
-    await supabase
-      .from('france_user_sessions')
-      .update({
-        bot_state: 'AWAITING_SIZE_SELECTION',
-        session_data: updatedData
-      })
-      .eq('id', session.id);
+    // ✅ CENTRALISATION: Remplacer accès direct DB par SessionManager
+    console.log('📝 [CompositeWorkflowExecutor:395] Mise à jour session via SessionManager');
+    await this.sessionManager.updateSession(session.id, {
+      botState: 'AWAITING_SIZE_SELECTION',
+      sessionData: updatedData
+    });
   }
   
   /**
@@ -447,6 +453,7 @@ export class CompositeWorkflowExecutor {
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);
 
       // Reset session state vers AWAITING_MENU_CHOICE
+      console.log('🚨 [SPREAD_DEBUG_008] CompositeWorkflowExecutor ligne 451');
       const updatedData = {
         ...session.sessionData,
         selectedProduct: null,
@@ -454,13 +461,12 @@ export class CompositeWorkflowExecutor {
         compositeWorkflow: null
       };
 
-      await supabase
-        .from('france_user_sessions')
-        .update({
-          bot_state: 'AWAITING_MENU_CHOICE',
-          session_data: updatedData
-        })
-        .eq('id', session.id);
+      // ✅ CENTRALISATION: Remplacer accès direct DB par SessionManager
+      console.log('📝 [CompositeWorkflowExecutor:463] Mise à jour session via SessionManager');
+      await this.sessionManager.updateSession(session.id, {
+        botState: 'AWAITING_MENU_CHOICE',
+        sessionData: updatedData
+      });
 
       // DUPLICATION EXACTE de showMenuAfterDeliveryModeChoice()
       const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
@@ -519,6 +525,7 @@ export class CompositeWorkflowExecutor {
       await this.messageSender.sendMessage(phoneNumber, menuText);
       
       // Mettre à jour la session vers VIEWING_MENU (comme dans showMenuAfterDeliveryModeChoice)
+      console.log('🚨 [SPREAD_DEBUG_009] CompositeWorkflowExecutor ligne 525');
       const updatedSessionData = {
         ...session.sessionData,
         categories: categories,

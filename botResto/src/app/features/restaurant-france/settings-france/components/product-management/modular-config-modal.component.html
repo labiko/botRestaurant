@@ -220,7 +220,7 @@
             <p>Aucune viande configurée</p>
           </div>
           
-          <ion-button fill="outline" color="danger" class="add-meat-button">
+          <ion-button fill="outline" color="danger" class="add-meat-button" (click)="addNewMeat()">
             <ion-icon name="add" slot="start"></ion-icon>
             Ajouter une viande
           </ion-button>
@@ -259,7 +259,7 @@
             <p>Aucune sauce configurée</p>
           </div>
           
-          <ion-button fill="outline" color="warning" class="add-sauce-button">
+          <ion-button fill="outline" color="warning" class="add-sauce-button" (click)="addNewSauce()">
             <ion-icon name="add" slot="start"></ion-icon>
             Ajouter une sauce
           </ion-button>

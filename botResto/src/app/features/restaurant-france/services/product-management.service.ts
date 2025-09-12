@@ -363,6 +363,52 @@ export class ProductManagementService {
   }
 
   /**
+   * Crée une nouvelle option pour un produit
+   */
+  createProductOption(productId: number, optionData: Omit<ProductOption, 'id'>): Observable<ProductOption> {
+    const newOption = {
+      product_id: productId,
+      option_group: optionData.option_group,
+      option_name: optionData.option_name,
+      price_modifier: optionData.price_modifier || 0,
+      is_required: optionData.is_required || false,
+      max_selections: optionData.max_selections || 1,
+      display_order: optionData.display_order || 0,
+      is_active: optionData.is_active !== undefined ? optionData.is_active : true,
+      group_order: optionData.group_order || 0
+    };
+
+    return from(
+      this.supabase
+        .from('france_product_options')
+        .insert(newOption)
+        .select()
+        .single()
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return data as ProductOption;
+      })
+    );
+  }
+
+  /**
+   * Met à jour une option existante
+   */
+  updateProductOption(optionId: number, updates: Partial<ProductOption>): Observable<void> {
+    return from(
+      this.supabase
+        .from('france_product_options')
+        .update(updates)
+        .eq('id', optionId)
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+      })
+    );
+  }
+
+  /**
    * Met à jour la configuration workflow d'un produit
    */
   updateProductWorkflow(productId: number, workflowType: string, requiresSteps: boolean, stepsConfig?: any): Observable<void> {

@@ -40,25 +40,27 @@
             
             <!-- Categories Scroll Container -->
             <div class="categories-scroll-container" #categoriesContainer>
-              <div class="category-chips">
-                <ion-chip 
+              <div class="category-buttons">
+                <ion-button 
+                  [fill]="selectedCategory === 'all' ? 'solid' : 'outline'"
                   [color]="selectedCategory === 'all' ? 'primary' : 'medium'"
+                  size="small"
                   (click)="onCategoryChipClick('all')"
-                  [class.selected]="selectedCategory === 'all'"
-                  class="category-chip">
+                  class="category-button">
                   <ion-icon name="apps" slot="start"></ion-icon>
-                  <ion-label>Toutes</ion-label>
-                </ion-chip>
+                  Toutes
+                </ion-button>
                 
-                <ion-chip 
+                <ion-button 
                   *ngFor="let category of categories" 
+                  [fill]="selectedCategory === category.id.toString() ? 'solid' : 'outline'"
                   [color]="selectedCategory === category.id.toString() ? 'primary' : 'medium'"
+                  size="small"
                   (click)="onCategoryChipClick(category.id.toString())"
-                  [class.selected]="selectedCategory === category.id.toString()"
-                  class="category-chip">
+                  class="category-button">
                   <ion-icon [name]="category.icon || 'restaurant'" slot="start"></ion-icon>
-                  <ion-label>{{ category.name }}</ion-label>
-                </ion-chip>
+                  {{ category.name }}
+                </ion-button>
               </div>
             </div>
             

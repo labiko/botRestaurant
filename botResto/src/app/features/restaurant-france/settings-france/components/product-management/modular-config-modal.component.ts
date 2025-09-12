@@ -135,6 +135,7 @@ export class ModularConfigModalComponent implements OnInit {
     }) || [];
   }
 
+
   // Navigation onglets
   setActiveTab(tab: string | number | undefined) {
     if (tab && typeof tab === 'string' && (tab === 'sizes' || tab === 'drinks' || tab === 'meats' || tab === 'sauces' || tab === 'options')) {
@@ -274,13 +275,50 @@ export class ModularConfigModalComponent implements OnInit {
   private async saveOptions(options: any[]) {
     const promises = options.map(option => {
       if (option.id) {
-        // Update existing option - would need updateProductOption method
-        console.log('Option update not implemented yet:', option);
-        return Promise.resolve(true);
+        // Update existing option
+        return new Promise((resolve, reject) => {
+          this.productManagementService.updateProductOption(option.id, {
+            option_name: option.option_name,
+            option_group: option.option_group,
+            price_modifier: Number(option.price_modifier),
+            is_required: Boolean(option.is_required),
+            is_active: Boolean(option.is_active),
+            display_order: option.display_order || 0
+          }).subscribe({
+            next: () => {
+              console.log('✅ [SaveOptions] Option mise à jour:', option.option_name);
+              resolve(true);
+            },
+            error: (error: any) => {
+              console.error('❌ [SaveOptions] Erreur mise à jour option:', error);
+              reject(error);
+            }
+          });
+        });
       } else {
-        // Create new option - would need createProductOption method
-        console.log('New option creation not implemented yet:', option);
-        return Promise.resolve(true);
+        // Create new option
+        return new Promise((resolve, reject) => {
+          this.productManagementService.createProductOption(this.product.id, {
+            product_id: option.product_id,
+            option_name: option.option_name,
+            option_group: option.option_group,
+            price_modifier: Number(option.price_modifier),
+            is_required: Boolean(option.is_required),
+            max_selections: 1,
+            display_order: option.display_order || 0,
+            is_active: Boolean(option.is_active),
+            group_order: 0
+          }).subscribe({
+            next: (result) => {
+              console.log('✅ [SaveOptions] Nouvelle option créée:', result);
+              resolve(true);
+            },
+            error: (error: any) => {
+              console.error('❌ [SaveOptions] Erreur création option:', error);
+              reject(error);
+            }
+          });
+        });
       }
     });
 
@@ -342,6 +380,38 @@ export class ModularConfigModalComponent implements OnInit {
   removeOption(index: number) {
     const optionsArray = this.configForm.get('options') as FormArray;
     optionsArray.removeAt(index);
+  }
+
+  addNewMeat() {
+    const optionsArray = this.configForm.get('options') as FormArray;
+    optionsArray.push(this.formBuilder.group({
+      id: [null],
+      product_id: [this.product.id],
+      option_name: ['Nouvelle viande'],
+      option_group: ['VIANDES'],
+      price_modifier: [0],
+      is_required: [false],
+      is_active: [true],
+      display_order: [0],
+      max_selections: [1],
+      group_order: [0]
+    }));
+  }
+
+  addNewSauce() {
+    const optionsArray = this.configForm.get('options') as FormArray;
+    optionsArray.push(this.formBuilder.group({
+      id: [null],
+      product_id: [this.product.id],
+      option_name: ['Nouvelle sauce'],
+      option_group: ['SAUCES'],
+      price_modifier: [0],
+      is_required: [false],
+      is_active: [true],
+      display_order: [0],
+      max_selections: [1],
+      group_order: [0]
+    }));
   }
 
   dismiss(hasChanges: boolean = false) {

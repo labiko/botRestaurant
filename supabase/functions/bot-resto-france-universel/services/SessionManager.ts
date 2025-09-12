@@ -119,10 +119,17 @@ export class SessionManager implements ISessionManager {
           });
           
           // FUSION: Préserver les données existantes non présentes dans l'update
+          console.log('🔍 [CORRUPTION_DEBUG] AVANT spread SessionManager ligne 123 - Type existingSession.session_data:', typeof existingSession.session_data);
+          
+          // ✅ CORRUPTION FIX: Parser le JSON si c'est un string avant le spread
+          const existingData = typeof existingSession.session_data === 'string' ? JSON.parse(existingSession.session_data) : existingSession.session_data;
+          
           updates.sessionData = {
-            ...existingSession.session_data,  // D'abord les données existantes
+            ...existingData,  // D'abord les données existantes (parsées si nécessaire)
             ...updates.sessionData            // Puis les nouvelles (écrasent si même clé)
           };
+          
+          console.log('✅ [CORRUPTION_DEBUG] APRÈS spread SessionManager ligne 123 - Type updates.sessionData:', typeof updates.sessionData);
           
           // Préserver spécifiquement pizzaOptionsMap si elle existait et n'est pas dans l'update
           if (existingSession.session_data.pizzaOptionsMap && !updates.sessionData.pizzaOptionsMap) {
@@ -263,6 +270,118 @@ export class SessionManager implements ISessionManager {
   }
 
   /**
+   * CENTRALISATION - Parser session_data de la DB vers Object
+   * Gère automatiquement String → Object avec validation et sécurité
+   */
+  private parseSessionData(rawData: any): any {
+    console.log('🔍 [SessionManager:276] parseSessionData() - Input type:', typeof rawData);
+    
+    // Validation de sécurité - détecter la corruption par spread operator
+    if (typeof rawData === 'object' && rawData !== null) {
+      // Vérifier si l'objet est corrompu (transformation string → char array)
+      const keys = Object.keys(rawData);
+      const isCorrupted = keys.length > 0 && keys.every(key => /^\d+$/.test(key));
+      
+      if (isCorrupted) {
+        console.error('🚨 [SessionManager:283] CORRUPTION DÉTECTÉE - Object avec clés numériques (char array):', {
+          keys: keys.slice(0, 10), // Afficher les 10 premières clés
+          totalKeys: keys.length,
+          sampleValues: keys.slice(0, 3).map(k => rawData[k])
+        });
+        return {};
+      }
+      
+      console.log('✅ [SessionManager:291] parseSessionData() - Valid object, returning directly');
+      return rawData;
+    }
+    
+    // Si c'est un string JSON, parser avec validation
+    if (typeof rawData === 'string') {
+      // Validation de sécurité - vérifier la taille maximale (protection contre DoS)
+      if (rawData.length > 100000) { // 100KB max
+        console.error('🚨 [SessionManager:299] SÉCURITÉ - Session data trop volumineux:', rawData.length, 'caractères');
+        return {};
+      }
+      
+      try {
+        const parsed = JSON.parse(rawData);
+        
+        // Validation post-parsing
+        if (typeof parsed === 'object' && parsed !== null) {
+          console.log('✅ [SessionManager:306] parseSessionData() - Successfully parsed and validated JSON string');
+          return parsed;
+        } else {
+          console.warn('⚠️ [SessionManager:309] parseSessionData() - Parsed data is not an object');
+          return {};
+        }
+      } catch (error) {
+        console.warn('⚠️ [SessionManager:313] parseSessionData() - Échec parsing JSON string, retour objet vide:', error);
+        return {};
+      }
+    }
+    
+    // Fallback objet vide
+    console.log('⚠️ [SessionManager:318] parseSessionData() - Fallback to empty object for type:', typeof rawData);
+    return {};
+  }
+
+  /**
+   * CENTRALISATION - Stringify Object vers session_data pour la DB  
+   * Gère automatiquement Object → String avec validation et sécurité
+   */
+  private stringifySessionData(data: any): string {
+    console.log('🔍 [SessionManager:332] stringifySessionData() - Input type:', typeof data);
+    
+    // Validation de sécurité - détecter la corruption avant stringify
+    if (typeof data === 'object' && data !== null) {
+      const keys = Object.keys(data);
+      const isCorrupted = keys.length > 0 && keys.every(key => /^\d+$/.test(key));
+      
+      if (isCorrupted) {
+        console.error('🚨 [SessionManager:339] CORRUPTION DÉTECTÉE avant stringify - Object avec clés numériques:', {
+          keys: keys.slice(0, 10),
+          totalKeys: keys.length
+        });
+        return '{}'; // Retourner objet vide sérialisé
+      }
+    }
+    
+    // Si c'est déjà un string, valider et retourner
+    if (typeof data === 'string') {
+      // Validation de sécurité - vérifier la taille
+      if (data.length > 100000) {
+        console.error('🚨 [SessionManager:350] SÉCURITÉ - String data trop volumineux:', data.length);
+        return '{}';
+      }
+      console.log('✅ [SessionManager:353] stringifySessionData() - Already string, returning directly');
+      return data;
+    }
+    
+    // Si c'est un objet, stringify avec validation
+    if (typeof data === 'object' && data !== null) {
+      try {
+        const stringified = JSON.stringify(data);
+        
+        // Validation post-stringify
+        if (stringified.length > 100000) {
+          console.error('🚨 [SessionManager:362] SÉCURITÉ - Stringified data trop volumineux:', stringified.length);
+          return '{}';
+        }
+        
+        console.log('✅ [SessionManager:366] stringifySessionData() - Successfully stringified and validated object');
+        return stringified;
+      } catch (error) {
+        console.warn('⚠️ [SessionManager:314] stringifySessionData() - Échec stringify objet, retour {}:', error);
+        return '{}';
+      }
+    }
+    
+    // Fallback string vide
+    console.log('⚠️ [SessionManager:319] stringifySessionData() - Fallback to empty JSON');
+    return '{}';
+  }
+
+  /**
    * Mapper données base vers objet Session
    * SOLID - Data Transfer Object : Transformation claire des données
    */
@@ -285,7 +404,7 @@ export class SessionManager implements ISessionManager {
         language: 'fr',
         context: {}
       },
-      sessionData: dbRow.session_data || {}, // AJOUT: Mapping sessionData depuis BDD
+      sessionData: this.parseSessionData(dbRow.session_data), // ✅ CENTRALISATION: Utilise la fonction centralisée
       currentWorkflowId: dbRow.current_workflow_id || undefined,
       workflowStepId: dbRow.workflow_step_id || undefined,
       workflowData: dbRow.workflow_data || {
@@ -319,7 +438,7 @@ export class SessionManager implements ISessionManager {
     }
     
     if (session.sessionData !== undefined) { // AJOUT: Mapping sessionData vers BDD
-      dbData.session_data = session.sessionData;
+      dbData.session_data = this.stringifySessionData(session.sessionData); // ✅ CENTRALISATION: Utilise la fonction centralisée
     }
     
     if (session.currentWorkflowId !== undefined) {
