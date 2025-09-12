@@ -26,6 +26,7 @@ export interface TokenValidationResult {
   orderId?: number;
   driverId?: number;
   orderData?: DeliveryOrder;
+  isPostAcceptance?: boolean; // Indique si c'est un accès après acceptation
 }
 
 export interface TokenGenerationData {
@@ -260,8 +261,26 @@ export class DeliveryTokenService {
 
       // Vérifications de validité
       if (token.used) {
-        console.log('❌ [DeliveryToken] Token déjà utilisé');
-        return { valid: false, reason: 'Token déjà utilisé' };
+        // Si token utilisé, vérifier si c'est pour accès post-acceptation
+        if (token.france_orders.driver_id === token.driver_id) {
+          // Token utilisé mais par le bon livreur - permettre l'accès si pas expiré
+          if (new Date(token.expires_at) > now) {
+            console.log('✅ [DeliveryToken] Accès post-acceptation autorisé');
+            return {
+              valid: true,
+              orderId: token.order_id,
+              driverId: token.driver_id,
+              orderData: token.france_orders as DeliveryOrder,
+              isPostAcceptance: true
+            };
+          } else {
+            console.log('❌ [DeliveryToken] Session expirée (3h)');
+            return { valid: false, reason: 'Session expirée (3h)' };
+          }
+        } else {
+          console.log('❌ [DeliveryToken] Token déjà utilisé');
+          return { valid: false, reason: 'Token déjà utilisé' };
+        }
       }
 
       if (token.suspended) {
@@ -279,6 +298,7 @@ export class DeliveryTokenService {
         return { valid: false, reason: 'Lien définitivement expiré' };
       }
 
+      // Pour les tokens non utilisés, vérifier que la commande est disponible
       if (token.france_orders.status !== 'prete') {
         console.log('❌ [DeliveryToken] Commande non disponible, status:', token.france_orders.status);
         return { valid: false, reason: 'Commande non disponible' };
@@ -290,6 +310,11 @@ export class DeliveryTokenService {
       }
 
       console.log('✅ [DeliveryToken] Token valide');
+      
+      // DEBUG: Tracer driver_id
+      console.log('🔍 [DEBUG_VALIDATE] token.driver_id:', token.driver_id);
+      console.log('🔍 [DEBUG_VALIDATE] token object:', token);
+      
       return {
         valid: true,
         orderId: token.order_id,
@@ -383,15 +408,34 @@ export class DeliveryTokenService {
 
       // 1. Valider le token d'abord
       const validation = await this.validateToken(tokenString);
+      console.log('🔍 [DEBUG_ACCEPT] Validation result:', validation);
       if (!validation.valid) {
+        console.error('❌ [DEBUG_ACCEPT] Token invalide:', validation.reason);
         return { success: false, message: validation.reason || 'Token invalide' };
       }
 
+      // Si c'est un accès post-acceptation, ne pas ré-accepter
+      if (validation.isPostAcceptance) {
+        console.log('✅ [DEBUG_ACCEPT] Accès post-acceptation - pas de ré-acceptation');
+        return { success: true, message: 'Accès autorisé à votre commande' };
+      }
+
       // 2. Utiliser la fonction SQL atomique
+      console.log('🚀 [DEBUG_ACCEPT] Appel RPC avec:', {
+        p_token: tokenString,
+        p_order_id: validation.orderId,
+        p_driver_id: validation.driverId
+      });
+      
+      // DEBUG: Vérifier d'où vient driver_id = 1
+      console.log('🔍 [DEBUG_DRIVER_ID] validation object:', validation);
+      console.log('🔍 [DEBUG_DRIVER_ID] validation.driverId type:', typeof validation.driverId);
+      console.log('🔍 [DEBUG_DRIVER_ID] validation.driverId value:', validation.driverId);
+      
       const { data, error } = await this.supabaseFranceService.client.rpc('accept_order_atomic', {
         p_token: tokenString,
-        p_order_id: validation.orderId!,
-        p_driver_id: validation.driverId!
+        p_order_id: validation.orderId!
+        // p_driver_id supprimé - récupéré depuis le token
       });
 
       if (error) {

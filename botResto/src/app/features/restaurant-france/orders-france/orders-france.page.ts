@@ -182,6 +182,11 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       statusFilteredOrders = this.orders.filter(order => 
         order.status === 'livree' || order.status === 'annulee'
       );
+    } else if (this.selectedFilter === 'prete') {
+      // Inclure aussi les commandes assignées dans l'onglet PRÊTES
+      statusFilteredOrders = this.orders.filter(order => 
+        order.status === 'prete' || order.status === 'assignee'
+      );
     } else {
       statusFilteredOrders = this.orders.filter(order => order.status === this.selectedFilter);
     }
