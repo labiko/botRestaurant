@@ -2471,6 +2471,7 @@ export class UniversalBot implements IMessageHandler {
     cart.push({
       productId: selectedProduct.id,
       productName: selectedProduct.name,
+      categoryName: session.sessionData?.currentCategoryName || 'Produit',
       productDescription: productDescription,
       quantity: quantity,
       unitPrice: selectedProduct.price,
@@ -2707,6 +2708,7 @@ export class UniversalBot implements IMessageHandler {
       cart.push({
         productId: pizzaOption.pizzaId,
         productName: pizzaOption.pizzaName,
+        categoryName: 'Pizzas',
         productDescription: productDescription,
         sizeId: pizzaOption.sizeId,
         sizeName: pizzaOption.sizeName,

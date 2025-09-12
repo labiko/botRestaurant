@@ -1127,6 +1127,7 @@ export class CompositeWorkflowExecutor {
     cart.push({
       productId: selectedProduct.id,
       productName: selectedProduct.name,
+      categoryName: session.sessionData?.currentCategoryName || 'Produit',
       quantity: 1,
       unitPrice: selectedProduct.price,
       totalPrice: selectedProduct.price,

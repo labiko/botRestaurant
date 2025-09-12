@@ -183,9 +183,12 @@ export class OrderService {
     
     // Gérer différents formats d'items
     const name = item.productName || item.name || 'Produit';
+    const categoryName = item.categoryName || '';
     const quantity = item.quantity || 1;
     
-    itemText += `• ${quantity > 1 ? `${quantity}x ` : ''}${name}\n`;
+    // Afficher avec catégorie si disponible
+    const displayName = categoryName ? `${name} (${categoryName})` : name;
+    itemText += `• ${quantity > 1 ? `${quantity}x ` : ''}${displayName}\n`;
     
     // Ajouter la configuration si elle existe
     if (item.configuration || item.selected_options) {
