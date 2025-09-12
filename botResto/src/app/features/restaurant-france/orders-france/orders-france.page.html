@@ -256,7 +256,8 @@
           
           
           <!-- NOUVEAU : Statut d'assignation livreur - VERSION MODERNE -->
-          <div class="assignment-status" *ngIf="order.status === 'prete' || order.status === 'en_livraison'">
+          <div class="assignment-status" *ngIf="order.status === 'prete' || order.status === 'assignee' || order.status === 'en_livraison'">
+            <!-- DEBUG_ASSIGNEE: status={{order.status}} driver_assignment_status={{order.driver_assignment_status}} driver_id={{order.driver_id}} -->
             <div class="driver-info-badge modern" *ngIf="order.driver_id && order.driver_assignment_status === 'assigned'; else noDriverBadge">
                 <div class="driver-main-info">
                   <div class="driver-identity">

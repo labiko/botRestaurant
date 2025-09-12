@@ -59,14 +59,14 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   debugDriverDisplay() {
     setTimeout(() => {
       this.orders.forEach((order: FranceOrder) => {
-        if (order.status === 'prete' || order.status === 'en_livraison') {
-          console.log('🔍 DRIVER_DISPLAY_DEBUG - Order ' + order.id + ':', {
+        if (order.status === 'prete' || order.status === 'assignee' || order.status === 'en_livraison') {
+          console.log('🔍 DEBUG_ASSIGNEE - Order ' + order.id + ':', {
             status: order.status,
-            driver_id: order.driver_id,
             driver_assignment_status: order.driver_assignment_status,
+            driver_id: order.driver_id,
+            condition_result: !!(order.driver_id && order.driver_assignment_status === 'assigned'),
             has_delivery_driver: !!order.delivery_driver,
-            delivery_driver_data: order.delivery_driver,
-            condition_result: !!(order.driver_id && order.driver_assignment_status === 'assigned')
+            delivery_driver_data: order.delivery_driver
           });
         }
       });
@@ -636,7 +636,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    * Vérifier si une commande peut être assignée automatiquement
    */
   canStartDeliveryAssignment(order: FranceOrder): boolean {
-    return order.status === 'prete' && 
+    return (order.status === 'prete' || order.status === 'assignee') && 
            order.delivery_mode === 'livraison' && 
            !order.driver_id && // CORRIGÉ : utiliser driver_id au lieu de assigned_driver_id
            (!order.driver_assignment_status || order.driver_assignment_status === 'none');
@@ -795,7 +795,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       
       // Vérifier pour chaque commande prête sans livreur
       for (const order of this.orders) {
-        if (order.status === 'prete' && !order.driver_id) {
+        if ((order.status === 'prete' || order.status === 'assignee') && !order.driver_id) {
           const assignmentState = await this.deliveryAssignmentService.checkPendingAssignment(order.id);
           
           // Vérifier s'il existe ANY assignation pending (même expirée)

@@ -333,13 +333,14 @@ export class FranceOrdersService {
       console.log(`🔄 [FranceOrders] Changement statut pour commande ${orderId}: "${currentStatus}" → "${newStatus}" (changé: ${statusChanged})`);
 
       // Étape 1: Mise à jour du statut en base de données
+      const restaurantId = this.currentRestaurantId || 1; // Fallback sur 1
       const updateData: any = {
         status: newStatus,
-        updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
+        updated_at: await this.fuseauHoraireService.getRestaurantFutureTimeForDatabase(restaurantId, 0)
       };
 
       if (newStatus === 'en_livraison') {
-        updateData.delivery_started_at = this.fuseauHoraireService.getCurrentTimeForDatabase();
+        updateData.delivery_started_at = await this.fuseauHoraireService.getRestaurantFutureTimeForDatabase(restaurantId, 0);
       }
 
 
