@@ -367,8 +367,7 @@ export class CancellationService {
       await this.supabase
         .from('france_user_sessions')
         .delete()
-        .eq('phone_number', phoneNumber)
-        .eq('bot_state', 'AWAITING_CANCELLATION_CONFIRMATION');
+        .eq('phone_number', phoneNumber);
         
       console.log(`🗑️ [CancellationService] Session nettoyée pour: ${phoneNumber}`);
     } catch (error) {

@@ -2503,9 +2503,9 @@ export class UniversalBot implements IMessageHandler {
         .delete()
         .eq('phone_number', phoneNumber);
         
-      console.log(`🗑️ [DeleteSession] Sessions supprimées pour: ${phoneNumber}`);
+      console.log(`🗑️ [DeleteSession:2506] Sessions supprimées pour: ${phoneNumber}`);
     } catch (error) {
-      console.error('❌ [DeleteSession] Erreur suppression session:', error);
+      console.error('❌ [DeleteSession:2508] Erreur suppression session:', error);
     }
   }
 
@@ -2551,12 +2551,16 @@ export class UniversalBot implements IMessageHandler {
       await this.messageSender.sendMessage(phoneNumber, result.message);
       
       // Le service gère le nettoyage de session
-      if (result.action !== 'invalid_response') {
+      // Nettoyer seulement pour les réponses définitives ou invalides
+      if (result.action === 'cancelled' || result.action === 'invalid_response') {
+        console.log('🔄 [UniversalBot:2556] Calling cleanupCancellationSession from main logic');
         await this.cancellationService.cleanupCancellationSession(phoneNumber);
+        console.log('🗑️ [CancellationFlow] Session d\'annulation nettoyée après réponse:', result.action);
       }
       
     } catch (error) {
       console.error('❌ [CancellationConfirmationFlow] Erreur:', error);
+      console.log('🚨 [UniversalBot:2563] Calling cleanupCancellationSession from CATCH block');
       await this.cancellationService.cleanupCancellationSession(phoneNumber);
       await this.messageSender.sendMessage(phoneNumber, 
         '❌ Erreur lors de l\'annulation. Veuillez réessayer.'
