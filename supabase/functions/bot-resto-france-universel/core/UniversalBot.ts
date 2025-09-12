@@ -28,6 +28,8 @@ import { RestaurantScheduleService } from '../services/RestaurantScheduleService
 import { TimezoneService, RestaurantContext } from '../services/TimezoneService.ts';
 import { DeliveryModesService, ServiceMode } from '../services/DeliveryModesService.ts';
 import { PizzaDisplayService } from '../services/PizzaDisplayService.ts';
+import { RestaurantDiscoveryService } from '../services/RestaurantDiscoveryService.ts';
+import { LocationService, ICoordinates } from '../../_shared/application/services/LocationService.ts';
 
 /**
  * Orchestrateur principal du bot universel
@@ -44,6 +46,7 @@ export class UniversalBot implements IMessageHandler {
   private deliveryModesService: DeliveryModesService;
   private deliveryRadiusService: DeliveryRadiusService;
   private pizzaDisplayService: PizzaDisplayService;
+  private restaurantDiscoveryService: RestaurantDiscoveryService;
   private currentRestaurantContext: RestaurantContext | null = null;
   private supabaseUrl: string;
   private supabaseKey: string;
@@ -106,6 +109,12 @@ export class UniversalBot implements IMessageHandler {
       this.supabaseUrl, 
       this.supabaseKey, 
       this.messageSender as any // WhatsAppNotificationFranceService compatible
+    );
+    
+    // Initialiser le service de découverte des restaurants
+    this.restaurantDiscoveryService = new RestaurantDiscoveryService(
+      this.supabaseUrl,
+      this.supabaseKey
     );
   }
 
@@ -931,6 +940,12 @@ export class UniversalBot implements IMessageHandler {
       return;
     }
 
+    // Nouveau handler global "resto"
+    if (normalizedMessage === 'resto') {
+      await this.handleRestoCommand(phoneNumber);
+      return;
+    }
+
     console.log('🔍 [DEBUG] État session AVANT traitement:', {
       phoneNumber,
       message,
@@ -1012,6 +1027,25 @@ export class UniversalBot implements IMessageHandler {
         
       case 'AWAITING_OUT_OF_ZONE_CHOICE':
         await this.handleOutOfZoneChoice(phoneNumber, session, message);
+        break;
+        
+      // =================================
+      // NOUVEAU: CAS HANDLER GLOBAL "RESTO"
+      // =================================
+      
+      case 'CHOOSING_RESTAURANT_MODE':
+        console.log(`🔄 [STATE_DEBUG] Routage vers handleRestaurantModeSelection - État: CHOOSING_RESTAURANT_MODE`);
+        await this.handleRestaurantModeSelection(phoneNumber, session, message);
+        break;
+
+      case 'AWAITING_USER_LOCATION':
+        console.log(`🔄 [STATE_DEBUG] Routage vers handleLocationMessage - État: AWAITING_USER_LOCATION`);
+        await this.handleLocationMessage(phoneNumber, session, message);
+        break;
+        
+      case 'SELECTING_FROM_LIST':
+        console.log(`🔄 [STATE_DEBUG] Routage vers handleRestaurantSelection - État: SELECTING_FROM_LIST`);
+        await this.handleRestaurantSelection(phoneNumber, session, message);
         break;
         
       default:
@@ -2741,6 +2775,306 @@ export class UniversalBot implements IMessageHandler {
     productBlock += `💰 ${activePrice} EUR - Tapez ${index + 1}\n\n`;
     
     return productBlock;
+  }
+
+  // =================================
+  // NOUVEAU: HANDLER GLOBAL "RESTO"
+  // =================================
+
+  /**
+   * Handler principal pour la commande "resto"
+   * Nettoie session existante et propose menu découverte restaurants
+   */
+  async handleRestoCommand(phoneNumber: string): Promise<void> {
+    try {
+      console.log(`🏪 [RestaurantDiscovery] Commande "resto" reçue de: ${phoneNumber}`);
+      
+      // 1. Nettoyer session existante (même logique qu'annuler)
+      await this.deleteSession(phoneNumber);
+      
+      // 2. Créer session pour sélection de restaurant  
+      await this.createRestaurantDiscoverySession(phoneNumber);
+      
+      // 3. Envoyer menu de choix
+      const message = `🏪 **CHOISIR UN RESTAURANT**
+
+📋 **1** - Voir tous les restaurants
+📍 **2** - Restaurants près de moi
+
+💡 Tapez votre choix (**1** ou **2**)`;
+      
+      await this.messageSender.sendMessage(phoneNumber, message);
+      
+    } catch (error) {
+      console.error('❌ [RestaurantDiscovery] Erreur handleRestoCommand:', error);
+      await this.messageSender.sendMessage(phoneNumber, 
+        '❌ Erreur lors de l\'accès aux restaurants. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * Créer session temporaire pour découverte restaurants
+   * PATTERN CHOOSING_DELIVERY_MODE (accès direct comme ligne 843)
+   */
+  private async createRestaurantDiscoverySession(phoneNumber: string): Promise<void> {
+    try {
+      // 1. Supprimer session existante
+      await this.sessionManager.deleteSessionsByPhone(phoneNumber);
+      
+      // 2. Créer nouvelle session avec l'état CHOOSING_RESTAURANT_MODE (pattern ligne 843)
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + 30); // 30 minutes pour discovery
+      
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+      const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+      
+      const { data: newSession, error } = await supabase
+        .from('france_user_sessions')
+        .insert({
+          phone_number: phoneNumber,
+          chat_id: phoneNumber,
+          restaurant_id: null, // Pas de restaurant spécifique pour discovery
+          current_step: 'CHOOSING_RESTAURANT_MODE',
+          bot_state: 'CHOOSING_RESTAURANT_MODE',
+          session_data: JSON.stringify({
+            discoveryMode: true,
+            step: 'choosing_mode'
+          }),
+          cart_items: JSON.stringify([]),
+          total_amount: 0,
+          expires_at: expiresAt,
+          workflow_data: JSON.stringify({})
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+        
+      console.log(`✅ [RestaurantDiscovery] Session discovery créée pour: ${phoneNumber}`);
+    } catch (error) {
+      console.error('❌ [RestaurantDiscovery] Erreur création session:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gérer choix mode de sélection restaurant (1=liste, 2=géo)
+   */
+  async handleRestaurantModeSelection(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      const choice = message.trim();
+      console.log(`🏪 [RestaurantDiscovery] Mode choisi: ${choice}`);
+      
+      if (choice === '1') {
+        // Mode liste complète
+        await this.showAllRestaurants(phoneNumber);
+      } else if (choice === '2') {
+        // Mode géolocalisation
+        await this.requestLocation(phoneNumber);
+      } else {
+        // Choix invalide
+        await this.messageSender.sendMessage(phoneNumber, 
+          `❌ **Choix invalide**
+
+Tapez :
+📋 **1** pour tous les restaurants
+📍 **2** pour ceux près de vous`);
+      }
+      
+    } catch (error) {
+      console.error('❌ [RestaurantDiscovery] Erreur mode selection:', error);
+      await this.messageSender.sendMessage(phoneNumber, 
+        '❌ Erreur. Tapez **1** ou **2** pour choisir.');
+    }
+  }
+
+  /**
+   * Afficher tous les restaurants disponibles
+   */
+  async showAllRestaurants(phoneNumber: string): Promise<void> {
+    try {
+      const restaurants = await this.restaurantDiscoveryService.getAvailableRestaurants();
+      
+      // Mettre à jour session avec liste
+      await this.updateSessionWithRestaurants(phoneNumber, restaurants, 'all');
+      
+      const message = this.restaurantDiscoveryService.formatRestaurantList(restaurants);
+      await this.messageSender.sendMessage(phoneNumber, message);
+      
+    } catch (error) {
+      console.error('❌ [RestaurantDiscovery] Erreur showAllRestaurants:', error);
+      await this.messageSender.sendMessage(phoneNumber, 
+        '❌ Erreur lors de la récupération des restaurants. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * Demander partage de position utilisateur
+   * UTILISE SessionManager existant
+   */
+  async requestLocation(phoneNumber: string): Promise<void> {
+    try {
+      // Récupérer session actuelle puis mettre à jour avec SessionManager
+      const session = await this.sessionManager.getSession(phoneNumber);
+      if (!session) {
+        console.error('❌ [RestaurantDiscovery] Session introuvable pour requestLocation');
+        return;
+      }
+
+      await this.sessionManager.updateSession(session.id, {
+        botState: 'AWAITING_USER_LOCATION'
+      });
+      
+      const message = this.restaurantDiscoveryService.formatLocationRequest();
+      await this.messageSender.sendMessage(phoneNumber, message);
+      
+    } catch (error) {
+      console.error('❌ [RestaurantDiscovery] Erreur requestLocation:', error);
+      await this.messageSender.sendMessage(phoneNumber, 
+        '❌ Erreur. Tapez **1** pour voir tous les restaurants.');
+    }
+  }
+
+  /**
+   * Traiter message de géolocalisation reçu
+   */
+  async handleLocationMessage(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      if (message.startsWith('GPS:')) {
+        const coords = message.substring(4).split(',');
+        const latitude = parseFloat(coords[0]);
+        const longitude = parseFloat(coords[1]);
+        
+        console.log(`📍 [RestaurantDiscovery] Coordonnées reçues: ${latitude}, ${longitude}`);
+        
+        if (LocationService.isValidCoordinates({ latitude, longitude })) {
+          await this.showNearbyRestaurants(phoneNumber, latitude, longitude);
+        } else {
+          await this.messageSender.sendMessage(phoneNumber, 
+            `❌ **Coordonnées invalides**
+
+💡 Veuillez partager votre position ou tapez **1** pour voir tous les restaurants.`);
+        }
+      } else {
+        // Message non GPS en attente de localisation
+        await this.messageSender.sendMessage(phoneNumber, 
+          `📍 **En attente de votre position**
+
+Partagez votre position ou tapez **1** pour voir tous les restaurants.`);
+      }
+      
+    } catch (error) {
+      console.error('❌ [RestaurantDiscovery] Erreur handleLocationMessage:', error);
+      await this.messageSender.sendMessage(phoneNumber, 
+        '❌ Erreur. Tapez **1** pour voir tous les restaurants.');
+    }
+  }
+
+  /**
+   * Afficher restaurants proches avec distances
+   */
+  async showNearbyRestaurants(phoneNumber: string, lat: number, lng: number): Promise<void> {
+    try {
+      const nearbyRestaurants = await this.restaurantDiscoveryService
+        .getNearbyRestaurants(lat, lng);
+        
+      // Mettre à jour session
+      await this.updateSessionWithRestaurants(phoneNumber, nearbyRestaurants, 'nearby', { lat, lng });
+      
+      const message = this.restaurantDiscoveryService.formatNearbyRestaurantList(nearbyRestaurants);
+      await this.messageSender.sendMessage(phoneNumber, message);
+      
+    } catch (error) {
+      console.error('❌ [RestaurantDiscovery] Erreur showNearbyRestaurants:', error);
+      await this.messageSender.sendMessage(phoneNumber, 
+        '❌ Erreur lors de la recherche. Tapez **1** pour voir tous les restaurants.');
+    }
+  }
+
+  /**
+   * Gérer sélection finale du restaurant par numéro
+   */
+  async handleRestaurantSelection(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      const choice = parseInt(message.trim());
+      const restaurants = session.sessionData.availableRestaurants;
+      
+      console.log(`🏪 [RestaurantDiscovery] Sélection: ${choice} parmi ${restaurants?.length} restaurants`);
+      
+      if (restaurants && choice >= 1 && choice <= restaurants.length) {
+        const selectedRestaurant = restaurants[choice - 1];
+        console.log(`✅ [RestaurantDiscovery] Restaurant sélectionné: ${selectedRestaurant.name}`);
+        
+        // CONNEXION AVEC WORKFLOW EXISTANT
+        await this.startExistingRestaurantWorkflow(phoneNumber, selectedRestaurant);
+      } else {
+        await this.messageSender.sendMessage(phoneNumber, 
+          `❌ **Choix invalide**
+
+Tapez un numéro entre **1** et **${restaurants?.length || 0}**.`);
+      }
+      
+    } catch (error) {
+      console.error('❌ [RestaurantDiscovery] Erreur handleRestaurantSelection:', error);
+      await this.messageSender.sendMessage(phoneNumber, 
+        '❌ Erreur de sélection. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * Démarrer workflow restaurant existant (connexion avec l'existant)
+   */
+  async startExistingRestaurantWorkflow(phoneNumber: string, restaurant: any): Promise<void> {
+    try {
+      console.log(`🔄 [RestaurantDiscovery] Démarrage workflow existant pour: ${restaurant.name}`);
+      
+      // Supprimer session discovery et créer session restaurant normale
+      await this.deleteSession(phoneNumber);
+      
+      // UTILISE LA FONCTION EXISTANTE (pas de régression)
+      await this.handleDirectRestaurantAccess(phoneNumber, restaurant);
+      
+    } catch (error) {
+      console.error('❌ [RestaurantDiscovery] Erreur startExistingRestaurantWorkflow:', error);
+      await this.messageSender.sendMessage(phoneNumber, 
+        '❌ Erreur lors du démarrage. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * Utilitaire pour mettre à jour session avec restaurants
+   * UTILISE SessionManager existant
+   */
+  private async updateSessionWithRestaurants(
+    phoneNumber: string, 
+    restaurants: any[], 
+    mode: string, 
+    userLocation?: { lat: number, lng: number }
+  ): Promise<void> {
+    try {
+      // Récupérer session actuelle puis mettre à jour avec SessionManager
+      const session = await this.sessionManager.getSession(phoneNumber);
+      if (!session) {
+        console.error('❌ [RestaurantDiscovery] Session introuvable pour updateSessionWithRestaurants');
+        throw new Error('Session introuvable');
+      }
+
+      await this.sessionManager.updateSession(session.id, {
+        botState: 'SELECTING_FROM_LIST',
+        sessionData: {
+          ...session.sessionData, // Préserver données existantes
+          availableRestaurants: restaurants,
+          selectionMode: mode,
+          userLocation: userLocation || null
+        }
+      });
+        
+    } catch (error) {
+      console.error('❌ [RestaurantDiscovery] Erreur updateSessionWithRestaurants:', error);
+      throw error;
+    }
   }
 }
 

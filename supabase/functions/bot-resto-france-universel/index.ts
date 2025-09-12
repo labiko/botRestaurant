@@ -276,6 +276,16 @@ function extractMessageData(payload: any): { phoneNumber: string; message: strin
       message = messageData.textMessageData?.textMessage || '';
     } else if (messageData.typeMessage === 'extendedTextMessage') {
       message = messageData.extendedTextMessageData?.text || '';
+    } else if (messageData.typeMessage === 'locationMessage') {
+      // Nouveau: Gérer les messages de géolocalisation pour handler "resto"
+      const locationData = messageData.locationMessageData;
+      if (locationData) {
+        message = `GPS:${locationData.latitude},${locationData.longitude}`;
+        console.log(`📍 [Extract] Message géolocalisation reçu: ${message}`);
+      } else {
+        console.warn('⚠️ [Extract] Message locationMessage sans données de position');
+        return null;
+      }
     } else {
       // Ignorer les autres types de messages (images, audio, etc.)
       return null;
