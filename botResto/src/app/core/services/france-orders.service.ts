@@ -81,6 +81,7 @@ export interface OrderAction {
   label: string;
   color: string;
   nextStatus: string;
+  deliveryMode?: string;
 }
 
 @Injectable({
@@ -230,7 +231,7 @@ export class FranceOrdersService {
       ...order,
       items: processedItems,
       total_amount: order.total_amount, // 🧪 TEST: Afficher le vrai total_amount de la base sans recalcul
-      availableActions: this.getAvailableActions(order.status),
+      availableActions: this.getAvailableActions(order.status, order.delivery_mode),
       // Alias pour compatibilité UI avec le système de livraison
       assigned_driver_id: order.driver_id,
       // ✅ PLAN INITIAL : Propriétés d'assignation calculées par la fonction SQL
@@ -284,7 +285,7 @@ export class FranceOrdersService {
     }
   }
 
-  getAvailableActions(status: string): OrderAction[] {
+  getAvailableActions(status: string, deliveryMode?: string): OrderAction[] {
     const actions: { [key: string]: OrderAction[] } = {
       'pending': [
         { key: 'confirm', label: 'Confirmer', color: 'success', nextStatus: 'confirmee' },
@@ -299,18 +300,33 @@ export class FranceOrdersService {
       ],
       'prete': [
         // { key: 'deliver', label: 'En livraison', color: 'secondary', nextStatus: 'en_livraison' } // BOUTON MASQUÉ - Géré par le système de livraison
+        { key: 'serve', label: 'Marquer servie', color: 'success', nextStatus: 'servie', deliveryMode: 'sur_place' },
+        { key: 'pickup', label: 'Marquer récupérée', color: 'success', nextStatus: 'recuperee', deliveryMode: 'a_emporter' }
       ],
       'en_livraison': [
         { key: 'delivered', label: 'Marquer livrée', color: 'success', nextStatus: 'livree' }
       ],
       'livree': [
       ],
+      'servie': [
+      ],
+      'recuperee': [
+      ],
       'annulee': [
         // { key: 'restore', label: 'Restaurer', color: 'primary', nextStatus: 'pending' } // BOUTON SUPPRIMÉ - Inutile
       ]
     };
 
-    return actions[status] || [];
+    const availableActions = actions[status] || [];
+    
+    // Filtrer par delivery_mode pour 'prete' uniquement
+    if (status === 'prete' && deliveryMode) {
+      return availableActions.filter(action => 
+        !action.deliveryMode || action.deliveryMode === deliveryMode
+      );
+    }
+    
+    return availableActions;
   }
 
   async updateOrderStatus(orderId: number, newStatus: string): Promise<boolean> {
@@ -388,6 +404,8 @@ export class FranceOrdersService {
       'prete': 'sendOnReady',
       'en_livraison': 'sendOnDelivery',
       'livree': 'sendOnDelivered',
+      'servie': 'sendOnDelivered',
+      'recuperee': 'sendOnDelivered',
       'annulee': 'sendOnCancelled'
     };
 
@@ -513,6 +531,8 @@ export class FranceOrdersService {
       'prete': 'prete',
       'en_livraison': 'en_livraison',
       'livree': 'livree',
+      'servie': 'livree',
+      'recuperee': 'livree',
       'annulee': 'annulee'
     };
 
@@ -655,6 +675,8 @@ export class FranceOrdersService {
       'prete': 'success',
       'en_livraison': 'tertiary',
       'livree': 'success',
+      'servie': 'success',
+      'recuperee': 'success',
       'annulee': 'danger'
     };
 
@@ -669,6 +691,8 @@ export class FranceOrdersService {
       'prete': 'Prête',
       'en_livraison': 'En livraison',
       'livree': 'Livrée',
+      'servie': 'Servie',
+      'recuperee': 'Récupérée',
       'annulee': 'Annulée'
     };
 

@@ -134,10 +134,10 @@
             <ion-badge [color]="getStatusColor(order.status)" class="status-badge">
               {{ getStatusText(order.status) }}
             </ion-badge>
-            <ion-badge color="medium" outline *ngIf="order.status !== 'livree' && order.status !== 'annulee'">
+            <ion-badge color="medium" outline *ngIf="order.status !== 'livree' && order.status !== 'annulee' && order.status !== 'servie' && order.status !== 'recuperee'">
               {{ getDeliveryModeText(order.delivery_mode) }}
             </ion-badge>
-            <ion-badge color="tertiary" outline *ngIf="order.payment_mode && order.status !== 'livree' && order.status !== 'annulee'">
+            <ion-badge color="tertiary" outline *ngIf="order.payment_mode && order.status !== 'livree' && order.status !== 'annulee' && order.status !== 'servie' && order.status !== 'recuperee'">
               {{ getPaymentModeText(order.payment_mode) }}
             </ion-badge>
           </div>
@@ -379,6 +379,12 @@
           
           <!-- Code de validation livraison - MASQUÉ POUR LE RESTAURANT -->
           <!-- Le code est uniquement pour le client via WhatsApp -->
+        </div>
+
+        <!-- Dates de finalisation pour tous types de commandes -->
+        <div class="completion-dates">
+          <p *ngIf="order.updated_at && order.status === 'servie'"><strong>Servie le:</strong> {{ formatDateTime(order.updated_at) }}</p>
+          <p *ngIf="order.status === 'recuperee'"><strong>Récupérée le:</strong> {{ formatDateTime(order.updated_at) }}</p>
         </div>
 
         <!-- Client notes -->

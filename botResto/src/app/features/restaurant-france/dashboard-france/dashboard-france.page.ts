@@ -134,10 +134,13 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
       ['pending', 'confirmee'].includes(order.status)
     ).length;
 
+    // Statuts finalisés = 'prete' (anciennes) + nouveaux statuts terminés
+    const finalizedStatuses = ['prete', 'livree', 'servie', 'recuperee'];
+    
     this.todayRevenue = Math.round(
-      todayOrdersList.reduce((sum, order) => 
-        sum + order.total_amount, 0
-      ) * 100
+      todayOrdersList
+        .filter(order => finalizedStatuses.includes(order.status))
+        .reduce((sum, order) => sum + order.total_amount, 0) * 100
     ) / 100;
   }
 

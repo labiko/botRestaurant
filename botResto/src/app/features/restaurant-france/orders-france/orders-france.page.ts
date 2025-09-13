@@ -176,11 +176,11 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     let statusFilteredOrders: FranceOrder[] = [];
     if (this.selectedFilter === 'all') {
       statusFilteredOrders = this.orders.filter(order => 
-        order.status !== 'livree' && order.status !== 'annulee'
+        order.status !== 'livree' && order.status !== 'annulee' && order.status !== 'servie' && order.status !== 'recuperee'
       );
     } else if (this.selectedFilter === 'historique') {
       statusFilteredOrders = this.orders.filter(order => 
-        order.status === 'livree' || order.status === 'annulee'
+        order.status === 'livree' || order.status === 'annulee' || order.status === 'servie' || order.status === 'recuperee'
       );
     } else if (this.selectedFilter === 'prete') {
       // Inclure aussi les commandes assignées dans l'onglet PRÊTES
@@ -230,12 +230,12 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   getOrderCountByStatus(status: string): number {
     if (status === 'all') {
       return this.orders.filter(order => 
-        order.status !== 'livree' && order.status !== 'annulee'
+        order.status !== 'livree' && order.status !== 'annulee' && order.status !== 'servie' && order.status !== 'recuperee'
       ).length;
     }
     if (status === 'historique') {
       return this.orders.filter(order => 
-        order.status === 'livree' || order.status === 'annulee'
+        order.status === 'livree' || order.status === 'annulee' || order.status === 'servie' || order.status === 'recuperee'
       ).length;
     }
     return this.orders.filter(order => order.status === status).length;
