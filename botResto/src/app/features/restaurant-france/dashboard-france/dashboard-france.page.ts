@@ -134,9 +134,11 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
       ['pending', 'confirmee'].includes(order.status)
     ).length;
 
-    this.todayRevenue = todayOrdersList.reduce((sum, order) => 
-      sum + order.total_amount, 0
-    );
+    this.todayRevenue = Math.round(
+      todayOrdersList.reduce((sum, order) => 
+        sum + order.total_amount, 0
+      ) * 100
+    ) / 100;
   }
 
   /**
