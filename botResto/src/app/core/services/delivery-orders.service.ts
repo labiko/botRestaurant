@@ -83,7 +83,7 @@ export class DeliveryOrdersService {
       // Si includeAssigned est true, inclure les commandes assignées
       if (includeAssigned) {
         console.log('🔍 [DeliveryOrders] Mode token - Inclusion des commandes assignées');
-        query = query.in('status', ['prete', 'assignee']);
+        query = query.in('status', ['prete', 'assignee', 'en_livraison']);
         // Pas de filtre sur driver_id pour inclure toutes les commandes
       } else {
         console.log('🔍 [DeliveryOrders] Mode normal - Uniquement commandes prêtes non assignées');
