@@ -17,18 +17,12 @@ export class MessageSender implements IMessageSender {
   private apiToken: string;
   private instanceId: string;
   private baseUrl: string;
-  private messageQueue: MessageQueueItem[] = [];
-  private isProcessingQueue = false;
   private readonly MAX_MESSAGE_LENGTH = 4000; // WhatsApp limit
-  private readonly RATE_LIMIT_DELAY = 1000; // 1 seconde entre messages
 
   constructor(apiToken: string, instanceId: string) {
     this.apiToken = apiToken;
     this.instanceId = instanceId;
     this.baseUrl = `https://7105.api.greenapi.com/waInstance${instanceId}`;
-    
-    // Démarrer le processeur de queue
-    this.startQueueProcessor();
   }
 
   /**
@@ -43,14 +37,8 @@ export class MessageSender implements IMessageSender {
       // Valider le contenu
       const validatedContent = this.validateAndTruncateMessage(content);
       
-      // Ajouter à la queue pour respect du rate limiting
-      this.addToQueue({
-        phoneNumber,
-        content: validatedContent,
-        type: 'simple',
-        timestamp: Date.now(),
-        retries: 0
-      });
+      // Envoi direct sans queue
+      await this.sendDirectMessage(phoneNumber, validatedContent);
       
     } catch (error) {
       console.error('❌ [MessageSender] Erreur sendMessage:', error);
@@ -130,62 +118,8 @@ export class MessageSender implements IMessageSender {
   }
 
   // ================================================
-  // MÉTHODES PRIVÉES - QUEUE ET RATE LIMITING
+  // MÉTHODES PRIVÉES - ENVOI DIRECT
   // ================================================
-
-  private addToQueue(item: MessageQueueItem): void {
-    this.messageQueue.push(item);
-    console.log(`📋 [MessageQueue] Message ajouté à la queue: ${this.messageQueue.length} en attente`);
-  }
-
-  private async startQueueProcessor(): Promise<void> {
-    if (this.isProcessingQueue) {
-      return;
-    }
-    
-    this.isProcessingQueue = true;
-    console.log('🔄 [MessageQueue] Démarrage processeur de queue');
-    
-    while (true) {
-      try {
-        if (this.messageQueue.length > 0) {
-          const item = this.messageQueue.shift()!;
-          await this.processQueueItem(item);
-          
-          // Attendre pour respecter le rate limiting
-          await this.sleep(this.RATE_LIMIT_DELAY);
-        } else {
-          // Attendre un peu si la queue est vide
-          await this.sleep(100);
-        }
-      } catch (error) {
-        console.error('❌ [MessageQueue] Erreur processeur:', error);
-        await this.sleep(1000);
-      }
-    }
-  }
-
-  private async processQueueItem(item: MessageQueueItem): Promise<void> {
-    console.log(`⚡ [MessageQueue] Traitement message vers ${item.phoneNumber}`);
-    
-    try {
-      await this.sendDirectMessage(item.phoneNumber, item.content);
-      console.log(`✅ [MessageQueue] Message envoyé avec succès`);
-      
-    } catch (error) {
-      console.error(`❌ [MessageQueue] Échec envoi vers ${item.phoneNumber}:`, error);
-      
-      // Retry logic
-      if (item.retries < 3) {
-        item.retries++;
-        item.timestamp = Date.now() + (item.retries * 5000); // Délai progressif
-        this.messageQueue.push(item);
-        console.log(`🔄 [MessageQueue] Retry ${item.retries}/3 programmé`);
-      } else {
-        console.error(`💥 [MessageQueue] Message abandonné après 3 tentatives`);
-      }
-    }
-  }
 
   private async sendDirectMessage(phoneNumber: string, content: string): Promise<string | null> {
     console.log(`📤 [DirectSend] Envoi immédiat vers ${phoneNumber}`);
@@ -312,34 +246,6 @@ export class MessageSender implements IMessageSender {
   // MÉTHODES PUBLIQUES - MONITORING
   // ================================================
 
-  /**
-   * Obtenir statistiques de la queue
-   */
-  getQueueStats(): {
-    queueLength: number;
-    oldestMessage: number | null;
-    isProcessing: boolean;
-  } {
-    const oldestTimestamp = this.messageQueue.length > 0 
-      ? Math.min(...this.messageQueue.map(item => item.timestamp))
-      : null;
-    
-    return {
-      queueLength: this.messageQueue.length,
-      oldestMessage: oldestTimestamp,
-      isProcessing: this.isProcessingQueue
-    };
-  }
-
-  /**
-   * Vider la queue (maintenance)
-   */
-  clearQueue(): number {
-    const cleared = this.messageQueue.length;
-    this.messageQueue = [];
-    console.log(`🧹 [MessageQueue] Queue vidée: ${cleared} messages supprimés`);
-    return cleared;
-  }
 
   /**
    * Tester la connexion Green API
@@ -389,15 +295,3 @@ export class MessageSender implements IMessageSender {
   }
 }
 
-// ================================================
-// INTERFACES ET TYPES LOCAUX
-// ================================================
-
-interface MessageQueueItem {
-  phoneNumber: string;
-  content: string;
-  type: 'simple' | 'template' | 'media';
-  timestamp: number;
-  retries: number;
-  metadata?: Record<string, any>;
-}
