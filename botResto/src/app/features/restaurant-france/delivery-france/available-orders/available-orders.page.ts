@@ -226,8 +226,8 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
           
           // Si utilisateur déjà connecté, afficher directement la commande du token
           if (this.currentDriver) {
-            console.log(`🚀 [TOKEN_DEBUG] Appel displayTokenOrder() immédiat`);
-            this.displayTokenOrder();
+            console.log(`🚀 [TOKEN_DEBUG] Appel displayTokenOrder() immédiat - DÉSACTIVÉ, laisse loadAvailableOrders faire le travail`);
+            // this.displayTokenOrder(); // DÉSACTIVÉ - La subscription de loadAvailableOrders va filtrer
           } else {
             console.log(`⏳ [TOKEN_DEBUG] Attente connexion utilisateur pour displayTokenOrder()`);
           }
