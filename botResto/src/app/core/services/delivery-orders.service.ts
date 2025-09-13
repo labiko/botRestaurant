@@ -42,7 +42,7 @@ export class DeliveryOrdersService {
           france_restaurants!inner(name)
         `)
         .eq('driver_id', driverId)
-        .in('status', ['prete', 'en_livraison'])
+        .in('status', ['assignee', 'en_livraison'])
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -173,6 +173,9 @@ export class DeliveryOrdersService {
       ] : [
         { key: 'accept', label: 'Accepter', color: 'success', nextStatus: 'prete' }
       ],
+      'assignee': [
+        { key: 'start_delivery', label: 'Commencer la course', color: 'primary', nextStatus: 'en_livraison' }
+      ],
       'en_livraison': [
         { key: 'delivered', label: 'Marquer livrée', color: 'success', nextStatus: 'livree' }
       ]
@@ -221,6 +224,7 @@ export class DeliveryOrdersService {
         const estimatedTime = new Date();
         estimatedTime.setMinutes(estimatedTime.getMinutes() + 30); // 30 min par défaut
         updateData.estimated_delivery_time = estimatedTime.toISOString();
+        updateData.delivery_started_at = this.fuseauHoraireService.getCurrentTimeForDatabase();
       }
 
       const { error } = await this.supabaseFranceService.client

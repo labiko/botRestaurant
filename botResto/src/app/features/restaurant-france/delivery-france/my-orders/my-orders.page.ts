@@ -248,6 +248,8 @@ export class MyOrdersPage implements OnInit, OnDestroy {
             {
               orderNumber: order.order_number,
               restaurantName: this.currentDriver?.restaurantName || 'Restaurant',
+              driverName: `${this.currentDriver?.firstName || ''} ${this.currentDriver?.lastName || ''}`.trim() || 'Livreur',
+              driverPhone: this.currentDriver?.phoneNumber || '',
               estimatedTime: '10-15 min',
               validationCode: order.delivery_validation_code || ''
             }
