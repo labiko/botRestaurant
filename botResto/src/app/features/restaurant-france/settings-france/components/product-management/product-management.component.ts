@@ -402,23 +402,30 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
   }
 
   async onToggleProductStatus(product: FranceProduct) {
+    console.log('CLAUDE_DEBUG onToggleProductStatus pour produit:', product.name);
+    
     const alert = await this.alertController.create({
       header: 'Changer le statut',
       message: `Voulez-vous ${product.is_active ? 'désactiver' : 'activer'} le produit "${product.name}" ?`,
       buttons: [
         {
           text: 'Annuler',
-          role: 'cancel'
+          role: 'cancel',
+          handler: () => {
+            console.log('CLAUDE_DEBUG Annulation changement statut produit');
+          }
         },
         {
           text: 'Confirmer',
           handler: () => {
+            console.log('CLAUDE_DEBUG Confirmation changement statut produit');
             const newStatus = !product.is_active;
             
             this.productManagementService.updateProductStatus(product.id, newStatus)
               .pipe(takeUntil(this.destroy$))
               .subscribe({
                 next: () => {
+                  console.log('CLAUDE_DEBUG Statut produit mis à jour avec succès');
                   product.is_active = newStatus;
                   this.presentToast(
                     `Produit ${newStatus ? 'activé' : 'désactivé'}`, 
@@ -426,7 +433,7 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
                   );
                 },
                 error: (error) => {
-                  console.error('Error updating product status:', error);
+                  console.error('CLAUDE_DEBUG ERREUR mise à jour statut produit:', error);
                   this.presentToast('Erreur lors de la mise à jour du statut', 'danger');
                 }
               });

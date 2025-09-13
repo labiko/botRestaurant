@@ -39,14 +39,18 @@
           <ion-icon name="layers"></ion-icon>
           <ion-label>Composants</ion-label>
         </ion-segment-button>
+        <!-- Onglet Workflow masqué temporairement
         <ion-segment-button value="workflow" *ngIf="showWorkflowTab">
           <ion-icon name="git-branch"></ion-icon>
           <ion-label>Workflow</ion-label>
         </ion-segment-button>
+        -->
+        <!-- Onglet Configuration masqué temporairement
         <ion-segment-button value="config" *ngIf="showConfigTab">
           <ion-icon name="settings"></ion-icon>
           <ion-label>Configuration</ion-label>
         </ion-segment-button>
+        -->
       </ion-segment>
 
       <!-- Contenu des onglets -->
@@ -151,6 +155,7 @@
                     <p>Quantité: {{ component.quantity }} {{ component.unit }}</p>
                   </ion-label>
                   
+                  <!-- Icônes d'édition et suppression masquées temporairement
                   <ion-button 
                     fill="clear" 
                     color="primary"
@@ -166,6 +171,7 @@
                     (click)="removeCompositeItem(i)">
                     <ion-icon name="trash" slot="icon-only"></ion-icon>
                   </ion-button>
+                  -->
                 </ion-item>
                 
                 <!-- État vide -->
@@ -176,7 +182,7 @@
                 </div>
               </div>
               
-              <!-- Bouton ajouter -->
+              <!-- Bouton Ajouter un composant masqué temporairement
               <ion-button 
                 expand="block" 
                 fill="outline" 
@@ -185,6 +191,7 @@
                 <ion-icon name="add" slot="start"></ion-icon>
                 Ajouter un composant
               </ion-button>
+              -->
               
             </ion-card-content>
           </ion-card>

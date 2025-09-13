@@ -1,6 +1,9 @@
 <ion-header>
   <ion-toolbar color="primary">
-    <ion-title color="light">Configuration: {{ product?.name }}</ion-title>
+    <ion-title color="light">
+      <ion-icon name="cog" slot="start"></ion-icon>
+      Configuration du produit: {{ product?.name }}
+    </ion-title>
     <ion-buttons slot="end">
       <ion-button fill="clear" color="light" (click)="dismiss()">
         <ion-icon name="close" slot="icon-only"></ion-icon>
@@ -78,10 +81,12 @@
             <ion-icon name="resize" slot="start"></ion-icon>
             📏 Tailles ({{ sizesFormArray.length }})
           </ion-card-title>
+          <!-- Bouton Ajouter Menu masqué temporairement
           <ion-button fill="outline" color="primary" size="small" (click)="addNewSize()">
             <ion-icon name="add" slot="start"></ion-icon>
             + Ajouter Menu
           </ion-button>
+          -->
         </div>
       </ion-card-header>
       <ion-card-content>
@@ -97,6 +102,18 @@
                 fill="outline"
                 class="size-name-input">
               </ion-input>
+              
+              <ion-item lines="none" class="size-toggle-item">
+                <ion-label>Actif</ion-label>
+                <ion-toggle 
+                  formControlName="is_active"
+                  (ionChange)="onSizeToggleChange(i, $event)"
+                  color="success"
+                  slot="end">
+                </ion-toggle>
+              </ion-item>
+              
+              <!-- Icône de suppression masquée temporairement
               <ion-button 
                 fill="clear" 
                 color="danger" 
@@ -104,6 +121,7 @@
                 (click)="removeSize(i)">
                 <ion-icon name="trash" slot="icon-only"></ion-icon>
               </ion-button>
+              -->
             </div>
 
             <div class="size-config">
@@ -204,14 +222,16 @@
           <div class="meat-items" *ngIf="meatOptions.length > 0">
             <div *ngFor="let meat of meatOptions; let i = index" class="meat-item">
               <ion-item>
-                <ion-checkbox [checked]="meat.is_active" slot="start"></ion-checkbox>
                 <ion-label>
                   <h3>{{ meat.option_name }}</h3>
                   <p>{{ meat.is_required ? 'Obligatoire' : 'Optionnel' }} - Prix: {{ meat.price_modifier > 0 ? '+' + meat.price_modifier + '€' : 'Inclus' }}</p>
                 </ion-label>
-                <ion-button fill="clear" color="medium" slot="end">
-                  <ion-icon name="create" slot="icon-only"></ion-icon>
-                </ion-button>
+                <ion-toggle 
+                  [checked]="meat.is_active"
+                  (ionChange)="onOptionToggleChange(meat, $event)"
+                  color="success"
+                  slot="end">
+                </ion-toggle>
               </ion-item>
             </div>
           </div>
@@ -220,10 +240,12 @@
             <p>Aucune viande configurée</p>
           </div>
           
+          <!-- Bouton Ajouter une viande masqué temporairement
           <ion-button fill="outline" color="danger" class="add-meat-button" (click)="addNewMeat()">
             <ion-icon name="add" slot="start"></ion-icon>
             Ajouter une viande
           </ion-button>
+          -->
         </div>
       </ion-card-content>
     </ion-card>
@@ -243,14 +265,16 @@
           <div class="sauce-items" *ngIf="sauceOptions.length > 0">
             <div *ngFor="let sauce of sauceOptions; let i = index" class="sauce-item">
               <ion-item>
-                <ion-checkbox [checked]="sauce.is_active" slot="start"></ion-checkbox>
                 <ion-label>
                   <h3>{{ sauce.option_name }}</h3>
                   <p>{{ sauce.is_required ? 'Obligatoire' : 'Optionnel' }} - Prix: {{ sauce.price_modifier > 0 ? '+' + sauce.price_modifier + '€' : 'Gratuit' }}</p>
                 </ion-label>
-                <ion-button fill="clear" color="medium" slot="end">
-                  <ion-icon name="create" slot="icon-only"></ion-icon>
-                </ion-button>
+                <ion-toggle 
+                  [checked]="sauce.is_active"
+                  (ionChange)="onOptionToggleChange(sauce, $event)"
+                  color="success"
+                  slot="end">
+                </ion-toggle>
               </ion-item>
             </div>
           </div>
@@ -259,10 +283,12 @@
             <p>Aucune sauce configurée</p>
           </div>
           
+          <!-- Bouton Ajouter une sauce masqué temporairement
           <ion-button fill="outline" color="warning" class="add-sauce-button" (click)="addNewSauce()">
             <ion-icon name="add" slot="start"></ion-icon>
             Ajouter une sauce
           </ion-button>
+          -->
         </div>
       </ion-card-content>
     </ion-card>
@@ -275,10 +301,12 @@
             <ion-icon name="options" slot="start"></ion-icon>
             ⚙️ Autres Options ({{ otherOptions.length }})
           </ion-card-title>
+          <!-- Bouton masqué temporairement
           <ion-button fill="outline" color="secondary" size="small" (click)="addNewOption()">
             <ion-icon name="add" slot="start"></ion-icon>
             Ajouter Option
           </ion-button>
+          -->
         </div>
       </ion-card-header>
       <ion-card-content>
@@ -300,9 +328,11 @@
                   Prix: {{ option.price_modifier > 0 ? '+' + option.price_modifier + '€' : 'Inclus' }}
                 </p>
               </ion-label>
+              <!-- Icône d'édition masquée temporairement
               <ion-button fill="clear" color="medium" slot="end">
                 <ion-icon name="create" slot="icon-only"></ion-icon>
               </ion-button>
+              -->
             </ion-item>
           </div>
         </div>

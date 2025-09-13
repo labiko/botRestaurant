@@ -1518,7 +1518,8 @@ export class UniversalBot implements IMessageHandler {
       const { data: sizes } = await supabase
         .from('france_product_sizes')
         .select('id')
-        .eq('product_id', selectedProduct.id);
+        .eq('product_id', selectedProduct.id)
+        .eq('is_active', true);
       
       console.log(`🔍 [ProductSelection] ${sizes?.length || 0} tailles trouvées pour ${selectedProduct.name}`);
       
@@ -2999,8 +3000,20 @@ export class UniversalBot implements IMessageHandler {
         // Mode liste complète
         await this.showAllRestaurants(phoneNumber);
       } else if (choice === '2') {
-        // Mode géolocalisation
-        await this.requestLocation(phoneNumber);
+        // Fonctionnalité temporairement indisponible
+        await this.messageSender.sendMessage(phoneNumber, 
+          `📍 **GÉOLOCALISATION - BIENTÔT DISPONIBLE**
+
+🚧 Cette fonctionnalité arrive prochainement !
+
+En attendant, consultez tous nos restaurants :
+
+📋 **1** - Voir tous les restaurants
+
+💡 Tapez **1** pour continuer`);
+        
+        // Garder l'utilisateur dans l'étape de sélection
+        return;
       } else {
         // Choix invalide
         await this.messageSender.sendMessage(phoneNumber, 

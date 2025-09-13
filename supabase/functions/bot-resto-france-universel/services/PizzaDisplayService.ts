@@ -187,6 +187,7 @@ export class PizzaDisplayService {
           .from('france_product_sizes')
           .select('*')
           .eq('product_id', pizza.id)
+          .eq('is_active', true)
           .order('display_order');
         
         if (sizes && sizes.length > 0) {

@@ -167,6 +167,10 @@ export class CategoryManagementModalComponent implements OnInit, OnDestroy {
   }
 
   private async updateCategory(categoryId: number, updates: Partial<MenuCategory>) {
+    console.log('CLAUDE_DEBUG updateCategory appelée');
+    console.log('CLAUDE_DEBUG categoryId:', categoryId);
+    console.log('CLAUDE_DEBUG updates:', updates);
+    
     const loading = await this.loadingController.create({
       message: 'Mise à jour...'
     });
@@ -176,10 +180,16 @@ export class CategoryManagementModalComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: async () => {
+          console.log('CLAUDE_DEBUG Service updateMenuCategory success');
+          
           // Update local data
           const index = this.categories.findIndex(c => c.id === categoryId);
+          console.log('CLAUDE_DEBUG Index trouvé:', index);
+          
           if (index !== -1) {
+            console.log('CLAUDE_DEBUG Avant mise à jour locale:', this.categories[index]);
             this.categories[index] = { ...this.categories[index], ...updates };
+            console.log('CLAUDE_DEBUG Après mise à jour locale:', this.categories[index]);
             this.categories.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
           }
           
@@ -187,7 +197,7 @@ export class CategoryManagementModalComponent implements OnInit, OnDestroy {
           await this.presentToast('Catégorie mise à jour avec succès', 'success');
         },
         error: async (error) => {
-          console.error('❌ [CategoryManagement] Erreur mise à jour:', error);
+          console.error('CLAUDE_DEBUG ERREUR mise à jour:', error);
           await loading.dismiss();
           await this.presentToast('Erreur lors de la mise à jour', 'danger');
         }
@@ -195,8 +205,14 @@ export class CategoryManagementModalComponent implements OnInit, OnDestroy {
   }
 
   async onToggleCategoryStatus(category: MenuCategory) {
+    console.log('CLAUDE_DEBUG onToggleCategoryStatus appelée pour:', category.name);
+    console.log('CLAUDE_DEBUG Statut actuel:', category.is_active);
+    
     const newStatus = !category.is_active;
     const action = newStatus ? 'activer' : 'désactiver';
+    
+    console.log('CLAUDE_DEBUG Nouveau statut:', newStatus);
+    console.log('CLAUDE_DEBUG Action:', action);
     
     const alert = await this.alertController.create({
       header: 'Confirmation',
@@ -204,11 +220,15 @@ export class CategoryManagementModalComponent implements OnInit, OnDestroy {
       buttons: [
         {
           text: 'Annuler',
-          role: 'cancel'
+          role: 'cancel',
+          handler: () => {
+            console.log('CLAUDE_DEBUG Action annulée');
+          }
         },
         {
           text: action.charAt(0).toUpperCase() + action.slice(1),
           handler: () => {
+            console.log('CLAUDE_DEBUG Confirmation validée, appel updateCategory...');
             this.updateCategory(category.id, { is_active: newStatus });
           }
         }

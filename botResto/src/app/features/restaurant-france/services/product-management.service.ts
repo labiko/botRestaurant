@@ -336,6 +336,43 @@ export class ProductManagementService {
   }
 
   /**
+   * Met à jour uniquement le statut actif/inactif d'une taille de produit
+   */
+  updateProductSizeStatus(sizeId: number, isActive: boolean): Observable<void> {
+    return from(
+      this.supabase
+        .from('france_product_sizes')
+        .update({ 
+          is_active: isActive,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sizeId)
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+      })
+    );
+  }
+
+  /**
+   * Met à jour uniquement le statut actif/inactif d'une option de produit (viande, sauce, etc.)
+   */
+  updateProductOptionStatus(optionId: number, isActive: boolean): Observable<void> {
+    return from(
+      this.supabase
+        .from('france_product_options')
+        .update({ 
+          is_active: isActive
+        })
+        .eq('id', optionId)
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+      })
+    );
+  }
+
+  /**
    * Crée une nouvelle taille pour un produit
    */
   createProductSize(productId: number, sizeData: Omit<ProductSize, 'id'>): Observable<ProductSize> {

@@ -11,7 +11,7 @@
 
 <ion-content class="category-management-content">
   
-  <!-- Add Category Section -->
+  <!-- Section Nouvelle Catégorie masquée temporairement
   <ion-card>
     <ion-card-header>
       <ion-card-title>
@@ -54,6 +54,7 @@
       </form>
     </ion-card-content>
   </ion-card>
+  -->
 
   <!-- Categories List -->
   <ion-card>
@@ -95,7 +96,7 @@
             [color]="category.is_active ? 'danger' : 'success'"
             (click)="onToggleCategoryStatus(category)"
             slot="end">
-            <ion-icon [name]="category.is_active ? 'eye-off' : 'eye'" slot="icon-only"></ion-icon>
+            {{ category.is_active ? 'DÉSACTIVER' : 'ACTIVER' }}
           </ion-button>
         </ion-item>
       </div>

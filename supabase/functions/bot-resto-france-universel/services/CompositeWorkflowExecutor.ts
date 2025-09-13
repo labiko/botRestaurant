@@ -242,6 +242,7 @@ export class CompositeWorkflowExecutor {
         .from('france_product_sizes')
         .select('*')
         .eq('product_id', product.id)
+        .eq('is_active', true)
         .order('display_order'),
         
       supabase

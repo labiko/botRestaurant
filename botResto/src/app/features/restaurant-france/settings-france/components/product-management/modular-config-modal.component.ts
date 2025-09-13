@@ -64,7 +64,8 @@ export class ModularConfigModalComponent implements OnInit {
           size_name: [size.size_name],
           price_on_site: [size.price_on_site],
           price_delivery: [size.price_delivery || 0],
-          includes_drink: [size.includes_drink]
+          includes_drink: [size.includes_drink],
+          is_active: [size.is_active !== undefined ? size.is_active : true] // Par défaut actif si pas défini
         }));
       });
     }
@@ -354,7 +355,8 @@ export class ModularConfigModalComponent implements OnInit {
       size_name: [newMenuName],
       price_on_site: [templateSize ? templateSize.price_on_site + 2 : 7], // +2€ par défaut
       price_delivery: [templateSize ? templateSize.price_delivery + 2 : 8], // +2€ par défaut  
-      includes_drink: [templateSize ? templateSize.includes_drink : true] // même config boisson
+      includes_drink: [templateSize ? templateSize.includes_drink : true], // même config boisson
+      is_active: [true] // Nouvelle taille active par défaut
     };
     
     sizesArray.push(this.formBuilder.group(newSize));
@@ -363,6 +365,79 @@ export class ModularConfigModalComponent implements OnInit {
   removeSize(index: number) {
     const sizesArray = this.configForm.get('sizes') as FormArray;
     sizesArray.removeAt(index);
+  }
+
+  /**
+   * Gère le changement de statut d'une taille avec sauvegarde automatique
+   */
+  async onSizeToggleChange(sizeIndex: number, event: any) {
+    const isActive = event.detail.checked;
+    const sizeForm = this.sizesFormArray.at(sizeIndex);
+    const sizeId = sizeForm.get('id')?.value;
+    const sizeName = sizeForm.get('size_name')?.value;
+    
+    console.log(`🔄 Toggle taille "${sizeName}" (ID: ${sizeId}) -> ${isActive ? 'ACTIF' : 'INACTIF'}`);
+    
+    if (sizeId) {
+      // Taille existante - sauvegarder immédiatement en base
+      this.productManagementService.updateProductSizeStatus(sizeId, isActive).subscribe({
+        next: async () => {
+          await this.presentToast(
+            `Taille "${sizeName}" ${isActive ? 'activée' : 'désactivée'}`, 
+            isActive ? 'success' : 'warning'
+          );
+        },
+        error: async (error) => {
+          console.error('Erreur mise à jour statut taille:', error);
+          // Remettre l'ancien état en cas d'erreur
+          sizeForm.get('is_active')?.setValue(!isActive, { emitEvent: false });
+          await this.presentToast('Erreur lors de la mise à jour du statut', 'danger');
+        }
+      });
+    } else {
+      // Nouvelle taille - juste mettre à jour le form (sera sauvé avec le reste)
+      console.log(`📝 Nouvelle taille "${sizeName}" marquée comme ${isActive ? 'active' : 'inactive'}`);
+    }
+  }
+
+  /**
+   * Gère le changement de statut d'une option (viande, sauce, etc.) avec sauvegarde automatique
+   */
+  async onOptionToggleChange(option: any, event: any) {
+    const isActive = event.detail.checked;
+    const optionId = option.id;
+    const optionName = option.option_name;
+    
+    console.log(`🔄 Toggle option "${optionName}" (ID: ${optionId}) -> ${isActive ? 'ACTIF' : 'INACTIF'}`);
+    
+    if (optionId) {
+      // Option existante - sauvegarder immédiatement en base
+      this.productManagementService.updateProductOptionStatus(optionId, isActive).subscribe({
+        next: async () => {
+          // Mettre à jour la valeur dans le FormArray
+          const optionIndex = this.optionsFormArray.value.findIndex((opt: any) => opt.id === optionId);
+          if (optionIndex !== -1) {
+            const optionForm = this.optionsFormArray.at(optionIndex);
+            optionForm.get('is_active')?.setValue(isActive);
+          }
+          
+          await this.presentToast(
+            `${optionName} ${isActive ? 'activé' : 'désactivé'}`, 
+            isActive ? 'success' : 'warning'
+          );
+        },
+        error: async (error) => {
+          console.error('Erreur mise à jour statut option:', error);
+          // Remettre l'ancien état en cas d'erreur
+          const optionIndex = this.optionsFormArray.value.findIndex((opt: any) => opt.id === optionId);
+          if (optionIndex !== -1) {
+            const optionForm = this.optionsFormArray.at(optionIndex);
+            optionForm.get('is_active')?.setValue(!isActive);
+          }
+          await this.presentToast('Erreur lors de la mise à jour du statut', 'danger');
+        }
+      });
+    }
   }
 
   addNewOption() {
