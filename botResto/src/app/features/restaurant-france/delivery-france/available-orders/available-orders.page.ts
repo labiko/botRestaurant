@@ -254,39 +254,59 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
             await loading.present();
 
             try {
-              // MODIFICATION: Utiliser le nouveau système avec tokens et logs détaillés
-              // Générer un token temporaire pour cette acceptation
-              const tokenResult = await this.deliveryTokenService.generateTokensForOrder(order.id);
+              // MODIFICATION: Réutiliser le token existant au lieu d'en générer un nouveau
+              // Récupérer les tokens existants pour cette commande
+              console.log(`🔍 [AcceptOrder] Recherche tokens existants pour commande ${order.id}...`);
+              const existingTokens = await this.deliveryTokenService.getTokensForOrder(order.id);
+              console.log(`🔍 [AcceptOrder] ${existingTokens.length} tokens trouvés:`, existingTokens);
               
-              if (tokenResult.success && tokenResult.tokens.length > 0) {
-                // Trouver le token pour ce livreur
-                const driverToken = tokenResult.tokens.find(token => token.driver_id === this.currentDriver!.id);
+              // MODIFICATION: Utiliser n'importe quel token disponible (pas de contrôle livreur)
+              const availableToken = existingTokens.length > 0 ? existingTokens[0] : null;
+              console.log(`🔍 [AcceptOrder] Token disponible sélectionné:`, availableToken);
+              
+              if (availableToken) {
+                // Utiliser le token existant (avec logs détaillés [ACCEPT_DETAILED])
+                const acceptResult = await this.deliveryTokenService.acceptOrderByToken(availableToken.token);
                 
-                if (driverToken) {
-                  // Accepter avec le token (avec logs détaillés [ACCEPT_DETAILED])
-                  const acceptResult = await this.deliveryTokenService.acceptOrderByToken(driverToken.token);
-                  
-                  if (acceptResult.success) {
-                    this.loadAvailableOrders(); // Recharger les données
-                    this.presentToast('Commande acceptée avec succès');
-                    // Naviguer vers mes commandes après acceptation
-                    this.router.navigate(['/restaurant-france/delivery-france/my-orders']);
-                  } else {
-                    this.presentToast(acceptResult.message || 'Erreur lors de l\'acceptation');
-                  }
-                } else {
-                  this.presentToast('Token non trouvé pour ce livreur');
-                }
-              } else {
-                // Fallback vers l'ancienne méthode si les tokens échouent
-                const success = await this.deliveryOrdersService.acceptOrder(order.id, this.currentDriver!.id);
-                if (success) {
+                if (acceptResult.success) {
                   this.loadAvailableOrders(); // Recharger les données
                   this.presentToast('Commande acceptée avec succès');
                   // Naviguer vers mes commandes après acceptation
                   this.router.navigate(['/restaurant-france/delivery-france/my-orders']);
                 } else {
-                  this.presentToast('Erreur lors de l\'acceptation');
+                  this.presentToast(acceptResult.message || 'Erreur lors de l\'acceptation');
+                }
+              } else {
+                // Fallback: Générer un token si aucun n'existe pour ce livreur
+                const tokenResult = await this.deliveryTokenService.generateTokensForOrder(order.id);
+                
+                if (tokenResult.success && tokenResult.tokens.length > 0) {
+                  // Utiliser n'importe quel token généré (pas de contrôle livreur)
+                  const newToken = tokenResult.tokens[0];
+                  
+                  if (newToken) {
+                    const acceptResult = await this.deliveryTokenService.acceptOrderByToken(newToken.token);
+                    
+                    if (acceptResult.success) {
+                      this.loadAvailableOrders(); // Recharger les données
+                      this.presentToast('Commande acceptée avec succès');
+                      this.router.navigate(['/restaurant-france/delivery-france/my-orders']);
+                    } else {
+                      this.presentToast(acceptResult.message || 'Erreur lors de l\'acceptation');
+                    }
+                  } else {
+                    this.presentToast('Token non trouvé pour ce livreur');
+                  }
+                } else {
+                  // Fallback final vers l'ancienne méthode
+                  const success = await this.deliveryOrdersService.acceptOrder(order.id, this.currentDriver!.id);
+                  if (success) {
+                    this.loadAvailableOrders(); // Recharger les données
+                    this.presentToast('Commande acceptée avec succès');
+                    this.router.navigate(['/restaurant-france/delivery-france/my-orders']);
+                  } else {
+                    this.presentToast('Erreur lors de l\'acceptation');
+                  }
                 }
               }
             } catch (error) {

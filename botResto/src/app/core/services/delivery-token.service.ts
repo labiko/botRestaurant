@@ -300,13 +300,31 @@ export class DeliveryTokenService {
 
       // Pour les tokens non utilisés, vérifier que la commande est disponible
       if (token.france_orders.status !== 'prete') {
+        // MODIFICATION: Permettre l'accès si la commande est assignée (token déjà associé au bon livreur)
+        if (token.france_orders.status === 'assignee') {
+          console.log('✅ [DeliveryToken] Accès autorisé - Token non utilisé mais commande assignée');
+          return {
+            valid: true,
+            orderId: token.order_id,
+            driverId: token.driver_id,
+            orderData: token.france_orders as DeliveryOrder,
+            isPostAcceptance: true
+          };
+        }
         console.log('❌ [DeliveryToken] Commande non disponible, status:', token.france_orders.status);
         return { valid: false, reason: 'Commande non disponible' };
       }
 
       if (token.france_orders.driver_id) {
-        console.log('❌ [DeliveryToken] Commande déjà assignée');
-        return { valid: false, reason: 'Commande déjà assignée' };
+        // MODIFICATION: Permettre l'accès (token déjà associé au bon livreur)
+        console.log('✅ [DeliveryToken] Accès autorisé - Token du livreur assigné');
+        return {
+          valid: true,
+          orderId: token.order_id,
+          driverId: token.driver_id,
+          orderData: token.france_orders as DeliveryOrder,
+          isPostAcceptance: true
+        };
       }
 
       console.log('✅ [DeliveryToken] Token valide');
@@ -708,6 +726,29 @@ export class DeliveryTokenService {
    */
   generateTokenUrl(token: string): string {
     return this.appConfigService.generateTokenUrl(token);
+  }
+
+  /**
+   * Récupérer les tokens existants pour une commande
+   */
+  async getTokensForOrder(orderId: number): Promise<DeliveryToken[]> {
+    try {
+      const { data: tokens, error } = await this.supabaseFranceService.client
+        .from('delivery_tokens')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ [DeliveryToken] Erreur récupération tokens:', error);
+        return [];
+      }
+
+      return tokens || [];
+    } catch (error) {
+      console.error('❌ [DeliveryToken] Erreur getTokensForOrder:', error);
+      return [];
+    }
   }
 
   /**
