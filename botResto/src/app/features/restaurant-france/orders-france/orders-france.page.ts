@@ -10,6 +10,7 @@ import { AddressWhatsAppService } from '../../../core/services/address-whatsapp.
 import { SupabaseFranceService } from '../../../core/services/supabase-france.service';
 import { FuseauHoraireService } from '../../../core/services/fuseau-horaire.service';
 import { DeliveryTrackingService } from '../../../core/services/delivery-tracking.service';
+import { AudioNotificationService } from '../../../core/services/audio-notification.service';
 
 @Component({
   selector: 'app-orders-france',
@@ -44,12 +45,16 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     private universalOrderDisplayService: UniversalOrderDisplayService,
     private addressWhatsAppService: AddressWhatsAppService,
     private supabaseFranceService: SupabaseFranceService,
-    private deliveryTrackingService: DeliveryTrackingService
+    private deliveryTrackingService: DeliveryTrackingService,
+    private audioNotificationService: AudioNotificationService
   ) { }
 
   ngOnInit() {
     this.initializeOrders();
     this.startAutoRefresh();
+    
+    // Configurer le restaurant pour les notifications audio
+    this.audioNotificationService.setCurrentRestaurant(this.restaurantId);
     
     // Debug pour analyser les conditions d'affichage livreur - sera appelé après loadOrders
     this.debugDriverDisplay();
@@ -108,6 +113,18 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       this.orders = await this.addressWhatsAppService.enrichOrdersWithWhatsAppNames(orders);
       
       console.log('✅ [OrdersPage] Commandes enrichies:', this.orders.length);
+      
+      // Vérifier et jouer le son pour les nouvelles commandes
+      this.audioNotificationService.checkAndPlayForNewOrders(this.restaurantId).subscribe({
+        next: (playedCount) => {
+          if (playedCount > 0) {
+            console.log(`🔔 [AudioNotification] ${playedCount} notification(s) audio jouée(s)`);
+          }
+        },
+        error: (error) => {
+          console.error('❌ [AudioNotification] Erreur lors de la vérification audio:', error);
+        }
+      });
       
       // DEBUG TEMPORAIRE - Chercher 1209-0013
       this.debugAllOrders();

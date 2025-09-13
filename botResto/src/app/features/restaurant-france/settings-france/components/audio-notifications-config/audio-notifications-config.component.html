@@ -1,0 +1,131 @@
+<div class="audio-config-container">
+  
+  <!-- Header Section -->
+  <div class="config-header">
+    <div class="header-content">
+      <ion-icon name="volume-high" class="header-icon"></ion-icon>
+      <div>
+        <h2>Notifications Audio</h2>
+        <p>Configurez les alertes sonores pour les nouvelles commandes</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-section">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Chargement des paramètres...</p>
+  </div>
+
+  <!-- Configuration Content -->
+  <div *ngIf="!isLoading && audioSettings" class="config-content">
+    
+    <!-- Master Toggle -->
+    <div class="setting-card primary">
+      <div class="setting-header">
+        <div class="setting-icon">
+          <ion-icon [name]="audioSettings.audio_notifications_enabled ? 'volume-high' : 'volume-mute'"></ion-icon>
+        </div>
+        <div class="setting-info">
+          <h3>Notifications Audio</h3>
+          <p>{{ audioSettings.audio_notifications_enabled ? 'Activées' : 'Désactivées' }}</p>
+        </div>
+        <ion-toggle
+          [checked]="audioSettings.audio_notifications_enabled"
+          (ionChange)="toggleAudioNotifications($event)"
+          color="success">
+        </ion-toggle>
+      </div>
+    </div>
+
+    <!-- Volume Control -->
+    <div class="setting-card" *ngIf="audioSettings.audio_notifications_enabled">
+      <div class="setting-header">
+        <div class="setting-icon">
+          <ion-icon name="volume-medium"></ion-icon>
+        </div>
+        <div class="setting-info">
+          <h3>Volume</h3>
+          <p>Réglez l'intensité du son ({{ audioSettings.audio_volume }}%)</p>
+        </div>
+      </div>
+      
+      <div class="volume-control">
+        <div class="volume-slider">
+          <ion-range
+            [value]="audioSettings.audio_volume"
+            min="0"
+            max="100"
+            step="5"
+            pin="true"
+            [pinFormatter]="volumeFormatter"
+            color="primary"
+            (ionInput)="onVolumeChange($event)">
+            
+            <ion-icon name="volume-low" slot="start"></ion-icon>
+            <ion-icon name="volume-high" slot="end"></ion-icon>
+            
+          </ion-range>
+        </div>
+        
+        <div class="volume-actions">
+          <ion-button
+            fill="outline"
+            size="small"
+            (click)="testSound()"
+            [disabled]="isTestingSound">
+            <ion-icon name="play" slot="start"></ion-icon>
+            {{ isTestingSound ? 'Test en cours...' : 'Tester le son' }}
+          </ion-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Information -->
+    <div class="setting-card info" *ngIf="audioSettings.audio_notifications_enabled">
+      <div class="setting-header">
+        <div class="setting-icon">
+          <ion-icon name="information-circle"></ion-icon>
+        </div>
+        <div class="setting-info">
+          <h3>Statut</h3>
+          <p *ngIf="audioSettings.audio_enabled_since && formattedEnabledSince">
+            Activé depuis : {{ formattedEnabledSince }}
+          </p>
+          <p *ngIf="!audioSettings.audio_enabled_since">
+            Son désactivé - Aucune notification en cours
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="help-section">
+      <div class="help-card">
+        <ion-icon name="help-circle-outline"></ion-icon>
+        <div class="help-content">
+          <h4>Comment ça fonctionne ?</h4>
+          <ul>
+            <li>Un son se joue automatiquement à chaque nouvelle commande</li>
+            <li>Seules les commandes reçues après activation sont notifiées</li>
+            <li>Le son s'arrête automatiquement après 5 secondes</li>
+            <li>Fonctionne même si la page est en arrière-plan</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="!isLoading && !audioSettings" class="error-section">
+    <ion-icon name="alert-circle" color="danger"></ion-icon>
+    <h3>Erreur de chargement</h3>
+    <p>Impossible de charger les paramètres audio</p>
+    <ion-button (click)="loadAudioSettings()" color="primary" fill="outline">
+      <ion-icon name="refresh" slot="start"></ion-icon>
+      Réessayer
+    </ion-button>
+  </div>
+
+</div>

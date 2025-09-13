@@ -60,6 +60,17 @@
         </div>
         <div class="tab-indicator"></div>
       </div>
+      
+      <div class="tab-card" [class.active]="currentTab === 'audio-notifications'" (click)="switchTab('audio-notifications')">
+        <div class="tab-icon">
+          <ion-icon name="volume-high"></ion-icon>
+        </div>
+        <div class="tab-content">
+          <h3>Notifications Audio</h3>
+          <p>Son et alertes nouvelles commandes</p>
+        </div>
+        <div class="tab-indicator"></div>
+      </div>
     </div>
 
     <!-- Content Area -->
@@ -83,6 +94,11 @@
       <!-- Service Modes Configuration -->
       <div *ngIf="currentTab === 'service-modes'" class="tab-content-wrapper">
         <app-service-modes></app-service-modes>
+      </div>
+
+      <!-- Audio Notifications Configuration -->
+      <div *ngIf="currentTab === 'audio-notifications'" class="tab-content-wrapper">
+        <app-audio-notifications-config></app-audio-notifications-config>
       </div>
 
     </div>

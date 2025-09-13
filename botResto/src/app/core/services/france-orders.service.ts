@@ -7,6 +7,7 @@ import { DeliveryNotificationService } from './delivery-notification.service';
 import { UniversalOrderDisplayService } from './universal-order-display.service';
 import { AutoRefreshService } from './auto-refresh.service';
 import { FuseauHoraireService } from './fuseau-horaire.service';
+import { AudioNotificationService } from './audio-notification.service';
 import { REFRESH_CONFIG } from '../config/refresh.config';
 
 // Interface pour les paramètres de notification WhatsApp
@@ -111,7 +112,8 @@ export class FranceOrdersService {
     private deliveryNotificationService: DeliveryNotificationService,
     private universalOrderDisplayService: UniversalOrderDisplayService,
     private autoRefreshService: AutoRefreshService,
-    private fuseauHoraireService: FuseauHoraireService
+    private fuseauHoraireService: FuseauHoraireService,
+    private audioNotificationService: AudioNotificationService
   ) { }
 
   async loadOrders(restaurantId: number): Promise<void> {
@@ -809,6 +811,18 @@ export class FranceOrdersService {
     try {
       console.log(`🔄 [DEBUG] Refresh des commandes restaurant ${restaurantId}`);
       await this.loadOrders(restaurantId);
+      
+      // NOUVEAU : Vérifier et jouer le son pour nouvelles commandes
+      this.audioNotificationService.checkAndPlayForNewOrders(restaurantId).subscribe({
+        next: (playedCount) => {
+          if (playedCount > 0) {
+            console.log(`🔔 [AudioNotification] ${playedCount} notification(s) audio jouée(s)`);
+          }
+        },
+        error: (error) => {
+          console.error('❌ [AudioNotification] Erreur vérification audio:', error);
+        }
+      });
     } catch (error) {
       console.error('❌ [FranceOrders] Erreur refresh automatique:', error);
     }

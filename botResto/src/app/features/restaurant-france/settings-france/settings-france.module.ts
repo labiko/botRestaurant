@@ -14,6 +14,7 @@ import { UniversalProductModalComponent } from './components/product-management/
 import { CategoryManagementModalComponent } from './components/product-management/category-management-modal.component';
 import { WorkflowConfigComponent } from './components/workflow-config/workflow-config.component';
 import { ServiceModesComponent } from './components/service-modes/service-modes.component';
+import { AudioNotificationsConfigComponent } from './components/audio-notifications-config/audio-notifications-config.component';
 
 @NgModule({
   imports: [
@@ -31,7 +32,8 @@ import { ServiceModesComponent } from './components/service-modes/service-modes.
     UniversalProductModalComponent,
     CategoryManagementModalComponent,
     WorkflowConfigComponent,
-    ServiceModesComponent
+    ServiceModesComponent,
+    AudioNotificationsConfigComponent
   ]
 })
 export class SettingsFrancePageModule {}
