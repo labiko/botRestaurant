@@ -119,6 +119,30 @@ export class UniversalBot implements IMessageHandler {
   }
 
   /**
+   * Récupérer le nom de catégorie depuis la base de données
+   */
+  private async getCategoryNameFromProduct(productId: number): Promise<string | null> {
+    try {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+      
+      const { data } = await supabase
+        .from('france_products')
+        .select('france_menu_categories(name)')
+        .eq('id', productId)
+        .single();
+      
+      return data?.france_menu_categories?.name || null;
+    } catch (error) {
+      console.error('Erreur récupération nom catégorie:', error);
+      return null;
+    }
+  }
+
+  /**
    * Point d'entrée principal - traite tous les messages WhatsApp
    * COPIE EXACTE DE LA LOGIQUE ORIGINALE pour maintenir la compatibilité
    */
@@ -956,6 +980,16 @@ export class UniversalBot implements IMessageHandler {
       contextKeys: session.sessionData ? Object.keys(session.sessionData) : []
     });
 
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer TOUS les passages par le routeur principal
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleMessage ROUTER:', {
+      phoneNumber,
+      message,
+      botState: session.botState,
+      currentCategoryName: session.sessionData?.currentCategoryName,
+      selectedProduct: session.sessionData?.selectedProduct?.name || null,
+      hasCart: !!session.sessionData?.cart
+    });
+
     switch (session.botState) {
       case 'CHOOSING_DELIVERY_MODE':
         await this.handleDeliveryModeChoice(phoneNumber, session, message);
@@ -1006,6 +1040,14 @@ export class UniversalBot implements IMessageHandler {
         break;
         
       case 'AWAITING_QUANTITY':
+        // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer le passage par AWAITING_QUANTITY  
+        console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleMessage AWAITING_QUANTITY:', {
+          phoneNumber,
+          message,
+          selectedProduct: session.sessionData?.selectedProduct?.name || null,
+          currentCategoryName: session.sessionData?.currentCategoryName,
+          productType: session.sessionData?.selectedProduct?.product_type
+        });
         await this.handleQuantityInput(phoneNumber, session, message);
         break;
         
@@ -1279,6 +1321,16 @@ export class UniversalBot implements IMessageHandler {
     console.log(`🛒 [ProductSelection] État session actuel:`, session.currentState);
     console.log(`🛒 [ProductSelection] Session complète:`, JSON.stringify(session.sessionData, null, 2));
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer currentCategoryName au moment de la sélection produit
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection:', {
+      phoneNumber,
+      message,
+      currentCategoryName: session.sessionData?.currentCategoryName,
+      currentCategoryId: session.sessionData?.currentCategoryId,
+      hasProducts: !!session.sessionData?.products,
+      productCount: session.sessionData?.products?.length || 0
+    });
+    
     // RÉUTILISATION: Vérifier les actions rapides 99, 00 avant parseInt
     const choice = message.trim();
     if (choice === '99' || choice === '00') {
@@ -1441,6 +1493,17 @@ export class UniversalBot implements IMessageHandler {
     // Vérifier si le produit nécessite des étapes (workflow composite)
     let isComposite = selectedProduct.requires_steps || selectedProduct.workflow_type || selectedProduct.type === 'composite';
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer la détection composite initiale
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection composite detection:', {
+      productId: selectedProduct.id,
+      productName: selectedProduct.name,
+      isComposite,
+      requires_steps: selectedProduct.requires_steps,
+      workflow_type: selectedProduct.workflow_type,
+      type: selectedProduct.type,
+      currentCategoryName: session.sessionData?.currentCategoryName
+    });
+    
     // NOUVELLE LOGIQUE : Vérifier aussi si le produit a des variantes de taille configurées
     if (!isComposite) {
       console.log(`🔍 [ProductSelection] Vérification des variantes pour ${selectedProduct.name}...`);
@@ -1462,6 +1525,17 @@ export class UniversalBot implements IMessageHandler {
       if (sizes && sizes.length > 0) {
         isComposite = true;
         console.log(`✅ [ProductSelection] ${selectedProduct.name} détecté comme ayant des variantes de taille`);
+        
+        // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer la conversion modular vers composite
+        console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection modular->composite:', {
+          productId: selectedProduct.id,
+          productName: selectedProduct.name,
+          product_type: selectedProduct.product_type,
+          sizesFound: sizes.length,
+          convertedToComposite: true,
+          currentCategoryName: session.sessionData?.currentCategoryName,
+          reason: 'HAS_SIZES'
+        });
       }
     }
     
@@ -1491,6 +1565,16 @@ export class UniversalBot implements IMessageHandler {
       try {
         // Lancer le workflow composite universel
         console.log(`🚀 [ProductSelection] Tentative de démarrage workflow composite pour: ${selectedProduct.name}`);
+        
+        // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer le démarrage du workflow composite
+        console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection startCompositeWorkflow:', {
+          productId: selectedProduct.id,
+          productName: selectedProduct.name,
+          currentCategoryName: session.sessionData?.currentCategoryName,
+          workflowPath: 'COMPOSITE_WORKFLOW',
+          phoneNumber
+        });
+        
         await this.compositeWorkflowExecutor.startCompositeWorkflow(phoneNumber, selectedProduct, session);
         console.log(`✅ [ProductSelection] Workflow composite démarré avec succès pour: ${selectedProduct.name}`);
         return;
@@ -1510,6 +1594,16 @@ export class UniversalBot implements IMessageHandler {
     
     // Produit simple - Stocker et traiter avec quantité 1
     console.log('📦 [ProductSelection] Produit simple - Traitement direct avec quantité 1');
+    
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer le workflow simple (non-composite)
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection simple workflow:', {
+      productId: selectedProduct.id,
+      productName: selectedProduct.name,
+      product_type: selectedProduct.product_type,
+      workflowPath: 'SIMPLE_WORKFLOW',
+      currentCategoryName: session.sessionData?.currentCategoryName,
+      phoneNumber
+    });
     
     // Créer session temporaire avec selectedProduct
     const tempSession = {
@@ -1602,6 +1696,15 @@ export class UniversalBot implements IMessageHandler {
         
         // Mettre à jour la session pour gérer la sélection
         console.log('🚨 [SPREAD_DEBUG_002] UniversalBot ligne 1564');
+        
+        // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer quand currentCategoryName est défini (ligne 1608)
+        console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.showProductsInCategory ligne 1608:', {
+          categoryId,
+          categoryName: category.name,
+          phoneNumber,
+          action: 'SETTING currentCategoryName in session'
+        });
+        
         const updatedData = {
           ...session.sessionData,
           currentCategoryId: categoryId,
@@ -1764,6 +1867,16 @@ export class UniversalBot implements IMessageHandler {
       console.log('📝 [ShowProducts] Mise à jour session avec produits');
       
       console.log('🚨 [SPREAD_DEBUG_003] UniversalBot ligne 1725');
+      
+      // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer quand currentCategoryName est défini (ligne 1770)
+      console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.showProductsInCategory ligne 1770:', {
+        categoryId,
+        categoryName: category.name,
+        phoneNumber,
+        productCount: productList.length,
+        action: 'SETTING currentCategoryName in session'
+      });
+      
       const updatedData = {
         ...session.sessionData,
         currentCategoryId: categoryId,
@@ -2430,6 +2543,17 @@ export class UniversalBot implements IMessageHandler {
     const quantity = parseInt(message.trim());
     const selectedProduct = session.sessionData?.selectedProduct;
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer handleQuantityInput pour workflow simple
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleQuantityInput:', {
+      phoneNumber,
+      message,
+      productId: selectedProduct?.id,
+      productName: selectedProduct?.name,
+      product_type: selectedProduct?.product_type,
+      currentCategoryName: session.sessionData?.currentCategoryName,
+      workflowPath: 'QUANTITY_INPUT'
+    });
+    
     console.log(`⏱️ [PERF] Product check - ${Date.now() - startTime}ms elapsed`);
     
     if (!selectedProduct) {
@@ -2471,7 +2595,9 @@ export class UniversalBot implements IMessageHandler {
     cart.push({
       productId: selectedProduct.id,
       productName: selectedProduct.name,
-      categoryName: session.sessionData?.currentCategoryName || 'Produit',
+      categoryName: await this.getCategoryNameFromProduct(selectedProduct.id) 
+                 || session.sessionData?.currentCategoryName 
+                 || 'ProduitTest',
       productDescription: productDescription,
       quantity: quantity,
       unitPrice: selectedProduct.price,

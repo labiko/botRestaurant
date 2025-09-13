@@ -237,6 +237,7 @@
           
           <p *ngIf="order.delivery_address"><strong>Adresse:</strong> {{ order.delivery_address }}</p>
           <p *ngIf="order.date_validation_code && order.status === 'livree'"><strong>Livrée le:</strong> {{ formatDateTime(order.date_validation_code) }}</p>
+          <p *ngIf="order.date_validation_code"><strong>Date validation:</strong> {{ formatDateTime(order.date_validation_code) }}</p>
           
           <!-- Informations client enrichies -->
           <div class="customer-info-enriched">

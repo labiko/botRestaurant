@@ -82,6 +82,16 @@ export class CompositeWorkflowExecutor {
   ): Promise<void> {
     console.log(`🔄 [CompositeWorkflow] Démarrage workflow pour: ${product.name}`);
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer l'entrée dans CompositeWorkflowExecutor
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - CompositeWorkflowExecutor.startCompositeWorkflow:', {
+      productId: product.id,
+      productName: product.name,
+      currentCategoryName: session.sessionData?.currentCategoryName,
+      workflowType: product.workflow_type || product.type,
+      hasStepsConfig: !!product.steps_config,
+      phoneNumber
+    });
+    
     try {
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);
@@ -1124,6 +1134,21 @@ export class CompositeWorkflowExecutor {
     
     const rawCart = session.sessionData?.cart || [];
     const cart = Array.isArray(rawCart) ? rawCart : [];
+    
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Analyser pourquoi currentCategoryName est absent
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - CompositeWorkflowExecutor.completeWorkflow:', {
+      productId: selectedProduct.id,
+      productName: selectedProduct.name,
+      currentCategoryName: session.sessionData?.currentCategoryName,
+      categoryNameUsed: session.sessionData?.currentCategoryName || 'Produit',
+      sessionData: {
+        currentCategoryName: session.sessionData?.currentCategoryName,
+        selectedRestaurantId: session.sessionData?.selectedRestaurantId,
+        currentState: session.sessionData?.currentState,
+        previousState: session.sessionData?.previousState
+      }
+    });
+    
     cart.push({
       productId: selectedProduct.id,
       productName: selectedProduct.name,
