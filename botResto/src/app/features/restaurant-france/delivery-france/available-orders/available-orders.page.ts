@@ -224,6 +224,13 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
           });
           console.log(`👤 [TOKEN_DEBUG] Current Driver connecté:`, this.currentDriver ? 'OUI' : 'NON');
           
+          // ✅ NOUVEAU : Vérifier si commande déjà acceptée
+          if (validation.orderData.status === 'assignee' || validation.orderData.status === 'en_livraison') {
+            console.log(`🔄 [TOKEN_REDIRECT] Commande déjà acceptée - Redirection vers my-orders`);
+            this.router.navigate(['/restaurant-france/delivery-france/my-orders']);
+            return;
+          }
+          
           // Si utilisateur déjà connecté, afficher directement la commande du token
           if (this.currentDriver) {
             console.log(`🚀 [TOKEN_DEBUG] Appel displayTokenOrder() immédiat`);
