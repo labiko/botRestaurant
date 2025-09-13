@@ -397,10 +397,20 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
   openDrivingDirectionsFromAddress(address: string) {
     if (address && address.trim()) {
-      // Ouvrir Google Maps avec l'adresse texte
       const encodedAddress = encodeURIComponent(address.trim());
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
-      window.open(url, '_blank');
+      
+      // Détecter le type d'appareil pour optimiser l'expérience
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // Sur mobile : ouvrir l'app Google Maps avec navigation directe
+        const mobileUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving&dir_action=navigate`;
+        window.open(mobileUrl, '_blank');
+      } else {
+        // Sur desktop : ouvrir Google Maps web avec itinéraire
+        const desktopUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
+        window.open(desktopUrl, '_blank');
+      }
     }
   }
 

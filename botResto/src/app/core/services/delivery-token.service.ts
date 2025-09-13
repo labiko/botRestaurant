@@ -403,51 +403,116 @@ export class DeliveryTokenService {
    * Accepter une commande par token (fonction atomique)
    */
   async acceptOrderByToken(tokenString: string): Promise<{success: boolean, message: string}> {
-    try {
-      console.log(`🔄 [DeliveryToken] Tentative d'acceptation avec token: ${tokenString.substring(0, 8)}...`);
+    const startTime = Date.now();
+    console.log(`🚀 [ACCEPT_DETAILED] ======== DÉBUT ACCEPTATION ========`);
+    console.log(`🚀 [ACCEPT_DETAILED] Token: ${tokenString.substring(0, 8)}...${tokenString.substring(-4)}`);
+    console.log(`🚀 [ACCEPT_DETAILED] Timestamp début: ${new Date(startTime).toISOString()}`);
 
-      // 1. Valider le token d'abord
+    try {
+      // 1. VALIDATION DU TOKEN
+      console.log(`🔍 [ACCEPT_DETAILED] ÉTAPE 1: Validation du token`);
       const validation = await this.validateToken(tokenString);
-      console.log('🔍 [DEBUG_ACCEPT] Validation result:', validation);
+      console.log(`🔍 [ACCEPT_DETAILED] Résultat validation complète:`, JSON.stringify(validation, null, 2));
+      
       if (!validation.valid) {
-        console.error('❌ [DEBUG_ACCEPT] Token invalide:', validation.reason);
+        console.error(`❌ [ACCEPT_DETAILED] ÉCHEC ÉTAPE 1: Token invalide - ${validation.reason}`);
         return { success: false, message: validation.reason || 'Token invalide' };
       }
+      console.log(`✅ [ACCEPT_DETAILED] ÉTAPE 1 RÉUSSIE: Token valide`);
 
       // Si c'est un accès post-acceptation, ne pas ré-accepter
       if (validation.isPostAcceptance) {
-        console.log('✅ [DEBUG_ACCEPT] Accès post-acceptation - pas de ré-acceptation');
+        console.log(`✅ [ACCEPT_DETAILED] COURT-CIRCUIT: Accès post-acceptation détecté`);
         return { success: true, message: 'Accès autorisé à votre commande' };
       }
 
-      // 2. Utiliser la fonction SQL atomique
-      console.log('🚀 [DEBUG_ACCEPT] Appel RPC avec:', {
-        p_token: tokenString,
-        p_order_id: validation.orderId,
-        p_driver_id: validation.driverId
-      });
+      // 2. PRÉPARATION APPEL RPC
+      console.log(`🔧 [ACCEPT_DETAILED] ÉTAPE 2: Préparation appel RPC`);
+      console.log(`🔧 [ACCEPT_DETAILED] Paramètres RPC:`);
+      console.log(`   - p_token: ${tokenString}`);
+      console.log(`   - p_order_id: ${validation.orderId} (type: ${typeof validation.orderId})`);
+      console.log(`   - driverId récupéré: ${validation.driverId} (type: ${typeof validation.driverId})`);
+
+      // 3. VÉRIFICATION ÉTAT PRÉ-ACCEPTATION
+      console.log(`🔍 [ACCEPT_DETAILED] ÉTAPE 3: Vérification état pré-acceptation`);
+      const preCheckResult = await this.supabaseFranceService.client
+        .from('france_orders')
+        .select('id, status, driver_id, driver_assignment_status, updated_at')
+        .eq('id', validation.orderId!)
+        .single();
       
-      // DEBUG: Vérifier d'où vient driver_id = 1
-      console.log('🔍 [DEBUG_DRIVER_ID] validation object:', validation);
-      console.log('🔍 [DEBUG_DRIVER_ID] validation.driverId type:', typeof validation.driverId);
-      console.log('🔍 [DEBUG_DRIVER_ID] validation.driverId value:', validation.driverId);
+      console.log(`🔍 [ACCEPT_DETAILED] État commande AVANT acceptation:`, preCheckResult.data);
+      if (preCheckResult.error) {
+        console.error(`❌ [ACCEPT_DETAILED] Erreur pré-vérification:`, preCheckResult.error);
+      }
+
+      // 4. APPEL FONCTION RPC ATOMIQUE
+      console.log(`🚀 [ACCEPT_DETAILED] ÉTAPE 4: Exécution accept_order_atomic`);
+      const rpcStartTime = Date.now();
       
       const { data, error } = await this.supabaseFranceService.client.rpc('accept_order_atomic', {
         p_token: tokenString,
         p_order_id: validation.orderId!
-        // p_driver_id supprimé - récupéré depuis le token
       });
+      
+      const rpcEndTime = Date.now();
+      console.log(`🚀 [ACCEPT_DETAILED] Durée RPC: ${rpcEndTime - rpcStartTime}ms`);
+      console.log(`🚀 [ACCEPT_DETAILED] Résultat RPC - data:`, data);
+      console.log(`🚀 [ACCEPT_DETAILED] Résultat RPC - error:`, error);
 
       if (error) {
-        console.error('❌ [DeliveryToken] Erreur accept_order_atomic:', error);
+        console.error(`❌ [ACCEPT_DETAILED] ÉCHEC ÉTAPE 4: Erreur RPC`);
+        console.error(`❌ [ACCEPT_DETAILED] Error code: ${error.code}`);
+        console.error(`❌ [ACCEPT_DETAILED] Error message: ${error.message}`);
+        console.error(`❌ [ACCEPT_DETAILED] Error details: ${error.details}`);
+        console.error(`❌ [ACCEPT_DETAILED] Error hint: ${error.hint}`);
         return { success: false, message: error.message || 'Erreur lors de l\'acceptation' };
       }
 
-      console.log('✅ [DeliveryToken] Commande acceptée avec succès');
+      console.log(`✅ [ACCEPT_DETAILED] ÉTAPE 4 RÉUSSIE: RPC exécutée avec succès`);
+
+      // 5. VÉRIFICATION POST-ACCEPTATION
+      console.log(`🔍 [ACCEPT_DETAILED] ÉTAPE 5: Vérification post-acceptation`);
+      const postCheckResult = await this.supabaseFranceService.client
+        .from('france_orders')
+        .select('id, status, driver_id, driver_assignment_status, updated_at')
+        .eq('id', validation.orderId!)
+        .single();
+      
+      console.log(`🔍 [ACCEPT_DETAILED] État commande APRÈS acceptation:`, postCheckResult.data);
+      if (postCheckResult.error) {
+        console.error(`❌ [ACCEPT_DETAILED] Erreur post-vérification:`, postCheckResult.error);
+      }
+
+      // 6. VÉRIFICATION TOKEN APRÈS ACCEPTATION
+      console.log(`🔍 [ACCEPT_DETAILED] ÉTAPE 6: Vérification token post-acceptation`);
+      const tokenCheckResult = await this.supabaseFranceService.client
+        .from('delivery_tokens')
+        .select('token, used, updated_at')
+        .eq('token', tokenString)
+        .single();
+      
+      console.log(`🔍 [ACCEPT_DETAILED] État token APRÈS acceptation:`, tokenCheckResult.data);
+      if (tokenCheckResult.error) {
+        console.error(`❌ [ACCEPT_DETAILED] Erreur vérification token:`, tokenCheckResult.error);
+      }
+
+      const endTime = Date.now();
+      console.log(`✅ [ACCEPT_DETAILED] ======== ACCEPTATION TERMINÉE ========`);
+      console.log(`✅ [ACCEPT_DETAILED] Durée totale: ${endTime - startTime}ms`);
+      console.log(`✅ [ACCEPT_DETAILED] Statut: SUCCÈS`);
+      
       return { success: true, message: 'Commande acceptée avec succès !' };
 
     } catch (error) {
-      console.error('❌ [DeliveryToken] Erreur acceptOrderByToken:', error);
+      const endTime = Date.now();
+      console.error(`💥 [ACCEPT_DETAILED] ======== EXCEPTION CAPTURÉE ========`);
+      console.error(`💥 [ACCEPT_DETAILED] Durée avant exception: ${endTime - startTime}ms`);
+      console.error(`💥 [ACCEPT_DETAILED] Type d'erreur:`, (error as any)?.constructor?.name);
+      console.error(`💥 [ACCEPT_DETAILED] Message d'erreur:`, (error as any)?.message);
+      console.error(`💥 [ACCEPT_DETAILED] Stack trace:`, (error as any)?.stack);
+      console.error(`💥 [ACCEPT_DETAILED] Erreur complète:`, error);
+      
       return { success: false, message: 'Erreur lors de l\'acceptation de la commande' };
     }
   }
