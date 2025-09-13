@@ -60,7 +60,7 @@
         </div>
         
         <div class="compact-summary">
-          📦 {{ getItemsCount(order) }} article{{ getItemsCount(order) > 1 ? 's' : '' }} • 
+          📦 {{ orderItemsCounts[order.id] }} article{{ orderItemsCounts[order.id] > 1 ? 's' : '' }} • 
           📍 {{ getDeliveryZone(order.delivery_address) }}
         </div>
 
@@ -117,10 +117,10 @@
           </div>
 
           <!-- DÉTAILS DES ARTICLES - VERSION UNIVERSELLE -->
-          <div class="detail-section" *ngIf="hasOrderItems(order)">
+          <div class="detail-section" *ngIf="orderHasItems[order.id]">
             <div class="detail-label">📦 Articles commandés:</div>
             <div class="order-items">
-              <div *ngFor="let formattedItem of getFormattedItems(order)" class="item-card">
+              <div *ngFor="let formattedItem of orderFormattedItems[order.id]" class="item-card">
                 
                 <!-- En-tête de l'article - FORMAT UNIVERSEL -->
                 <div class="item-header">

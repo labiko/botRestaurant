@@ -60,7 +60,7 @@
         </div>
         
         <div class="compact-summary">
-          📦 {{ getItemsCount(order) }} article{{ getItemsCount(order) > 1 ? 's' : '' }}
+          📦 {{ orderItemsCounts[order.id] }} article{{ orderItemsCounts[order.id] > 1 ? 's' : '' }}
         </div>
 
         <div class="compact-time">
@@ -134,10 +134,10 @@
           </div>
 
           <!-- DÉTAILS DES ARTICLES - FORMAT UNIVERSEL (MÊME QUE RESTAURANT) -->
-          <div class="detail-section" *ngIf="hasOrderItems(order)">
+          <div class="detail-section" *ngIf="orderHasItems[order.id]">
             <div class="detail-label">📦 Articles commandés:</div>
             <div class="order-items">
-              <div *ngFor="let formattedItem of getFormattedItems(order)" class="item-card">
+              <div *ngFor="let formattedItem of orderFormattedItems[order.id]" class="item-card">
                 
                 <!-- En-tête de l'article - FORMAT EXACT restaurant -->
                 <div class="item-header">

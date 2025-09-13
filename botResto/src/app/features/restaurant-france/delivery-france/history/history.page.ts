@@ -35,6 +35,11 @@ export class HistoryPage implements OnInit, OnDestroy {
   isOnline = false;
   isToggling = false;
 
+  // Variables calculées pour éviter les recalculs constants
+  public orderItemsCounts: { [orderId: number]: number } = {};
+  public orderHasItems: { [orderId: number]: boolean } = {};
+  public orderFormattedItems: { [orderId: number]: any[] } = {};
+
   private userSubscription?: Subscription;
   private historyOrdersSubscription?: Subscription;
   private onlineStatusSubscription?: Subscription;
@@ -160,6 +165,9 @@ export class HistoryPage implements OnInit, OnDestroy {
       this.historyOrders = processedOrders;
       this.isLoading = false;
       
+      // Recalculer les données des commandes
+      this.computeOrderData();
+      
       // Mettre à jour le compteur dans le service partagé
       this.deliveryCountersService.updateHistoryOrdersCount(processedOrders.length);
       
@@ -176,6 +184,17 @@ export class HistoryPage implements OnInit, OnDestroy {
       this.historyOrders = [];
       this.isLoading = false;
     }
+  }
+
+  /**
+   * Recalculer les données des commandes pour éviter les recalculs constants
+   */
+  private computeOrderData(): void {
+    this.historyOrders.forEach(order => {
+      this.orderItemsCounts[order.id] = this.deliveryOrderItemsService.getOrderItems(order).reduce((total, item) => total + (item.quantity || 1), 0);
+      this.orderHasItems[order.id] = this.deliveryOrderItemsService.hasOrderItems(order);
+      this.orderFormattedItems[order.id] = this.getFormattedItems(order);
+    });
   }
 
   /**

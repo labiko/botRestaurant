@@ -60,7 +60,7 @@
         </div>
         
         <div class="compact-summary">
-          📦 {{ getItemsCount(order) }} article{{ getItemsCount(order) > 1 ? 's' : '' }} • 
+          📦 {{ orderItemsCounts[order.id] }} article{{ orderItemsCounts[order.id] > 1 ? 's' : '' }} • 
           📍 {{ getDeliveryZone(order.delivery_address) }}
         </div>
 
@@ -172,12 +172,10 @@
           </div>
 
           <!-- DÉTAILS DES ARTICLES - FORMAT UNIVERSEL (MÊME QUE RESTAURANT) -->
-          <div class="detail-section" *ngIf="hasOrderItems(order)">
+          <div class="detail-section" *ngIf="orderHasItems[order.id]">
             <div class="detail-label">📦 Articles commandés:</div>
             <div class="order-items">
-              <div *ngFor="let formattedItem of getFormattedItems(order)" class="item-card">
-                
-                <!-- En-tête de l'article - FORMAT EXACT restaurant -->
+              <div *ngFor="let formattedItem of orderFormattedItems[order.id]" class="item-card">
                 <div class="item-header">
                   <div class="item-main">
                     <span class="item-quantity">{{ formattedItem.quantity }}x</span>
@@ -188,8 +186,6 @@
                   </div>
                   <span class="item-price">{{ formatPrice(formattedItem.totalPrice) }}</span>
                 </div>
-
-                <!-- Configuration inline (tags colorés sous le nom) -->
                 <div class="item-inline-config" *ngIf="formattedItem.inlineConfiguration && formattedItem.inlineConfiguration.length > 0">
                   <div class="inline-composition-list">
                     <ion-chip 
@@ -201,8 +197,6 @@
                     </ion-chip>
                   </div>
                 </div>
-
-                <!-- Configuration détaillée avec icônes (format liste) -->
                 <div class="item-detailed-config" *ngIf="formattedItem.formattedConfiguration && formattedItem.formattedConfiguration.length > 0">
                   <div *ngFor="let configLine of formattedItem.formattedConfiguration" class="config-group">
                     <div class="config-group-header">
@@ -214,15 +208,11 @@
                     </div>
                   </div>
                 </div>
-
-                <!-- Items additionnels (boissons, etc.) -->
                 <div class="item-additional" *ngIf="formattedItem.additionalItems && formattedItem.additionalItems.length > 0">
                   <div *ngFor="let additionalItem of formattedItem.additionalItems" class="additional-info">
                     <span class="additional-text">{{ additionalItem }}</span>
                   </div>
                 </div>
-
-                <!-- Description complète si présente -->
                 <div class="item-description" *ngIf="formattedItem.description">
                   <small class="text-muted">{{ formattedItem.description }}</small>
                 </div>

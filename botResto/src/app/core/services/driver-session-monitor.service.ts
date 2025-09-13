@@ -4,7 +4,7 @@ import { AlertController } from '@ionic/angular';
 import { SupabaseFranceService } from './supabase-france.service';
 
 // CONSTANTE MODIFIABLE FACILEMENT
-const POLLING_INTERVAL_MS = 1 * 60 * 1000; // 1 minute (test)
+const POLLING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes (réduit pour performance)
 
 export interface SessionCheckResult {
   isActive: boolean;

@@ -42,6 +42,11 @@ export class MyOrdersPage implements OnInit, OnDestroy {
   showOTPInput: { [orderId: number]: boolean } = {};
   otpDigits: { [orderId: number]: string[] } = {};
 
+  // Variables calculées pour éviter les recalculs constants
+  public orderItemsCounts: { [orderId: number]: number } = {};
+  public orderHasItems: { [orderId: number]: boolean } = {};
+  public orderFormattedItems: { [orderId: number]: any[] } = {};
+
   private userSubscription?: Subscription;
   private myOrdersSubscription?: Subscription;
   private onlineStatusSubscription?: Subscription;
@@ -125,6 +130,9 @@ export class MyOrdersPage implements OnInit, OnDestroy {
           this.myOrders = orders;
           this.isLoading = false;
           
+          // Recalculer les données des commandes
+          this.computeOrderData();
+          
           // Mettre à jour le compteur dans le service partagé
           this.deliveryCountersService.updateMyOrdersCount(orders.length);
         },
@@ -137,6 +145,17 @@ export class MyOrdersPage implements OnInit, OnDestroy {
       console.error('Erreur:', error);
       this.isLoading = false;
     }
+  }
+
+  /**
+   * Recalculer les données des commandes pour éviter les recalculs constants
+   */
+  private computeOrderData(): void {
+    this.myOrders.forEach(order => {
+      this.orderItemsCounts[order.id] = this.deliveryOrderItemsService.getOrderItems(order).reduce((total, item) => total + (item.quantity || 1), 0);
+      this.orderHasItems[order.id] = this.deliveryOrderItemsService.hasOrderItems(order);
+      this.orderFormattedItems[order.id] = this.getFormattedItems(order);
+    });
   }
 
   /**
@@ -710,6 +729,7 @@ export class MyOrdersPage implements OnInit, OnDestroy {
     try {
       if (this.currentDriver) {
         await this.deliveryOrdersService.loadDriverOrders(this.currentDriver.id);
+        this.computeOrderData();
       }
     } catch (error) {
       console.error('❌ [MyOrders] Erreur lors du rafraîchissement:', error);

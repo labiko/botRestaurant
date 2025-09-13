@@ -41,6 +41,11 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   acceptanceToken: string | null = null;
   tokenOrder: DeliveryOrder | null = null;
 
+  // Variables calculées pour éviter les recalculs constants
+  public orderItemsCounts: { [orderId: number]: number } = {};
+  public orderHasItems: { [orderId: number]: boolean } = {};
+  public orderFormattedItems: { [orderId: number]: any[] } = {};
+
   private userSubscription?: Subscription;
   private availableOrdersSubscription?: Subscription;
   private onlineStatusSubscription?: Subscription;
@@ -116,6 +121,9 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
       this.availableOrdersSubscription = this.deliveryOrdersService.availableOrders$.subscribe(orders => {
         this.availableOrders = orders;
         this.isLoading = false;
+        
+        // Recalculer les données des commandes
+        this.computeOrderData();
         
         // Mettre à jour le compteur dans le service partagé
         this.deliveryCountersService.updateAvailableOrdersCount(orders.length);
@@ -388,6 +396,17 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   */
 
   /**
+   * Recalculer les données des commandes pour éviter les recalculs constants
+   */
+  private computeOrderData(): void {
+    this.availableOrders.forEach(order => {
+      this.orderItemsCounts[order.id] = this.deliveryOrderItemsService.getOrderItems(order).reduce((total, item) => total + (item.quantity || 1), 0);
+      this.orderHasItems[order.id] = this.deliveryOrderItemsService.hasOrderItems(order);
+      this.orderFormattedItems[order.id] = this.getFormattedItems(order);
+    });
+  }
+
+  /**
    * FONCTIONS UTILITAIRES - IDENTIQUES AU DASHBOARD ET MY-ORDERS
    */
 
@@ -652,6 +671,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     try {
       if (this.currentDriver && this.currentDriver.restaurantId) {
         await this.deliveryOrdersService.loadAvailableOrders(this.currentDriver.restaurantId);
+        this.computeOrderData();
       }
     } catch (error) {
       console.error('❌ [AvailableOrders] Erreur lors du rafraîchissement:', error);
