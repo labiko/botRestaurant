@@ -395,6 +395,15 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     }
   }
 
+  openDrivingDirectionsFromAddress(address: string) {
+    if (address && address.trim()) {
+      // Ouvrir Google Maps avec l'adresse texte
+      const encodedAddress = encodeURIComponent(address.trim());
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
+      window.open(url, '_blank');
+    }
+  }
+
   /**
    * Récupérer le nom du livreur assigné
    */

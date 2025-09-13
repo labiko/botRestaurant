@@ -223,23 +223,16 @@
         <div *ngIf="order.delivery_mode === 'livraison'" class="delivery-info">
           <div class="delivery-header">
             <h4>Informations livraison:</h4>
-            <!-- Bouton Itinéraire masqué - réservé au livreur -->
-            <!-- 
             <ion-button 
-              *ngIf="order.delivery_address && order.delivery_address_coordinates"
+              *ngIf="order.delivery_mode === 'livraison' && order.delivery_address"
               fill="solid" 
               size="small" 
               color="primary"
               class="maps-button"
-              (click)="openDrivingDirections(
-                order.delivery_address_coordinates.latitude, 
-                order.delivery_address_coordinates.longitude, 
-                order.delivery_address
-              )">
+              (click)="openDrivingDirectionsFromAddress(order.delivery_address)">
               <ion-icon name="navigate" slot="start"></ion-icon>
               Itinéraire
             </ion-button>
-            -->
           </div>
           
           <p *ngIf="order.delivery_address"><strong>Adresse:</strong> {{ order.delivery_address }}</p>
