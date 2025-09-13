@@ -99,7 +99,16 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
       if (user !== undefined) {
         this.currentDriver = user;
         if (user && user.type === 'driver') {
-          this.loadAvailableOrders();
+          if (this.acceptanceToken) {
+            // ✅ Mode token : Charger toutes les données PUIS filtrer
+            console.log(`🎯 [TOKEN_DEBUG] Mode token détecté - Chargement avec filtrage`);
+            console.log(`🔑 [TOKEN_DEBUG] Token: ${this.acceptanceToken.substring(0, 8)}...`);
+            this.loadAvailableOrders(true); // ✅ Passer true pour inclure les commandes assignées
+          } else {
+            // ✅ Mode normal : Afficher toutes les commandes disponibles
+            console.log(`📋 [TOKEN_DEBUG] Mode normal - Token: ${this.acceptanceToken ? 'EXISTS' : 'NULL'}, TokenOrder: ${this.tokenOrder ? 'EXISTS' : 'NULL'}`);
+            this.loadAvailableOrders(false); // ✅ Passer false pour mode normal
+          }
           this.initializeOnlineStatus();
         }
       }
@@ -107,26 +116,82 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Charger les commandes disponibles
+   * Afficher uniquement la commande spécifique du token
    */
-  private async loadAvailableOrders() {
+  private displayTokenOrder() {
+    if (!this.tokenOrder) {
+      console.log(`❌ [TOKEN_DEBUG] displayTokenOrder appelé mais tokenOrder est null`);
+      return;
+    }
+    
+    console.log(`🎯 [TOKEN_DEBUG] Début displayTokenOrder - Commande: ${this.tokenOrder.order_number}`);
+    console.log(`🔍 [TOKEN_DEBUG] Token Order récupéré:`, {
+      id: this.tokenOrder.id,
+      order_number: this.tokenOrder.order_number,
+      status: this.tokenOrder.status,
+      driver_id: this.tokenOrder.driver_id,
+      total_amount: this.tokenOrder.total_amount
+    });
+    console.log(`📊 [TOKEN_DEBUG] Available Orders AVANT modification - Count: ${this.availableOrders.length}`);
+    
+    // Afficher UNIQUEMENT la commande du token
+    this.availableOrders = [this.tokenOrder];
+    this.isLoading = false;
+    
+    console.log(`✅ [TOKEN_DEBUG] Available Orders APRÈS modification - Count: ${this.availableOrders.length}`);
+    console.log(`✅ [TOKEN_DEBUG] Commande affichée:`, this.availableOrders[0]?.order_number);
+    
+    // Recalculer les données pour cette commande unique
+    this.computeOrderData();
+    
+    // Mettre à jour le compteur (1 seule commande)
+    this.deliveryCountersService.updateAvailableOrdersCount(1);
+    
+    console.log(`🏁 [TOKEN_DEBUG] displayTokenOrder terminé - Interface mise à jour`);
+  }
+
+  /**
+   * Charger les commandes disponibles
+   * @param includeAssigned - Inclure les commandes assignées (mode token)
+   */
+  private async loadAvailableOrders(includeAssigned: boolean = false) {
     if (!this.currentDriver) return;
 
     this.isLoading = true;
     try {
-      // Charger les commandes disponibles
-      await this.deliveryOrdersService.loadAvailableOrders(this.currentDriver.restaurantId);
+      // Charger les commandes disponibles (avec ou sans assignées selon le mode)
+      await this.deliveryOrdersService.loadAvailableOrders(this.currentDriver.restaurantId, includeAssigned);
       
       // S'abonner aux changements des commandes disponibles
       this.availableOrdersSubscription = this.deliveryOrdersService.availableOrders$.subscribe(orders => {
-        this.availableOrders = orders;
+        if (this.acceptanceToken && this.tokenOrder) {
+          // Mode token : Chercher la commande du token dans les données chargées
+          console.log(`🎯 [TOKEN_DEBUG] Mode token - Recherche commande enrichie`);
+          console.log(`🔍 [TOKEN_DEBUG] Recherche ID ${this.tokenOrder.id} dans ${orders.length} commandes`);
+          
+          const tokenOrderEnriched = orders.find(order => order.id === this.tokenOrder!.id);
+          
+          if (tokenOrderEnriched) {
+            console.log(`✅ [TOKEN_DEBUG] Commande enrichie trouvée:`, tokenOrderEnriched.order_number);
+            this.availableOrders = [tokenOrderEnriched];
+          } else {
+            console.log(`⚠️ [TOKEN_DEBUG] Commande pas dans les disponibles - Utilisation tokenOrder de base`);
+            this.availableOrders = [this.tokenOrder];
+          }
+          
+          console.log(`✅ [TOKEN_DEBUG] Available Orders final: ${this.availableOrders.length}`);
+        } else {
+          // Mode normal : Garder toutes les commandes
+          this.availableOrders = orders;
+        }
+        
         this.isLoading = false;
         
         // Recalculer les données des commandes
         this.computeOrderData();
         
         // Mettre à jour le compteur dans le service partagé
-        this.deliveryCountersService.updateAvailableOrdersCount(orders.length);
+        this.deliveryCountersService.updateAvailableOrdersCount(this.availableOrders.length);
       });
     } catch (error) {
       console.error('Erreur chargement commandes disponibles:', error);
@@ -149,7 +214,23 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
         
         if (validation.valid && validation.orderData) {
           this.tokenOrder = validation.orderData;
-          console.log(`✅ [AvailableOrders] Token valide pour commande #${validation.orderData.order_number}`);
+          console.log(`✅ [TOKEN_DEBUG] Token validé avec succès`);
+          console.log(`🔍 [TOKEN_DEBUG] Validation result:`, {
+            valid: validation.valid,
+            order_id: validation.orderData.id,
+            order_number: validation.orderData.order_number,
+            status: validation.orderData.status,
+            driver_id: validation.orderData.driver_id
+          });
+          console.log(`👤 [TOKEN_DEBUG] Current Driver connecté:`, this.currentDriver ? 'OUI' : 'NON');
+          
+          // Si utilisateur déjà connecté, afficher directement la commande du token
+          if (this.currentDriver) {
+            console.log(`🚀 [TOKEN_DEBUG] Appel displayTokenOrder() immédiat`);
+            this.displayTokenOrder();
+          } else {
+            console.log(`⏳ [TOKEN_DEBUG] Attente connexion utilisateur pour displayTokenOrder()`);
+          }
           
           // L'utilisateur est déjà authentifié par le DeliveryTokenGuard
           // Pas besoin d'afficher la popup - il peut voir les commandes directement

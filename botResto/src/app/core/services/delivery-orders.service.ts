@@ -62,22 +62,37 @@ export class DeliveryOrdersService {
 
   /**
    * Charger toutes les commandes prêtes pour livraison (non assignées)
+   * @param restaurantId - ID du restaurant
+   * @param includeAssigned - Inclure aussi les commandes assignées (pour mode token)
    */
-  async loadAvailableOrders(restaurantId: number): Promise<void> {
+  async loadAvailableOrders(restaurantId: number, includeAssigned: boolean = false): Promise<void> {
     console.log('🔍 [DeliveryOrders] loadAvailableOrders - Restaurant ID:', restaurantId);
+    console.log('🔍 [DeliveryOrders] Include Assigned:', includeAssigned);
     
     try {
-      const { data, error } = await this.supabaseFranceService.client
+      // Construction de la requête de base
+      let query = this.supabaseFranceService.client
         .from('france_orders')
         .select(`
           *,
           france_restaurants!inner(name)
         `)
         .eq('restaurant_id', restaurantId)
-        .eq('status', 'prete')
-        .eq('delivery_mode', 'livraison')
-        .is('driver_id', null)
-        .order('created_at', { ascending: true });
+        .eq('delivery_mode', 'livraison');
+      
+      // Si includeAssigned est true, inclure les commandes assignées
+      if (includeAssigned) {
+        console.log('🔍 [DeliveryOrders] Mode token - Inclusion des commandes assignées');
+        query = query.in('status', ['prete', 'assignee']);
+        // Pas de filtre sur driver_id pour inclure toutes les commandes
+      } else {
+        console.log('🔍 [DeliveryOrders] Mode normal - Uniquement commandes prêtes non assignées');
+        query = query
+          .eq('status', 'prete')
+          .is('driver_id', null);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: true });
 
       if (error) {
         console.error('Erreur chargement commandes disponibles:', error);
