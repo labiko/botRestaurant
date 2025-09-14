@@ -58,7 +58,10 @@ export class ProductQueryService implements IProductQueryService {
       }
 
       // Exécuter la requête
-      const { data, error } = await query;
+      const { data, error } = await QueryPerformanceMonitor.measureQuery(
+        'DYNAMIC_PRODUCT_QUERY_WITH_JOINS',
+        query
+      );
 
       if (error) {
         console.error('❌ [ProductQuery] Erreur requête:', error);

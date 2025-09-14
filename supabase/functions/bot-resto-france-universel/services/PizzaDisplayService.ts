@@ -4,6 +4,7 @@
 
 import { IMessageSender } from '../types.ts';
 import { SessionManager } from './SessionManager.ts';
+import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
 
 /**
  * Service UNIVERSEL pour l'affichage unifié des pizzas
@@ -326,16 +327,19 @@ export class PizzaDisplayService {
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);
       
       // Récupérer toutes les pizzas avec la taille demandée
-      const { data: pizzasWithSize } = await supabase
-        .from('france_products')
-        .select(`
-          *,
-          france_product_sizes!inner (*)
-        `)
-        .eq('france_product_sizes.size_name', data.pizzaSize)
-        .eq('category_id', session.sessionData?.currentCategoryId)
-        .eq('is_active', true)
-        .order('display_order');
+      const { data: pizzasWithSize } = await QueryPerformanceMonitor.measureQuery(
+        'PIZZA_WITH_SIZES_INNER_JOIN',
+        supabase
+          .from('france_products')
+          .select(`
+            *,
+            france_product_sizes!inner (*)
+          `)
+          .eq('france_product_sizes.size_name', data.pizzaSize)
+          .eq('category_id', session.sessionData?.currentCategoryId)
+          .eq('is_active', true)
+          .order('display_order')
+      );
       
       // Construire le message d'en-tête
       let message = `🍕 Choix Pizza ${data.stepNumber}/${data.totalSteps} pour ${data.menuType}\n`;

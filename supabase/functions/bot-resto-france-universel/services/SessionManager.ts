@@ -6,6 +6,7 @@
 const SESSION_DURATION_MINUTES = 240; // 4 heures - TEMPORAIRE pour test décalage horaire
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
 import { 
   ISessionManager, 
   BotSession, 
@@ -61,12 +62,15 @@ export class SessionManager implements ISessionManager {
     
     try {
       // Rechercher session existante et active
-      const { data: existingSession, error } = await this.supabase
-        .from('france_user_sessions')
-        .select('*')
-        .eq('phone_number', phoneNumber)
-        .gt('expires_at', this.getCurrentTime().toISOString())
-        .single();
+      const { data: existingSession, error } = await QueryPerformanceMonitor.measureQuery(
+        'SESSION_SELECT_STAR_WITH_JSON',
+        this.supabase
+          .from('france_user_sessions')
+          .select('*')
+          .eq('phone_number', phoneNumber)
+          .gt('expires_at', this.getCurrentTime().toISOString())
+          .single()
+      );
 
       if (existingSession && !error) {
         console.log(`✅ [SessionManager] Session existante trouvée: ${existingSession.id}`);

@@ -6,6 +6,7 @@
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { LocationService, ICoordinates } from '../../_shared/application/services/LocationService.ts';
+import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
 
 export interface Restaurant {
   id: number;
@@ -45,12 +46,15 @@ export class RestaurantDiscoveryService {
     try {
       console.log(`🔍 [RestaurantDiscovery] Récupération restaurants disponibles`);
       
-      const { data, error } = await this.supabase
-        .from('france_restaurants')
-        .select('id, name, latitude, longitude, delivery_zone_km, is_active, is_exceptionally_closed, business_hours')
-        .eq('is_active', true)
-        .eq('is_exceptionally_closed', false)
-        .order('name');
+      const { data, error } = await QueryPerformanceMonitor.measureQuery(
+        'RESTAURANTS_WITH_GEOLOCATION',
+        this.supabase
+          .from('france_restaurants')
+          .select('id, name, latitude, longitude, delivery_zone_km, is_active, is_exceptionally_closed, business_hours')
+          .eq('is_active', true)
+          .eq('is_exceptionally_closed', false)
+          .order('name')
+      );
         
       if (error) {
         console.error('❌ [RestaurantDiscovery] Erreur récupération restaurants:', error);

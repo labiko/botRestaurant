@@ -3,6 +3,7 @@
 
 import { IMessageSender } from '../types.ts';
 import { SessionManager } from './SessionManager.ts';
+import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
 
 /**
  * Exécuteur de workflows composites (TACOS, PIZZAS avec suppléments, etc.)
@@ -423,12 +424,15 @@ export class CompositeWorkflowExecutor {
     supabase: any
   ): Promise<void> {
     // Continuer avec le workflow classique sans variantes
-    const { data: productOptions, error } = await supabase
-      .from('france_product_options')
-      .select('*')
-      .eq('product_id', product.id)
-      .order('group_order', { ascending: true })
-      .order('display_order', { ascending: true });
+    const { data: productOptions, error } = await QueryPerformanceMonitor.measureQuery(
+      'PRODUCT_OPTIONS_DOUBLE_ORDER_BY',
+      supabase
+        .from('france_product_options')
+        .select('*')
+        .eq('product_id', product.id)
+        .order('group_order', { ascending: true })
+        .order('display_order', { ascending: true })
+    );
     
     if (error || !productOptions || productOptions.length === 0) {
       console.error('❌ [StandardWorkflow] Pas d\'options trouvées:', error);
