@@ -2892,8 +2892,11 @@ export class UniversalBot implements IMessageHandler {
     productBlock += `━━━━━━━━━━━━━━━━━━━━━\n`;
     
     // Nom avec icônes
-    const cleanName = product.name.replace(/^[^\s]+\s/, ''); // Enlève emoji existant
-    productBlock += `🎯 ${categoryIcon} ${categoryIcon} ${cleanName.toUpperCase()}\n`;
+    // ANCIEN CODE (commenté pour rollback si besoin) :
+    // const cleanName = product.name.replace(/^[^\s]+\s/, ''); // Enlève emoji existant - PROBLEME: supprime le premier mot
+    
+    // CORRECTION: Garder le nom complet mais préserver le comportement existant (double categoryIcon)
+    productBlock += `🎯 ${categoryIcon} ${categoryIcon} ${product.name.toUpperCase()}\n`;
     
     // Composition si disponible
     if (product.composition) {
