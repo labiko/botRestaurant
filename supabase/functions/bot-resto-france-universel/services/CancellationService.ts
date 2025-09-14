@@ -397,11 +397,16 @@ export class CancellationService {
    * Formater le message de succès
    */
   formatSuccessMessage(orderNumber: string): string {
-    return `✅ **COMMANDE ANNULÉE**
+    return `✅ **ANNULATION RÉUSSIE !**
 
-📋 Commande N°${orderNumber} annulée avec succès
+📋 Commande N°${orderNumber} annulée
+💰 Aucun montant débité
+⏰ Annulation traitée immédiatement
 
-💡 Tapez le numéro du resto pour accéder directement.`;
+🎯 **Que faire maintenant ?**
+🍕 Tapez **"resto"** → Voir tous les restaurants  
+🔢 Tapez **le numéro du resto** → Accéder directement
+📞 Besoin d'aide ? Contactez le restaurant`;
   }
 
   /**
