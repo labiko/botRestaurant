@@ -39,7 +39,7 @@
         <div class="tab-indicator"></div>
       </div>
       
-      <div class="tab-card" [class.active]="currentTab === 'workflows'" (click)="switchTab('workflows')">
+      <div class="tab-card disabled" [class.active]="false" style="pointer-events: none; opacity: 0.5;">
         <div class="tab-icon">
           <ion-icon name="git-branch"></ion-icon>
         </div>

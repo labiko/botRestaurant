@@ -199,6 +199,7 @@
                   fill="outline" 
                   size="small" 
                   color="tertiary"
+                  [disabled]="true"
                   (click)="onViewProductDetails(product)">
                   <ion-icon name="eye" slot="start"></ion-icon>
                   Détails
@@ -207,6 +208,7 @@
                   fill="outline" 
                   size="small" 
                   color="tertiary"
+                  [disabled]="true"
                   (click)="onConfigureWorkflow(product)">
                   <ion-icon name="settings" slot="start"></ion-icon>
                   Workflow
@@ -254,6 +256,7 @@
             <ion-button 
               fill="clear" 
               color="primary"
+              [disabled]="true"
               (click)="onViewProductDetails(product)">
               <ion-icon name="information-circle" slot="start"></ion-icon>
               Détails
