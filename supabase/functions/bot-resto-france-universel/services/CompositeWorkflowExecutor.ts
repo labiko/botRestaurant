@@ -897,7 +897,6 @@ export class CompositeWorkflowExecutor {
       `✅ ${optionGroup.displayName}: ${selectedNames}`);
     
     // Passer à l'étape suivante
-    await new Promise(resolve => setTimeout(resolve, 500));
     await this.showUniversalWorkflowStep(phoneNumber, session, workflowData, workflowData.currentStep);
   }
   
@@ -1006,8 +1005,7 @@ export class CompositeWorkflowExecutor {
     const nextStep = await this.determineNextStep(workflowData, selectedOptions, optionGroup);
     workflowData.currentStep = nextStep;
     
-    // Passer à l'étape suivante (avec délai pour éviter spam)
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Passer à l'étape suivante
     
     // CORRECTION : Vérifier si le workflow est terminé avant d'appeler showWorkflowStep
     if (workflowData.currentStep >= workflowData.optionGroups.length) {
