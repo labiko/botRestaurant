@@ -8,6 +8,7 @@
 const SESSION_DURATION_MINUTES = 120; // 2 heures - Durée raisonnable pour commandes livraison
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
 // Import commenté car service non utilisé directement dans ce contexte
 // Le messageSender est injecté depuis UniversalBot qui gère déjà WhatsApp
 
@@ -58,14 +59,17 @@ export class CancellationService {
       
       const cleanPhone = phoneNumber.replace('@c.us', '');
       
-      const { data, error } = await this.supabase
-        .from('france_orders')
-        .select('id, order_number, status, total_amount, phone_number, driver_id, delivery_address, created_at')
-        .eq('phone_number', cleanPhone)
-        .not('status', 'in', '("livree","servie","recuperee","annulee")')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+      const { data, error } = await QueryPerformanceMonitor.measureQuery(
+        'FIND_CANCELABLE_ORDER',
+        this.supabase
+          .from('france_orders')
+          .select('id, order_number, status, total_amount, phone_number, driver_id, delivery_address, created_at')
+          .eq('phone_number', cleanPhone)
+          .not('status', 'in', '("livree","servie","recuperee","annulee")')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+      );
 
       if (error) {
         console.log(`ℹ️ [CancellationService] Aucune commande annulable trouvée:`, error.message);

@@ -5,6 +5,7 @@
  */
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
 
 export interface OrderData {
   restaurant_id: number;
@@ -50,12 +51,15 @@ export class OrderService {
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
       
-      const { count } = await this.supabase
-        .from('france_orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('restaurant_id', restaurantId)
-        .gte('created_at', startOfDay.toISOString())
-        .lt('created_at', endOfDay.toISOString());
+      const { count } = await QueryPerformanceMonitor.measureQuery(
+        'COUNT_ORDERS_TODAY',
+        this.supabase
+          .from('france_orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('restaurant_id', restaurantId)
+          .gte('created_at', startOfDay.toISOString())
+          .lt('created_at', endOfDay.toISOString())
+      );
       
       const orderNumber = `${dayMonth}-${String((count || 0) + 1).padStart(4, '0')}`;
       

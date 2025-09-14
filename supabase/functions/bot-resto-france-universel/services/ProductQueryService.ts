@@ -8,6 +8,7 @@ import {
   Product,
   ProductQueryConfig
 } from '../types.ts';
+import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
 
 /**
  * Service de requête produits unifié
@@ -108,17 +109,20 @@ export class ProductQueryService implements IProductQueryService {
     console.log(`🔍 [ProductQuery] Récupération produit ID: ${productId}`);
     
     try {
-      const { data, error } = await this.supabase
-        .from('france_products')
-        .select(`
-          *,
-          france_menu_categories (
-            name,
-            slug
-          )
-        `)
-        .eq('id', productId)
-        .single();
+      const { data, error } = await QueryPerformanceMonitor.measureQuery(
+        'PRODUCT_WITH_CATEGORY',
+        this.supabase
+          .from('france_products')
+          .select(`
+            *,
+            france_menu_categories (
+              name,
+              slug
+            )
+          `)
+          .eq('id', productId)
+          .single()
+      );
 
       if (error || !data) {
         console.error('❌ [ProductQuery] Produit non trouvé:', error);
