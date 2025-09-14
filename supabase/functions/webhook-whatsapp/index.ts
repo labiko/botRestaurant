@@ -2607,13 +2607,13 @@ ${restaurantName}
           console.log(`✅ Confirmation reçue, annulation de N°${orderToCancel}`);
           
           const { error } = await supabase
-            .from('commandes')
+            .from('france_orders')
             .update({
-              statut: 'annulee',
-              cancelled_at: new Date().toISOString()
+              status: 'annulee',
+              updated_at: 'NOW()'
             })
-            .eq('numero_commande', orderToCancel)
-            .not('statut', 'in', '(terminee,livree,annulee)');
+            .eq('order_number', orderToCancel)
+            .not('status', 'in', '("livree","servie","recuperee","annulee")');
 
           if (!error) {
             // Récupérer infos restaurant pour message

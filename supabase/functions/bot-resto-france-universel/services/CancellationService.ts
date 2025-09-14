@@ -62,7 +62,7 @@ export class CancellationService {
         .from('france_orders')
         .select('id, order_number, status, total_amount, phone_number, driver_id, delivery_address, created_at')
         .eq('phone_number', cleanPhone)
-        .not('status', 'in', '("livree","annulee")')
+        .not('status', 'in', '("livree","servie","recuperee","annulee")')
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -73,6 +73,7 @@ export class CancellationService {
       }
 
       console.log(`✅ [CancellationService] Commande annulable trouvée: ${data.order_number}`);
+      console.log(`🔒 [SECURITY] Vérification statut commande ${data.order_number}: ${data.status} - AUTORISÉE`);
       return data as CancellableOrder;
       
     } catch (error) {
@@ -107,7 +108,7 @@ export class CancellationService {
           updated_at: 'NOW()' // Utilise le fuseau PostgreSQL (Europe/Paris)
         })
         .eq('id', orderId)
-        .not('status', 'in', '("livree","annulee")');
+        .not('status', 'in', '("livree","servie","recuperee","annulee")');
 
       if (error) {
         console.error('❌ [CancellationService] Erreur BDD:', error);
@@ -126,6 +127,7 @@ export class CancellationService {
       }
 
       console.log(`✅ [CancellationService] Commande ${orderInfo.order_number} annulée`);
+      console.log(`🔒 [SECURITY] Annulation réussie - Commande: ${orderInfo.order_number}, Statut précédent: en cours`);
       return {
         success: true,
         orderNumber: orderInfo.order_number,
@@ -402,11 +404,14 @@ export class CancellationService {
    * Message si aucune commande à annuler
    */
   formatNoOrderMessage(): string {
-    return `ℹ️ **AUCUNE COMMANDE À ANNULER**
+    return `😊 **TOUT EST EN ORDRE !**
 
-Vous n'avez pas de commande en cours.
+Nous n'avons trouvé aucune commande à annuler.
+Vos commandes récentes ont toutes été traitées avec succès.
 
-💡 Tapez le numéro du resto pour accéder directement.`;
+🎯 **Prochaines actions :**
+🍕 Tapez **"resto"** → Voir tous les restaurants
+🔢 Tapez **le numéro du resto** → Accéder directement`;
   }
 
   /**
