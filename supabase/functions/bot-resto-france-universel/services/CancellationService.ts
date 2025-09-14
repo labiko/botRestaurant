@@ -20,6 +20,7 @@ export interface CancellableOrder {
   driver_id?: number;
   delivery_address?: string;
   created_at?: string;
+  restaurant_id?: number;
 }
 
 export interface CancellationResult {
@@ -98,12 +99,12 @@ export class CancellationService {
         };
       }
 
-      // 2. Mettre à jour statut en BDD
+      // 2. Mettre à jour statut en BDD avec timestamp correct
       const { error } = await this.supabase
         .from('france_orders')
         .update({ 
           status: 'annulee', 
-          updated_at: new Date() 
+          updated_at: 'NOW()' // Utilise le fuseau PostgreSQL (Europe/Paris)
         })
         .eq('id', orderId)
         .not('status', 'in', '("livree","annulee")');
@@ -184,7 +185,7 @@ export class CancellationService {
     try {
       const { data, error } = await this.supabase
         .from('france_orders')
-        .select('id, order_number, status, total_amount, phone_number, driver_id, delivery_address')
+        .select('id, order_number, status, total_amount, phone_number, driver_id, delivery_address, restaurant_id')
         .eq('id', orderId)
         .single();
 

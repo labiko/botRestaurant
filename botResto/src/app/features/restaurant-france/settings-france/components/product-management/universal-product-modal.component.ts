@@ -21,6 +21,7 @@ interface ModalConfig {
 })
 export class UniversalProductModalComponent implements OnInit {
   @Input() product: any;
+  @Input() mode: 'edit' | 'duplicate' = 'edit'; // Nouveau paramètre
   
   productForm!: FormGroup;
   modalConfig: ModalConfig = {
@@ -47,6 +48,7 @@ export class UniversalProductModalComponent implements OnInit {
 
   ngOnInit() {
     console.log('🔍 [UniversalModal] Produit reçu:', this.product);
+    console.log('🔍 [UniversalModal] Mode:', this.mode);
     this.analyzeProduct();
     this.populateForm();
     this.loadCompositeItems();
@@ -64,7 +66,8 @@ export class UniversalProductModalComponent implements OnInit {
       product_type: ['simple'],
       workflow_type: [''],
       requires_steps: [false],
-      steps_config: ['']
+      steps_config: [''],
+      category_id: [null] // ✅ AJOUT: champ category_id manquant
     });
   }
 
@@ -110,6 +113,8 @@ export class UniversalProductModalComponent implements OnInit {
   private populateForm() {
     if (!this.product) return;
 
+    console.log('🔍 [UniversalModal] category_id du produit source:', this.product.category_id);
+
     this.productForm.patchValue({
       name: this.product.name || '',
       description: this.product.description || '',
@@ -121,7 +126,8 @@ export class UniversalProductModalComponent implements OnInit {
       product_type: this.product.product_type || 'simple',
       workflow_type: this.product.workflow_type || '',
       requires_steps: this.product.requires_steps || false,
-      steps_config: this.product.steps_config ? JSON.stringify(this.product.steps_config, null, 2) : ''
+      steps_config: this.product.steps_config ? JSON.stringify(this.product.steps_config, null, 2) : '',
+      category_id: this.product.category_id || null // ✅ AJOUT: Duplication du category_id
     });
 
     console.log('📝 [UniversalModal] Formulaire peuplé avec les données produit');

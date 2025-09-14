@@ -223,12 +223,7 @@ export class AudioNotificationService {
       // Réinitialiser le son au début
       this.audioElement.currentTime = 0;
       
-      // Définir le volume (0.0 à 1.0)
-      if (volume !== undefined) {
-        this.audioElement.volume = Math.max(0, Math.min(1, volume / 100));
-      }
-
-      // Jouer le son
+      // Jouer le son (volume géré par le système utilisateur)
       await this.audioElement.play();
       console.log('[AudioNotification] Son joué avec succès');
       
@@ -243,9 +238,9 @@ export class AudioNotificationService {
   /**
    * Tester le son (pour interface paramètres)
    */
-  async testSound(volume: number = 50): Promise<boolean> {
-    console.log('[AudioNotification] Test du son avec volume:', volume);
-    return await this.playNewOrderSound(volume);
+  async testSound(): Promise<boolean> {
+    console.log('[AudioNotification] Test du son');
+    return await this.playNewOrderSound();
   }
 
   /**
@@ -267,7 +262,7 @@ export class AudioNotificationService {
 
           // Jouer le son pour chaque commande éligible
           for (const order of eligibleOrders) {
-            const played = await this.playNewOrderSound(settings.audio_volume);
+            const played = await this.playNewOrderSound();
             
             if (played) {
               // Marquer comme joué

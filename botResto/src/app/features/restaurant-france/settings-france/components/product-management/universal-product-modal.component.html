@@ -1,8 +1,8 @@
 <ion-header>
   <ion-toolbar color="primary">
     <ion-title>
-      <ion-icon name="pencil" slot="start"></ion-icon>
-      Modifier le produit
+      <ion-icon [name]="mode === 'duplicate' ? 'copy' : 'pencil'" slot="start"></ion-icon>
+      {{ mode === 'duplicate' ? 'Dupliquer le produit' : 'Modifier le produit' }}
     </ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="onCancel()">
@@ -273,7 +273,7 @@
       </ion-button>
       <ion-button fill="solid" color="primary" (click)="onSave()" [disabled]="productForm.invalid">
         <ion-icon name="checkmark" slot="start"></ion-icon>
-        Sauvegarder
+        {{ mode === 'duplicate' ? 'Créer le produit' : 'Sauvegarder' }}
       </ion-button>
     </div>
   </ion-toolbar>

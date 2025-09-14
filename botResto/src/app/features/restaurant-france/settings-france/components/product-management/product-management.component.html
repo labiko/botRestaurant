@@ -245,6 +245,14 @@
             
             <ion-button 
               fill="clear" 
+              color="secondary"
+              (click)="onDuplicateProduct(product)">
+              <ion-icon name="copy" slot="start"></ion-icon>
+              Dupliquer
+            </ion-button>
+            
+            <ion-button 
+              fill="clear" 
               color="primary"
               (click)="onViewProductDetails(product)">
               <ion-icon name="information-circle" slot="start"></ion-icon>

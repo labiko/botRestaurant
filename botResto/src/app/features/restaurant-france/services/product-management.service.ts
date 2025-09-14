@@ -400,6 +400,43 @@ export class ProductManagementService {
   }
 
   /**
+   * Crée un nouveau produit
+   */
+  createProduct(restaurantId: number, productData: Partial<FranceProduct>): Observable<FranceProduct> {
+    const newProduct = {
+      restaurant_id: restaurantId,
+      category_id: productData.category_id,
+      name: productData.name,
+      description: productData.description || null,
+      product_type: productData.product_type,
+      base_price: productData.base_price || null,
+      composition: productData.composition || null,
+      display_order: productData.display_order || 0,
+      is_active: productData.is_active !== undefined ? productData.is_active : true,
+      price_on_site_base: productData.price_on_site_base || null,
+      price_delivery_base: productData.price_delivery_base || null,
+      workflow_type: productData.workflow_type || null,
+      requires_steps: productData.requires_steps !== undefined ? productData.requires_steps : false,
+      steps_config: productData.steps_config || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    return from(
+      this.supabase
+        .from('france_products')
+        .insert(newProduct)
+        .select()
+        .single()
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return data as FranceProduct;
+      })
+    );
+  }
+
+  /**
    * Crée une nouvelle option pour un produit
    */
   createProductOption(productId: number, optionData: Omit<ProductOption, 'id'>): Observable<ProductOption> {

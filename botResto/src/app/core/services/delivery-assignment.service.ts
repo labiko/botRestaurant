@@ -476,7 +476,7 @@ Répondez:
     try {
       const updateData: any = {
         driver_assignment_status: status,
-        updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
+        updated_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
       };
 
       if (status === 'searching') {

@@ -38,8 +38,8 @@
       </div>
     </div>
 
-    <!-- Volume Control -->
-    <div class="setting-card" *ngIf="audioSettings.audio_notifications_enabled">
+    <!-- Volume Control - MASQUE pour éviter les problèmes de périphériques système -->
+    <!-- <div class="setting-card" *ngIf="audioSettings.audio_notifications_enabled">
       <div class="setting-header">
         <div class="setting-icon">
           <ion-icon name="volume-medium"></ion-icon>
@@ -79,7 +79,7 @@
           </ion-button>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <!-- Status Information -->
     <div class="setting-card info" *ngIf="audioSettings.audio_notifications_enabled">

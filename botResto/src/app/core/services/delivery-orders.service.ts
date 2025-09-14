@@ -216,7 +216,7 @@ export class DeliveryOrdersService {
     try {
       const updateData: any = {
         status: newStatus,
-        updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
+        updated_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
       };
 
       // Si on commence la livraison, ajouter l'heure estimée

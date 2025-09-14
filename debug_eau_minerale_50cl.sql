@@ -9,9 +9,8 @@ SELECT
     p.id,
     p.name,
     p.category_id,
-    p.type,
-    p.price_on_site as price_base,
-    p.price_delivery as price_delivery_base,
+    p.product_type,  -- Corrigé: 'type' n'existe pas, c'est 'product_type'
+    p.base_price as price_base,  -- Corrigé: 'price_on_site' n'existe pas sur france_products
     p.is_active,
     c.name as category_name
 FROM france_products p
@@ -42,7 +41,7 @@ SELECT
     'COMPARAISON VARIANTS SUSPECTS' as section,
     pv.variant_name,
     COUNT(*) as count_variants,
-    GROUP_CONCAT(p.name) as products_concernés
+    STRING_AGG(p.name, ', ') as products_concernés  -- Corrigé: GROUP_CONCAT → STRING_AGG pour PostgreSQL
 FROM france_product_variants pv
 JOIN france_products p ON pv.product_id = p.id
 WHERE p.category_id = 14 -- catégorie boissons

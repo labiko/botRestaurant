@@ -151,14 +151,14 @@ export class AudioNotificationsConfigComponent implements OnInit, OnDestroy {
    * Tester le son
    */
   async testSound(): Promise<void> {
-    if (this.isTestingSound || !this.audioSettings) {
+    if (this.isTestingSound) {
       return;
     }
     
     this.isTestingSound = true;
     
     try {
-      const success = await this.audioNotificationService.testSound(this.audioSettings.audio_volume);
+      const success = await this.audioNotificationService.testSound();
       
       if (success) {
         this.presentToast('Test réussi ! 🔊', 'success');

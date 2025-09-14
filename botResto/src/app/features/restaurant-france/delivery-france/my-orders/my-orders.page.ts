@@ -15,6 +15,7 @@ import { DeliveryCountersService, DeliveryCounters } from '../../../../core/serv
 import { DeliveryOrderItemsService } from '../../../../core/services/delivery-order-items.service';
 import { UniversalOrderDisplayService, FormattedItem } from '../../../../core/services/universal-order-display.service';
 import { AddressWhatsAppService } from '../../../../core/services/address-whatsapp.service';
+import { FuseauHoraireService } from '../../../../core/services/fuseau-horaire.service';
 
 @Component({
   selector: 'app-my-orders',
@@ -67,7 +68,8 @@ export class MyOrdersPage implements OnInit, OnDestroy {
     private deliveryCountersService: DeliveryCountersService,
     private deliveryOrderItemsService: DeliveryOrderItemsService,
     private universalOrderDisplayService: UniversalOrderDisplayService,
-    private addressWhatsAppService: AddressWhatsAppService
+    private addressWhatsAppService: AddressWhatsAppService,
+    private fuseauHoraireService: FuseauHoraireService
   ) {}
 
   ngOnInit() {
@@ -385,7 +387,7 @@ export class MyOrdersPage implements OnInit, OnDestroy {
             .from('france_orders')
             .update({
               date_validation_code: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
             })
             .eq('id', order.id);
 

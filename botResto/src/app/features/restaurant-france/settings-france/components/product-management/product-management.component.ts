@@ -35,6 +35,7 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
   searchTerm: string = '';
   isLoading = false;
   hideDeliveryInfo = false; // Flag pour masquer les infos de livraison
+  isCreating = false; // Protection anti-double-soumission
   
   // Mock restaurant ID - should come from auth service
   restaurantId = 1;
@@ -366,7 +367,7 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
     // Filter by category
     if (this.selectedCategory !== 'all') {
       filtered = filtered.filter(product => 
-        product.category_id.toString() === this.selectedCategory
+        product.category_id && product.category_id.toString() === this.selectedCategory
       );
     }
 
@@ -591,6 +592,100 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
       await loading.dismiss();
       console.error('❌ [ProductManagement] Erreur sauvegarde:', error);
       await this.presentToast('Erreur lors de la sauvegarde', 'danger');
+    }
+  }
+
+  /**
+   * Dupliquer un produit existant
+   */
+  async onDuplicateProduct(product: FranceProduct) {
+    console.log('🔄 [ProductManagement] === DÉBUT DUPLICATION ===');
+    console.log('🔄 [ProductManagement] Nom du produit:', product.name);
+    console.log('🔍 [ProductManagement] OBJET PRODUCT COMPLET:', product);
+    console.log('🔍 [ProductManagement] category_id source:', product.category_id);
+    console.log('🔍 [ProductManagement] restaurant_id source:', product.restaurant_id);
+    console.log('🔍 [ProductManagement] product_type source:', product.product_type);
+    console.log('🔄 [ProductManagement] === FIN DEBUG SOURCE ===');
+    
+    try {
+      // 1. Cloner les données du produit (sans l'ID)
+      const duplicatedProductData = {
+        ...product,
+        id: undefined, // Supprimer l'ID pour création
+        name: `${product.name} (Copie)`, // Nom modifié
+        created_at: undefined,
+        updated_at: undefined
+      };
+      
+      console.log('📝 [ProductManagement] Données dupliquées:', duplicatedProductData);
+      
+      // 2. Ouvrir la modal existante en mode duplication
+      const modal = await this.modalController.create({
+        component: UniversalProductModalComponent,
+        componentProps: {
+          product: duplicatedProductData,
+          mode: 'duplicate' // Nouveau mode
+        },
+        backdropDismiss: false,
+        cssClass: 'universal-product-modal'
+      });
+
+      modal.onDidDismiss().then((result) => {
+        if (result.role === 'save' && result.data) {
+          console.log('💾 [ProductManagement] Sauvegarde duplication:', result.data);
+          this.saveNewProduct(result.data);
+        } else {
+          console.log('❌ [ProductManagement] Duplication annulée');
+        }
+      });
+
+      return await modal.present();
+      
+    } catch (error) {
+      console.error('❌ [ProductManagement] Erreur lors de la duplication:', error);
+      await this.presentToast('Erreur lors de la duplication', 'danger');
+    }
+  }
+
+  /**
+   * Sauvegarder un nouveau produit (duplication)
+   */
+  private async saveNewProduct(productData: any) {
+    // Protection anti-double-soumission
+    if (this.isCreating) {
+      console.log('⚠️ [ProductManagement] Création déjà en cours, ignorée');
+      return;
+    }
+
+    this.isCreating = true;
+
+    const loading = await this.loadingController.create({
+      message: 'Création du produit dupliqué...'
+    });
+    await loading.present();
+
+    try {
+      console.log('💾 [ProductManagement] Création nouveau produit:', productData);
+      
+      // Créer nouveau produit via le service (méthode à ajouter)
+      await this.productManagementService.createProduct(
+        this.restaurantId, 
+        productData
+      ).toPromise();
+      
+      await loading.dismiss();
+      await this.presentToast('Produit dupliqué avec succès', 'success');
+      
+      // Recharger la liste des produits
+      this.loadProducts();
+      
+    } catch (error) {
+      await loading.dismiss();
+      console.error('❌ [ProductManagement] Erreur création produit:', error);
+      await this.presentToast('Erreur lors de la création du produit', 'danger');
+    } finally {
+      // Toujours remettre le flag à false
+      this.isCreating = false;
     }
   }
 

@@ -397,7 +397,7 @@ export class OrderService {
   async updateOrderStatus(orderId: number, status: string): Promise<boolean> {
     const { error } = await this.supabase
       .from('france_orders')
-      .update({ status, updated_at: new Date().toISOString() })
+      .update({ status, updated_at: 'NOW()' }) // Utilise le fuseau PostgreSQL (Europe/Paris)
       .eq('id', orderId);
     
     if (error) {

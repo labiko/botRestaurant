@@ -247,6 +247,31 @@ export class FuseauHoraireService {
   }
 
   /**
+   * NOUVEAU : Obtenir l'heure actuelle formatée pour la base de données
+   * Récupère automatiquement le restaurant_id depuis l'utilisateur connecté
+   * Idéal pour les mises à jour d'updated_at sans passer de paramètres
+   */
+  async getCurrentDatabaseTimeForRestaurant(): Promise<string> {
+    try {
+      // Récupérer l'utilisateur connecté pour obtenir le restaurant_id
+      const currentUser = this.authFranceService.getCurrentUser();
+      const restaurantId = currentUser?.restaurantId;
+      alert(restaurantId)
+      if (!restaurantId) {
+        throw new Error('Aucun restaurant_id trouvé dans la session utilisateur');
+      }
+      
+      // Utiliser la méthode existante avec 0 minutes (= maintenant)
+      return await this.getRestaurantFutureTimeForDatabase(restaurantId, 0);
+      
+    } catch (error) {
+      console.error(`❌ [FuseauHoraire] Erreur getCurrentDatabaseTimeForRestaurant:`, error);
+      // Fallback sur l'heure UTC en cas d'erreur
+      return this.getCurrentTimeForDatabase();
+    }
+  }
+
+  /**
    * DEBUG : Tester le fuseau horaire du restaurant de l'utilisateur connecté
    */
   async debugCurrentUserTimezone(): Promise<{restaurantId: number, timezone: string, currentTime: string, formattedTime: string, user: any}> {
