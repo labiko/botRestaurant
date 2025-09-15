@@ -349,37 +349,26 @@ export class CompositeWorkflowExecutor {
       message += '\n━━━━━━━━━━━━━━━━━━━━━\n';
     }
     
-    message += `🎯 *${product.name.toUpperCase()}*\n\n`;
+    message += `🌮 ${product.name.toUpperCase()}\n`;
+    message += `📍 Prix sur place\n\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
     
-    const variantTitle = config.variant_selection?.title || displayConfig?.custom_header_text || '💰 Choisissez votre taille:';
-    message += `${variantTitle}\n`;
-    
-    // 4. Lister les variantes selon la configuration
-    const format = config.variant_selection?.format || '🔸 {variant_name} ({price} EUR) - Tapez {index}';
-    
+    // 4. Lister les variantes avec format sandwich
     finalVariants.forEach((variant, index) => {
       // Utiliser le prix selon le mode de livraison
       const price = deliveryMode === 'livraison' ? 
         (variant.price_delivery || variant.price_on_site + 1) : 
         (variant.price_on_site || variant.base_price);
       
-      let variantLine = format
-        .replace('{variant_name}', variant.variant_name)
-        .replace('{price}', price)
-        .replace('{index}', (index + 1).toString());
-      
-      message += `   ${variantLine}`;
-      
-      if (config.variant_selection?.show_drink_note && variant.has_drink_included) {
-        message += ' (+ boisson)';
-      }
-      
-      message += '\n';
+      message += `🎯 🌮 🌮 ${variant.variant_name}\n`;
+      message += `🧾 1 VIANDE AU CHOIX, 2 SAUCES AU CHOIX, EXTRAS OPTIONNELS, 1 BOISSON\n`;
+      message += `💰 ${price} EUR - Tapez ${index + 1}\n\n`;
+      message += `━━━━━━━━━━━━━━━━━━━━━\n`;
     });
     
-    message += '\n\n💡 Choisissez votre option: tapez le numéro\n';
-    message += `Ex: 1 = ${finalVariants[0]?.variant_name}\n`;
-    message += '(Chaque produit sera configuré individuellement)\n\n';
+    message += '\n💡 Tapez le numéro du produit souhaité\n';
+    message += '📝 Ex: 1 pour 1 produit, 1,1 pour 2 fois le même produit\n';
+    message += '↩️ Tapez 0 pour revenir au menu principal\n\n';
     
     // 5. Footer selon configuration
     const footerOptions = config.footer_options || [
