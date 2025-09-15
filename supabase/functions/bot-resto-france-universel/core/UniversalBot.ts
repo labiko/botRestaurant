@@ -1385,14 +1385,6 @@ export class UniversalBot implements IMessageHandler {
       console.log(`🍕 [ProductSelection] Mode pizza unifié - Accepte jusqu'à ${maxValidChoice}`);
     }
     
-    // NOUVEAU : Vérifier aussi menuOrder pour les variantes inline
-    const menuOrder = session.sessionData?.menuOrder;
-    if (menuOrder) {
-      const menuMaxChoice = Math.max(...Object.keys(menuOrder).map(k => parseInt(k)));
-      maxValidChoice = Math.max(maxValidChoice, menuMaxChoice);
-      console.log(`🆕 [ProductSelection] MenuOrder détecté - max choice étendu à ${maxValidChoice}`);
-    }
-    
     if (isNaN(productNumber) || productNumber < 1 || productNumber > maxValidChoice) {
       console.log(`❌ [ProductSelection] Choix invalide: ${productNumber} (max: ${maxValidChoice})`);
       await this.messageSender.sendMessage(phoneNumber, 
@@ -1466,18 +1458,6 @@ export class UniversalBot implements IMessageHandler {
       console.log(`🛒 [ProductSelection] Utilisation système classique pour produits standards`);
     }
     
-    // NOUVEAU : Traiter les variantes inline AVANT la logique standard
-    if (menuOrder && menuOrder[productNumber]) {
-      const variantProduct = menuOrder[productNumber];
-      console.log(`🆕 [ProductSelection] Variante inline détectée: ${variantProduct.name}`);
-      
-      if (variantProduct._isVariant) {
-        console.log(`🆕 [ProductSelection] Traitement direct au panier pour variante inline`);
-        await this.handleSimpleProductAddition(phoneNumber, session, variantProduct, 1);
-        return;
-      }
-    }
-    
     const selectedProduct = products[productNumber - 1];
     console.log(`✅ [ProductSelection] Produit sélectionné: ${selectedProduct.name} (ID: ${selectedProduct.id})`);
     
@@ -1499,7 +1479,6 @@ export class UniversalBot implements IMessageHandler {
       Object.assign(selectedProduct, fullProduct);
       console.log(`✅ [ProductSelection] Produit complet rechargé avec steps_config:`, !!fullProduct.steps_config);
     }
-    
     
     // DÉBOGAGE : Afficher toutes les propriétés du produit
     console.log(`🔍 [ProductSelection] Propriétés du produit:`, {
@@ -1769,75 +1748,10 @@ export class UniversalBot implements IMessageHandler {
       const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
       const productList: any[] = [];
       
-      // Nouveau : Index pour le menu (sera incrémenté pour chaque item affiché)
-      let menuIndex = 0;
-      const menuOrder: any = {}; // Map index -> produit pour la sélection
-      
-      // Parcourir les produits avec for...of pour permettre await
-      for (const product of products) {
+      products.forEach((product: any, index: number) => {
+        const displayNumber = index < 9 ? numberEmojis[index] : index === 9 ? '🔟' : `${index + 1}`;
         
-        // NOUVEAU : Vérifier si on doit afficher les variantes inline
-        if (product.display_variants_inline && product.france_product_sizes && product.france_product_sizes.length > 0) {
-          console.log(`🆕 [ShowProducts] ${product.name} configuré pour affichage variantes inline`);
-          
-          // Récupérer les tailles depuis la BD
-          const { data: sizes } = await this.supabase
-            .from('france_product_sizes')
-            .select('*')
-            .eq('product_id', product.id)
-            .order('display_order');
-          
-          // Afficher chaque taille comme un produit distinct
-          for (const size of sizes || []) {
-            menuIndex++;
-            const displayNumber = menuIndex < 9 ? numberEmojis[menuIndex - 1] : menuIndex === 10 ? '🔟' : `${menuIndex}`;
-            
-            const variantProduct = {
-              ...product,
-              id: product.id,
-              name: `${product.name} ${size.size_name}`,
-              price_on_site: size.price_on_site,
-              price_delivery: size.price_delivery,
-              composition: size.description || product.composition,
-              _sizeId: size.id,
-              _isVariant: true,
-              _originalProduct: product
-            };
-            
-            const activePrice = deliveryMode === 'livraison' ? 
-              variantProduct.price_delivery : variantProduct.price_on_site;
-            
-            console.log(`🔍 [ShowProducts] Affichage variante ${menuIndex}: ${variantProduct.name} - ${activePrice}€`);
-            
-            menuText += this.formatProductWithSeparators(
-              variantProduct, menuIndex - 1, category.icon, activePrice
-            );
-            
-            menuOrder[menuIndex] = variantProduct;
-            productList.push({
-              id: variantProduct.id,
-              name: variantProduct.name,
-              price: activePrice,
-              priceOnSite: variantProduct.price_on_site,
-              priceDelivery: variantProduct.price_delivery,
-              type: product.product_type,
-              workflow_type: product.workflow_type,
-              requires_steps: product.requires_steps,
-              sizes: [],
-              variants: [],
-              _sizeId: size.id,
-              _isVariant: true
-            });
-          }
-          
-          continue; // Passer au produit suivant
-        }
-        
-        // Comportement standard pour les autres produits (code existant préservé)
-        menuIndex++;
-        const displayNumber = menuIndex < 9 ? numberEmojis[menuIndex - 1] : menuIndex === 10 ? '🔟' : `${menuIndex}`;
-        
-        console.log(`🔍 [ShowProducts] Traitement produit ${menuIndex}: ${product.name}`);
+        console.log(`🔍 [ShowProducts] Traitement produit ${index + 1}: ${product.name}`);
         console.log(`🔍 [ShowProducts] Produit a ${product.france_product_sizes?.length || 0} tailles et ${product.france_product_variants?.length || 0} variantes`);
         
         // Déterminer les prix selon le mode de livraison choisi
@@ -1927,10 +1841,9 @@ export class UniversalBot implements IMessageHandler {
         console.log(`💰 [ShowProducts] ${product.name}: sur place ${priceOnSite}€, livraison ${priceDelivery}€, mode ${deliveryMode}, prix actif ${activePrice}€`);
         
         // Utilisation du nouveau format avec séparateurs
-        menuText += this.formatProductWithSeparators(product, menuIndex - 1, category.icon, activePrice);
+        menuText += this.formatProductWithSeparators(product, index, category.icon, activePrice);
         
         // Stocker le produit pour la session
-        menuOrder[menuIndex] = product;
         productList.push({
           id: product.id,
           name: product.name,
@@ -1943,7 +1856,7 @@ export class UniversalBot implements IMessageHandler {
           sizes: product.france_product_sizes || [],
           variants: product.france_product_variants || []
         });
-      }
+      });
       
       menuText += '\n💡 Tapez le numéro du produit souhaité';
       menuText += '\n📝 Ex: 1 pour 1 produit, 1,1 pour 2 fois le même produit';
@@ -1970,7 +1883,6 @@ export class UniversalBot implements IMessageHandler {
         currentCategoryId: categoryId,
         currentCategoryName: category.name,
         products: productList,
-        menuOrder: menuOrder, // NOUVEAU : Stocker l'ordre des produits pour la sélection
         deliveryMode: deliveryMode
       };
       
