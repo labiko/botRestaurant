@@ -103,9 +103,11 @@ export class PizzaDisplayService {
     const pizzaCategories = this.displayConfig.apply_to_categories || ['pizzas'];
     const menuCategories = this.displayConfig.apply_to_menu_categories || ['menu-pizza', 'Menu Pizza', 'menu_pizza'];
     
-    // DÉTECTION UNIVERSELLE : Toute catégorie contenant "menu" OU "pizza" dans le slug
-    const isUniversalCategory = categorySlug.toLowerCase().includes('menu') || 
-                               categorySlug.toLowerCase().includes('pizza');
+    // DÉTECTION PRÉCISE : Slugs exacts uniquement
+    const isUniversalCategory = categorySlug === 'pizzas' || 
+                               categorySlug === 'menu-pizza' ||
+                               categorySlug === 'menu_pizza' ||
+                               categorySlug === 'menus';
     
     return pizzaCategories.includes(categorySlug) || 
            menuCategories.includes(categorySlug) ||
@@ -246,7 +248,7 @@ export class PizzaDisplayService {
   ): Promise<void> {
     try {
       // Construire le message d'en-tête avec actions au début (MÊME FORMAT que pizzas)
-      let message = `📋 📋 Menu Pizza\n`;
+      let message = `${data.categoryIcon || '📋'} ${data.categoryName || 'Menu'}\n`;
       message += `📍 ${data.restaurantName}\n\n`;
       message += `ACTIONS RAPIDES:\n`;
       message += `⚡ 99 = Passer commande | 🗑️ 00 = Vider panier | 🍕 0 = Ajouter d'autres produits\n\n`;
