@@ -1,6 +1,14 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
+CREATE TABLE public.automation_logs (
+  id integer NOT NULL DEFAULT nextval('automation_logs_id_seq'::regclass),
+  action character varying NOT NULL,
+  details jsonb,
+  created_at timestamp without time zone DEFAULT now(),
+  success boolean DEFAULT true,
+  CONSTRAINT automation_logs_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.delivery_driver_actions (
   id integer NOT NULL DEFAULT nextval('delivery_driver_actions_id_seq'::regclass),
   order_id integer,
@@ -10,8 +18,8 @@ CREATE TABLE public.delivery_driver_actions (
   action_timestamp timestamp without time zone DEFAULT now(),
   details jsonb,
   CONSTRAINT delivery_driver_actions_pkey PRIMARY KEY (id),
-  CONSTRAINT delivery_driver_actions_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
   CONSTRAINT delivery_driver_actions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id),
+  CONSTRAINT delivery_driver_actions_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
   CONSTRAINT delivery_driver_actions_token_id_fkey FOREIGN KEY (token_id) REFERENCES public.delivery_tokens(id)
 );
 CREATE TABLE public.delivery_order_logs (
@@ -98,8 +106,8 @@ CREATE TABLE public.france_delivery_assignments (
   expires_at timestamp with time zone,
   response_time_seconds integer,
   CONSTRAINT france_delivery_assignments_pkey PRIMARY KEY (id),
-  CONSTRAINT france_delivery_assignments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id),
-  CONSTRAINT france_delivery_assignments_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id)
+  CONSTRAINT france_delivery_assignments_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
+  CONSTRAINT france_delivery_assignments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id)
 );
 CREATE TABLE public.france_delivery_drivers (
   id bigint NOT NULL DEFAULT nextval('france_delivery_drivers_id_seq'::regclass),
@@ -179,6 +187,7 @@ CREATE TABLE public.france_orders (
   delivery_started_at timestamp with time zone,
   assignment_timeout_at timestamp with time zone,
   assignment_started_at timestamp with time zone,
+  audio_played boolean DEFAULT false,
   CONSTRAINT france_orders_pkey PRIMARY KEY (id),
   CONSTRAINT france_orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id),
   CONSTRAINT france_orders_delivery_address_id_fkey FOREIGN KEY (delivery_address_id) REFERENCES public.france_customer_addresses(id),
@@ -318,6 +327,9 @@ CREATE TABLE public.france_restaurants (
   is_exceptionally_closed boolean DEFAULT false,
   latitude numeric,
   longitude numeric,
+  audio_notifications_enabled boolean DEFAULT true,
+  audio_volume integer DEFAULT 50 CHECK (audio_volume >= 0 AND audio_volume <= 100),
+  audio_enabled_since timestamp without time zone,
   CONSTRAINT france_restaurants_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.france_sessions (
@@ -332,7 +344,7 @@ CREATE TABLE public.france_sessions (
 );
 CREATE TABLE public.france_user_sessions (
   id integer NOT NULL DEFAULT nextval('france_user_sessions_id_seq'::regclass),
-  phone_number character varying NOT NULL UNIQUE,
+  phone_number character varying NOT NULL,
   chat_id character varying,
   restaurant_id integer,
   current_step character varying,
@@ -350,8 +362,7 @@ CREATE TABLE public.france_user_sessions (
   current_workflow_id character varying,
   workflow_data jsonb DEFAULT '{}'::jsonb,
   workflow_step_id character varying,
-  CONSTRAINT france_user_sessions_pkey PRIMARY KEY (id),
-  CONSTRAINT france_user_sessions_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
+  CONSTRAINT france_user_sessions_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.france_whatsapp_numbers (
   id integer NOT NULL DEFAULT nextval('france_whatsapp_numbers_id_seq'::regclass),
