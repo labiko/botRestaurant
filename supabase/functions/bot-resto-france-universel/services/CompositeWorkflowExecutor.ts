@@ -1031,6 +1031,25 @@ export class CompositeWorkflowExecutor {
     const currentStep = workflowData.currentStep;
     let nextStep = currentStep + 1;
 
+    // NOUVELLE LOGIQUE CONDITIONNELLE (sans casser l'existant)
+    const conditionalConfig = currentGroup.options?.[0]?.conditional_next_group;
+    if (conditionalConfig && selectedOptions.length > 0) {
+      // Utiliser display_order de l'option sélectionnée
+      const selectedDisplayOrder = selectedOptions[0]?.display_order?.toString();
+
+      if (selectedDisplayOrder && conditionalConfig[selectedDisplayOrder]) {
+        const targetGroupOrder = conditionalConfig[selectedDisplayOrder];
+        const targetIndex = workflowData.optionGroups.findIndex(
+          g => g.groupOrder === targetGroupOrder
+        );
+
+        if (targetIndex !== -1) {
+          console.log(`🔀 [ConditionalLogic] ${currentGroup.groupName} option ${selectedDisplayOrder} → group_order ${targetGroupOrder}`);
+          return targetIndex;
+        }
+      }
+    }
+
     // Logique universelle configurée : Vérifier next_group_order
     const configuredNext = currentGroup.options?.[0]?.next_group_order;
     if (configuredNext) {
@@ -1193,7 +1212,8 @@ export class CompositeWorkflowExecutor {
       
       groups[groupOrder].options.push({
         ...option,
-        next_group_order: option.next_group_order
+        next_group_order: option.next_group_order,
+        conditional_next_group: option.conditional_next_group
       });
     });
     
