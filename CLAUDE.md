@@ -10,6 +10,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Committer TOUT le projet** à chaque fois
 - **Un seul commit global** pour toutes les modifications en cours
 
+## 🔄 STRATÉGIE DE BRANCHES
+
+**⚠️ RÈGLES CRITIQUES DE DÉVELOPPEMENT** :
+
+### **🛡️ PROTECTION MASTER**
+- **MASTER = PRODUCTION** : Ne jamais modifier directement
+- **Commit sur master** uniquement pour sauvegarder l'état stable actuel
+- **Aucun merge sur master** sans demande explicite de l'utilisateur
+- **Master reste intouchable** pendant le développement
+
+### **🚀 BRANCHE DE DÉVELOPPEMENT**
+- **BRANCHE PAR DÉFAUT** : `dev` pour tout le développement
+- **Tous les changements** se font sur la branche `dev`
+- **Tests et expérimentations** uniquement sur `dev`
+- **Déploiements depuis `dev`** pour tester
+
+### **📋 WORKFLOW OBLIGATOIRE**
+1. **Commit + push sur master** pour sauvegarder l'état stable
+2. **Créer branche `dev`** depuis master
+3. **Basculer sur `dev`** comme branche par défaut
+4. **Tout développement sur `dev`** uniquement
+5. **Merge vers master** SEULEMENT sur demande explicite utilisateur
+
 ## 🎯 PRINCIPE DE NON-RÉGRESSION
 
 **⚠️ IMPORTANT**: Avant toute modification du code, s'assurer que les changements ne cassent pas les workflows existants. Toujours tester les scénarios fonctionnels après chaque modification.
