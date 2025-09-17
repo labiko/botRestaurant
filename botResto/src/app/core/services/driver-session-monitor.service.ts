@@ -30,7 +30,6 @@ export class DriverSessionMonitorService {
     private router: Router,
     private alertController: AlertController
   ) {
-    console.log(`🔍 [DriverSessionMonitor] Service initialisé avec polling ${POLLING_INTERVAL_MS / 60000} minutes`);
     
     // Gestion états application (arrière-plan/premier plan)
     this.setupVisibilityHandlers();
@@ -41,7 +40,6 @@ export class DriverSessionMonitorService {
    */
   startMonitoring(driverId: number): void {
     if (this.isMonitoring && this.currentDriverId === driverId) {
-      console.log(`🔍 [DriverSessionMonitor] Monitoring déjà actif pour livreur ${driverId}`);
       return;
     }
 
@@ -51,7 +49,6 @@ export class DriverSessionMonitorService {
     this.currentDriverId = driverId;
     this.isMonitoring = true;
 
-    console.log(`🚀 [DriverSessionMonitor] Démarrage monitoring livreur ${driverId}`);
 
     // Premier check immédiat (optionnel - pour détecter rapidement)
     this.checkDriverStatus(driverId);
@@ -74,7 +71,6 @@ export class DriverSessionMonitorService {
     }
 
     if (this.isMonitoring) {
-      console.log(`⏹️ [DriverSessionMonitor] Arrêt monitoring livreur ${this.currentDriverId}`);
     }
 
     this.isMonitoring = false;
@@ -87,11 +83,9 @@ export class DriverSessionMonitorService {
    */
   async forceCheck(): Promise<void> {
     if (this.currentDriverId && this.isMonitoring) {
-      console.log('🚨 [DriverSessionMonitor] FORCE CHECK - ignore cache');
       this.lastCheck = undefined; // Reset cache
       await this.checkDriverStatus(this.currentDriverId);
     } else {
-      console.log('❌ [DriverSessionMonitor] Pas de monitoring actif pour force check');
     }
   }
 
@@ -100,7 +94,6 @@ export class DriverSessionMonitorService {
    */
   private async checkDriverStatus(driverId: number): Promise<void> {
     try {
-      console.log(`🔍 [DriverSessionMonitor] Vérification statut livreur ${driverId}...`);
 
       // Vérifier cache simple
       if (this.shouldSkipCheck()) {
@@ -128,7 +121,6 @@ export class DriverSessionMonitorService {
         isActive: driver?.is_active ?? false
       };
 
-      console.log(`📊 [DriverSessionMonitor] Statut livreur ${driverId}: ${driver?.is_active ? 'ACTIF' : 'INACTIF'}`);
 
       // Si désactivé → logout immédiat
       if (!driver?.is_active) {
@@ -148,7 +140,6 @@ export class DriverSessionMonitorService {
    */
   private async forceLogout(reason: string): Promise<void> {
     try {
-      console.log(`🚨 [DriverSessionMonitor] Déconnexion forcée: ${reason}`);
 
       // 1. Arrêter monitoring avant tout
       this.stopMonitoring();
@@ -209,7 +200,6 @@ Contactez votre responsable pour plus d'informations.`,
     // sessionStorage
     sessionStorage.clear();
 
-    console.log('🧹 [DriverSessionMonitor] Session locale nettoyée');
   }
 
   /**
@@ -229,9 +219,7 @@ Contactez votre responsable pour plus d'informations.`,
     document.addEventListener('visibilitychange', () => {
       if (this.isMonitoring) {
         if (document.hidden) {
-          console.log('⏸️ [DriverSessionMonitor] App en arrière-plan - monitoring suspendu');
         } else {
-          console.log('▶️ [DriverSessionMonitor] App au premier plan - monitoring repris');
           // Check immédiat au retour
           if (this.currentDriverId) {
             this.checkDriverStatus(this.currentDriverId);

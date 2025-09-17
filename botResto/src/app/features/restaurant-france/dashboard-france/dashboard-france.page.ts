@@ -178,7 +178,6 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
    */
   viewStats() {
     // TODO: Implémenter la page de statistiques
-    console.log('Affichage statistiques - À implémenter');
   }
 
   /**

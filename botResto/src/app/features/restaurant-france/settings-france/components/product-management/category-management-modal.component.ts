@@ -4,10 +4,11 @@ import { ModalController, LoadingController, ToastController, AlertController } 
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { 
-  ProductManagementService, 
-  MenuCategory 
+import {
+  ProductManagementService,
+  MenuCategory
 } from '../../../services/product-management.service';
+import { AuthFranceService } from '../../../auth-france/services/auth-france.service';
 
 @Component({
   selector: 'app-category-management-modal',
@@ -21,9 +22,8 @@ export class CategoryManagementModalComponent implements OnInit, OnDestroy {
   categoryForm!: FormGroup;
   categories: MenuCategory[] = [];
   isLoading = false;
-  
-  // Mock restaurant ID - should come from auth service
-  restaurantId = 1;
+
+  restaurantId: number;
 
   constructor(
     private fb: FormBuilder,
@@ -31,8 +31,16 @@ export class CategoryManagementModalComponent implements OnInit, OnDestroy {
     private loadingController: LoadingController,
     private toastController: ToastController,
     private alertController: AlertController,
-    private productManagementService: ProductManagementService
+    private productManagementService: ProductManagementService,
+    private authFranceService: AuthFranceService
   ) {
+    // Récupérer l'ID du restaurant depuis la session
+    const id = this.authFranceService.getCurrentRestaurantId();
+    if (id === null) {
+      console.error('❌ [CategoryManagement] Impossible de récupérer restaurant ID - utilisateur non connecté');
+      throw new Error('Restaurant ID requis - utilisateur non connecté');
+    }
+    this.restaurantId = id;
     this.initializeForm();
   }
 

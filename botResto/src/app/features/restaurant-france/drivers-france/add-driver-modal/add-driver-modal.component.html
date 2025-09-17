@@ -108,9 +108,9 @@
     <button 
       type="button"
       (click)="save()" 
-      [disabled]="!driverForm?.valid || isLoading"
+      [disabled]="!driverForm.valid || isLoading"
       style="flex: 2; padding: 12px; background: #6c5ce7; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);"
-      [style.opacity]="(!driverForm?.valid || isLoading) ? '0.6' : '1'">
+      [style.opacity]="(!driverForm.valid || isLoading) ? '0.6' : '1'">
       <span *ngIf="isLoading">⏳ Création...</span>
       <span *ngIf="!isLoading">✅ Créer le livreur</span>
     </button>

@@ -1056,7 +1056,6 @@ export class CompositeWorkflowExecutor {
         );
 
         if (targetIndex !== -1) {
-          console.log(`🔀 [ConditionalLogic] ${currentGroup.groupName} option ${selectedDisplayOrder} → group_order ${targetGroupOrder}`);
           return targetIndex;
         }
       }
@@ -1067,7 +1066,6 @@ export class CompositeWorkflowExecutor {
     if (configuredNext) {
       const targetIndex = workflowData.optionGroups.findIndex(g => g.groupOrder === configuredNext);
       if (targetIndex !== -1) {
-        console.log(`🔄 [UniversalLogic] Saut conditionnel: ${currentGroup.groupName} → group_order ${configuredNext}`);
         return targetIndex;
       }
     }

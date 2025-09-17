@@ -20,8 +20,6 @@ export class AppConfigService {
 
   constructor() {
     this.config = this.initializeConfig();
-    console.log(`🔧 [AppConfig] Configuration initialisée pour ${this.config.production ? 'PRODUCTION' : 'DÉVELOPPEMENT'}`);
-    console.log(`📍 [AppConfig] Base URL: ${this.config.baseUrl}`);
   }
 
   /**
@@ -125,11 +123,6 @@ export class AppConfigService {
    */
   logCurrentConfig(): void {
     console.group('🔧 Configuration de l\'application');
-    console.log('Environment:', this.config.production ? 'PRODUCTION' : 'DÉVELOPPEMENT');
-    console.log('Base URL:', this.config.baseUrl);
-    console.log('API URL:', this.config.apiUrl);
-    console.log('Token Acceptance URL:', this.config.tokenAcceptanceUrl);
-    console.log('Supabase URL:', this.config.supabaseUrl ? '✓ Configuré' : '❌ Manquant');
     console.groupEnd();
   }
 
@@ -138,6 +131,5 @@ export class AppConfigService {
    */
   updateConfig(updates: Partial<AppEnvironmentConfig>): void {
     this.config = { ...this.config, ...updates };
-    console.log('🔄 [AppConfig] Configuration mise à jour:', updates);
   }
 }

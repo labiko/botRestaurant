@@ -2,7 +2,7 @@
   <ion-toolbar color="primary">
     <ion-title color="light">
       <ion-icon name="cog" slot="start"></ion-icon>
-      Configuration du produit: {{ product?.name }}
+      Configuration du produit: {{ product.name }}
     </ion-title>
     <ion-buttons slot="end">
       <ion-button fill="clear" color="light" (click)="dismiss()">
@@ -174,7 +174,7 @@
       <ion-card-content>
         <div class="drinks-config">
           <p class="section-description">
-            Boissons disponibles pour <strong>{{ product?.name }}</strong>
+            Boissons disponibles pour <strong>{{ product.name }}</strong>
             <span *ngIf="drinkSizes.length > 0"> - Tailles détectées: {{ drinkSizes.join(', ') }}</span>
           </p>
           
@@ -217,7 +217,7 @@
       </ion-card-header>
       <ion-card-content>
         <div class="meats-config">
-          <p class="section-description">Configuration des viandes disponibles pour <strong>{{ product?.name }}</strong></p>
+          <p class="section-description">Configuration des viandes disponibles pour <strong>{{ product.name }}</strong></p>
           
           <div class="meat-items" *ngIf="meatOptions.length > 0">
             <div *ngFor="let meat of meatOptions; let i = index" class="meat-item">
@@ -260,7 +260,7 @@
       </ion-card-header>
       <ion-card-content>
         <div class="sauces-config">
-          <p class="section-description">Configuration des sauces disponibles pour <strong>{{ product?.name }}</strong></p>
+          <p class="section-description">Configuration des sauces disponibles pour <strong>{{ product.name }}</strong></p>
           
           <div class="sauce-items" *ngIf="sauceOptions.length > 0">
             <div *ngFor="let sauce of sauceOptions; let i = index" class="sauce-item">
@@ -356,7 +356,7 @@
       <ion-button 
         expand="block" 
         color="primary" 
-        [disabled]="isLoading || !configForm?.valid"
+        [disabled]="isLoading || !configForm.valid"
         (click)="saveConfiguration()">
         <ion-icon name="save" slot="start" *ngIf="!isLoading"></ion-icon>
         <ion-spinner name="circular" slot="start" *ngIf="isLoading"></ion-spinner>

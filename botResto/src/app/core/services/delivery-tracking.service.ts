@@ -40,7 +40,6 @@ export class DeliveryTrackingService {
    */
   async getDeliveryTrackingData(restaurantId: number): Promise<DeliveryTrackingData> {
     try {
-      console.log(`📊 [DeliveryTracking] Récupération données suivi restaurant ${restaurantId}...`);
 
       // Récupérer toutes les commandes prêtes et assignées du restaurant
       const { data: activeOrders, error } = await this.supabaseFranceService.client
@@ -67,7 +66,6 @@ export class DeliveryTrackingService {
       }
 
       if (!activeOrders || activeOrders.length === 0) {
-        console.log('ℹ️ [DeliveryTracking] Aucune commande active trouvée');
         return {
           activeOrders: [],
           totalActiveOrders: 0,
@@ -91,7 +89,6 @@ export class DeliveryTrackingService {
       // Calculer le temps de réponse moyen (simulation pour l'instant)
       const averageResponseTime = this.calculateAverageResponseTime(trackingStats);
 
-      console.log(`✅ [DeliveryTracking] ${trackingStats.length} commandes trackées`);
 
       return {
         activeOrders: trackingStats,
@@ -200,7 +197,6 @@ export class DeliveryTrackingService {
     reason: string = 'Libération forcée par le restaurant'
   ): Promise<{success: boolean, message: string}> {
     try {
-      console.log(`🚨 [DeliveryTracking] Force Release commande ${orderId}...`);
 
       const { data: result, error } = await this.supabaseFranceService.client
         .rpc('force_release_order', {
@@ -218,7 +214,6 @@ export class DeliveryTrackingService {
       }
 
       if (result) {
-        console.log(`✅ [DeliveryTracking] Commande ${orderId} libérée avec succès`);
         return {
           success: true,
           message: 'Commande libérée avec succès'
@@ -244,13 +239,11 @@ export class DeliveryTrackingService {
    */
   async sendReminderNotifications(orderId: number): Promise<{success: boolean, message: string}> {
     try {
-      console.log(`🔔 [DeliveryTracking] Envoi rappels pour commande ${orderId}...`);
 
       // Utiliser le système de réactivation (Option B)
       const result = await this.deliveryNotificationService.sendReactivationNotifications(orderId);
 
       if (result.success) {
-        console.log(`✅ [DeliveryTracking] Rappels envoyés: ${result.sentCount} messages`);
         return {
           success: true,
           message: `${result.sentCount} rappels envoyés avec succès`
@@ -277,7 +270,6 @@ export class DeliveryTrackingService {
    */
   async markOrderReady(orderId: number, restaurantId: number): Promise<{success: boolean, message: string}> {
     try {
-      console.log(`✅ [DeliveryTracking] Marquage commande ${orderId} comme prête...`);
 
       // 1. Mettre à jour le statut de la commande
       const { error: updateError } = await this.supabaseFranceService.client
@@ -301,7 +293,6 @@ export class DeliveryTrackingService {
       const notificationResult = await this.deliveryNotificationService.notifyAvailableDrivers(orderId);
 
       if (notificationResult.success) {
-        console.log(`✅ [DeliveryTracking] Commande ${orderId} prête, ${notificationResult.sentCount} notifications envoyées`);
         return {
           success: true,
           message: `Commande marquée prête et ${notificationResult.sentCount} livreurs notifiés`

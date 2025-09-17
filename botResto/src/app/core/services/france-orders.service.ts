@@ -131,7 +131,6 @@ export class FranceOrdersService {
         console.error('❌ [FranceOrders] Details:', error?.details);
         
         // FALLBACK : Utiliser l'ancienne méthode en cas d'erreur
-        console.log('🔄 [FranceOrders] Fallback vers ancienne requête...');
         return this.loadOrdersFallback(restaurantId);
       }
 
@@ -249,7 +248,6 @@ export class FranceOrdersService {
    */
   private async loadOrdersFallback(restaurantId: number): Promise<void> {
     try {
-      console.log('🔄 REGRESSION_DEBUG - Using FALLBACK method with JOIN...');
       
       const { data, error } = await this.supabaseFranceService.client
         .from('france_orders')
@@ -277,7 +275,6 @@ export class FranceOrdersService {
       }
 
       const processedOrders = data?.map((order: any) => this.processOrder(order)) || [];
-      console.log(`✅ [FranceOrders] Fallback réussi - ${processedOrders.length} commandes`);
       
       this.ordersSubject.next(processedOrders);
       
@@ -348,7 +345,6 @@ export class FranceOrdersService {
       const currentStatus = currentOrder?.status;
       const statusChanged = currentStatus !== newStatus;
 
-      console.log(`🔄 [FranceOrders] Changement statut pour commande ${orderId}: "${currentStatus}" → "${newStatus}" (changé: ${statusChanged})`);
 
       // Étape 1: Mise à jour du statut en base de données
       const restaurantId = this.currentRestaurantId || 1; // Fallback sur 1
@@ -372,7 +368,6 @@ export class FranceOrdersService {
         return false;
       }
 
-      console.log(`✅ [FranceOrders] Statut mis à jour: ${orderId} → ${newStatus}`);
 
       // Étape 2: Envoyer notification WhatsApp SEULEMENT si le statut a vraiment changé
       if (statusChanged) {
@@ -386,7 +381,6 @@ export class FranceOrdersService {
           console.error('⚠️ [FranceOrders] Erreur notification WhatsApp (non bloquant):', whatsappError);
         }
       } else {
-        console.log(`ℹ️ [FranceOrders] Statut inchangé pour commande ${orderId}, aucune notification envoyée`);
       }
 
       return true;
@@ -413,12 +407,10 @@ export class FranceOrdersService {
 
     const settingKey = statusMapping[status];
     if (!settingKey) {
-      console.log(`ℹ️ [FranceOrders] Statut non mappé pour notifications: ${status}`);
       return false;
     }
 
     const shouldSend = settings[settingKey];
-    console.log(`🔔 [FranceOrders] Notification pour statut '${status}': ${shouldSend ? 'OUI' : 'NON'}`);
     return shouldSend;
   }
 
@@ -428,11 +420,9 @@ export class FranceOrdersService {
    */
   private async sendWhatsAppNotification(orderId: number, newStatus: string): Promise<void> {
     try {
-      console.log(`📱 [FranceOrders] Envoi notification WhatsApp pour commande ${orderId}, statut: ${newStatus}`);
 
       // NOUVEAU : Vérifier si notification doit être envoyée - PAS DE RÉGRESSION
       if (!this.shouldSendNotification(newStatus)) {
-        console.log(`⏭️ [FranceOrders] Notification désactivée pour le statut: ${newStatus}`);
         return;
       }
 
@@ -448,7 +438,6 @@ export class FranceOrdersService {
       const whatsappStatus = this.mapStatusToWhatsApp(newStatus);
       
       if (!whatsappStatus) {
-        console.log(`ℹ️ [FranceOrders] Pas de notification WhatsApp pour le statut: ${newStatus}`);
         return;
       }
 
@@ -460,7 +449,6 @@ export class FranceOrdersService {
       );
 
       if (success) {
-        console.log(`✅ [FranceOrders] Notification WhatsApp envoyée avec succès pour commande ${orderId}`);
       } else {
         console.error(`❌ [FranceOrders] Échec envoi notification WhatsApp pour commande ${orderId}`);
       }
@@ -476,7 +464,6 @@ export class FranceOrdersService {
    */
   private async getOrderCompleteData(orderId: number): Promise<any | null> {
     try {
-      console.log(`🔍 [FranceOrders] Récupération données commande ID: ${orderId}`);
       
       const { data, error } = await this.supabaseFranceService.client
         .from('france_orders')
@@ -545,9 +532,6 @@ export class FranceOrdersService {
    * Formate les données de commande pour le service WhatsApp
    */
   private formatOrderDataForWhatsApp(orderData: any): OrderDataFrance {
-    console.log('🔍 [FranceOrders] formatOrderDataForWhatsApp - orderData.items:', orderData.items);
-    console.log('🔍 [FranceOrders] formatOrderDataForWhatsApp - delivery_mode:', orderData.delivery_mode);
-    console.log('🔍 [FranceOrders] formatOrderDataForWhatsApp - payment_mode:', orderData.payment_mode);
     
     // Les articles sont dans un format complexe du bot, utilisons processOrder pour les extraire
     const processedOrder = this.processOrder(orderData);
@@ -584,10 +568,8 @@ export class FranceOrdersService {
    * Formate les articles pour l'affichage WhatsApp - FORMAT UNIVERSEL
    */
   private formatItemsForWhatsApp(items: any[]): string {
-    console.log('🔍 [FranceOrders] formatItemsForWhatsApp - items:', items);
     
     if (!Array.isArray(items) || items.length === 0) {
-      console.log('❌ [FranceOrders] Items array vide ou invalide');
       return '• Aucun article détaillé disponible';
     }
 
@@ -636,7 +618,6 @@ export class FranceOrdersService {
         });
       }
       
-      console.log(`✅ [FranceOrders] Item formaté: ${formattedItem.quantity}x ${formattedItem.productName} - ${this.formatPrice(formattedItem.totalPrice)}`);
       
       return itemText + (configDetails.length > 0 ? '\n' + configDetails.join('\n') : '');
     }).join('\n');
@@ -734,7 +715,6 @@ export class FranceOrdersService {
       // 1. Le statut devient "prete" 
       // 2. ET la commande est en mode livraison
       if (newStatus === 'prete') {
-        console.log(`🚚 [FranceOrders] Vérification mode livraison pour commande ${orderId}...`);
 
         // Récupérer les détails de la commande pour vérifier le mode de livraison
         const { data: order, error } = await this.supabaseFranceService.client
@@ -749,18 +729,15 @@ export class FranceOrdersService {
         }
 
         if (order && order.delivery_mode === 'livraison') {
-          console.log(`📱 [FranceOrders] Déclenchement notifications livreurs pour commande ${orderId}...`);
           
           // Déclencher le système de notification des livreurs avec tokens sécurisés
           const notificationResult = await this.deliveryNotificationService.notifyAvailableDrivers(orderId);
           
           if (notificationResult.success) {
-            console.log(`✅ [FranceOrders] ${notificationResult.sentCount} livreurs notifiés pour commande ${orderId}`);
           } else {
             console.warn(`⚠️ [FranceOrders] Échec notifications livreurs: ${notificationResult.message}`);
           }
         } else {
-          console.log(`ℹ️ [FranceOrders] Commande ${orderId} n'est pas en mode livraison (mode: ${order?.delivery_mode}), pas de notification livreurs`);
         }
       }
     } catch (error) {
@@ -788,7 +765,6 @@ export class FranceOrdersService {
       }
     });
     
-    console.log('🔄 [DEBUG] Auto-refresh démarré (30s)');
     return this.autoRefreshSubscription;
   }
 
@@ -801,7 +777,6 @@ export class FranceOrdersService {
       this.autoRefreshSubscription = undefined;
     }
     this.autoRefreshService.stopAutoRefresh('restaurant-orders');
-    console.log('⏹️ [DEBUG] Auto-refresh arrêté');
   }
 
   /**
@@ -809,14 +784,12 @@ export class FranceOrdersService {
    */
   private async performSilentRefresh(restaurantId: number): Promise<void> {
     try {
-      console.log(`🔄 [DEBUG] Refresh des commandes restaurant ${restaurantId}`);
       await this.loadOrders(restaurantId);
       
       // NOUVEAU : Vérifier et jouer le son pour nouvelles commandes
       this.audioNotificationService.checkAndPlayForNewOrders(restaurantId).subscribe({
         next: (playedCount) => {
           if (playedCount > 0) {
-            console.log(`🔔 [AudioNotification] ${playedCount} notification(s) audio jouée(s)`);
           }
         },
         error: (error) => {

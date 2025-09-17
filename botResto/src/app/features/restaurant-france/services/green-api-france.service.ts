@@ -38,7 +38,6 @@ export class GreenApiFranceService {
   };
 
   constructor(private http: HttpClient) {
-    console.log(`🔧 [GreenAPI] Configuration initialisée - Instance: ${this.CONFIG.instanceId.substring(0, 4)}...`);
   }
 
   /**
@@ -73,7 +72,6 @@ export class GreenApiFranceService {
         'Instance connectée et autorisée' : 
         `Status: ${response?.stateInstance || 'Inconnu'}`;
 
-      console.log(`📱 [GreenAPI] Status instance: ${statusMessage}`);
       
       return { isConnected, statusMessage };
       
@@ -103,7 +101,6 @@ export class GreenApiFranceService {
       const formattedPhone = this.formatPhoneNumber(phoneNumber);
       const chatId = `${formattedPhone}@c.us`;
 
-      console.log(`📨 [GreenAPI] Envoi message à ${formattedPhone}...`);
 
       const url = `${this.CONFIG.baseUrl}/waInstance${this.CONFIG.instanceId}/sendMessage/${this.CONFIG.apiToken}`;
       
@@ -119,7 +116,6 @@ export class GreenApiFranceService {
       const response = await this.http.post<WhatsAppResponse>(url, payload, { headers }).toPromise();
       
       if (response && response.idMessage) {
-        console.log(`✅ [GreenAPI] Message envoyé avec succès - ID: ${response.idMessage}`);
         return {
           success: true,
           messageId: response.idMessage
@@ -169,7 +165,6 @@ export class GreenApiFranceService {
       cleaned = '33' + cleaned;
     }
     
-    console.log(`📞 [GreenAPI] Numéro formaté: ${phoneNumber} → ${cleaned}`);
     return cleaned;
   }
 
@@ -238,7 +233,6 @@ export class GreenApiFranceService {
    */
   async testConnection(): Promise<{success: boolean, message: string}> {
     try {
-      console.log('🔍 [GreenAPI] Test de connectivité...');
       
       const statusCheck = await this.checkInstanceStatus();
       

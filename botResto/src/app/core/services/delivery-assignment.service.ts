@@ -65,7 +65,6 @@ export class DeliveryAssignmentService {
    */
   async startOrderAssignment(orderId: number): Promise<boolean> {
     try {
-      console.log(`🚀 [DeliveryAssignment] Début assignation commande ${orderId}`);
 
       // 1. Vérifier que la commande est éligible
       const order = await this.getOrderForAssignment(orderId);
@@ -77,7 +76,6 @@ export class DeliveryAssignmentService {
       // 2. Vérifier si la commande est déjà assignée
       const existingAssignment = await this.getAcceptedAssignment(orderId);
       if (existingAssignment) {
-        console.log(`⚠️ [DeliveryAssignment] Commande ${orderId} déjà assignée au livreur ${existingAssignment.driver_id}`);
         return false;
       }
 
@@ -111,7 +109,6 @@ export class DeliveryAssignmentService {
       // 5. Envoyer les notifications à tous les livreurs
       await this.sendAssignmentNotifications(orderId, availableDrivers);
 
-      console.log(`✅ [DeliveryAssignment] Assignation démarrée pour commande ${orderId} - ${successfulAssignments.length} livreurs notifiés`);
       return true;
 
     } catch (error) {
@@ -125,7 +122,6 @@ export class DeliveryAssignmentService {
    */
   async acceptAssignment(assignmentId: number, driverId: number): Promise<boolean | {success: false, message: string, alreadyTaken: boolean}> {
     try {
-      console.log(`✅ [DeliveryAssignment] Livreur ${driverId} accepte assignation ${assignmentId}`);
 
       // 1. Vérifier que l'assignation est encore valide
       const assignment = await this.getAssignmentById(assignmentId);
@@ -138,7 +134,6 @@ export class DeliveryAssignmentService {
       const existingAssignment = await this.getAcceptedAssignment(assignment.order_id);
       if (existingAssignment) {
         const driverName = existingAssignment.driver_name || 'un autre livreur';
-        console.log(`⚠️ [DeliveryAssignment] Commande ${assignment.order_id} déjà prise par ${driverName}`);
         // Marquer cette assignation comme rejetée puisque déjà prise
         await this.markAssignmentAsRejected(assignmentId);
         
@@ -182,7 +177,6 @@ export class DeliveryAssignmentService {
       // 6. Envoyer notifications de confirmation
       await this.sendAcceptanceNotifications(assignment.order_id, driverId);
 
-      console.log(`✅ [DeliveryAssignment] Assignation acceptée avec succès - Commande ${assignment.order_id} → Livreur ${driverId}`);
       return true;
 
     } catch (error) {
@@ -196,7 +190,6 @@ export class DeliveryAssignmentService {
    */
   async rejectAssignment(assignmentId: number, driverId: number): Promise<boolean> {
     try {
-      console.log(`❌ [DeliveryAssignment] Livreur ${driverId} rejette assignation ${assignmentId}`);
 
       // 1. Calculer le temps de réponse
       const assignment = await this.getAssignmentById(assignmentId);
@@ -221,7 +214,6 @@ export class DeliveryAssignmentService {
         return false;
       }
 
-      console.log(`✅ [DeliveryAssignment] Assignation rejetée par livreur ${driverId}`);
       return true;
 
     } catch (error) {
@@ -372,7 +364,6 @@ export class DeliveryAssignmentService {
         return [];
       }
 
-      console.log(`🔍 [DeliveryAssignment] ${(data || []).length} livreurs disponibles trouvés`);
       return (data || []) as AvailableDriver[];
     } catch (error) {
       console.error('❌ [DeliveryAssignment] Erreur service livreurs disponibles:', error);
@@ -435,7 +426,6 @@ export class DeliveryAssignmentService {
         try {
           const message = this.formatAssignmentMessage(orderData, driver);
           // Ici on utiliserait le service de notification WhatsApp
-          console.log(`📱 [DeliveryAssignment] Notification envoyée au livreur ${driver.id}: ${message}`);
           return true;
         } catch (error) {
           console.error(`❌ [DeliveryAssignment] Erreur notification livreur ${driver.id}:`, error);
@@ -594,7 +584,6 @@ Votre commande ${data.order_number} a été prise en charge par ${data.france_de
 Merci pour votre patience !
       `.trim();
 
-      console.log(`📱 [DeliveryAssignment] Notification client: ${customerMessage}`);
 
       // Notification au restaurant
       const restaurantMessage = `
@@ -605,7 +594,6 @@ Commande ${data.order_number} prise en charge par ${data.france_delivery_drivers
 La commande peut être marquée "En livraison" quand le livreur arrive.
       `.trim();
 
-      console.log(`📱 [DeliveryAssignment] Notification restaurant: ${restaurantMessage}`);
 
     } catch (error) {
       console.error('❌ [DeliveryAssignment] Erreur notifications acceptation:', error);
@@ -621,7 +609,6 @@ La commande peut être marquée "En livraison" quand le livreur arrive.
       await this.updateOrderAssignmentStatus(orderId, 'none');
 
       // Notification au restaurant
-      console.log(`⚠️ [DeliveryAssignment] Aucun livreur disponible pour commande ${orderId}`);
     } catch (error) {
       console.error('❌ [DeliveryAssignment] Erreur gestion pas de livreurs:', error);
     }
@@ -651,7 +638,6 @@ La commande peut être marquée "En livraison" quand le livreur arrive.
       }
 
       if (data && data > 0) {
-        console.log(`🧹 [DeliveryAssignment] ${data} assignations expirées nettoyées`);
       }
     } catch (error) {
       console.error('❌ [DeliveryAssignment] Erreur service nettoyage:', error);
@@ -667,7 +653,6 @@ La commande peut être marquée "En livraison" quand le livreur arrive.
     isExpired: boolean;
   }> {
     try {
-      console.log(`🔍 [DeliveryAssignment] Vérification assignations pending pour commande ${orderId}`);
       
       // Vérifier les assignations pending non expirées (30 minutes)
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
@@ -697,7 +682,6 @@ La commande peut être marquée "En livraison" quand le livreur arrive.
       }
       
       if (!data || data.length === 0) {
-        console.log(`ℹ️ [DeliveryAssignment] Aucune assignation pending pour commande ${orderId}`);
         return {
           hasPending: false,
           pendingDrivers: [],
@@ -712,7 +696,6 @@ La commande peut être marquée "En livraison" quand le livreur arrive.
       
       const isExpired = nonExpiredAssignments.length === 0;
       
-      console.log(`✅ [DeliveryAssignment] ${data.length} assignation(s) pending trouvée(s), ${nonExpiredAssignments.length} non expirée(s)`);
       
       return {
         hasPending: nonExpiredAssignments.length > 0,
@@ -735,7 +718,6 @@ La commande peut être marquée "En livraison" quand le livreur arrive.
    */
   async cleanExpiredAssignments(): Promise<number> {
     try {
-      console.log('🧹 [DeliveryAssignment] Nettoyage des assignations expirées...');
       
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       
@@ -755,7 +737,6 @@ La commande peut être marquée "En livraison" quand le livreur arrive.
       }
       
       const cleanedCount = data?.length || 0;
-      console.log(`✅ [DeliveryAssignment] ${cleanedCount} assignation(s) expirée(s) nettoyée(s)`);
       
       return cleanedCount;
       
@@ -771,7 +752,6 @@ La commande peut être marquée "En livraison" quand le livreur arrive.
    */
   async checkAnyPendingAssignment(orderId: number): Promise<{ hasAny: boolean }> {
     try {
-      console.log(`🔍 [DeliveryAssignment] Vérification ANY assignation pending pour commande ${orderId}`);
       
       const { data, error } = await this.supabaseFranceService.client
         .from('france_delivery_assignments')
@@ -786,7 +766,6 @@ La commande peut être marquée "En livraison" quand le livreur arrive.
       }
       
       const hasAny = (data && data.length > 0);
-      console.log(`📊 [DeliveryAssignment] Commande ${orderId} - ANY assignation pending: ${hasAny}`);
       
       return { hasAny };
       

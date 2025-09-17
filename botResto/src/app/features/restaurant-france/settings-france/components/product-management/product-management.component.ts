@@ -6,15 +6,16 @@ import { ModularConfigModalComponent } from './modular-config-modal.component';
 import { UniversalProductModalComponent } from './universal-product-modal.component';
 import { CategoryManagementModalComponent } from './category-management-modal.component';
 
-import { 
-  ProductManagementService, 
-  FranceProduct, 
-  ProductType, 
+import {
+  ProductManagementService,
+  FranceProduct,
+  ProductType,
   MenuCategory,
   ProductVariant,
   ProductSize,
-  ProductOption 
+  ProductOption
 } from '../../../services/product-management.service';
+import { AuthFranceService } from '../../../auth-france/services/auth-france.service';
 
 @Component({
   selector: 'app-product-management',
@@ -36,17 +37,25 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
   isLoading = false;
   hideDeliveryInfo = false; // Flag pour masquer les infos de livraison
   isCreating = false; // Protection anti-double-soumission
-  
-  // Mock restaurant ID - should come from auth service
-  restaurantId = 1;
+
+  restaurantId: number;
 
   constructor(
     private productManagementService: ProductManagementService,
     private alertController: AlertController,
     private loadingController: LoadingController,
     private toastController: ToastController,
-    private modalController: ModalController
-  ) {}
+    private modalController: ModalController,
+    private authFranceService: AuthFranceService
+  ) {
+    // Récupérer l'ID du restaurant depuis la session
+    const id = this.authFranceService.getCurrentRestaurantId();
+    if (id === null) {
+      console.error('❌ [ProductManagement] Impossible de récupérer restaurant ID - utilisateur non connecté');
+      throw new Error('Restaurant ID requis - utilisateur non connecté');
+    }
+    this.restaurantId = id;
+  }
 
   ngOnInit() {
     this.loadRestaurantConfig();
@@ -185,7 +194,6 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
   }
 
   private async showModularConfigModal(product: FranceProduct, details: any) {
-    console.log('🔧 [ProductManagement] Ouverture du modal de configuration modulaire:', product.name, details);
     
     const modal = await this.modalController.create({
       component: ModularConfigModalComponent,
@@ -202,7 +210,6 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
     
     const { data } = await modal.onDidDismiss();
     if (data) {
-      console.log('✅ Configuration mise à jour, rechargement des produits...');
       this.loadProducts();
     }
   }
@@ -403,7 +410,6 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
   }
 
   async onToggleProductStatus(product: FranceProduct) {
-    console.log('CLAUDE_DEBUG onToggleProductStatus pour produit:', product.name);
     
     const alert = await this.alertController.create({
       header: 'Changer le statut',
@@ -413,20 +419,17 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
           text: 'Annuler',
           role: 'cancel',
           handler: () => {
-            console.log('CLAUDE_DEBUG Annulation changement statut produit');
           }
         },
         {
           text: 'Confirmer',
           handler: () => {
-            console.log('CLAUDE_DEBUG Confirmation changement statut produit');
             const newStatus = !product.is_active;
             
             this.productManagementService.updateProductStatus(product.id, newStatus)
               .pipe(takeUntil(this.destroy$))
               .subscribe({
                 next: () => {
-                  console.log('CLAUDE_DEBUG Statut produit mis à jour avec succès');
                   product.is_active = newStatus;
                   this.presentToast(
                     `Produit ${newStatus ? 'activé' : 'désactivé'}`, 
@@ -521,7 +524,6 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
    * Nouvelle fonction pour ouvrir la modale universelle adaptative
    */
   async onEditProduct(product: FranceProduct) {
-    console.log('🔧 [ProductManagement] Ouverture modale universelle pour:', product.name);
     
     const modal = await this.modalController.create({
       component: UniversalProductModalComponent,
@@ -534,10 +536,8 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
 
     modal.onDidDismiss().then((result) => {
       if (result.role === 'save' && result.data) {
-        console.log('💾 [ProductManagement] Sauvegarde des modifications:', result.data);
         this.saveProductChanges(product, result.data);
       } else {
-        console.log('❌ [ProductManagement] Modification annulée');
       }
     });
 
@@ -554,12 +554,9 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
     await loading.present();
 
     try {
-      console.log('💾 [ProductManagement] Sauvegarde complète du produit ID:', originalProduct.id);
-      console.log('📝 [ProductManagement] Données à sauvegarder:', updatedData);
       
       // Si produit composite avec composants, utiliser la fonction SQL spéciale
       if (originalProduct.product_type === 'composite' && updatedData.compositeItems) {
-        console.log('🔧 [ProductManagement] Mise à jour produit composite avec composants');
         
         // Extraire les composants
         const compositeItems = updatedData.compositeItems;
@@ -599,13 +596,6 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
    * Dupliquer un produit existant
    */
   async onDuplicateProduct(product: FranceProduct) {
-    console.log('🔄 [ProductManagement] === DÉBUT DUPLICATION ===');
-    console.log('🔄 [ProductManagement] Nom du produit:', product.name);
-    console.log('🔍 [ProductManagement] OBJET PRODUCT COMPLET:', product);
-    console.log('🔍 [ProductManagement] category_id source:', product.category_id);
-    console.log('🔍 [ProductManagement] restaurant_id source:', product.restaurant_id);
-    console.log('🔍 [ProductManagement] product_type source:', product.product_type);
-    console.log('🔄 [ProductManagement] === FIN DEBUG SOURCE ===');
     
     try {
       // 1. Cloner les données du produit (sans l'ID)
@@ -617,7 +607,6 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
         updated_at: undefined
       };
       
-      console.log('📝 [ProductManagement] Données dupliquées:', duplicatedProductData);
       
       // 2. Ouvrir la modal existante en mode duplication
       const modal = await this.modalController.create({
@@ -632,10 +621,8 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
 
       modal.onDidDismiss().then((result) => {
         if (result.role === 'save' && result.data) {
-          console.log('💾 [ProductManagement] Sauvegarde duplication:', result.data);
           this.saveNewProduct(result.data);
         } else {
-          console.log('❌ [ProductManagement] Duplication annulée');
         }
       });
 
@@ -653,7 +640,6 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
   private async saveNewProduct(productData: any) {
     // Protection anti-double-soumission
     if (this.isCreating) {
-      console.log('⚠️ [ProductManagement] Création déjà en cours, ignorée');
       return;
     }
 
@@ -665,7 +651,6 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
     await loading.present();
 
     try {
-      console.log('💾 [ProductManagement] Création nouveau produit:', productData);
       
       // Créer nouveau produit via le service (méthode à ajouter)
       await this.productManagementService.createProduct(

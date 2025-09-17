@@ -21,14 +21,9 @@ export class SupabaseFranceService {
       }
     });
     
-    console.log('🇫🇷 [SupabaseFrance] Service initialisé:', {
-      url: supabaseUrl,
-      keyPrefix: supabaseKey.substring(0, 20) + '...'
-    });
 
     // Test de connexion automatique
     this.testConnection().then(result => {
-      console.log('🧪 [SupabaseFrance] Test connexion:', result.message);
     });
   }
 
@@ -54,7 +49,6 @@ export class SupabaseFranceService {
         };
       }
 
-      console.log('✅ [SupabaseFrance] Connexion réussie');
       return { 
         success: true, 
         message: 'Connexion à la base France réussie' 

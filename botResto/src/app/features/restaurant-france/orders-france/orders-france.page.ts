@@ -31,8 +31,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   filteredOrdersCount: number = 0;
   totalOrdersCount: number = 0;
 
-  // Restaurant ID fixe pour l'instant (à récupérer depuis l'auth plus tard)
-  private restaurantId = 1;
+  private restaurantId: number;
 
   constructor(
     public franceOrdersService: FranceOrdersService,
@@ -47,7 +46,15 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     private supabaseFranceService: SupabaseFranceService,
     private deliveryTrackingService: DeliveryTrackingService,
     private audioNotificationService: AudioNotificationService
-  ) { }
+  ) {
+    // Récupérer l'ID du restaurant depuis la session
+    const id = this.authService.getCurrentRestaurantId();
+    if (id === null) {
+      console.error('❌ [OrdersFrance] Impossible de récupérer restaurant ID - utilisateur non connecté');
+      throw new Error('Restaurant ID requis - utilisateur non connecté');
+    }
+    this.restaurantId = id;
+  }
 
   ngOnInit() {
     this.initializeOrders();
@@ -65,14 +72,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     setTimeout(() => {
       this.orders.forEach((order: FranceOrder) => {
         if (order.status === 'prete' || order.status === 'assignee' || order.status === 'en_livraison') {
-          console.log('🔍 DEBUG_ASSIGNEE - Order ' + order.id + ':', {
-            status: order.status,
-            driver_assignment_status: order.driver_assignment_status,
-            driver_id: order.driver_id,
-            condition_result: !!(order.driver_id && order.driver_assignment_status === 'assigned'),
-            has_delivery_driver: !!order.delivery_driver,
-            delivery_driver_data: order.delivery_driver
-          });
+          // Debug logic preserved without console output
         }
       });
     }, 2000); // Attendre 2s que les commandes se chargent
@@ -81,15 +81,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   // DEBUG TEMPORAIRE - Appelé automatiquement
   debugAllOrders() {
     const order1209 = this.orders.find((o: any) => o.order_number === '1209-0013');
-    
-    console.log('🎯 SEARCH_1209_DEBUG - Total commandes:', this.orders.length);
-    console.log('🎯 SEARCH_1209_DEBUG - Commande 1209-0013 trouvée:', !!order1209);
-    if (order1209) {
-      console.log('🎯 SEARCH_1209_DEBUG - Détails 1209:', order1209);
-    } else {
-      // Afficher toutes les commandes pour voir ce qu'on a
-      console.log('🎯 SEARCH_1209_DEBUG - Liste des commandes:', this.orders.map((o: any) => o.order_number));
-    }
+    // Debug logic preserved without console output
   }
 
   ngOnDestroy() {
@@ -107,18 +99,15 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     
     // S'abonner aux changements de commandes avec enrichissement WhatsApp
     this.ordersSubscription = this.franceOrdersService.orders$.subscribe(async (orders) => {
-      console.log('🔄 [OrdersPage] Réception commandes:', orders.length);
       
       // Enrichir les commandes avec les noms WhatsApp
       this.orders = await this.addressWhatsAppService.enrichOrdersWithWhatsAppNames(orders);
       
-      console.log('✅ [OrdersPage] Commandes enrichies:', this.orders.length);
       
       // Vérifier et jouer le son pour les nouvelles commandes
       this.audioNotificationService.checkAndPlayForNewOrders(this.restaurantId).subscribe({
         next: (playedCount) => {
           if (playedCount > 0) {
-            console.log(`🔔 [AudioNotification] ${playedCount} notification(s) audio jouée(s)`);
           }
         },
         error: (error) => {
@@ -146,7 +135,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
   async manualRefresh(event?: any) {
     try {
-      console.log('🔄 [OrdersFrance] Actualisation manuelle des commandes...');
       
       // Vérifier que nous avons un restaurant_id
       if (!this.restaurantId) {
@@ -161,7 +149,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       // CORRECTION: Redémarrer l'auto-refresh après le refresh manuel
       this.startAutoRefresh();
       
-      console.log('✅ [OrdersFrance] Commandes actualisées avec succès');
       this.presentToast('Commandes actualisées', 'success');
       
     } catch (error) {
@@ -298,7 +285,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
     const targetTab = statusToTab[status];
     if (targetTab) {
-      console.log(`📋 [OrdersFrance] Passage automatique vers l'onglet: ${targetTab}`);
       this.selectedFilter = targetTab;
     }
   }
@@ -462,7 +448,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    */
   async handleDeliveryOrderReady(order: FranceOrder, action: OrderAction): Promise<void> {
     try {
-      console.log(`🚚 [OrdersFrance] Gestion commande livraison prête: ${order.id}`);
 
       // 1. Vérifier le nombre de livreurs disponibles
       const activeDriversCount = await this.driversFranceService.getActiveDriversCount(this.restaurantId);
@@ -553,7 +538,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    */
   private async startAutomaticAssignment(order: FranceOrder): Promise<void> {
     try {
-      console.log(`🚀 [OrdersFrance] Démarrage assignation automatique pour commande ${order.id}`);
 
       // NOUVEAU : Vérifier d'abord si l'assignation est possible AVANT de changer le statut
       // 1. Tenter d'abord l'assignation automatique SANS changer le statut
@@ -580,7 +564,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
       } else {
         // Échec d'assignation - NE PAS marquer comme prête, proposer des alternatives
-        console.log('⚠️ [OrdersFrance] Aucun livreur disponible - commande reste en préparation');
         this.presentToast('Aucun livreur disponible actuellement', 'warning');
         await this.showAssignmentFailedAlert(order);
       }
@@ -636,7 +619,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
           handler: () => {
             // Navigation vers la page des livreurs
             // TODO: Implémenter la navigation
-            console.log('Navigation vers page livreurs');
           }
         }
       ]
@@ -847,11 +829,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
           order.hasAnyAssignment = anyAssignmentState.hasAny; // N'importe quelle assignation
           
           // DEBUG: Log pour vérifier les valeurs
-          console.log(`🔍 [DEBUG] Commande ${order.id}:`, {
-            hasPendingAssignment: order.hasPendingAssignment,
-            hasAnyAssignment: order.hasAnyAssignment,
-            anyAssignmentState
-          });
           order.pendingDriversCount = assignmentState.pendingDrivers.length;
           
           // Construire la liste des noms des livreurs
@@ -869,7 +846,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
         }
       }
       
-      console.log('✅ [OrdersFrance] État des assignations pending chargé');
     } catch (error) {
       console.error('❌ [OrdersFrance] Erreur chargement assignations pending:', error);
     }
@@ -880,22 +856,16 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    */
   async sendRemindersForOrder(order: FranceOrder): Promise<void> {
     try {
-      console.log(`📨 [OrdersFrance] VRAIE LOGIQUE RAPPEL - Commande ${order.order_number}`);
-      console.log(`📨 [DEBUG] hasAnyAssignment: ${order.hasAnyAssignment}`);
-      console.log(`📨 [DEBUG] hasPendingAssignment: ${order.hasPendingAssignment}`);
       
       // ✅ UTILISER la vraie logique de rappel du tracking
-      console.log(`✅ [DEBUG] Appel deliveryTrackingService.sendReminderNotifications (réactive tokens)`);
       
       const result = await this.deliveryTrackingService.sendReminderNotifications(order.id);
       
       if (result.success) {
-        console.log('✅ [OrdersFrance] Rappels envoyés avec succès');
         this.presentToast(result.message, 'success');
         // ✅ OPTIMISATION : loadOrders() inclut maintenant l'état des assignations
         await this.franceOrdersService.loadOrders(this.restaurantId);
       } else {
-        console.log('❌ [OrdersFrance] Échec envoi rappels:', result.message);
         this.presentToast(result.message, 'danger');
       }
       

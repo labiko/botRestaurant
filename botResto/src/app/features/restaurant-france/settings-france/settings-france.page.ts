@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RestaurantConfigService } from '../services/restaurant-config.service';
+import { AuthFranceService } from '../auth-france/services/auth-france.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -11,12 +12,23 @@ import { takeUntil } from 'rxjs/operators';
 })
 export class SettingsFrancePage implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
-  
+
   currentTab: 'restaurant' | 'products' | 'workflows' | 'service-modes' | 'audio-notifications' = 'restaurant';
   restaurantName: string = 'Configuration Restaurant'; // Default name
-  restaurantId = 1; // Mock restaurant ID - should come from auth service
+  restaurantId: number;
 
-  constructor(private restaurantConfigService: RestaurantConfigService) { }
+  constructor(
+    private restaurantConfigService: RestaurantConfigService,
+    private authFranceService: AuthFranceService
+  ) {
+    // Récupérer l'ID du restaurant depuis la session
+    const id = this.authFranceService.getCurrentRestaurantId();
+    if (id === null) {
+      console.error('❌ [SettingsFrance] Impossible de récupérer restaurant ID - utilisateur non connecté');
+      throw new Error('Restaurant ID requis - utilisateur non connecté');
+    }
+    this.restaurantId = id;
+  }
 
   ngOnInit() {
     this.loadRestaurantName();
@@ -59,8 +71,6 @@ export class SettingsFrancePage implements OnInit, OnDestroy {
    * Refresh all data - reload current tab components
    */
   refreshData() {
-    console.log('🔄 [SettingsFrance] Rafraîchissement des données...');
-    
     // Force reloading of the current tab component by triggering Angular change detection
     // This will cause ngOnInit to be called again on the current tab component
     const currentTab = this.currentTab;

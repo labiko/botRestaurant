@@ -67,14 +67,6 @@ export class UniversalOrderDisplayService {
     const itemKey = `${item.productId || item.id || productName}_${categoryName}`;
     if (!this.loggedItems.has(itemKey)) {
       this.loggedItems.add(itemKey);
-      console.log('🏷️ CATEGORY_DEBUG - Item data:', {
-        productName,
-        categoryName,
-        item_categoryName: item.categoryName,
-        item_category_id: item.category_id,
-        item_category: item.category,
-        full_item: item
-      });
     }
     
     return categoryName ? `${productName} (${categoryName})` : productName;

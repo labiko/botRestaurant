@@ -95,7 +95,6 @@ export class AudioNotificationService {
     ).pipe(
       map(({ error }) => {
         if (error) throw error;
-        console.log('[AudioNotification] Notifications audio activées pour restaurant:', restaurantId);
       })
     );
   }
@@ -115,7 +114,6 @@ export class AudioNotificationService {
     ).pipe(
       map(({ error }) => {
         if (error) throw error;
-        console.log('[AudioNotification] Notifications audio désactivées pour restaurant:', restaurantId);
       })
     );
   }
@@ -134,7 +132,6 @@ export class AudioNotificationService {
     ).pipe(
       map(({ error }) => {
         if (error) throw error;
-        console.log('[AudioNotification] Volume mis à jour:', clampedVolume);
       })
     );
   }
@@ -205,7 +202,6 @@ export class AudioNotificationService {
     ).pipe(
       map(({ error }) => {
         if (error) throw error;
-        console.log('[AudioNotification] Commande marquée comme "sonnée":', orderId);
       })
     );
   }
@@ -225,7 +221,6 @@ export class AudioNotificationService {
       
       // Jouer le son (volume géré par le système utilisateur)
       await this.audioElement.play();
-      console.log('[AudioNotification] Son joué avec succès');
       
       return true;
       
@@ -239,7 +234,6 @@ export class AudioNotificationService {
    * Tester le son (pour interface paramètres)
    */
   async testSound(): Promise<boolean> {
-    console.log('[AudioNotification] Test du son');
     return await this.playNewOrderSound();
   }
 

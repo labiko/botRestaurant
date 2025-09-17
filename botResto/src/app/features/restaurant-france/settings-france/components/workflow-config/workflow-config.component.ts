@@ -3,12 +3,13 @@ import { AlertController, LoadingController, ToastController } from '@ionic/angu
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { 
-  WorkflowConfigService, 
-  WorkflowDefinition, 
-  WorkflowStep, 
-  WorkflowTemplate 
+import {
+  WorkflowConfigService,
+  WorkflowDefinition,
+  WorkflowStep,
+  WorkflowTemplate
 } from '../../../services/workflow-config.service';
+import { AuthFranceService } from '../../../auth-france/services/auth-france.service';
 
 @Component({
   selector: 'app-workflow-config',
@@ -25,16 +26,24 @@ export class WorkflowConfigComponent implements OnInit, OnDestroy {
   workflowSteps: WorkflowStep[] = [];
   
   isLoading = false;
-  
-  // Mock restaurant ID - should come from auth service
-  restaurantId = 1;
+
+  restaurantId: number;
 
   constructor(
     private workflowConfigService: WorkflowConfigService,
+    private authFranceService: AuthFranceService,
     private alertController: AlertController,
     private loadingController: LoadingController,
     private toastController: ToastController
-  ) {}
+  ) {
+    // Récupérer l'ID du restaurant depuis la session
+    const id = this.authFranceService.getCurrentRestaurantId();
+    if (id === null) {
+      console.error('❌ [WorkflowConfig] Impossible de récupérer restaurant ID - utilisateur non connecté');
+      throw new Error('Restaurant ID requis - utilisateur non connecté');
+    }
+    this.restaurantId = id;
+  }
 
   ngOnInit() {
     this.loadWorkflows();

@@ -4,14 +4,15 @@ import { AlertController, LoadingController, ToastController } from '@ionic/angu
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { 
-  DeliveryManagementService, 
-  DeliveryDriver, 
+import {
+  DeliveryManagementService,
+  DeliveryDriver,
   FranceOrder,
-  DeliveryAssignment 
+  DeliveryAssignment
 } from '../../../services/delivery-management.service';
 
 import { RestaurantConfigService } from '../../../services/restaurant-config.service';
+import { AuthFranceService } from '../../../auth-france/services/auth-france.service';
 
 @Component({
   selector: 'app-delivery-config',
@@ -29,13 +30,11 @@ export class DeliveryConfigComponent implements OnInit, OnDestroy {
   recentAssignments: DeliveryAssignment[] = [];
   
   isLoading = false;
-  
-  // Mock restaurant ID - should come from auth service
-  restaurantId = 1;
-  
+
+  restaurantId: number;
+
   // Delivery zones - to be loaded from database
   deliveryZones: any[] = [];
-  
 
   constructor(
     private fb: FormBuilder,
@@ -43,8 +42,17 @@ export class DeliveryConfigComponent implements OnInit, OnDestroy {
     private restaurantConfigService: RestaurantConfigService,
     private alertController: AlertController,
     private loadingController: LoadingController,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private authFranceService: AuthFranceService
   ) {
+    // Récupérer l'ID du restaurant depuis la session
+    const id = this.authFranceService.getCurrentRestaurantId();
+    if (id === null) {
+      console.error('❌ [DeliveryConfig] Impossible de récupérer restaurant ID - utilisateur non connecté');
+      throw new Error('Restaurant ID requis - utilisateur non connecté');
+    }
+    this.restaurantId = id;
+
     this.initializeForm();
   }
 

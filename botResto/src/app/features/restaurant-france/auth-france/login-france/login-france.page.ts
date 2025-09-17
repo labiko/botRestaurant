@@ -80,7 +80,6 @@ export class LoginFrancePage implements OnInit, OnDestroy {
    * Sélection du profil utilisateur
    */
   selectProfile(profileType: 'restaurant' | 'driver') {
-    console.log('🎯 [LoginFrance] Profil sélectionné:', profileType);
     this.selectedProfileType = profileType;
     this.showLoginForm = true;
     this.errorMessage = '';
@@ -124,12 +123,10 @@ export class LoginFrancePage implements OnInit, OnDestroy {
         userType: this.selectedProfileType
       };
 
-      console.log(`🔐 [LoginFrance] Tentative connexion ${this.selectedProfileType}:`, credentials.phone);
 
       const result = await this.authFranceService.login(credentials);
 
       if (result.success && result.user) {
-        console.log('✅ [LoginFrance] Connexion réussie:', result.user);
         
         await this.showSuccessToast(`Connexion réussie ! Bienvenue ${result.user.name || result.user.firstName}`);
         

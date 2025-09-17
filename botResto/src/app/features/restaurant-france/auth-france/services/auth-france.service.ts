@@ -54,34 +54,21 @@ export class AuthFranceService {
    */
   private async checkExistingSession(): Promise<void> {
     try {
-      console.log('🔍 [AuthFrance] Vérification session existante...');
       
       const sessionData = localStorage.getItem('france_auth_session');
       if (!sessionData) {
-        console.log('📝 [AuthFrance] Aucune session trouvée');
         // Important: émettre null pour indiquer qu'il n'y a pas de session
         this.currentUserSubject.next(null);
         return;
       }
 
       const session = JSON.parse(sessionData);
-      console.log('📋 [AuthFrance] Session trouvée:', {
-        id: session.id,
-        user_type: session.user_type,
-        expires_at: session.expires_at
-      });
 
       const isValid = await this.validateSession(session.id);
-      console.log('✅ [AuthFrance] Session valide:', isValid);
         
       if (isValid) {
         const user = await this.getUserFromSession(session.id);
         if (user) {
-          console.log('👤 [AuthFrance] Utilisateur récupéré:', {
-            id: user.id,
-            type: user.type,
-            name: user.name || `${user.firstName} ${user.lastName}`
-          });
           this.setCurrentUser(user);
         } else {
           console.warn('⚠️ [AuthFrance] Impossible de récupérer les données utilisateur');
@@ -102,7 +89,6 @@ export class AuthFranceService {
    */
   async loginRestaurant(phone: string, password: string): Promise<AuthResult> {
     try {
-      console.log('🏪 [AuthFrance] Connexion restaurant:', phone);
 
       // Rechercher le restaurant par téléphone
       const { data: restaurant, error } = await this.supabaseFranceService.client
@@ -111,7 +97,6 @@ export class AuthFranceService {
         .or(`phone.eq.${phone},whatsapp_number.eq.${phone}`)
         .single();
 
-      console.log('🔍 [AuthFrance] Résultat recherche:', { restaurant, error });
 
       if (error) {
         console.error('❌ [AuthFrance] Erreur SQL:', {
@@ -132,16 +117,9 @@ export class AuthFranceService {
       }
 
       // Vérifier le mot de passe
-      console.log('🔐 [AuthFrance] Vérification mot de passe:', {
-        provided: password,
-        stored: restaurant.password_hash,
-        direct: restaurant.password_hash === password
-      });
-
       const passwordValid = restaurant.password_hash === password || 
                            await this.verifyPassword(password, restaurant.password_hash);
 
-      console.log('✅ [AuthFrance] Mot de passe valide:', passwordValid);
 
       if (!passwordValid) {
         return { success: false, message: 'Mot de passe incorrect' };
@@ -186,7 +164,6 @@ export class AuthFranceService {
    */
   async loginDriver(phone: string, password: string): Promise<AuthResult> {
     try {
-      console.log('🚴 [AuthFrance] Connexion livreur:', phone);
 
       // Valider le format du numéro de téléphone
       const phoneValidation = this.phoneFormatService.isValidDriverPhone(phone);
@@ -259,7 +236,6 @@ export class AuthFranceService {
       this.setCurrentUser(user);
       
       // NOUVEAU: Démarrer monitoring session pour livreur
-      console.log('🔍 [AuthFrance] Démarrage monitoring session livreur ID:', user.id);
       this.driverSessionMonitorService.startMonitoring(user.id);
       
       return { 
@@ -290,12 +266,10 @@ export class AuthFranceService {
    * Utilisée par le service delivery-token pour l'auto-login
    */
   public authenticateDriverByToken(driver: FranceUser): void {
-    console.log('🔐 [AuthFrance] Authentification par token pour:', driver.name);
     this.setCurrentUser(driver);
     
     // NOUVEAU: Démarrer monitoring session pour livreur authentifié par token
     if (driver.type === 'driver') {
-      console.log('🔍 [AuthFrance] Démarrage monitoring session livreur token ID:', driver.id);
       this.driverSessionMonitorService.startMonitoring(driver.id);
     }
   }
@@ -306,7 +280,6 @@ export class AuthFranceService {
   async logout(): Promise<void> {
     try {
       // NOUVEAU: Arrêter monitoring avant déconnexion
-      console.log('⏹️ [AuthFrance] Arrêt monitoring session avant logout');
       this.driverSessionMonitorService.stopMonitoring();
       
       const sessionData = localStorage.getItem('france_auth_session');
@@ -321,7 +294,6 @@ export class AuthFranceService {
       }
       
       this.clearSession();
-      console.log('✅ [AuthFrance] Déconnexion réussie');
     } catch (error) {
       console.error('Erreur déconnexion:', error);
       this.clearSession();
@@ -341,7 +313,6 @@ export class AuthFranceService {
         console.log('👤 [AuthFrance] Session livreur - 30 jours');
       } else {
         expiresAt.setHours(expiresAt.getHours() + 24); // 24h pour restaurants
-        console.log('🏪 [AuthFrance] Session restaurant - 24 heures');
       }
 
       const { data, error } = await this.supabaseFranceService.client
@@ -406,7 +377,6 @@ export class AuthFranceService {
    */
   private async getUserFromSession(sessionId: string): Promise<FranceUser | null> {
     try {
-      console.log('🔍 [AuthFrance] Récupération utilisateur depuis session:', sessionId);
 
       const { data: session, error } = await this.supabaseFranceService.client
         .from('france_auth_sessions')
@@ -414,7 +384,6 @@ export class AuthFranceService {
         .eq('id', sessionId)
         .single();
 
-      console.log('📋 [AuthFrance] Données session récupérées:', { session, error });
 
       if (error || !session) {
         console.error('❌ [AuthFrance] Session non trouvée ou erreur:', error);
@@ -422,7 +391,6 @@ export class AuthFranceService {
       }
 
       if (session.user_type === 'restaurant') {
-        console.log('🏪 [AuthFrance] Récupération données restaurant...');
         
         const { data: restaurant, error: restError } = await this.supabaseFranceService.client
           .from('france_restaurants')
@@ -430,7 +398,6 @@ export class AuthFranceService {
           .eq('id', session.user_id)
           .single();
 
-        console.log('🏪 [AuthFrance] Restaurant récupéré:', { restaurant, restError });
 
         if (restaurant && !restError) {
           return {
@@ -519,6 +486,21 @@ export class AuthFranceService {
    */
   isAuthenticated(): boolean {
     return this.isAuthenticatedSubject.value;
+  }
+
+  /**
+   * Récupérer l'ID du restaurant connecté
+   * Retourne null si pas authentifié - permet de détecter les erreurs
+   */
+  getCurrentRestaurantId(): number | null {
+    const user = this.getCurrentUser();
+
+    if (user && user.restaurantId) {
+      return user.restaurantId;
+    }
+
+    console.error('❌ Aucun restaurant connecté - getCurrentRestaurantId() retourne null');
+    return null;
   }
 
   /**

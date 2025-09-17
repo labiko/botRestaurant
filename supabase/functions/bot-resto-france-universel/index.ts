@@ -72,7 +72,6 @@ class BotFactory {
       scheduleService
     );
     
-    console.log('✅ [BotFactory] Bot universel assemblé avec succès');
     return universalBot;
   }
 
@@ -93,7 +92,6 @@ class BotFactory {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       const { data, error } = await supabase.from('france_restaurants').select('id').limit(1);
       results.supabase = !error && !!data;
-      console.log(`${results.supabase ? '✅' : '❌'} [BotFactory] Connexion Supabase`);
     } catch (error) {
       console.error('❌ [BotFactory] Erreur test Supabase:', error);
     }
@@ -249,7 +247,6 @@ async function handleMetrics(request: Request): Promise<Response> {
 function extractMessageData(payload: any): { phoneNumber: string; message: string } | null {
   try {
     // Vérifier le type de notification - IGNORER LES MESSAGES SORTANTS
-    console.log(`🔍 [Extract] Type webhook: ${payload.typeWebhook}`);
     
     if (payload.typeWebhook !== 'incomingMessageReceived') {
       // Ignorer explicitement les messages sortants du bot
@@ -431,9 +428,7 @@ console.log('🏗️ [Startup] Architecture SOLID avec configuration multi-resta
 console.log('✅ [Startup] Démarrage direct - connexions testées à la première utilisation');
 
 // Pré-charger l'instance du bot
-console.log('🤖 [Startup] Pré-chargement de l\'instance du bot...');
 const preloadedBot = getBotInstance();
-console.log('✅ [Startup] Bot universel pré-chargé et prêt');
 
 // Démarrer le serveur HTTP SANS JWT (comme l'ancien bot)
 console.log('🌐 [Startup] Démarrage serveur HTTP...');

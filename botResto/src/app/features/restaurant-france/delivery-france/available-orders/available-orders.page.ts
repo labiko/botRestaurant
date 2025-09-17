@@ -90,7 +90,6 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     // S'abonner aux compteurs partagés pour les badges
     this.countersSubscription = this.deliveryCountersService.counters$.subscribe(counters => {
       this.currentCounters = counters;
-      console.log(`🔢 [AvailableOrders] Compteurs reçus:`, counters);
     });
     
     // S'abonner aux données utilisateur
@@ -101,12 +100,10 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
         if (user && user.type === 'driver') {
           if (this.acceptanceToken) {
             // ✅ Mode token : Charger toutes les données PUIS filtrer
-            console.log(`🎯 [TOKEN_DEBUG] Mode token détecté - Chargement avec filtrage`);
             console.log(`🔑 [TOKEN_DEBUG] Token: ${this.acceptanceToken.substring(0, 8)}...`);
             this.loadAvailableOrders(true); // ✅ Passer true pour inclure les commandes assignées
           } else {
             // ✅ Mode normal : Afficher toutes les commandes disponibles
-            console.log(`📋 [TOKEN_DEBUG] Mode normal - Token: ${this.acceptanceToken ? 'EXISTS' : 'NULL'}, TokenOrder: ${this.tokenOrder ? 'EXISTS' : 'NULL'}`);
             this.loadAvailableOrders(false); // ✅ Passer false pour mode normal
           }
           this.initializeOnlineStatus();
@@ -120,11 +117,9 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
    */
   private displayTokenOrder() {
     if (!this.tokenOrder) {
-      console.log(`❌ [TOKEN_DEBUG] displayTokenOrder appelé mais tokenOrder est null`);
       return;
     }
     
-    console.log(`🎯 [TOKEN_DEBUG] Début displayTokenOrder - Commande: ${this.tokenOrder.order_number}`);
     console.log(`🔍 [TOKEN_DEBUG] Token Order récupéré:`, {
       id: this.tokenOrder.id,
       order_number: this.tokenOrder.order_number,
@@ -132,14 +127,11 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
       driver_id: this.tokenOrder.driver_id,
       total_amount: this.tokenOrder.total_amount
     });
-    console.log(`📊 [TOKEN_DEBUG] Available Orders AVANT modification - Count: ${this.availableOrders.length}`);
     
     // Afficher UNIQUEMENT la commande du token
     this.availableOrders = [this.tokenOrder];
     this.isLoading = false;
     
-    console.log(`✅ [TOKEN_DEBUG] Available Orders APRÈS modification - Count: ${this.availableOrders.length}`);
-    console.log(`✅ [TOKEN_DEBUG] Commande affichée:`, this.availableOrders[0]?.order_number);
     
     // Recalculer les données pour cette commande unique
     this.computeOrderData();
@@ -147,7 +139,6 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     // Mettre à jour le compteur (1 seule commande)
     this.deliveryCountersService.updateAvailableOrdersCount(1);
     
-    console.log(`🏁 [TOKEN_DEBUG] displayTokenOrder terminé - Interface mise à jour`);
   }
 
   /**
@@ -166,20 +157,15 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
       this.availableOrdersSubscription = this.deliveryOrdersService.availableOrders$.subscribe(orders => {
         if (this.acceptanceToken && this.tokenOrder) {
           // Mode token : Chercher la commande du token dans les données chargées
-          console.log(`🎯 [TOKEN_DEBUG] Mode token - Recherche commande enrichie`);
-          console.log(`🔍 [TOKEN_DEBUG] Recherche ID ${this.tokenOrder.id} dans ${orders.length} commandes`);
           
           const tokenOrderEnriched = orders.find(order => order.id === this.tokenOrder!.id);
           
           if (tokenOrderEnriched) {
-            console.log(`✅ [TOKEN_DEBUG] Commande enrichie trouvée:`, tokenOrderEnriched.order_number);
             this.availableOrders = [tokenOrderEnriched];
           } else {
-            console.log(`⚠️ [TOKEN_DEBUG] Commande pas dans les disponibles - Utilisation tokenOrder de base`);
             this.availableOrders = [this.tokenOrder];
           }
           
-          console.log(`✅ [TOKEN_DEBUG] Available Orders final: ${this.availableOrders.length}`);
         } else {
           // Mode normal : Garder toutes les commandes
           this.availableOrders = orders;
@@ -214,7 +200,6 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
         
         if (validation.valid && validation.orderData) {
           this.tokenOrder = validation.orderData;
-          console.log(`✅ [TOKEN_DEBUG] Token validé avec succès`);
           console.log(`🔍 [TOKEN_DEBUG] Validation result:`, {
             valid: validation.valid,
             order_id: validation.orderData.id,
@@ -222,11 +207,9 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
             status: validation.orderData.status,
             driver_id: validation.orderData.driver_id
           });
-          console.log(`👤 [TOKEN_DEBUG] Current Driver connecté:`, this.currentDriver ? 'OUI' : 'NON');
           
           // ✅ NOUVEAU : Vérifier si commande déjà acceptée
           if (validation.orderData.status === 'assignee' || validation.orderData.status === 'en_livraison') {
-            console.log(`🔄 [TOKEN_REDIRECT] Commande déjà acceptée - Redirection vers my-orders`);
             this.router.navigate(['/restaurant-france/delivery-france/my-orders']);
             return;
           }
@@ -242,7 +225,6 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
           // L'utilisateur est déjà authentifié par le DeliveryTokenGuard
           // Pas besoin d'afficher la popup - il peut voir les commandes directement
         } else {
-          console.log(`❌ [AvailableOrders] Token invalide: ${validation.reason}`);
           await this.showToast(validation.reason || 'Lien expiré ou invalide', 'danger');
         }
       } catch (error) {
@@ -292,14 +274,12 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     await loading.present();
 
     try {
-      console.log(`🔄 [AvailableOrders] Acceptation via token pour commande ${this.tokenOrder.id}...`);
       
       const result = await this.deliveryTokenService.acceptOrderByToken(this.acceptanceToken);
       
       await loading.dismiss();
       
       if (result.success) {
-        console.log('✅ [AvailableOrders] Commande acceptée via token avec succès');
         await this.showToast('Commande acceptée avec succès !', 'success');
         
         // Recharger les données et rediriger vers mes commandes
@@ -344,13 +324,10 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
             try {
               // MODIFICATION: Réutiliser le token existant au lieu d'en générer un nouveau
               // Récupérer les tokens existants pour cette commande
-              console.log(`🔍 [AcceptOrder] Recherche tokens existants pour commande ${order.id}...`);
               const existingTokens = await this.deliveryTokenService.getTokensForOrder(order.id);
-              console.log(`🔍 [AcceptOrder] ${existingTokens.length} tokens trouvés:`, existingTokens);
               
               // MODIFICATION: Utiliser n'importe quel token disponible (pas de contrôle livreur)
               const availableToken = existingTokens.length > 0 ? existingTokens[0] : null;
-              console.log(`🔍 [AcceptOrder] Token disponible sélectionné:`, availableToken);
               
               if (availableToken) {
                 // Utiliser le token existant (avec logs détaillés [ACCEPT_DETAILED])
@@ -606,12 +583,8 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
 
   // Fonctions détails articles
   hasOrderItems(order: DeliveryOrder): boolean {
-    console.log('🔍 [AvailableOrders] hasOrderItems - Order:', order.order_number);
-    console.log('🔍 [AvailableOrders] hasOrderItems - Items raw:', order.items);
-    console.log('🔍 [AvailableOrders] hasOrderItems - Items type:', typeof order.items);
     
     const result = this.deliveryOrderItemsService.hasOrderItems(order);
-    console.log('✅ [AvailableOrders] hasOrderItems - Result:', result);
     return result;
   }
 
@@ -623,16 +596,10 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
    * NOUVEAU - Formater les items avec le service universel (même format que restaurant)
    */
   getFormattedItems(order: DeliveryOrder): FormattedItem[] {
-    console.log('🔍 [AvailableOrders] getFormattedItems - Order:', order.order_number);
-    console.log('🔍 [AvailableOrders] getFormattedItems - Raw items:', order.items);
     
     const items = this.deliveryOrderItemsService.getOrderItems(order);
-    console.log('🔍 [AvailableOrders] getFormattedItems - Parsed items:', items);
-    console.log('🔍 [AvailableOrders] getFormattedItems - Items count:', items?.length || 0);
     
     const formattedItems = this.universalOrderDisplayService.formatOrderItems(items || []);
-    console.log('✅ [AvailableOrders] getFormattedItems - Formatted items:', formattedItems);
-    console.log('✅ [AvailableOrders] getFormattedItems - Formatted count:', formattedItems?.length || 0);
     
     return formattedItems;
   }
@@ -718,7 +685,6 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
       // S'abonner aux changements de statut
       this.onlineStatusSubscription = this.driverOnlineStatusService.onlineStatus$.subscribe(isOnline => {
         this.isOnline = isOnline;
-        console.log(`📱 [AvailableOrders] Statut mis à jour: ${isOnline ? 'En ligne' : 'Hors ligne'}`);
         
         // Si hors ligne, vider les commandes disponibles
         if (!isOnline) {
@@ -748,11 +714,9 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
         // Si on vient de se mettre en ligne, recharger les commandes disponibles
         if (result.newStatus) {
           this.loadAvailableOrders();
-          console.log('✅ [AvailableOrders] Livreur en ligne - rechargement des commandes');
         } else {
           // Si hors ligne, vider les commandes disponibles
           this.availableOrders = [];
-          console.log('⏸️ [AvailableOrders] Livreur hors ligne - commandes vidées');
         }
       } else {
         this.presentToast(result.message);
@@ -790,7 +754,6 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
    * Rafraîchir les données lors du clic sur le tab
    */
   refreshAvailableOrders() {
-    console.log('🔄 [AvailableOrders] Rafraîchissement des données...');
     if (this.currentDriver) {
       this.loadAvailableOrders();
     }
@@ -800,7 +763,6 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
    * Pull to refresh - Rafraîchir les données en tirant vers le bas
    */
   async doRefresh(event: any) {
-    console.log('🔄 [AvailableOrders] Pull to refresh déclenché');
     
     try {
       if (this.currentDriver && this.currentDriver.restaurantId) {

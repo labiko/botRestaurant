@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { RestaurantConfigService } from '../../../services/restaurant-config.service';
 import { ServiceModesService } from '../../../services/service-modes.service';
+import { AuthFranceService } from '../../../auth-france/services/auth-france.service';
 
 export interface ServiceMode {
   id?: number;
@@ -38,8 +39,7 @@ export class ServiceModesComponent implements OnInit, OnDestroy {
   isEditingDeliveryZone: boolean = false;
   tempDeliveryZoneKm: number = 5;
   
-  // Mock restaurant ID - should come from auth service
-  restaurantId = 1;
+  restaurantId: number;
 
   constructor(
     private fb: FormBuilder,
@@ -47,8 +47,17 @@ export class ServiceModesComponent implements OnInit, OnDestroy {
     private serviceModesService: ServiceModesService,
     private alertController: AlertController,
     private loadingController: LoadingController,
-    private toastController: ToastController
-  ) {}
+    private toastController: ToastController,
+    private authFranceService: AuthFranceService
+  ) {
+    // Récupérer l'ID du restaurant depuis la session
+    const id = this.authFranceService.getCurrentRestaurantId();
+    if (id === null) {
+      console.error('❌ [ServiceModes] Impossible de récupérer restaurant ID - utilisateur non connecté');
+      throw new Error('Restaurant ID requis - utilisateur non connecté');
+    }
+    this.restaurantId = id;
+  }
 
   ngOnInit() {
     this.loadServiceModes();
