@@ -50,6 +50,9 @@ export class UniversalBot implements IMessageHandler {
   private currentRestaurantContext: RestaurantContext | null = null;
   private supabaseUrl: string;
   private supabaseKey: string;
+
+  // 🔧 OPTIMISATION: Client Supabase unique réutilisé
+  private supabaseClient: any = null;
   
   constructor(
     private sessionManager: ISessionManager,
@@ -119,15 +122,33 @@ export class UniversalBot implements IMessageHandler {
   }
 
   /**
+   * 🔧 OPTIMISATION: Méthode pour obtenir le client Supabase unique
+   * Évite la création de multiples clients et imports répétés
+   */
+  private async getSupabaseClient() {
+    try {
+      if (!this.supabaseClient) {
+        console.log('🔧 [UniversalBot] Création client Supabase unique...');
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+        this.supabaseClient = createClient(this.supabaseUrl, this.supabaseKey);
+        console.log('✅ [UniversalBot] Client Supabase unique créé avec succès');
+      }
+      return this.supabaseClient;
+    } catch (error) {
+      console.error('❌ [UniversalBot] Erreur création client principal, fallback temporaire:', error);
+      // Fallback: créer un client temporaire en cas d'erreur
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+      return createClient(this.supabaseUrl, this.supabaseKey);
+    }
+  }
+
+  /**
    * Récupérer le nom de catégorie depuis la base de données
    */
   private async getCategoryNameFromProduct(productId: number): Promise<string | null> {
     try {
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
+      // 🔧 OPTIMISATION: Utilisation du client unique
+      const supabase = await this.getSupabaseClient();
       
       const { data } = await supabase
         .from('france_products')
@@ -602,13 +623,8 @@ export class UniversalBot implements IMessageHandler {
       
       console.log('🔍 [PHONE_DEBUG] Formats à tester:', formats);
       
-      // Import temporaire de supabase
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
-      
+      const supabase = await this.getSupabaseClient();
+
       for (const format of formats) {
         console.log('🔍 [PHONE_DEBUG] Test format:', format);
         const { data: restaurant, error } = await supabase
@@ -650,8 +666,8 @@ export class UniversalBot implements IMessageHandler {
    */
   private async loadAndSetRestaurantContext(restaurantId: number): Promise<void> {
     try {
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+      // 🔧 OPTIMISATION: Utilisation du client unique
+      const supabase = await this.getSupabaseClient();
       
       const { data: restaurant } = await supabase
         .from('france_restaurants')
@@ -805,26 +821,9 @@ export class UniversalBot implements IMessageHandler {
     console.log('🔥 [STEP0] Juste avant le try');
     try {
       console.log('🔥 [STEP1] Dans le try, avant import supabase...');
-      // Import temporaire de supabase
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      console.log('🔥 [STEP2] Import réussi, création client...');
-      
-      // Utiliser les valeurs stockées dans la classe
-      console.log('🔥 [STEP3] Variables de classe, URL:', this.supabaseUrl ? 'OK' : 'MANQUANTE', 'Key:', this.supabaseKey ? 'OK' : 'MANQUANTE');
-      console.log('🔥 [STEP3.1] URL complète:', this.supabaseUrl);
-      console.log('🔥 [STEP3.2] Key (premiers chars):', this.supabaseKey?.substring(0, 20) + '...');
-      
-      let supabase;
-      try {
-        console.log('🔥 [STEP3.3] Tentative createClient...');
-        supabase = createClient(this.supabaseUrl, this.supabaseKey);
-        console.log('🔥 [STEP4] Client supabase créé avec succès');
-      } catch (createError) {
-        console.error('💥 [ERREUR_CREATE_CLIENT]:', createError);
-        console.error('💥 [ERREUR_CREATE_CLIENT] Message:', createError.message);
-        console.error('💥 [ERREUR_CREATE_CLIENT] Stack:', createError.stack);
-        throw createError;
-      }
+      console.log('🔥 [STEP2] Utilisation client unique...');
+      const supabase = await this.getSupabaseClient();
+      console.log('🔥 [STEP3] Client récupéré avec succès');
       
       // Supprimer les sessions existantes
       console.log('🔧 [DeleteSession] Tentative suppression pour phoneNumber:', phoneNumber);
@@ -902,12 +901,7 @@ export class UniversalBot implements IMessageHandler {
    */
   private async handleGenericGreeting(phoneNumber: string): Promise<void> {
     try {
-      // Import temporaire de supabase
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
+      const supabase = await this.getSupabaseClient();
       
       // Test connexion BDD
       const { data: restaurants, error } = await supabase
@@ -1125,11 +1119,7 @@ export class UniversalBot implements IMessageHandler {
     console.log(`✅ [DeliveryMode] Mode sélectionné: ${deliveryMode}`);
     
     // Récupérer les infos restaurant
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    const supabase = await this.getSupabaseClient();
     
     const restaurant = await supabase
       .from('france_restaurants')
@@ -1152,12 +1142,7 @@ export class UniversalBot implements IMessageHandler {
    * Afficher le menu après choix du mode de livraison
    */
   private async showMenuAfterDeliveryModeChoice(phoneNumber: string, restaurant: any, deliveryMode: string, existingSession?: any): Promise<void> {
-    // Import temporaire de supabase
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    const supabase = await this.getSupabaseClient();
     
     // Chargement dynamique des catégories depuis la BDD
     const { data: categories, error: catError } = await supabase
@@ -1275,13 +1260,8 @@ export class UniversalBot implements IMessageHandler {
       const selectedCategory = categories[categoryNumber - 1];
       console.log(`✅ [handleMenuNavigation] Catégorie sélectionnée: ${selectedCategory.name} (ID: ${selectedCategory.id})`);
       
-      // Import temporaire de supabase
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
-      
+      const supabase = await this.getSupabaseClient();
+
       const restaurant = await supabase
         .from('france_restaurants')
         .select('*')
@@ -1350,12 +1330,8 @@ export class UniversalBot implements IMessageHandler {
       console.log('↩️ [ProductSelection] Retour au menu principal');
       
       // Récupérer les catégories et réafficher le menu
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
-      
+      const supabase = await this.getSupabaseClient();
+
       const { data: restaurant } = await supabase
         .from('france_restaurants')
         .select('*')
@@ -1423,11 +1399,8 @@ export class UniversalBot implements IMessageHandler {
             console.log(`📋 [ProductSelection] Menu Pizza détecté: ${selectedOption.pizzaName}`);
             
             // Récupérer le produit complet depuis la base
-            const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-            const supabase = createClient(
-              Deno.env.get('SUPABASE_URL')!,
-              Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-            );
+            // 🔧 OPTIMISATION: Utilisation du client unique
+            const supabase = await this.getSupabaseClient();
             
             const { data: fullProduct } = await supabase
               .from('france_products')
@@ -1462,11 +1435,8 @@ export class UniversalBot implements IMessageHandler {
     console.log(`✅ [ProductSelection] Produit sélectionné: ${selectedProduct.name} (ID: ${selectedProduct.id})`);
     
     // CORRECTION: Re-requête le produit complet avec steps_config
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    // 🔧 OPTIMISATION: Utilisation du client unique
+    const supabase = await this.getSupabaseClient();
     
     const { data: fullProduct } = await supabase
       .from('france_products')
@@ -1508,12 +1478,8 @@ export class UniversalBot implements IMessageHandler {
     if (!isComposite) {
       console.log(`🔍 [ProductSelection] Vérification des variantes pour ${selectedProduct.name}...`);
       
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
-      
+      const supabase = await this.getSupabaseClient();
+
       // Vérifier dans france_product_sizes
       const { data: sizes } = await supabase
         .from('france_product_sizes')
@@ -1629,13 +1595,8 @@ export class UniversalBot implements IMessageHandler {
     console.log(`📦 [ShowProducts] Chargement produits catégorie ID: ${categoryId}`);
     
     try {
-      // Import temporaire de supabase
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
-      
+      const supabase = await this.getSupabaseClient();
+
       // 1. Récupérer la catégorie pour son nom et icône
       const { data: category } = await supabase
         .from('france_menu_categories')
@@ -1934,12 +1895,8 @@ export class UniversalBot implements IMessageHandler {
         );
         
         // Afficher les catégories après vidage
-        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-        const supabase = createClient(
-          Deno.env.get('SUPABASE_URL')!,
-          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-        );
-        
+        const supabase = await this.getSupabaseClient();
+
         const { data: restaurant } = await supabase
           .from('france_restaurants')
           .select('*')
@@ -1964,8 +1921,7 @@ export class UniversalBot implements IMessageHandler {
           await this.showCategoryProducts(phoneNumber, session, categoryId);
         } else {
           // Récupérer les données restaurant
-          const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-          const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+          const supabase = await this.getSupabaseClient();
           const { data: restaurant } = await supabase
             .from('france_restaurants')
             .select('*')
@@ -2457,8 +2413,8 @@ export class UniversalBot implements IMessageHandler {
    */
   private async getRestaurantName(restaurantId: number): Promise<string> {
     try {
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+      // 🔧 OPTIMISATION: Utilisation du client unique
+      const supabase = await this.getSupabaseClient();
       
       const { data: restaurant } = await supabase
         .from('france_restaurants')
@@ -2509,8 +2465,7 @@ export class UniversalBot implements IMessageHandler {
           await this.showCategoryProducts(phoneNumber, session, categoryId);
         } else {
           // Récupérer les données restaurant
-          const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-          const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+          const supabase = await this.getSupabaseClient();
           const { data: restaurant } = await supabase
             .from('france_restaurants')
             .select('*')
@@ -2653,13 +2608,8 @@ export class UniversalBot implements IMessageHandler {
    */
   private async deleteSession(phoneNumber: string): Promise<void> {
     try {
-      // Import temporaire de supabase
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
-      
+      const supabase = await this.getSupabaseClient();
+
       await supabase
         .from('france_user_sessions')
         .delete()
@@ -2957,9 +2907,8 @@ export class UniversalBot implements IMessageHandler {
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + 30); // 30 minutes pour discovery
       
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      const supabase = createClient(this.supabaseUrl, this.supabaseKey);
-      
+      const supabase = await this.getSupabaseClient();
+
       const { data: newSession, error } = await supabase
         .from('france_user_sessions')
         .insert({
