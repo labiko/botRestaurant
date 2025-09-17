@@ -881,9 +881,15 @@ export class CompositeWorkflowExecutor {
     }
     
     console.log(`✅ [UniversalWorkflow] Validation réussie, stockage des sélections...`);
-    
+
     // Stocker les sélections
-    const selectedOptions = selections.map(s => optionGroup.options[s - 1]);
+    const selectedOptions = selections.map(s => {
+      const option = optionGroup.options[s - 1];
+      return {
+        ...option,
+        option_name: this.cleanOptionName(option.option_name) // Nettoyage avec emoji
+      };
+    });
     workflowData.selections[optionGroup.groupName] = selectedOptions;
     
     // LOGIQUE UNIVERSELLE : Déterminer la prochaine étape selon les règles conditionnelles
@@ -994,11 +1000,17 @@ export class CompositeWorkflowExecutor {
         `❌ ${validation.error}\n${this.getSelectionHelp(optionGroup)}`);
       return;
     }
-    
+
     // Stocker les sélections
-    const selectedOptions = selections.map(s => optionGroup.options[s - 1]);
+    const selectedOptions = selections.map(s => {
+      const option = optionGroup.options[s - 1];
+      return {
+        ...option,
+        option_name: this.cleanOptionName(option.option_name) // Nettoyage avec emoji
+      };
+    });
     workflowData.selections[optionGroup.groupName] = selectedOptions;
-    
+
     // Afficher un récap de la sélection
     const selectedNames = selectedOptions.map(s => s.option_name).join(', ');
     await this.messageSender.sendMessage(phoneNumber, 
@@ -1367,6 +1379,27 @@ export class CompositeWorkflowExecutor {
     }));
   }
   
+  /**
+   * Nettoyer le nom d'une option (enlever SEULEMENT la numérotation)
+   * Garde les emojis pour un affichage moderne
+   * Exemples:
+   * "🍝 4. PÂTES" → "🍝 PÂTES"
+   * "🥤 10. COCA ZERO" → "🥤 COCA ZERO"
+   * "PÂTES" → "PÂTES" (pas de changement)
+   */
+  private cleanOptionName(name: string): string {
+    if (!name) return name;
+
+    // Regex : enlever SEULEMENT "numéro." mais garder emoji
+    // Pattern: cherche "1. " ou "10. " etc et l'enlève
+    const cleaned = name
+      .replace(/\s*\d+\.\s*/g, ' ') // Enlever tous les "1. ", "10. ", etc.
+      .replace(/\s+/g, ' ') // Normaliser les espaces multiples
+      .trim();
+
+    return cleaned || name; // Fallback au nom original si vide
+  }
+
   /**
    * Obtenir le nom d'affichage pour un groupe
    */
