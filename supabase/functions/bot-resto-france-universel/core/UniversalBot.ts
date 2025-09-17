@@ -169,15 +169,8 @@ export class UniversalBot implements IMessageHandler {
    */
   async handleMessage(phoneNumber: string, message: string): Promise<void> {
     try {
-      console.log(`🤖 [MESSAGE_DEBUG] === MESSAGE REÇU ===`);
-      console.log(`🤖 [MESSAGE_DEBUG] De: ${phoneNumber}`);
-      console.log(`🤖 [MESSAGE_DEBUG] Message: "${message}"`);
-      console.log(`🤖 [MESSAGE_DEBUG] Type: ${typeof message}`);
-      console.log(`🤖 [MESSAGE_DEBUG] Longueur: ${message.length}`);
-      
       // PRIORITÉ 1: Détection numéro téléphone restaurant (accès QR code)
       const isPhone = this.isPhoneNumberFormat(message);
-      console.log(`🤖 [MESSAGE_DEBUG] Est un téléphone: ${isPhone}`);
       
       if (isPhone) {
         console.log('📱 Format téléphone détecté:', message);
@@ -609,11 +602,6 @@ export class UniversalBot implements IMessageHandler {
    */
   private async findRestaurantByPhone(phoneNumber: string): Promise<any> {
     try {
-      console.log('🔍 [PHONE_DEBUG] === RECHERCHE RESTAURANT ===');
-      console.log('🔍 [PHONE_DEBUG] Numéro reçu:', phoneNumber);
-      console.log('🔍 [PHONE_DEBUG] Type:', typeof phoneNumber);
-      console.log('🔍 [PHONE_DEBUG] Longueur:', phoneNumber.length);
-      
       // Essayer différents formats de normalisation
       const formats = [
         phoneNumber, // Format original (ex: 0177123456)
@@ -621,23 +609,17 @@ export class UniversalBot implements IMessageHandler {
         `33${phoneNumber.substring(1)}` // Format sans + (ex: 330177123456)
       ];
       
-      console.log('🔍 [PHONE_DEBUG] Formats à tester:', formats);
-      
       const supabase = await this.getSupabaseClient();
 
       for (const format of formats) {
-        console.log('🔍 [PHONE_DEBUG] Test format:', format);
         const { data: restaurant, error } = await supabase
           .from('france_restaurants')
           .select('*')
           .or(`phone.eq.${format},whatsapp_number.eq.${format}`)
           .single();
-        
-        console.log('🔍 [PHONE_DEBUG] Résultat requête pour', format, ':', { restaurant: restaurant?.name || 'null', error: error?.message || 'none' });
-        
+
         if (restaurant) {
-          console.log('✅ [PHONE_DEBUG] Restaurant trouvé:', restaurant.name);
-          console.log('✅ [PHONE_DEBUG] Restaurant data:', JSON.stringify(restaurant, null, 2));
+          console.log('✅ Restaurant trouvé:', restaurant.name);
           return restaurant;
         }
       }
@@ -695,63 +677,31 @@ export class UniversalBot implements IMessageHandler {
    */
   private async handleDirectRestaurantAccess(phoneNumber: string, restaurant: any): Promise<void> {
     try {
-      console.log(`🎯 [DirectAccess] === DÉBUT ACCÈS DIRECT RESTAURANT ===`);
-      console.log(`🎯 [DirectAccess] Restaurant: ${restaurant.name}`);
-      
-      // AFFICHER L'HEURE ACTUELLE POUR DIAGNOSTIC
-      const now = new Date();
-      console.log(`⏰ [HEURE_DEBUG] === DIAGNOSTIC FUSEAU HORAIRE ===`);
-      console.log(`⏰ [HEURE_DEBUG] Date système brute: ${now.toString()}`);
-      console.log(`⏰ [HEURE_DEBUG] Date ISO: ${now.toISOString()}`);
-      console.log(`⏰ [HEURE_DEBUG] Heure locale système: ${now.toLocaleString('fr-FR')}`);
-      console.log(`⏰ [HEURE_DEBUG] Heure Paris: ${now.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}`);
-      console.log(`⏰ [HEURE_DEBUG] Timezone offset: ${now.getTimezoneOffset()} minutes`);
-      console.log(`⏰ [HEURE_DEBUG] Jour de la semaine: ${now.getDay()} (0=dimanche)`);
-      
-      console.log(`🎯 [DirectAccess] Données restaurant:`, JSON.stringify(restaurant, null, 2));
-      
-      // 🚨 VÉRIFICATION DES HORAIRES avec le service dédié
-      console.log(`🚨 [DirectAccess] APPEL du service des horaires...`);
-      console.log(`🚨 [DirectAccess] Service disponible: ${!!this.scheduleService}`);
-      
+      // VÉRIFICATION DES HORAIRES avec le service dédié
       const scheduleResult = this.scheduleService.checkRestaurantSchedule(restaurant);
       
-      console.log(`🚨 [DirectAccess] RÉSULTAT service horaires:`, JSON.stringify(scheduleResult, null, 2));
-      console.log(`🚨 [DirectAccess] Restaurant ouvert: ${scheduleResult.isOpen}`);
-      console.log(`🚨 [DirectAccess] Statut: ${scheduleResult.status}`);
-      
       if (!scheduleResult.isOpen) {
-        console.log(`🚫 [DirectAccess] Restaurant fermé - Envoi message de fermeture`);
         // Restaurant fermé - Utiliser le service pour générer le message
         const closedMessage = this.scheduleService.getScheduleMessage(scheduleResult, restaurant.name);
-        console.log(`🚫 [DirectAccess] Message de fermeture: ${closedMessage}`);
-        
         await this.messageSender.sendMessage(phoneNumber, closedMessage);
         return;
       }
-      
-      console.log(`✅ [DirectAccess] Restaurant ouvert - Procédure d'accueil`)
       
       // Premier message : Bienvenue personnalisé
       const welcomeMessage = `🇫🇷 Bonjour ! Bienvenue chez ${restaurant.name} !\n🍕 ${restaurant.description || 'Découvrez notre délicieux menu'}\n📍 ${restaurant.address || 'Restaurant disponible'}`;
       await this.messageSender.sendMessage(phoneNumber, welcomeMessage);
       
       // Charger les modes de livraison disponibles depuis la base de données
-      console.log('🚚 [DirectAccess] Chargement des modes de livraison...');
       const availableModes = await this.deliveryModesService.getAvailableModes(restaurant.id);
-      console.log(`🚚 [DirectAccess] Modes disponibles: ${availableModes.map(m => m.mode).join(', ')}`);
-      
+
       // Deuxième message : Choix du mode de livraison (dynamique)
       const deliveryModeMessage = this.deliveryModesService.formatModesMessage(availableModes);
       await this.messageSender.sendMessage(phoneNumber, deliveryModeMessage);
-      
+
       // ⚡ DÉFINIR LE CONTEXTE RESTAURANT AVANT TOUTE OPÉRATION DE SESSION
-      console.log('⚡ [CONTEXT_SETUP] Définition contexte restaurant...');
       this.setRestaurantContext(restaurant);
-      console.log('✅ [CONTEXT_SETUP] Contexte restaurant défini');
-      
+
       // 🎯 [STEP1] Suppression des sessions existantes
-      console.log('🔍 [DEBUG_RESTAURANT_ACCESS] === STEP1 DÉBUT ===');
       console.log('🎯 [STEP1] Suppression sessions utilisateur existantes...');
       try {
         await this.sessionManager.deleteSessionsByPhone(phoneNumber);
@@ -785,29 +735,17 @@ export class UniversalBot implements IMessageHandler {
             availableModes: availableModes.map(m => m.mode)
           }
         );
-        console.log('✅ [STEP2] Session restaurant créée:', session.id);
-        console.log('🔍 [DEBUG_RESTAURANT_ACCESS] === STEP2 SUCCÈS ===');
       } catch (createError) {
-        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] === STEP2 ÉCHEC ===');
         console.error('❌ [STEP2] Erreur création session:', createError);
-        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] createError.message:', createError?.message);
-        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] createError.stack:', createError?.stack);
-        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] createError.name:', createError?.name);
         throw createError;
       }
-      
-      console.log('✅ [STEP3] Session créée pour choix mode livraison avec modes disponibles');
-      
+
     } catch (error) {
-      console.error('🚨 [DEBUG_RESTAURANT_ACCESS] === ERREUR GLOBALE ===');
       console.error('❌ [DirectAccess] Erreur détaillée:', {
         message: error.message,
         stack: error.stack,
         error: error
       });
-      console.error('🚨 [DEBUG_RESTAURANT_ACCESS] error.name:', error?.name);
-      console.error('🚨 [DEBUG_RESTAURANT_ACCESS] error.cause:', error?.cause);
-      console.error('🚨 [DEBUG_RESTAURANT_ACCESS] typeof error:', typeof error);
       await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de l\'accès au restaurant.');
     }
   }
@@ -1182,13 +1120,8 @@ export class UniversalBot implements IMessageHandler {
       console.log('📦 [showMenuAfterDeliveryModeChoice] Mise à jour session vers VIEWING_MENU');
       console.log(`🔍 [SESSION] Mode sélectionné: ${deliveryMode}`);
       
-      console.log('🔍 [CORRUPTION_DEBUG] SOURCE session.sessionData - Type:', typeof session.sessionData);
-      console.log('🔍 [CORRUPTION_DEBUG] SOURCE session.sessionData - Data:', JSON.stringify(session.sessionData).substring(0, 100) + '...');
-      
       // ✅ CORRUPTION FIX: Parser le JSON si c'est un string avant le spread
       const sessionData = typeof session.sessionData === 'string' ? JSON.parse(session.sessionData) : session.sessionData;
-      console.log('🔍 [CORRUPTION_DEBUG] APRÈS JSON.parse ligne 1125 - Type:', typeof sessionData);
-      console.log('🔍 [CORRUPTION_DEBUG] APRÈS JSON.parse ligne 1125 - Data:', JSON.stringify(sessionData).substring(0, 100) + '...');
       
       const updatedData = {
         ...sessionData,
@@ -1199,9 +1132,6 @@ export class UniversalBot implements IMessageHandler {
         totalPrice: sessionData?.totalPrice || 0
       };
       
-      console.log('🔍 [CORRUPTION_DEBUG] APRÈS spread ligne 1128 - Type:', typeof updatedData);
-      console.log('🔍 [CORRUPTION_DEBUG] APRÈS spread ligne 1128 - Data:', JSON.stringify(updatedData).substring(0, 100) + '...');
-      
       console.log(`✅ [SESSION] Données session mises à jour:`, {
         deliveryMode: updatedData.deliveryMode,
         selectedServiceMode: updatedData.selectedServiceMode,
@@ -1211,16 +1141,11 @@ export class UniversalBot implements IMessageHandler {
       
       // ✅ CORRECTION: Ne pas changer bot_state ici car c'est après handleDeliveryModeChoice
       // bot_state sera mis à jour vers VIEWING_MENU une fois que l'utilisateur aura fait son choix
-      console.log('🔍 [CORRUPTION_DEBUG] AVANT update UniversalBot ligne 1141 - Type:', typeof updatedData);
-      console.log('🔍 [CORRUPTION_DEBUG] AVANT update UniversalBot ligne 1141 - Data:', JSON.stringify(updatedData).substring(0, 100) + '...');
-      
       console.log('📝 [UPDATE_SESSION_04] UniversalBot ligne 1153 - CRITIQUE');
       await this.sessionManager.updateSession(session.id, {
         // botState: 'VIEWING_MENU', // ← SUPPRIMÉ: on garde CHOOSING_DELIVERY_MODE
         sessionData: updatedData  // ✅ CORRECTION FINALE: Passer l'objet directement, SessionManager gère JSON.stringify
       });
-      
-      console.log('✅ [CORRUPTION_DEBUG] APRÈS update UniversalBot ligne 1141 - Terminé');
     }
   }
   
@@ -1957,20 +1882,15 @@ export class UniversalBot implements IMessageHandler {
   private async handleOrderCreation(phoneNumber: string, session: any): Promise<void> {
     try {
       console.log(`📦 [OrderCreation] Début création commande pour: ${phoneNumber}`);
-      console.log(`🚨 [DEBUG-OrderCreation] Session complète:`, JSON.stringify(session, null, 2));
       
-      const cart = session.sessionData?.cart || [];
+      const cart = session.sessionData?.cart || {};
+      // CONVERSION SÉCURISÉE : Si c'est un objet, convertir en array. Si déjà array, garder tel quel
+      const cartArray = Array.isArray(cart) ? cart : Object.values(cart);
       const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
       const deliveryMode = session.sessionData?.deliveryMode;
-      
-      console.log(`🚨 [DEBUG-OrderCreation] cart:`, JSON.stringify(cart, null, 2));
-      console.log(`🚨 [DEBUG-OrderCreation] restaurantId:`, restaurantId);
-      console.log(`🚨 [DEBUG-OrderCreation] deliveryMode:`, deliveryMode);
-      console.log(`🚨 [DEBUG-OrderCreation] session.restaurant_id (table):`, session.restaurant_id);
-      console.log(`🚨 [DEBUG-OrderCreation] Toutes les clés sessionData:`, Object.keys(session.sessionData || {}));
-      
-      if (!cart || cart.length === 0) {
-        console.log(`❌ [DEBUG-OrderCreation] PANIER VIDE - cart.length: ${cart?.length}`);
+
+
+      if (!cartArray || cartArray.length === 0) {
         await this.messageSender.sendMessage(phoneNumber, '❌ Votre panier est vide. Ajoutez des produits avant de commander.');
         return;
       }
@@ -2090,14 +2010,16 @@ export class UniversalBot implements IMessageHandler {
    */
   private async processOrderWithMode(phoneNumber: string, session: any, deliveryMode: string): Promise<void> {
     try {
-      const cart = session.sessionData?.cart || [];
+      const cart = session.sessionData?.cart || {};
+      // CONVERSION SÉCURISÉE : Si c'est un objet, convertir en array. Si déjà array, garder tel quel
+      const cartArray = Array.isArray(cart) ? cart : Object.values(cart);
       // CORRECTION: Même logique de fallback que pour les commandes
       const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
-      
+
       // Déléguer la création au service dédié
       const order = await this.orderService.createOrderWorkflow(
         phoneNumber,
-        cart,
+        cartArray,  // Passer l'array converti
         restaurantId,
         deliveryMode
       );
@@ -2374,14 +2296,16 @@ export class UniversalBot implements IMessageHandler {
    */
   private async processOrderWithAddress(phoneNumber: string, session: any, address: any): Promise<void> {
     try {
-      const cart = session.sessionData?.cart || [];
+      const cart = session.sessionData?.cart || {};
+      // CONVERSION SÉCURISÉE : Si c'est un objet, convertir en array. Si déjà array, garder tel quel
+      const cartArray = Array.isArray(cart) ? cart : Object.values(cart);
       // CORRECTION: Même logique de fallback que pour les commandes
       const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
-      
+
       // Déléguer la création au service dédié
       const order = await this.orderService.createOrderWorkflow(
         phoneNumber,
-        cart,
+        cartArray,  // Passer l'array converti
         restaurantId,
         'livraison',
         address
@@ -2727,13 +2651,15 @@ export class UniversalBot implements IMessageHandler {
         });
         
         // Traiter directement la commande en emporter
-        const cart = session.sessionData?.cart || [];
+        const cart = session.sessionData?.cart || {};
+        // CONVERSION SÉCURISÉE : Si c'est un objet, convertir en array. Si déjà array, garder tel quel
+        const cartArray = Array.isArray(cart) ? cart : Object.values(cart);
         // CORRECTION: Même logique de fallback que pour les commandes
         const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
-        
+
         const order = await this.orderService.createOrderWorkflow(
           phoneNumber,
-          cart,
+          cartArray,  // Passer l'array converti
           restaurantId,
           'a_emporter',
           null // Pas d'adresse pour emporter

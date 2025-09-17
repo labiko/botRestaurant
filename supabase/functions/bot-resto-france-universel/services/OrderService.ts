@@ -123,14 +123,17 @@ export class OrderService {
    */
   calculateCartTotal(cart: any[]): number {
     let total = 0;
-    
+
     if (Array.isArray(cart)) {
-      cart.forEach(item => {
-        const itemTotal = (item.unitPrice || 0) * (item.quantity || 1);
+      cart.forEach((item, index) => {
+        // Chercher price OU unitPrice (menus pizza ont price, autres ont unitPrice)
+        const price = item.price || item.unitPrice || 0;
+        const quantity = item.quantity || 1;
+        const itemTotal = price * quantity;
         total += itemTotal;
       });
     }
-    
+
     console.log(`💰 [OrderService] Total calculé: ${total}€`);
     return total;
   }
@@ -193,9 +196,14 @@ export class OrderService {
     // Afficher avec catégorie si disponible
     const displayName = categoryName ? `${name} (${categoryName})` : name;
     itemText += `• ${quantity > 1 ? `${quantity}x ` : ''}${displayName}\n`;
-    
-    // Ajouter la configuration si elle existe
-    if (item.configuration || item.selected_options) {
+
+    // Traitement SPÉCIFIQUE pour menu pizza (ajout isolé sans toucher au reste)
+    if (item.type === 'menu_pizza' && item.details) {
+      console.log('🍕 [formatOrderItem] Menu pizza détecté, traitement spécial');
+      itemText += this.formatMenuPizzaDetails(item.details);
+    }
+    // Code EXISTANT inchangé pour tous les autres produits
+    else if (item.configuration || item.selected_options) {
       const config = item.configuration || item.selected_options;
       console.log('🔍 [formatOrderItem] Item config:', JSON.stringify(config, null, 2));
       
@@ -214,6 +222,36 @@ export class OrderService {
     }
     
     return itemText;
+  }
+
+  /**
+   * Formater les détails spécifiques des menus pizza
+   * Méthode dédiée pour éviter tout impact sur les autres catégories
+   */
+  private formatMenuPizzaDetails(details: any): string {
+    let text = '';
+
+    // Traiter les pizzas si elles existent
+    if (details.pizzas && Array.isArray(details.pizzas)) {
+      details.pizzas.forEach((pizza: any, index: number) => {
+        const pizzaName = pizza.name || `Pizza ${index + 1}`;
+        const pizzaEmoji = pizza.emoji || '🍕';
+        text += `  → Pizza ${index + 1}: ${pizzaEmoji} ${pizzaName}\n`;
+      });
+    }
+
+    // Ajouter d'autres détails si nécessaires (boissons, etc.)
+    if (details.beverages && Array.isArray(details.beverages)) {
+      details.beverages.forEach((bev: any) => {
+        text += `  → Boisson: ${bev.name || 'Boisson'}\n`;
+      });
+    }
+
+    if (details.sides && details.sides.name) {
+      text += `  → Accompagnement: ${details.sides.name}\n`;
+    }
+
+    return text;
   }
 
   /**

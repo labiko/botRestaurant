@@ -739,7 +739,16 @@ export class CompositeWorkflowExecutor {
     message += '\n💡 Pour choisir votre ';
     message += optionGroup.groupName === 'viande' ? 'viande' : optionGroup.displayName.toLowerCase();
     message += ': tapez les numéros\n';
-    message += `Ex: 1 = ${optionGroup.options[0]?.option_name}\n\n`;
+
+    if (optionGroup.groupName === 'sauces' || optionGroup.displayName.toLowerCase() === 'sauces') {
+      // Exemple spécial pour sauces (sélection multiple)
+      const sauce1 = optionGroup.options[0]?.option_name || 'Option1';
+      const sauce2 = optionGroup.options[1]?.option_name || 'Option2';
+      message += `Ex: 1,2 = ${sauce1},${sauce2}\n\n`;
+    } else {
+      // Exemple standard pour autres catégories (sélection simple)
+      message += `Ex: 1 = ${optionGroup.options[0]?.option_name}\n\n`;
+    }
     message += '00 - Finaliser cette étape\n';
     message += '000 - Ajouter au panier et continuer\n';
     message += '0000 - Recommencer la configuration\n\n';
@@ -827,55 +836,45 @@ export class CompositeWorkflowExecutor {
   ): Promise<void> {
     console.log(`🚨 [UniversalWorkflow] ENTRÉE DANS handleUniversalWorkflowResponse`);
     console.log(`🚨 [UniversalWorkflow] Message reçu: "${message}"`);
-    console.log(`🚨 [UniversalWorkflow] Session complète:`, JSON.stringify(session.sessionData, null, 2));
-    
     // Vérifier si c'est un workflow menu pizza
     if (session.sessionData?.menuPizzaWorkflow) {
         await this.handleMenuPizzaResponse(phoneNumber, session, message);
         return;
     }
-    
+
     const workflowData = session.sessionData?.universalWorkflow;
-    
+
     if (!workflowData) {
       console.error('❌ [UniversalWorkflow] Pas de workflow en cours - workflowData est undefined/null');
       console.error('❌ [UniversalWorkflow] Session.sessionData disponible:', Object.keys(session.sessionData || {}));
-      await this.messageSender.sendMessage(phoneNumber, 
+      await this.messageSender.sendMessage(phoneNumber,
         '❌ Erreur de session. Veuillez recommencer.');
       return;
     }
-    
+
     // AVANT parseUserSelection, ajouter :
     const choice = message.trim();
     if (choice === '99' || choice === '00' || choice === '0') {
       // Déléguer aux actions existantes
       return await this.handleCartActions(phoneNumber, session, message);
     }
-    
+
     const currentStep = workflowData.currentStep;
     const optionGroup = workflowData.optionGroups[currentStep];
     
-    console.log(`🔍 [UniversalWorkflow] Traitement réponse étape ${currentStep}: "${message}"`);
-    console.log(`🔍 [UniversalWorkflow] Option group actuel:`, JSON.stringify(optionGroup, null, 2));
-    
     // Valider et parser la sélection
-    console.log(`🔍 [UniversalWorkflow] Appel parseUserSelection avec message: "${message}"`);
     const selections = this.parseUserSelection(message, optionGroup);
-    console.log(`🔍 [UniversalWorkflow] Résultat parseUserSelection:`, selections);
-    
+
     if (!selections || selections.length === 0) {
-      await this.messageSender.sendMessage(phoneNumber, 
+      await this.messageSender.sendMessage(phoneNumber,
         `❌ Sélection invalide.\n${this.getSelectionHelp(optionGroup)}`);
       return;
     }
-    
+
     // Valider les contraintes
-    console.log(`🔍 [UniversalWorkflow] Appel validateSelections...`);
     const validation = this.validateSelections(selections, optionGroup);
-    console.log(`🔍 [UniversalWorkflow] Résultat validation:`, validation);
     
     if (!validation.valid) {
-      console.log(`❌ [UniversalWorkflow] Validation échouée: ${validation.error}`);
       await this.messageSender.sendMessage(phoneNumber, 
         `❌ ${validation.error}\n${this.getSelectionHelp(optionGroup)}`);
       return;
@@ -1029,40 +1028,28 @@ export class CompositeWorkflowExecutor {
     selectedOptions: any[], 
     currentGroup: any
   ): Promise<number> {
-    console.log(`🚨 [DEBUG-determineNextStep] ENTRÉE - currentStep: ${workflowData.currentStep}`);
-    console.log(`🚨 [DEBUG-determineNextStep] currentGroup:`, JSON.stringify(currentGroup, null, 2));
-    console.log(`🚨 [DEBUG-determineNextStep] selectedOptions:`, JSON.stringify(selectedOptions, null, 2));
-    
     const currentStep = workflowData.currentStep;
     let nextStep = currentStep + 1;
-    
-    console.log(`🚨 [DEBUG-determineNextStep] nextStep initial: ${nextStep}`);
-    
-    // Règle universelle : Si choix "Pas de..." dans un groupe X_choice, 
+
+    // Règle universelle : Si choix "Pas de..." dans un groupe X_choice,
     // skipper les groupes facultatifs suivants du même type
     if (currentGroup.groupName.includes('_choice')) {
-      console.log(`🚨 [DEBUG-determineNextStep] Groupe _choice détecté: ${currentGroup.groupName}`);
       const selectedChoice = selectedOptions[0]?.option_name?.toLowerCase();
-      console.log(`🚨 [DEBUG-determineNextStep] selectedChoice: "${selectedChoice}"`);
-      
+
       // Détecter les choix négatifs universels (pas de, sans, aucun, etc.)
       const negativeChoices = ['pas de', 'sans', 'aucun', 'no ', 'none'];
       const isNegativeChoice = negativeChoices.some(neg => selectedChoice?.includes(neg));
-      console.log(`🚨 [DEBUG-determineNextStep] isNegativeChoice: ${isNegativeChoice}`);
-      
+
       if (isNegativeChoice) {
-        console.log(`🔄 [Workflow] Choix négatif détecté: "${selectedChoice}" - Recherche de groupes à skipper`);
-        
         // Chercher le groupe principal associé (ex: extras_choice -> extras)
         const baseGroupName = currentGroup.groupName.replace('_choice', '');
-        
+
         // Skipper tous les groupes facultatifs suivants de même type
         while (nextStep < workflowData.optionGroups.length) {
           const nextGroup = workflowData.optionGroups[nextStep];
-          
+
           // Si le groupe suivant est facultatif ET du même type, le skipper
           if (!nextGroup.isRequired && nextGroup.groupName.startsWith(baseGroupName)) {
-            console.log(`⏭️ [Workflow] Skip groupe facultatif: ${nextGroup.groupName}`);
             nextStep++;
           } else {
             break; // Arrêter au premier groupe obligatoire ou différent
@@ -1070,13 +1057,9 @@ export class CompositeWorkflowExecutor {
         }
       }
     }
-    
-    console.log(`📍 [Workflow] Étape ${currentStep} -> ${nextStep} (total: ${workflowData.optionGroups.length})`);
-    console.log(`🚨 [DEBUG-determineNextStep] SORTIE - nextStep final: ${nextStep}`);
-    
+
     // VÉRIFICATION CRITIQUE : Si nextStep dépasse le nombre d'étapes
     if (nextStep >= workflowData.optionGroups.length) {
-      console.log(`🚨 [DEBUG-determineNextStep] nextStep (${nextStep}) >= optionGroups.length (${workflowData.optionGroups.length}) - Workflow terminé`);
     } else {
       console.log(`🚨 [DEBUG-determineNextStep] Prochaine étape: ${workflowData.optionGroups[nextStep]?.groupName}`);
     }
@@ -1505,10 +1488,6 @@ export class CompositeWorkflowExecutor {
    * Traiter le composant suivant du menu
    */
   private async processNextMenuComponent(phoneNumber: string, session: any, componentIndex: number): Promise<void> {
-    console.log(`🔍 DEBUG_SELECTIONS: === processNextMenuComponent ENTRÉE ===`);
-    console.log(`🔍 DEBUG_SELECTIONS: componentIndex demandé: ${componentIndex}`);
-    console.log(`🔍 DEBUG_SELECTIONS: session.sessionData workflow selections AVANT refresh:`, JSON.stringify(session.sessionData?.menuPizzaWorkflow?.selections, null, 2));
-    
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(this.supabaseUrl, this.supabaseKey);
 
@@ -1519,12 +1498,8 @@ export class CompositeWorkflowExecutor {
       .eq('phone_number', phoneNumber)
       .single();
 
-    console.log(`🔍 DEBUG_SELECTIONS: session rafraîchie de la DB - selections:`, JSON.stringify(sessionData.session_data?.menuPizzaWorkflow?.selections, null, 2));
-
     const menuConfig = sessionData.session_data.menuPizzaWorkflow.menuConfig;
     const components = menuConfig.components;
-    
-    console.log(`🔍 DEBUG_SELECTIONS: components.length: ${components.length}`);
     
     if (componentIndex >= components.length) {
         // Tous les composants traités - finaliser
@@ -1641,31 +1616,21 @@ export class CompositeWorkflowExecutor {
 
     // Détecter la structure de session (sessionData vs session_data)
     const sessionData = session.sessionData || session.session_data;
-    
-    console.log(`🔍 DEBUG_SELECTIONS: === updateMenuSession ENTRÉE ===`);
-    console.log(`🔍 DEBUG_SELECTIONS: updates reçus:`, JSON.stringify(updates, null, 2));
-    console.log(`🔍 DEBUG_SELECTIONS: sessionData avant:`, JSON.stringify(sessionData?.menuPizzaWorkflow, null, 2));
-    
+
     // Préserver les sélections : priorité aux sélections locales, puis existantes en DB
     const existingWorkflow = sessionData?.menuPizzaWorkflow || {};
     const preservedSelections = currentSelections || existingWorkflow.selections || {};
-    
-    console.log(`🔍 DEBUG_SELECTIONS: sélections existantes en DB:`, JSON.stringify(existingWorkflow.selections, null, 2));
-    console.log(`🔍 DEBUG_SELECTIONS: sélections locales passées:`, JSON.stringify(currentSelections, null, 2));
-    console.log(`🔍 DEBUG_SELECTIONS: sélections finales préservées:`, JSON.stringify(preservedSelections, null, 2));
 
     // Construire le nouvel état workflow en préservant les sélections
     const newWorkflowState = {
       ...existingWorkflow,
       ...updates
     };
-    
+
     // Préserver les sélections (priorité : updates.selections > currentSelections > existingWorkflow.selections)
     if (!updates.selections) {
       newWorkflowState.selections = preservedSelections;
     }
-    
-    console.log(`🔍 DEBUG_SELECTIONS: nouvel état workflow:`, JSON.stringify(newWorkflowState, null, 2));
 
     const updatedSessionData = {
       ...sessionData,
@@ -1678,8 +1643,6 @@ export class CompositeWorkflowExecutor {
         session_data: updatedSessionData
       })
       .eq('id', session.id);
-      
-    console.log(`🔍 DEBUG_SELECTIONS: === updateMenuSession SORTIE - Sauvegardé en base ===`);
   }
 
   /**
@@ -1687,6 +1650,7 @@ export class CompositeWorkflowExecutor {
    */
   private async finalizeMenuOrder(phoneNumber: string, session: any): Promise<void> {
     const workflow = session.session_data.menuPizzaWorkflow;
+
     const selections = workflow.selections;
     
     // Construire le récapitulatif
@@ -1731,31 +1695,21 @@ export class CompositeWorkflowExecutor {
   private async handleMenuPizzaResponse(phoneNumber: string, session: any, message: string): Promise<void> {
     const workflow = session.sessionData.menuPizzaWorkflow;
     const waitingFor = workflow.waitingFor;
-    
-    console.log(`🔍 DEBUG_SELECTIONS: === handleMenuPizzaResponse ENTRÉE ===`);
-    console.log(`🔍 DEBUG_SELECTIONS: handleMenuPizzaResponse - waitingFor: "${waitingFor}"`);
-    console.log(`🔍 DEBUG_SELECTIONS: handleMenuPizzaResponse - message: "${message}"`);
-    console.log(`🔍 DEBUG_SELECTIONS: handleMenuPizzaResponse - workflow complet:`, JSON.stringify(workflow, null, 2));
-    console.log(`🔍 DEBUG_SELECTIONS: handleMenuPizzaResponse - selections avant:`, JSON.stringify(workflow.selections, null, 2));
-    
+
     switch (waitingFor) {
         case 'pizza_selection':
-            console.log(`🔍 DEBUG_SELECTIONS: Appel processPizzaSelectionResponse`);
             await this.processPizzaSelectionResponse(phoneNumber, session, message);
             break;
-            
+
         case 'beverage_selection':
-            console.log(`🔍 DEBUG_SELECTIONS: Appel processBeverageSelectionResponse`);
             await this.processBeverageSelectionResponse(phoneNumber, session, message);
             break;
-            
+
         case 'side_selection':
-            console.log(`🔍 DEBUG_SELECTIONS: Appel processSideSelectionResponse`);
             await this.processSideSelectionResponse(phoneNumber, session, message);
             break;
             
         case 'confirmation':
-            console.log(`🔍 DEBUG_SELECTIONS: Appel processMenuConfirmation`);
             await this.processMenuConfirmation(phoneNumber, session, message);
             break;
     }
@@ -1765,15 +1719,10 @@ export class CompositeWorkflowExecutor {
    * Traiter la sélection de pizzas
    */
   private async processPizzaSelectionResponse(phoneNumber: string, session: any, message: string): Promise<void> {
-    console.log(`🔍 DEBUG_SELECTIONS: === DÉBUT processPizzaSelectionResponse ===`);
     const workflow = session.sessionData.menuPizzaWorkflow;
     const expectedQuantity = workflow.expectedQuantity;
     const selectionMode = workflow.selectionMode;
-    
-    console.log(`🔍 DEBUG_SELECTIONS: expectedQuantity: ${expectedQuantity}`);
-    console.log(`🔍 DEBUG_SELECTIONS: selectionMode: ${selectionMode}`);
-    console.log(`🔍 DEBUG_SELECTIONS: availablePizzas count: ${workflow.availablePizzas?.length}`);
-    
+
     let selections = [];
     
     if (selectionMode === 'multiple') {
@@ -1803,29 +1752,20 @@ export class CompositeWorkflowExecutor {
     }
     
     // Stocker les sélections
-    console.log(`🔍 DEBUG_SELECTIONS: selections validées:`, selections);
     const selectedPizzas = selections.map((index: number) => {
         const pizza = availablePizzas[index - 1];
-        console.log(`🔍 DEBUG_SELECTIONS: pizza sélectionnée[${index}]:`, pizza?.name);
         const variant = workflow.pizzaVariants.find((v: any) => v.product_id === pizza.id);
-        const selectedPizza = {
+        return {
             id: pizza.id,
             name: pizza.name,
             size: workflow.currentSize || workflow.menuConfig.components[workflow.currentComponent]?.size?.toUpperCase() || 'MEDIUM',
             price: variant?.price_on_site || 0
         };
-        console.log(`🔍 DEBUG_SELECTIONS: selectedPizza créée:`, selectedPizza);
-        return selectedPizza;
     });
-    
-    console.log(`🔍 DEBUG_SELECTIONS: selectedPizzas final:`, selectedPizzas);
-    
+
     // Ajouter au workflow
     if (!workflow.selections) workflow.selections = {};
     workflow.selections.pizzas = selectedPizzas;
-    
-    console.log(`🔍 DEBUG_SELECTIONS: workflow.selections après ajout:`, workflow.selections);
-    console.log(`🔍 DEBUG_SELECTIONS: Passage au composant suivant: ${workflow.currentComponent + 1}`);
     
     // Sauvegarder les sélections avant de passer au composant suivant
     await this.updateMenuSession(phoneNumber, session, {
@@ -1888,28 +1828,23 @@ export class CompositeWorkflowExecutor {
    * Traiter sélection de boissons
    */
   private async processBeverageSelectionResponse(phoneNumber: string, session: any, message: string): Promise<void> {
-    console.log(`🔍 DEBUG_SELECTIONS: === processBeverageSelectionResponse ENTRÉE ===`);
     const workflow = session.sessionData.menuPizzaWorkflow;
-    console.log(`🔍 DEBUG_SELECTIONS: selections AVANT boisson:`, JSON.stringify(workflow.selections, null, 2));
-    
+
     const choice = parseInt(message.trim());
     const availableOptions = workflow.availableOptions;
-    
+
     if (isNaN(choice) || choice < 1 || choice > availableOptions.length) {
         await this.messageSender.sendMessage(phoneNumber,
             `❌ Choix invalide. Tapez un numéro entre 1 et ${availableOptions.length}.`);
         return;
     }
-    
+
     const selectedOption = availableOptions[choice - 1];
-    console.log(`🔍 DEBUG_SELECTIONS: selectedOption boisson:`, selectedOption);
-    
+
     // Ajouter aux sélections
     if (!workflow.selections) workflow.selections = {};
     if (!workflow.selections.beverages) workflow.selections.beverages = [];
     workflow.selections.beverages.push(selectedOption);
-    
-    console.log(`🔍 DEBUG_SELECTIONS: selections APRÈS boisson:`, JSON.stringify(workflow.selections, null, 2));
     
     // Sauvegarder les sélections avant de passer au composant suivant
     await this.updateMenuSession(phoneNumber, session, {
@@ -1924,27 +1859,22 @@ export class CompositeWorkflowExecutor {
    * Traiter sélection d'accompagnements
    */
   private async processSideSelectionResponse(phoneNumber: string, session: any, message: string): Promise<void> {
-    console.log(`🔍 DEBUG_SELECTIONS: === processSideSelectionResponse ENTRÉE ===`);
     const workflow = session.sessionData.menuPizzaWorkflow;
-    console.log(`🔍 DEBUG_SELECTIONS: selections AVANT accompagnement:`, JSON.stringify(workflow.selections, null, 2));
-    
+
     const choice = parseInt(message.trim());
     const availableOptions = workflow.availableOptions;
-    
+
     if (isNaN(choice) || choice < 1 || choice > availableOptions.length) {
         await this.messageSender.sendMessage(phoneNumber,
             `❌ Choix invalide. Tapez un numéro entre 1 et ${availableOptions.length}.`);
         return;
     }
-    
+
     const selectedOption = availableOptions[choice - 1];
-    console.log(`🔍 DEBUG_SELECTIONS: selectedOption accompagnement:`, selectedOption);
-    
+
     // Ajouter aux sélections
     if (!workflow.selections) workflow.selections = {};
     workflow.selections.sides = selectedOption;
-    
-    console.log(`🔍 DEBUG_SELECTIONS: selections APRÈS accompagnement:`, JSON.stringify(workflow.selections, null, 2));
     
     // Sauvegarder les sélections avant de passer au composant suivant
     await this.updateMenuSession(phoneNumber, session, {
@@ -1959,15 +1889,12 @@ export class CompositeWorkflowExecutor {
    * Confirmer et ajouter au panier
    */
   private async processMenuConfirmation(phoneNumber: string, session: any, message: string): Promise<void> {
-    console.log(`🔍 DEBUG_SELECTIONS: === processMenuConfirmation ENTRÉE ===`);
     const choice = message.trim();
-    console.log(`🔍 DEBUG_SELECTIONS: choix utilisateur: "${choice}"`);
-    
+
     if (choice === '1') {
         // Ajouter au panier
         const workflow = session.sessionData.menuPizzaWorkflow;
-        console.log(`🔍 DEBUG_SELECTIONS: workflow.selections au moment de la confirmation:`, JSON.stringify(workflow.selections, null, 2));
-        
+
         const cartItem = {
             id: workflow.product.id,
             name: workflow.product.name,
@@ -1977,8 +1904,6 @@ export class CompositeWorkflowExecutor {
             details: workflow.selections,
             deliveryMode: session.sessionData.deliveryMode
         };
-        
-        console.log(`🔍 DEBUG_SELECTIONS: cartItem créé:`, JSON.stringify(cartItem, null, 2));
         
         // Ajouter au panier existant
         const cart = session.sessionData.cart || {};
@@ -2006,12 +1931,42 @@ export class CompositeWorkflowExecutor {
           })
           .eq('id', session.id);
         
-        await this.messageSender.sendMessage(phoneNumber,
-            `✅ ${workflow.product.name} ajouté au panier!\n\n` +
-            `Que voulez-vous faire?\n` +
-            `1. Continuer mes achats\n` +
-            `2. Voir le panier (99)\n` +
-            `3. Vider le panier (00)`);
+        // Créer message de confirmation spécifique aux menus pizza
+        let pizzaConfirmMessage = `✅ ${workflow.product.name} ajouté !\n\n`;
+
+        // Détail des pizzas sélectionnées
+        if (workflow.selections && workflow.selections.pizzas) {
+            workflow.selections.pizzas.forEach((pizza: any, index: number) => {
+                pizzaConfirmMessage += `• Pizza ${index + 1}: ${pizza.emoji || '🍕'} ${pizza.name} (${workflow.currentSize || 'JUNIOR'})\n`;
+            });
+        }
+
+        pizzaConfirmMessage += '\n━━━━━━━━━━━━━━━━━━━━\n';
+        pizzaConfirmMessage += '🛒 MON PANIER\n\n';
+
+        // Afficher tous les items du panier
+        Object.values(cart).forEach((item: any, index: number) => {
+            if (item.type === 'menu_pizza') {
+                pizzaConfirmMessage += `${index + 1}. ${item.name} - ${item.price}€\n`;
+                if (item.details && item.details.pizzas) {
+                    item.details.pizzas.forEach((pizza: any, pIndex: number) => {
+                        pizzaConfirmMessage += `   • Pizza ${pIndex + 1}: ${pizza.name}\n`;
+                    });
+                }
+            } else {
+                pizzaConfirmMessage += `${index + 1}. ${item.name} - ${item.price}€\n`;
+            }
+        });
+
+        pizzaConfirmMessage += '\n━━━━━━━━━━━━━━━━━━━━\n';
+        pizzaConfirmMessage += `💎 TOTAL: ${totalPrice}€\n`;
+        pizzaConfirmMessage += `📦 ${Object.keys(cart).length} produit${Object.keys(cart).length > 1 ? 's' : ''}\n\n`;
+        pizzaConfirmMessage += 'ACTIONS RAPIDES:\n';
+        pizzaConfirmMessage += '⚡ 99 = Passer commande\n';
+        pizzaConfirmMessage += '🗑️ 00 = Vider panier\n';
+        pizzaConfirmMessage += '🍕 0  = Ajouter d\'autres produits';
+
+        await this.messageSender.sendMessage(phoneNumber, pizzaConfirmMessage);
             
     } else if (choice === '2') {
         // Recommencer

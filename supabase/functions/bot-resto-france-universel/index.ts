@@ -153,7 +153,6 @@ async function handleWebhook(request: Request): Promise<Response> {
 
     // Parser le payload
     const payload = await request.json();
-    console.log('📦 [Webhook] Payload reçu:', JSON.stringify(payload, null, 2));
 
     // Extraire les données du message
     const messageData = extractMessageData(payload);
