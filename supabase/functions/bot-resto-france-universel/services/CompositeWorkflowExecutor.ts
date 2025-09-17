@@ -1024,12 +1024,22 @@ export class CompositeWorkflowExecutor {
    * Compatible avec tous les restaurants et types de produits
    */
   private async determineNextStep(
-    workflowData: any, 
-    selectedOptions: any[], 
+    workflowData: any,
+    selectedOptions: any[],
     currentGroup: any
   ): Promise<number> {
     const currentStep = workflowData.currentStep;
     let nextStep = currentStep + 1;
+
+    // Logique universelle configurée : Vérifier next_group_order
+    const configuredNext = currentGroup.options?.[0]?.next_group_order;
+    if (configuredNext) {
+      const targetIndex = workflowData.optionGroups.findIndex(g => g.groupOrder === configuredNext);
+      if (targetIndex !== -1) {
+        console.log(`🔄 [UniversalLogic] Saut conditionnel: ${currentGroup.groupName} → group_order ${configuredNext}`);
+        return targetIndex;
+      }
+    }
 
     // Règle universelle : Si choix "Pas de..." dans un groupe X_choice,
     // skipper les groupes facultatifs suivants du même type
@@ -1181,7 +1191,10 @@ export class CompositeWorkflowExecutor {
         };
       }
       
-      groups[groupOrder].options.push(option);
+      groups[groupOrder].options.push({
+        ...option,
+        next_group_order: option.next_group_order
+      });
     });
     
     return Object.values(groups).sort((a, b) => a.groupOrder - b.groupOrder);
