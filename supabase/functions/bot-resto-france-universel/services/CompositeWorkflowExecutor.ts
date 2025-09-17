@@ -1625,7 +1625,8 @@ export class CompositeWorkflowExecutor {
         availablePizzas: pizzas,
         pizzaVariants: variants,
         expectedQuantity: component.quantity,
-        selectionMode: component.selection_mode
+        selectionMode: component.selection_mode,
+        currentSize: normalizedSize
     });
     
     await this.messageSender.sendMessage(phoneNumber, message);
@@ -1810,7 +1811,7 @@ export class CompositeWorkflowExecutor {
         const selectedPizza = {
             id: pizza.id,
             name: pizza.name,
-            size: workflow.currentComponent?.size || 'unknown',
+            size: workflow.currentSize || workflow.menuConfig.components[workflow.currentComponent]?.size?.toUpperCase() || 'MEDIUM',
             price: variant?.price_on_site || 0
         };
         console.log(`🔍 DEBUG_SELECTIONS: selectedPizza créée:`, selectedPizza);
