@@ -7,6 +7,46 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
 
+/**
+ * Obtenir l'heure actuelle dans le bon fuseau horaire PARIS
+ * ✅ Version finale optimisée avec format Paris validé
+ */
+function getCurrentTime(): Date {
+  // Formatter pour timezone Paris (gère automatiquement heure d'été/hiver)
+  const parisFormatter = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+
+  const utcNow = new Date();
+  // Format: "17/09/2025 22:06:36" (validé comme correct)
+  const parisFormatted = parisFormatter.format(utcNow);
+
+  // Parsing du format DD/MM/YYYY HH:mm:ss
+  const parts = parisFormatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+  if (parts) {
+    const [, day, month, year, hour, minute, second] = parts;
+    return new Date(
+      parseInt(year),
+      parseInt(month) - 1, // Mois 0-indexé
+      parseInt(day),
+      parseInt(hour),
+      parseInt(minute),
+      parseInt(second)
+    );
+  }
+
+  // Fallback UTC si parsing échoue
+  console.warn('⚠️ [getCurrentTime] Parsing Paris échoué, fallback UTC');
+  return utcNow;
+}
+
 export interface OrderData {
   restaurant_id: number;
   phone_number: string;
@@ -44,7 +84,7 @@ export class OrderService {
    */
   async generateOrderNumber(restaurantId: number): Promise<string> {
     try {
-      const today = new Date();
+      const today = getCurrentTime();
       const dayMonth = `${String(today.getDate()).padStart(2, '0')}${String(today.getMonth() + 1).padStart(2, '0')}`;
       
       // Compter les commandes du jour pour ce restaurant
@@ -69,7 +109,7 @@ export class OrderService {
     } catch (error) {
       console.error('❌ [OrderService] Erreur génération numéro:', error);
       // Fallback avec timestamp
-      return `ORD-${Date.now()}`;
+      return `ORD-${getCurrentTime().getTime()}`;
     }
   }
 
@@ -87,29 +127,29 @@ export class OrderService {
    * Créer une commande en base de données
    */
   async createOrder(orderData: OrderData): Promise<any> {
-    const startTime = Date.now();
+    const startTime = getCurrentTime().getTime();
     try {
-      console.log(`⏱️ [PERF] createOrder START - Time: ${new Date().toISOString()}`);
+      console.log(`⏱️ [PERF] createOrder START - Time: ${getCurrentTime().toISOString()}`);
       console.log(`📦 [OrderService] Création commande...`);
       console.log(`💰 [OrderService] Total: ${orderData.total_amount}€`);
       
-      console.log(`⏱️ [PERF] Starting Supabase INSERT france_orders - ${Date.now() - startTime}ms elapsed`);
+      console.log(`⏱️ [PERF] Starting Supabase INSERT france_orders - ${getCurrentTime().getTime() - startTime}ms elapsed`);
       // Insérer la commande
       const { data: order, error } = await this.supabase
         .from('france_orders')
         .insert(orderData)
         .select()
         .single();
-      console.log(`⏱️ [PERF] Supabase INSERT completed - ${Date.now() - startTime}ms elapsed`);
+      console.log(`⏱️ [PERF] Supabase INSERT completed - ${getCurrentTime().getTime() - startTime}ms elapsed`);
       
       if (error) {
         console.error('❌ [OrderService] Erreur insertion:', error);
-        console.log(`⏱️ [PERF] createOrder FAILED - ${Date.now() - startTime}ms`);
+        console.log(`⏱️ [PERF] createOrder FAILED - ${getCurrentTime().getTime() - startTime}ms`);
         throw error;
       }
       
       console.log(`✅ [OrderService] Commande créée: #${order.order_number}`);
-      console.log(`⏱️ [PERF] createOrder SUCCESS - ${Date.now() - startTime}ms TOTAL`);
+      console.log(`⏱️ [PERF] createOrder SUCCESS - ${getCurrentTime().getTime() - startTime}ms TOTAL`);
       return order;
       
     } catch (error) {
@@ -360,8 +400,8 @@ export class OrderService {
     deliveryMode: string,
     deliveryAddress?: any
   ): Promise<any> {
-    const startTime = Date.now();
-    console.log(`⏱️ [PERF] createOrderWorkflow START - Time: ${new Date().toISOString()}`);
+    const startTime = getCurrentTime().getTime();
+    console.log(`⏱️ [PERF] createOrderWorkflow START - Time: ${getCurrentTime().toISOString()}`);
     try {
       console.log(`📦 [OrderWorkflow] Début pour: ${phoneNumber}`);
       

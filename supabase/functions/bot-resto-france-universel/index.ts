@@ -3,6 +3,46 @@
 // Point d'entrée unique pour toutes les requêtes WhatsApp
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+
+/**
+ * Obtenir l'heure actuelle dans le bon fuseau horaire PARIS
+ * ✅ Version finale optimisée avec format Paris validé
+ */
+function getCurrentTime(): Date {
+  // Formatter pour timezone Paris (gère automatiquement heure d'été/hiver)
+  const parisFormatter = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+
+  const utcNow = new Date();
+  // Format: "17/09/2025 22:06:36" (validé comme correct)
+  const parisFormatted = parisFormatter.format(utcNow);
+
+  // Parsing du format DD/MM/YYYY HH:mm:ss
+  const parts = parisFormatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+  if (parts) {
+    const [, day, month, year, hour, minute, second] = parts;
+    return new Date(
+      parseInt(year),
+      parseInt(month) - 1, // Mois 0-indexé
+      parseInt(day),
+      parseInt(hour),
+      parseInt(minute),
+      parseInt(second)
+    );
+  }
+
+  // Fallback UTC si parsing échoue
+  console.warn('⚠️ [getCurrentTime] Parsing Paris échoué, fallback UTC');
+  return utcNow;
+}
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Import des services
@@ -140,6 +180,7 @@ function getBotInstance(): UniversalBot {
  */
 async function handleWebhook(request: Request): Promise<Response> {
   console.log('🔔 [Webhook] Réception webhook WhatsApp');
+  console.log('🔍 RESTAURANT_ID_DEBUG - WEBHOOK APPELÉ');
   
   try {
     // Vérifier le Content-Type
@@ -168,7 +209,7 @@ async function handleWebhook(request: Request): Promise<Response> {
     return createSuccessResponse({ 
       message: 'Message traité avec succès',
       phoneNumber: messageData.phoneNumber,
-      processedAt: new Date().toISOString()
+      processedAt: getCurrentTime().toISOString()
     });
 
   } catch (error) {
@@ -190,7 +231,7 @@ async function handleHealth(request: Request): Promise<Response> {
     
     const healthData = {
       status: 'healthy',
-      timestamp: new Date().toISOString(),
+      timestamp: getCurrentTime().toISOString(),
       version: '2.0.0-universal',
       connections: { note: 'Connexions testées à la première utilisation' },
       // stats: botStats
@@ -218,7 +259,7 @@ async function handleMetrics(request: Request): Promise<Response> {
   try {
     // TODO: Implémenter collecte de métriques
     const metrics = {
-      timestamp: new Date().toISOString(),
+      timestamp: getCurrentTime().toISOString(),
       // sessionStats: await sessionManager.getActiveSessionsStats(),
       // queueStats: messageSender.getQueueStats(),
       // cacheStats: productQueryService.getCacheStats(),
@@ -309,7 +350,7 @@ function createSuccessResponse(data: any): Response {
     success: true,
     data,
     metadata: {
-      timestamp: new Date().toISOString(),
+      timestamp: getCurrentTime().toISOString(),
       version: '2.0.0-universal'
     }
   };
@@ -332,7 +373,7 @@ function createErrorResponse(message: string, status: number = 500): Response {
       details: null
     },
     metadata: {
-      timestamp: new Date().toISOString(),
+      timestamp: getCurrentTime().toISOString(),
       version: '2.0.0-universal'
     }
   };

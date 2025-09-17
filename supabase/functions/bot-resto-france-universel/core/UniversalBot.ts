@@ -36,6 +36,60 @@ import { LocationService, ICoordinates } from '../../_shared/application/service
  * SOLID - Single Responsibility : Coordonne les services, ne fait pas le travail
  */
 export class UniversalBot implements IMessageHandler {
+
+  /**
+   * Obtenir l'heure actuelle dans le bon fuseau horaire PARIS
+   * ✅ Version finale optimisée avec format Paris validé + DEBUG
+   */
+  private getCurrentTime(): Date {
+    console.log('🕐 [DEBUG_TIMEZONE] === DÉBUT getCurrentTime() ===');
+
+    // Formatter pour timezone Paris (gère automatiquement heure d'été/hiver)
+    const parisFormatter = new Intl.DateTimeFormat('fr-FR', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+
+    const utcNow = new Date();
+    console.log('🕐 [DEBUG_TIMEZONE] UTC brut:', utcNow.toISOString());
+
+    // Format: "17/09/2025 22:06:36" (validé comme correct)
+    const parisFormatted = parisFormatter.format(utcNow);
+    console.log('🕐 [DEBUG_TIMEZONE] Paris formaté:', parisFormatted);
+
+    // Parsing du format DD/MM/YYYY HH:mm:ss
+    const parts = parisFormatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+    if (parts) {
+      const [, day, month, year, hour, minute, second] = parts;
+      const parisDate = new Date(
+        parseInt(year),
+        parseInt(month) - 1, // Mois 0-indexé
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute),
+        parseInt(second)
+      );
+
+      console.log('🕐 [DEBUG_TIMEZONE] Paris Date finale:', {
+        date: parisDate,
+        iso: parisDate.toISOString(),
+        difference_hours: Math.round((parisDate.getTime() - utcNow.getTime()) / (1000 * 60 * 60))
+      });
+
+      console.log('🕐 [DEBUG_TIMEZONE] === FIN getCurrentTime() - RETOUR PARIS ===');
+      return parisDate;
+    }
+
+    // Fallback UTC si parsing échoue (ne devrait jamais arriver)
+    console.warn('🕐 [DEBUG_TIMEZONE] === FALLBACK UTC - PARSING ÉCHOUÉ ===');
+    return utcNow;
+  }
   private compositeWorkflowExecutor: CompositeWorkflowExecutor;
   private orderService: OrderService;
   private addressService: AddressManagementService;
@@ -168,9 +222,11 @@ export class UniversalBot implements IMessageHandler {
    * COPIE EXACTE DE LA LOGIQUE ORIGINALE pour maintenir la compatibilité
    */
   async handleMessage(phoneNumber: string, message: string): Promise<void> {
+    console.log('🔍 RESTAURANT_ID_DEBUG - HANDLE MESSAGE:', { phoneNumber, message });
     try {
       // PRIORITÉ 1: Détection numéro téléphone restaurant (accès QR code)
       const isPhone = this.isPhoneNumberFormat(message);
+      console.log('🔍 RESTAURANT_ID_DEBUG - isPhone:', isPhone);
       
       if (isPhone) {
         console.log('📱 Format téléphone détecté:', message);
@@ -194,15 +250,28 @@ export class UniversalBot implements IMessageHandler {
         await this.messageSender.sendMessage(phoneNumber, result.message);
         return;
       }
-      
-      // PRIORITÉ 3: Messages classiques (salut/bonjour) - Menu générique  
+
+      // PRIORITÉ 2.5: Détection mot-clé "resto" (AVANT vérification session)
+      if (message.toLowerCase().trim() === 'resto') {
+        await this.handleRestoCommand(phoneNumber);
+        return;
+      }
+
+      // PRIORITÉ 3: Messages classiques (salut/bonjour) - Menu générique
       if (message.toLowerCase().includes('salut') || message.toLowerCase().includes('bonjour')) {
         await this.handleGenericGreeting(phoneNumber);
         return;
       }
       
       // PRIORITÉ 4: Gestion complète des messages selon l'état de session
+      console.log('🔍 RESTAURANT_ID_DEBUG - AVANT getSession pour message:', message);
       const session = await this.sessionManager.getSession(phoneNumber);
+      console.log('🔍 RESTAURANT_ID_DEBUG - SESSION récupérée:', {
+        exists: !!session,
+        id: session?.id,
+        restaurantId: session?.restaurantId,
+        botState: session?.botState
+      });
       
       console.log('🔄 [SESSION_GET] Session récupérée:', {
         sessionExists: !!session,
@@ -215,10 +284,19 @@ export class UniversalBot implements IMessageHandler {
         phoneNumber: phoneNumber
       });
       
-      if (session && session.restaurantId) {
+      console.log('🔍 RESTAURANT_ID_DEBUG - TEST CONDITIONS:', {
+        sessionExists: !!session,
+        hasRestaurantId: !!session?.restaurantId,
+        restaurantIdValue: session?.restaurantId,
+        restaurantIdType: typeof session?.restaurantId
+      });
+
+      if (session && (session.restaurantId || session.botState === 'CHOOSING_RESTAURANT_MODE')) {
         // L'utilisateur a une session active avec restaurant sélectionné
-        // Charger le contexte restaurant pour cette session
-        await this.loadAndSetRestaurantContext(session.restaurantId);
+        // Charger le contexte restaurant seulement si ID restaurant valide
+        if (session.restaurantId) {
+          await this.loadAndSetRestaurantContext(session.restaurantId);
+        }
         
         await this.handleSessionMessage(phoneNumber, session, message);
         return;
@@ -798,8 +876,7 @@ export class UniversalBot implements IMessageHandler {
       }
       
       // Créer nouvelle session avec l'état CHOOSING_DELIVERY_MODE
-      const expiresAt = new Date();
-      expiresAt.setMinutes(expiresAt.getMinutes() + SESSION_DURATION_MINUTES); // 2 heures d'expiration
+      const expiresAt = new Date(this.getCurrentTime().getTime() + SESSION_DURATION_MINUTES * 60 * 1000); // 4 heures depuis heure Paris
       
       const { data: newSession, error } = await supabase
         .from('france_user_sessions')
@@ -1225,6 +1302,16 @@ export class UniversalBot implements IMessageHandler {
     console.log(`🛒 [ProductSelection] Message reçu: "${message}"`);
     console.log(`🛒 [ProductSelection] État session actuel:`, session.currentState);
     console.log(`🛒 [ProductSelection] Session complète:`, JSON.stringify(session.sessionData, null, 2));
+
+    // 🚨 DEBUG CRITIQUE : Ajouter logs pour analyser le bug panier
+    console.log(`🚨 [BUG_DEBUG_PANIER] État session:`, {
+      botState: session.botState,
+      current_step: session.currentStep,
+      message: message,
+      hasCart: !!(session.sessionData?.cart && Object.keys(session.sessionData.cart).length > 0),
+      cartKeys: session.sessionData?.cart ? Object.keys(session.sessionData.cart) : [],
+      totalPrice: session.sessionData?.totalPrice || 0
+    });
     
     // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer currentCategoryName au moment de la sélection produit
     console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection:', {
@@ -1278,12 +1365,30 @@ export class UniversalBot implements IMessageHandler {
     
     // Vérifier la validité du choix - Support affichage unifié des pizzas
     let maxValidChoice = products.length;
-    
+
     // Si c'est un affichage unifié de pizzas, accepter les choix étendus
     const hasPizzaMap = session.sessionData?.pizzaOptionsMap || session.workflowData?.pizzaOptionsMap;
+
+    // 🚨 LOGS CRITIQUES : Analyser détection Menu Pizza vs Pizza simple
+    console.log(`🚨 [PIZZA_DETECTION_DEBUG] Analyse contexte pizza:`, {
+      currentCategoryName: session.sessionData?.currentCategoryName,
+      currentCategorySlug: session.sessionData?.currentCategorySlug,
+      hasPizzaMap: !!hasPizzaMap,
+      pizzaOptionsMapSession: !!session.sessionData?.pizzaOptionsMap,
+      pizzaOptionsMapWorkflow: !!session.workflowData?.pizzaOptionsMap,
+      totalPizzaOptionsSession: session.sessionData?.totalPizzaOptions,
+      totalPizzaOptionsWorkflow: session.workflowData?.totalPizzaOptions,
+      productsLength: products.length,
+      message: message,
+      botState: session.botState
+    });
+
     if (hasPizzaMap) {
       maxValidChoice = session.sessionData?.totalPizzaOptions || session.workflowData?.totalPizzaOptions || products.length;
       console.log(`🍕 [ProductSelection] Mode pizza unifié - Accepte jusqu'à ${maxValidChoice}`);
+      console.log(`🚨 [PIZZA_DETECTION_DEBUG] LOGIQUE MENU PIZZA ACTIVÉE ! maxValidChoice étendu à ${maxValidChoice}`);
+    } else {
+      console.log(`🚨 [PIZZA_DETECTION_DEBUG] LOGIQUE NORMALE - maxValidChoice = ${maxValidChoice}`);
     }
     
     if (isNaN(productNumber) || productNumber < 1 || productNumber > maxValidChoice) {
@@ -1306,7 +1411,15 @@ export class UniversalBot implements IMessageHandler {
     // Gérer la sélection en mode pizza unifié - Vérifier sessionData ET workflowData
     const pizzaOptionsMap = session.sessionData?.pizzaOptionsMap || session.workflowData?.pizzaOptionsMap;
     const totalPizzaOptions = session.sessionData?.totalPizzaOptions || session.workflowData?.totalPizzaOptions;
-    
+
+    console.log(`🧹 [PIZZA_CLEANUP_DEBUG] Validation contexte pizzaOptionsMap:`, {
+      currentCategoryName: session.sessionData?.currentCategoryName,
+      hasPizzaMap: !!pizzaOptionsMap,
+      mapLength: pizzaOptionsMap?.length || 0,
+      isIndividualPizzaCategory: session.sessionData?.currentCategoryName === 'Pizzas',
+      shouldCleanMap: session.sessionData?.currentCategoryName === 'Pizzas' && !!pizzaOptionsMap
+    });
+
     // 🔧 SOLUTION 1 : Détection spéciale Menu Pizza avec discriminant universel
     if (pizzaOptionsMap) {
       // Vérifier les actions spéciales AVANT le mapping
@@ -2556,10 +2669,10 @@ export class UniversalBot implements IMessageHandler {
       console.log(`🔍 [CancellationFlow] session data:`, JSON.stringify(session, null, 2));
       console.log(`🔍 [CancellationFlow] session.sessionData:`, JSON.stringify(session.sessionData, null, 2));
       console.log(`🔍 [CancellationFlow] session expires_at:`, session.expiresAt);
-      console.log(`🔍 [CancellationFlow] current time:`, new Date());
+      console.log(`🔍 [CancellationFlow] current time:`, this.getCurrentTime());
       
       // Vérifier expiration
-      const now = new Date();
+      const now = this.getCurrentTime();
       const expiresAt = new Date(session.expiresAt || session.expires_at);
       const isExpired = now > expiresAt;
       console.log(`🔍 [CancellationFlow] Session expired?:`, isExpired);
@@ -2718,7 +2831,7 @@ export class UniversalBot implements IMessageHandler {
         unitPrice: pizzaOption.price,
         quantity: 1,
         totalPrice: pizzaOption.price,
-        addedAt: new Date().toISOString()
+        addedAt: this.getCurrentTime().toISOString()
       });
       
       // Calculer le nouveau total
@@ -2729,11 +2842,14 @@ export class UniversalBot implements IMessageHandler {
       const updatedSessionData = {
         ...session.sessionData,
         cart: cart,
-        totalPrice: newTotal
+        totalPrice: newTotal,
+        selectedProduct: null,
+        awaitingQuantity: false,
+        awaitingCartActions: true
       };
-      
+
       await this.sessionManager.updateSession(session.id, {
-        botState: 'SELECTING_PRODUCTS',
+        botState: 'AWAITING_CART_ACTIONS',
         sessionData: updatedSessionData
       });
       
@@ -2830,8 +2946,13 @@ export class UniversalBot implements IMessageHandler {
       await this.sessionManager.deleteSessionsByPhone(phoneNumber);
       
       // 2. Créer nouvelle session avec l'état CHOOSING_RESTAURANT_MODE (pattern ligne 843)
-      const expiresAt = new Date();
-      expiresAt.setMinutes(expiresAt.getMinutes() + 30); // 30 minutes pour discovery
+      const now = this.getCurrentTime();
+      const expiresAt = new Date(now.getTime() + 30 * 60 * 1000); // 30 minutes pour discovery depuis heure Paris
+      console.log('🕐 TIMEZONE_DEBUG - Session expiry calculation:', {
+        now: now.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        diffMinutes: (expiresAt.getTime() - now.getTime()) / (1000 * 60)
+      });
       
       const supabase = await this.getSupabaseClient();
 

@@ -212,6 +212,8 @@ export class PizzaDisplayService {
               price: price,
               type: 'individual_pizza' // DISCRIMINANT UNIVERSEL
             });
+
+            console.log(`🍕 [PIZZA_INDIVIDUAL_DEBUG] Option créée: ${globalIndex} = ${pizza.name} ${size.size_name}`);
             
             message += `   🔸 ${size.size_name} (${price} EUR) - Tapez ${globalIndex}\n`;
             globalIndex++;
@@ -228,6 +230,8 @@ export class PizzaDisplayService {
       // Envoyer le message formaté
       await this.messageSender.sendMessage(phoneNumber, message);
       
+      console.log(`🍕 [PIZZA_INDIVIDUAL_DEBUG] Total options créées: ${pizzaOptionsMap.length}, globalIndex final: ${globalIndex - 1}`);
+
       // Mettre à jour la session avec le mapping créé localement
       await this.updateSessionWithDirectMapping(session, pizzaOptionsMap, globalIndex - 1);
       
@@ -389,7 +393,8 @@ export class PizzaDisplayService {
     pizzaOptionsMap: any[],
     totalOptions: number
   ): Promise<void> {
-    console.log(`🔧 [PizzaDisplay] DÉBUT updateSessionWithDirectMapping - ${pizzaOptionsMap.length} options`);
+    console.log(`🔧 [PIZZA_INDIVIDUAL_DEBUG] DÉBUT updateSessionWithDirectMapping - ${pizzaOptionsMap.length} options`);
+    console.log(`🔧 [PIZZA_INDIVIDUAL_DEBUG] Session actuelle - currentCategoryName: ${session.sessionData?.currentCategoryName}`);
     
     try {
       // ✅ CENTRALISATION: Utilisation de SessionManager au lieu d'accès direct DB

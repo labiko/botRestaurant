@@ -36,22 +36,60 @@ export class SessionManager implements ISessionManager {
   }
 
   /**
-   * Obtenir l'heure actuelle dans le bon fuseau horaire
-   * Utilise le contexte global du TimezoneService configuré pour le restaurant
+   * Obtenir l'heure actuelle dans le bon fuseau horaire PARIS
+   * ✅ Version finale optimisée avec format Paris validé + DEBUG
    */
   private getCurrentTime(): Date {
-    // VERSION SIMPLIFIÉE - On utilise directement UTC pour éviter les régressions
-    // Le TimezoneService sera réactivé plus tard quand le workflow de base sera stable
-    return new Date();
+    console.log('🕐 [DEBUG_TIMEZONE] === DÉBUT getCurrentTime() ===');
+
+    // Formatter pour timezone Paris (gère automatiquement heure d'été/hiver)
+    const parisFormatter = new Intl.DateTimeFormat('fr-FR', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+
+    const utcNow = new Date();
+    console.log('🕐 [DEBUG_TIMEZONE] UTC brut:', utcNow.toISOString());
+
+    // Format: "17/09/2025 22:06:36" (validé comme correct)
+    const parisFormatted = parisFormatter.format(utcNow);
+    console.log('🕐 [DEBUG_TIMEZONE] Paris formaté:', parisFormatted);
+
+    // Parsing du format DD/MM/YYYY HH:mm:ss
+    const parts = parisFormatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+    if (parts) {
+      const [, day, month, year, hour, minute, second] = parts;
+      const parisDate = new Date(
+        parseInt(year),
+        parseInt(month) - 1, // Mois 0-indexé
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute),
+        parseInt(second)
+      );
+
+      console.log('🕐 [DEBUG_TIMEZONE] Paris Date finale:', {
+        date: parisDate,
+        iso: parisDate.toISOString(),
+        difference_hours: Math.round((parisDate.getTime() - utcNow.getTime()) / (1000 * 60 * 60))
+      });
+
+      console.log('🕐 [DEBUG_TIMEZONE] === FIN getCurrentTime() - RETOUR PARIS ===');
+      return parisDate;
+    }
+
+    // Fallback UTC si parsing échoue (ne devrait jamais arriver)
+    console.warn('🕐 [DEBUG_TIMEZONE] === FALLBACK UTC - PARSING ÉCHOUÉ ===');
+    return utcNow;
   }
 
-  /**
-   * Générer un timestamp formaté pour la base de données
-   */
-  private getCurrentTimestamp(): string {
-    // VERSION SIMPLIFIÉE - UTC direct
-    return new Date().toISOString().replace('T', ' ').replace('Z', '');
-  }
+
 
   /**
    * Récupérer ou créer une session utilisateur
@@ -248,7 +286,7 @@ export class SessionManager implements ISessionManager {
         },
         cart_items: [],
         total_amount: 0,
-        expires_at: new Date(Date.now() + SESSION_DURATION_MINUTES * 60 * 1000), // 2 heures
+        expires_at: new Date(this.getCurrentTime().getTime() + SESSION_DURATION_MINUTES * 60 * 1000), // 4 heures depuis heure Paris
         created_at: this.getCurrentTime(),
         updated_at: this.getCurrentTime()
       };
@@ -534,7 +572,7 @@ export class SessionManager implements ISessionManager {
     console.log(`⏰ [SessionManager] Prolongation session: ${sessionId} (+${additionalMinutes}min)`);
     
     try {
-      const newExpiresAt = new Date(Date.now() + additionalMinutes * 60 * 1000);
+      const newExpiresAt = new Date(this.getCurrentTime().getTime() + additionalMinutes * 60 * 1000);
       
       const { error } = await this.supabase
         .from('france_user_sessions')
@@ -670,8 +708,8 @@ export class SessionManager implements ISessionManager {
           cart_items: [],
           total_amount: 0,
           expires_at: expiresAt,
-          created_at: this.getCurrentTimestamp(),
-          updated_at: this.getCurrentTimestamp()
+          created_at: this.getCurrentTime(),
+          updated_at: this.getCurrentTime()
         })
         .select()
         .single();

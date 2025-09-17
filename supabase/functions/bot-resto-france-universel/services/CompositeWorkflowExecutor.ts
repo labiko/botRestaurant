@@ -6,6 +6,46 @@ import { SessionManager } from './SessionManager.ts';
 import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
 
 /**
+ * Obtenir l'heure actuelle dans le bon fuseau horaire PARIS
+ * ✅ Version finale optimisée avec format Paris validé
+ */
+function getCurrentTime(): Date {
+  // Formatter pour timezone Paris (gère automatiquement heure d'été/hiver)
+  const parisFormatter = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+
+  const utcNow = new Date();
+  // Format: "17/09/2025 22:06:36" (validé comme correct)
+  const parisFormatted = parisFormatter.format(utcNow);
+
+  // Parsing du format DD/MM/YYYY HH:mm:ss
+  const parts = parisFormatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+  if (parts) {
+    const [, day, month, year, hour, minute, second] = parts;
+    return new Date(
+      parseInt(year),
+      parseInt(month) - 1, // Mois 0-indexé
+      parseInt(day),
+      parseInt(hour),
+      parseInt(minute),
+      parseInt(second)
+    );
+  }
+
+  // Fallback UTC si parsing échoue
+  console.warn('⚠️ [getCurrentTime] Parsing Paris échoué, fallback UTC');
+  return utcNow;
+}
+
+/**
  * Exécuteur de workflows composites (TACOS, PIZZAS avec suppléments, etc.)
  * SOLID : Strategy Pattern - Différentes stratégies selon le type de produit
  */
@@ -1971,7 +2011,7 @@ export class CompositeWorkflowExecutor {
         
         // Ajouter au panier existant
         const cart = session.sessionData.cart || {};
-        const itemKey = `menu_${workflow.product.id}_${Date.now()}`;
+        const itemKey = `menu_${workflow.product.id}_${getCurrentTime().getTime()}`;
         cart[itemKey] = cartItem;
         
         // Calculer le total
