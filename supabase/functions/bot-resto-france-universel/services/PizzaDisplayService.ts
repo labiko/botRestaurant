@@ -163,28 +163,33 @@ export class PizzaDisplayService {
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);
       
-      // Construire le message d'en-tête avec actions au début
-      let message = `🍕 🍕 Pizzas\n`;
-      message += `📍 ${data.restaurantName}\n\n`;
-      message += `ACTIONS RAPIDES:\n`;
-      message += `⚡ 99 = Passer commande | 🗑️ 00 = Vider panier | 🍕 0 = Ajouter d'autres produits\n\n`;
-      
+      // PAGINATION : Diviser les pizzas en 2 groupes pour éviter la limite WhatsApp
+      const PIZZAS_PER_MESSAGE = 17; // Limite pour rester sous 4096 caractères
+      const firstBatch = data.pizzas.slice(0, PIZZAS_PER_MESSAGE);
+      const secondBatch = data.pizzas.slice(PIZZAS_PER_MESSAGE);
+
       let globalIndex = 1; // Numérotation globale pour toutes les options
       const pizzaOptionsMap: any[] = []; // Créer le mapping ici pour synchronisation exacte
-      
-      // Pour chaque pizza
-      for (const pizza of data.pizzas) {
-        message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+
+      // MESSAGE 1 : Premières 17 pizzas
+      let message1 = `🍕 🍕 Pizzas (1/2)\n`;
+      message1 += `📍 ${data.restaurantName}\n\n`;
+      message1 += `ACTIONS RAPIDES:\n`;
+      message1 += `⚡ 99 = Passer commande | 🗑️ 00 = Vider panier | 🍕 0 = Ajouter d'autres produits\n\n`;
+
+      // Pour chaque pizza du premier batch
+      for (const pizza of firstBatch) {
+        message1 += `━━━━━━━━━━━━━━━━━━━━━\n`;
         
         // Nom de la pizza (enlever l'emoji du nom car il est déjà présent)
         const pizzaName = pizza.name.replace(/^[^\s]+\s/, ''); // Enlève le premier emoji
-        message += `🎯 *🍕 ${pizzaName}*\n`;
-        
+        message1 += `🎯 *🍕 ${pizzaName}*\n`;
+
         // Description des ingrédients (utiliser le champ description existant)
         if (pizza.description) {
-          message += `🧾 ${pizza.description}\n\n`;
+          message1 += `🧾 ${pizza.description}\n\n`;
         }
-        
+
         // Récupérer les tailles depuis france_product_sizes
         const { data: sizes } = await supabase
           .from('france_product_sizes')
@@ -192,16 +197,16 @@ export class PizzaDisplayService {
           .eq('product_id', pizza.id)
           .eq('is_active', true)
           .order('display_order');
-        
+
         if (sizes && sizes.length > 0) {
-          message += `💰 Choisissez votre taille:\n`;
-          
+          message1 += `💰 Choisissez votre taille:\n`;
+
           for (const size of sizes) {
             // Utiliser le prix selon le mode (mais ils sont identiques d'après nos données)
-            const price = data.deliveryMode === 'livraison' 
+            const price = data.deliveryMode === 'livraison'
               ? (size.price_delivery || size.price_on_site)
               : size.price_on_site;
-            
+
             // CRÉER LE MAPPING EN MÊME TEMPS QUE L'AFFICHAGE
             pizzaOptionsMap.push({
               optionNumber: globalIndex,
@@ -214,21 +219,87 @@ export class PizzaDisplayService {
             });
 
             console.log(`🍕 [PIZZA_INDIVIDUAL_DEBUG] Option créée: ${globalIndex} = ${pizza.name} ${size.size_name}`);
-            
-            message += `   🔸 ${size.size_name} (${price} EUR) - Tapez ${globalIndex}\n`;
+
+            message1 += `   🔸 ${size.size_name} (${price} EUR) - Tapez ${globalIndex}\n`;
             globalIndex++;
           }
         }
-        
-        message += '\n';
+
+        message1 += '\n';
       }
-      
-      // Footer avec instructions  
-      message += `━━━━━━━━━━━━━━━━━━━━━\n`;
-      message += `💡 Tapez le numéro de votre choix`;
-      
-      // Envoyer le message formaté
-      await this.messageSender.sendMessage(phoneNumber, message);
+
+      // Footer du premier message
+      message1 += `━━━━━━━━━━━━━━━━━━━━━\n`;
+      message1 += `💡 Suite des pizzas dans le message suivant...`;
+
+      // Envoyer le premier message
+      await this.messageSender.sendMessage(phoneNumber, message1);
+
+      // MESSAGE 2 : Pizzas restantes (18-33)
+      if (secondBatch.length > 0) {
+        let message2 = `🍕 🍕 Pizzas (2/2)\n`;
+        message2 += `📍 ${data.restaurantName}\n\n`;
+        message2 += `ACTIONS RAPIDES:\n`;
+        message2 += `⚡ 99 = Passer commande | 🗑️ 00 = Vider panier | 🍕 0 = Ajouter d'autres produits\n\n`;
+
+        // Pour chaque pizza du second batch
+        for (const pizza of secondBatch) {
+          message2 += `━━━━━━━━━━━━━━━━━━━━━\n`;
+
+          // Nom de la pizza (enlever l'emoji du nom car il est déjà présent)
+          const pizzaName = pizza.name.replace(/^[^\s]+\s/, ''); // Enlève le premier emoji
+          message2 += `🎯 *🍕 ${pizzaName}*\n`;
+
+          // Description des ingrédients (utiliser le champ description existant)
+          if (pizza.description) {
+            message2 += `🧾 ${pizza.description}\n\n`;
+          }
+
+          // Récupérer les tailles depuis france_product_sizes
+          const { data: sizes } = await supabase
+            .from('france_product_sizes')
+            .select('*')
+            .eq('product_id', pizza.id)
+            .eq('is_active', true)
+            .order('display_order');
+
+          if (sizes && sizes.length > 0) {
+            message2 += `💰 Choisissez votre taille:\n`;
+
+            for (const size of sizes) {
+              // Utiliser le prix selon le mode (mais ils sont identiques d'après nos données)
+              const price = data.deliveryMode === 'livraison'
+                ? (size.price_delivery || size.price_on_site)
+                : size.price_on_site;
+
+              // CRÉER LE MAPPING EN MÊME TEMPS QUE L'AFFICHAGE
+              pizzaOptionsMap.push({
+                optionNumber: globalIndex,
+                pizzaId: pizza.id,
+                pizzaName: pizza.name,
+                sizeId: size.id,
+                sizeName: size.size_name,
+                price: price,
+                type: 'individual_pizza' // DISCRIMINANT UNIVERSEL
+              });
+
+              console.log(`🍕 [PIZZA_INDIVIDUAL_DEBUG] Option créée: ${globalIndex} = ${pizza.name} ${size.size_name}`);
+
+              message2 += `   🔸 ${size.size_name} (${price} EUR) - Tapez ${globalIndex}\n`;
+              globalIndex++;
+            }
+          }
+
+          message2 += '\n';
+        }
+
+        // Footer du second message
+        message2 += `━━━━━━━━━━━━━━━━━━━━━\n`;
+        message2 += `💡 Tapez le numéro de votre choix`;
+
+        // Envoyer le second message
+        await this.messageSender.sendMessage(phoneNumber, message2);
+      }
       
       console.log(`🍕 [PIZZA_INDIVIDUAL_DEBUG] Total options créées: ${pizzaOptionsMap.length}, globalIndex final: ${globalIndex - 1}`);
 

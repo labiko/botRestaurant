@@ -847,6 +847,27 @@
   }
 }
 
+.additional-notes {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #e8f4fd;
+  border-left: 3px solid #2196f3;
+  border-radius: 8px;
+
+  h4 {
+    margin-bottom: 0.5rem;
+    color: #1976d2;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .note-text {
+    font-style: italic;
+    color: var(--ion-color-medium-shade);
+    margin: 0;
+  }
+}
+
 .order-actions {
   .status-actions {
     display: flex;

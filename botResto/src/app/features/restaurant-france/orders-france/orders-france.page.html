@@ -393,6 +393,12 @@
           <p class="note-text">{{ order.notes }}</p>
         </div>
 
+        <!-- Additional notes post-order -->
+        <div *ngIf="order.additional_notes" class="additional-notes">
+          <h4>💬 Note ajoutée après commande :</h4>
+          <p class="note-text">{{ order.additional_notes }}</p>
+        </div>
+
         <!-- Actions -->
         <div class="order-actions">
           <!-- Status update buttons -->

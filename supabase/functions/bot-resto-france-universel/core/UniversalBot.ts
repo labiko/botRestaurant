@@ -264,6 +264,46 @@ export class UniversalBot implements IMessageHandler {
       }
       
       // PRIORITÉ 4: Gestion complète des messages selon l'état de session
+
+      // ANTI-SESSION PARASITE : Vérifier existence session AVANT getSession()
+      console.log('🔍 DEBUG_SESSION_CREATION - AVANT vérification existence session');
+      const sessionExists = await this.sessionManager.checkSessionExists(phoneNumber);
+
+      console.log('🔍 DEBUG_SESSION_CREATION - Contrôle anti-parasite:', {
+        sessionExists: sessionExists,
+        message: message,
+        messageLength: message.length,
+        isResto: message.toLowerCase() === 'resto',
+        isPhoneNumber: this.isPhoneNumber(message),
+        shouldBlock: !sessionExists && message.toLowerCase() !== 'resto' && !this.isPhoneNumber(message)
+      });
+
+      if (!sessionExists &&
+          message.toLowerCase() !== 'resto' &&
+          !this.isPhoneNumber(message)) {
+
+        console.log('🚫 DEBUG_SESSION_CREATION - MESSAGE BLOQUÉ:', {
+          message: message,
+          phoneNumber: phoneNumber,
+          reason: 'Anti-parasite protection - session inexistante'
+        });
+
+        await this.messageSender.sendMessage(phoneNumber,
+          `⏰ *SESSION EXPIRÉE !*
+
+📝 Votre temps pour ajouter une note est terminé
+🕐 Les notes doivent être envoyées dans les 5 minutes
+
+🎯 *Que faire maintenant ?*
+🍕 Tapez *"resto"* → Voir tous les restaurants
+🔢 Tapez *le numéro du resto* → Accéder directement
+📞 Besoin d'aide ? Contactez le restaurant`
+        );
+
+        return; // Arrêter le traitement - PAS de session créée
+      }
+
+      // Maintenant on peut récupérer la session en sécurité
       console.log('🔍 RESTAURANT_ID_DEBUG - AVANT getSession pour message:', message);
       const session = await this.sessionManager.getSession(phoneNumber);
       console.log('🔍 RESTAURANT_ID_DEBUG - SESSION récupérée:', {
@@ -272,7 +312,7 @@ export class UniversalBot implements IMessageHandler {
         restaurantId: session?.restaurantId,
         botState: session?.botState
       });
-      
+
       console.log('🔄 [SESSION_GET] Session récupérée:', {
         sessionExists: !!session,
         sessionId: session?.id,
@@ -283,7 +323,7 @@ export class UniversalBot implements IMessageHandler {
         message: message,
         phoneNumber: phoneNumber
       });
-      
+
       console.log('🔍 RESTAURANT_ID_DEBUG - TEST CONDITIONS:', {
         sessionExists: !!session,
         hasRestaurantId: !!session?.restaurantId,
@@ -311,11 +351,23 @@ export class UniversalBot implements IMessageHandler {
       }
       
       // PRIORITÉ 5: Réponse par défaut
-      await this.messageSender.sendMessage(phoneNumber, 
+      console.log('📤 DEBUG_SESSION_CREATION - Réponse par défaut sans session:', {
+        message: message,
+        phoneNumber: phoneNumber,
+        reason: 'Aucune session et pas resto/numéro'
+      });
+
+      await this.messageSender.sendMessage(phoneNumber,
         `🤖 Message reçu : "${message}"\n🚧 Bot universel opérationnel.\n💡 **Comment commander :**\n• Scannez le QR code du restaurant\n• Ou tapez "salut" pour voir les infos\nStatus : Bot universel ✅`);
-      
+
     } catch (error) {
       console.error('❌ [UniversalBot] Erreur traitement message:', error);
+      console.log('💥 DEBUG_SESSION_CREATION - EXCEPTION dans processMessage:', {
+        error: error.message,
+        phoneNumber: phoneNumber,
+        message: message,
+        stack: error.stack
+      });
       await this.handleError(phoneNumber, error as Error);
     }
   }
@@ -653,9 +705,16 @@ export class UniversalBot implements IMessageHandler {
    * Gestion des erreurs globales
    */
   private async handleError(phoneNumber: string, error: Error): Promise<void> {
-    
+
     console.error('💥 [UniversalBot] Erreur globale:', error);
-    
+
+    console.log('🔍 DEBUG_SESSION_CREATION - handleError appelé:', {
+      phoneNumber: phoneNumber,
+      errorMessage: error.message,
+      errorStack: error.stack,
+      willCreateSession: false
+    });
+
     await this.messageSender.sendMessage(
       phoneNumber,
       '❌ Une erreur est survenue. Tapez "resto" pour recommencer.'
@@ -1000,6 +1059,26 @@ export class UniversalBot implements IMessageHandler {
     });
 
     switch (session.botState) {
+      case 'POST_ORDER_NOTES':
+        // Gestion des notes post-commande
+        if (this.getCurrentTime().getTime() > session.sessionData?.expiresAt) {
+          await this.deleteSession(phoneNumber);
+          return;
+        }
+
+        if (message.toLowerCase().includes('annuler')) {
+          await this.deleteSession(phoneNumber);
+          return; // Laisse handler annulation traiter
+        }
+
+        if (message.toLowerCase() === 'resto') {
+          await this.deleteSession(phoneNumber);
+          return; // Continue workflow normal
+        }
+
+        await this.handlePostOrderNote(phoneNumber, session, message);
+        return;
+
       case 'CHOOSING_DELIVERY_MODE':
         await this.handleDeliveryModeChoice(phoneNumber, session, message);
         break;
@@ -2146,9 +2225,14 @@ export class UniversalBot implements IMessageHandler {
         restaurantName,
         deliveryMode
       );
-      
+
       await this.messageSender.sendMessage(phoneNumber, confirmationMessage);
+
+      // Supprimer l'ancienne session AVANT de créer la nouvelle
       await this.deleteSession(phoneNumber);
+
+      // Créer session pour notes post-commande
+      await this.createPostOrderNotesSession(phoneNumber, order, session.restaurantId);
       
     } catch (error) {
       console.error('❌ [ProcessOrder] Erreur:', error);
@@ -2640,6 +2724,90 @@ export class UniversalBot implements IMessageHandler {
     console.log(`⏱️ [PERF] handleQuantityInput COMPLETE - ${Date.now() - startTime}ms TOTAL`);
   }
   
+  /**
+   * Créer session pour notes post-commande
+   */
+  private async createPostOrderNotesSession(phoneNumber: string, order: any, restaurantId: number): Promise<void> {
+    try {
+      console.log(`💬 [PostOrderNotes] Création session notes pour commande: ${order.order_number}`);
+
+      await this.sessionManager.createSessionForRestaurant(
+        phoneNumber,
+        { id: restaurantId },
+        'POST_ORDER_NOTES',
+        {
+          orderId: order.id,
+          orderNumber: order.order_number,
+          expiresAt: this.getCurrentTime().getTime() + 5*60*1000 // 5 minutes
+        }
+      );
+
+      // Message pour informer le client
+      await this.messageSender.sendMessage(phoneNumber,
+        `💬 *Besoin d'une précision ?*
+📝 Vous avez *5 minutes* pour envoyer *UN SEUL* message
+💡 Exemples : "sans oignons", "bien cuit", "code porte 1234"`
+      );
+
+    } catch (error) {
+      console.error('❌ [PostOrderNotes] Erreur création session:', error);
+    }
+  }
+
+  /**
+   * Gérer l'ajout d'une note post-commande
+   */
+  private async handlePostOrderNote(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      const orderId = session.sessionData?.orderId;
+
+      if (!orderId) {
+        console.error('❌ [PostOrderNote] Pas d\'orderId dans session');
+        await this.deleteSession(phoneNumber);
+        return;
+      }
+
+      // Timestamp avec timezone Paris
+      const timestamp = this.getCurrentTime().toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Sauvegarder note avec horodatage
+      const supabase = await this.getSupabaseClient();
+      await supabase
+        .from('france_orders')
+        .update({
+          additional_notes: `[${timestamp}] ${message}`,
+          updated_at: this.getCurrentTime().toISOString()
+        })
+        .eq('id', orderId);
+
+      // Confirmer et terminer
+      await this.messageSender.sendMessage(phoneNumber,
+        `✅ Note ajoutée à votre commande #${session.sessionData.orderNumber}\n\n` +
+        `📝 "${message}"\n\n` +
+        `Merci ! Le restaurant a bien reçu votre précision.`
+      );
+
+      // Supprimer session = terminé
+      await this.deleteSession(phoneNumber);
+
+    } catch (error) {
+      console.error('❌ [PostOrderNote] Erreur:', error);
+      await this.deleteSession(phoneNumber);
+    }
+  }
+
+  /**
+   * Vérifier si le message est un numéro de téléphone (7+ chiffres)
+   */
+  private isPhoneNumber(message: string): boolean {
+    const cleanMessage = message.replace(/[\s\-\(\)\+]/g, '');
+    const isNumeric = /^\d+$/.test(cleanMessage);
+    return isNumeric && cleanMessage.length >= 7;
+  }
+
   /**
    * Supprimer une session (équivalent de SimpleSession.deleteAllForPhone)
    */

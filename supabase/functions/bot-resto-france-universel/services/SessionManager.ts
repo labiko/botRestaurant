@@ -92,6 +92,25 @@ export class SessionManager implements ISessionManager {
 
 
   /**
+   * Vérifier si une session existe SANS la créer
+   * Helper pour le contrôle anti-parasite
+   */
+  async checkSessionExists(phoneNumber: string): Promise<boolean> {
+    try {
+      const { data, error } = await this.supabase
+        .from('france_user_sessions')
+        .select('id')
+        .eq('phone_number', phoneNumber)
+        .gt('expires_at', this.getCurrentTime().toISOString())
+        .single();
+
+      return !error && !!data;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Récupérer ou créer une session utilisateur
    * SOLID - Interface Segregation : Interface claire et cohérente
    */
@@ -124,12 +143,23 @@ export class SessionManager implements ISessionManager {
 
       // Créer nouvelle session
       console.log(`🆕 [SessionManager] Création nouvelle session pour: ${phoneNumber}`);
+      console.log('🔍 DEBUG_SESSION_CREATION - AUTO-CRÉATION par getSession:', {
+        phoneNumber: phoneNumber,
+        reason: 'Aucune session trouvée - création automatique',
+        caller: 'SessionManager.getSession'
+      });
       return await this.createNewSession(phoneNumber);
       
     } catch (error) {
       console.error('❌ [SessionManager] Erreur récupération session:', error);
       
       // En cas d'erreur, créer session de secours
+      console.log('🔍 DEBUG_SESSION_CREATION - CRÉATION SECOURS par getSession:', {
+        phoneNumber: phoneNumber,
+        reason: 'Erreur récupération - session de secours',
+        error: error.message,
+        caller: 'SessionManager.getSession.catch'
+      });
       return await this.createNewSession(phoneNumber);
     }
   }
@@ -677,17 +707,40 @@ export class SessionManager implements ISessionManager {
    * SOLID - Factory Pattern : Création centralisée des sessions restaurant
    */
   async createSessionForRestaurant(
-    phoneNumber: string, 
-    restaurant: any, 
+    phoneNumber: string,
+    restaurant: any,
     currentStep: string,
     sessionData: any = {}
   ): Promise<BotSession> {
     console.log(`📝 [SessionManager] Création session restaurant pour: ${phoneNumber}`);
     console.log(`📝 [SessionManager] Restaurant: ${restaurant.name} (ID: ${restaurant.id})`);
-    
+
+    console.log('🔍 DEBUG_SESSION_CREATION - SESSION CRÉÉE PAR SessionManager:', {
+      phoneNumber: phoneNumber,
+      restaurantId: restaurant.id,
+      restaurantName: restaurant.name,
+      currentStep: currentStep,
+      sessionDataKeys: Object.keys(sessionData),
+      caller: 'SessionManager.createSessionForRestaurant'
+    });
+
+    // 🚨 CAPTURE STACK TRACE pour identifier qui appelle cette création
+    console.log('🔍 DEBUG_SESSION_CREATION - STACK TRACE CRÉATION:', {
+      stack: new Error().stack,
+      timestamp: new Date().toISOString()
+    });
+
     try {
       const expiresAt = this.getCurrentTime();
-      expiresAt.setMinutes(expiresAt.getMinutes() + SESSION_DURATION_MINUTES);
+
+      // Logique conditionnelle selon currentStep
+      if (currentStep === 'POST_ORDER_NOTES') {
+        // Notes post-commande : 5 minutes seulement
+        expiresAt.setMinutes(expiresAt.getMinutes() + 5);
+      } else {
+        // Tous les autres cas : durée normale (4h actuellement)
+        expiresAt.setMinutes(expiresAt.getMinutes() + SESSION_DURATION_MINUTES);
+      }
       
       const { data: newSession, error } = await this.supabase
         .from('france_user_sessions')
@@ -695,9 +748,9 @@ export class SessionManager implements ISessionManager {
           phone_number: phoneNumber,
           chat_id: phoneNumber,
           restaurant_id: restaurant.id,
-          current_step: 'CHOOSING_DELIVERY_MODE',
+          current_step: currentStep,
           session_data: JSON.stringify(sessionData),
-          bot_state: 'CHOOSING_DELIVERY_MODE',
+          bot_state: currentStep,
           workflow_data: {
             workflowId: 'restaurant_onboarding',
             currentStepId: currentStep,

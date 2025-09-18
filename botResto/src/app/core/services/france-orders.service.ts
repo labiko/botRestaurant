@@ -33,6 +33,7 @@ export interface FranceOrder {
   payment_method?: string;
   status: string;
   notes?: string;
+  additional_notes?: string;
   order_number: string;
   created_at: string;
   updated_at: string;

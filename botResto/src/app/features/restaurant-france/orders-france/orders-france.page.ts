@@ -59,10 +59,10 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   ngOnInit() {
     this.initializeOrders();
     this.startAutoRefresh();
-    
+
     // Configurer le restaurant pour les notifications audio
     this.audioNotificationService.setCurrentRestaurant(this.restaurantId);
-    
+
     // Debug pour analyser les conditions d'affichage livreur - sera appelé après loadOrders
     this.debugDriverDisplay();
   }
@@ -74,6 +74,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
         if (order.status === 'prete' || order.status === 'assignee' || order.status === 'en_livraison') {
           // Debug logic preserved without console output
         }
+
       });
     }, 2000); // Attendre 2s que les commandes se chargent
   }

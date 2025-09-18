@@ -439,6 +439,9 @@ Salut ${firstName} ! 👋
 📍 **Ton restaurant :**
 📞 ${restaurantName}${restaurantPhone ? ' : ' + restaurantPhone : ''}
 
+🔗 **Lien de connexion :**
+${environment.productionUrl}
+
 Prêt pour les premières commandes ? 🍕🏍️
 
 Bonne route partenaire ! 💪`;
