@@ -61,6 +61,25 @@ Le bot universel est la version de production active qui gère tous les pays. Ne
 - **`rm`** - INTERDIT ! Ne jamais supprimer de fichiers automatiquement
 - **`del`** - INTERDIT ! Ne jamais supprimer de fichiers automatiquement
 
+## 🔒 RÈGLE ABSOLUE - ÉCRITURE BASE DE DONNÉES
+
+**⚠️ INTERDICTION TOTALE D'ÉCRITURE EN BASE** :
+- **NE JAMAIS exécuter d'INSERT, UPDATE, DELETE** directement en base de données
+- **NE JAMAIS modifier les données** de production ou développement
+- **UNIQUEMENT DES REQUÊTES SELECT** pour la lecture/consultation
+- **TOUJOURS donner le SQL à l'utilisateur** pour qu'il l'exécute lui-même
+- **JAMAIS de psql avec des commandes d'écriture** - Lecture seule exclusivement
+
+**✅ Autorisé :**
+- `SELECT` pour consulter les données
+- `DESCRIBE` ou `SHOW` pour la structure
+- `EXPLAIN` pour analyser les requêtes
+
+**❌ STRICTEMENT INTERDIT :**
+- `INSERT`, `UPDATE`, `DELETE`
+- `CREATE`, `ALTER`, `DROP`
+- Toute commande qui modifie les données ou la structure
+
 **✅ Commandes autorisées :**
 - `supabase db push` - Applique les migrations sans supprimer les données
 - Scripts SQL avec **transactions** (`BEGIN;` ... `COMMIT;`)

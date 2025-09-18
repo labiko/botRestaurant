@@ -188,6 +188,7 @@ CREATE TABLE public.france_orders (
   assignment_timeout_at timestamp with time zone,
   assignment_started_at timestamp with time zone,
   audio_played boolean DEFAULT false,
+  additional_notes text,
   CONSTRAINT france_orders_pkey PRIMARY KEY (id),
   CONSTRAINT france_orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id),
   CONSTRAINT france_orders_delivery_address_id_fkey FOREIGN KEY (delivery_address_id) REFERENCES public.france_customer_addresses(id),
@@ -228,6 +229,8 @@ CREATE TABLE public.france_product_options (
   display_order integer DEFAULT 0,
   is_active boolean DEFAULT true,
   group_order integer DEFAULT 0,
+  next_group_order integer,
+  conditional_next_group jsonb,
   CONSTRAINT france_product_options_pkey PRIMARY KEY (id),
   CONSTRAINT france_product_options_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.france_products(id)
 );

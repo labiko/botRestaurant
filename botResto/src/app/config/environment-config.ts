@@ -39,6 +39,4 @@ const ENVIRONMENTS = {
 // Configuration active basée sur CURRENT_ENVIRONMENT
 export const FRANCE_CONFIG = ENVIRONMENTS[CURRENT_ENVIRONMENT];
 
-// 🔍 Log pour vérifier la configuration active
-console.log(`🔧 [ENV_CONFIG] Environnement actif: ${CURRENT_ENVIRONMENT}`);
-console.log(`🔧 [ENV_CONFIG] URL: ${FRANCE_CONFIG.supabaseFranceUrl}`);
+// Configuration exportée sans logs de debug
