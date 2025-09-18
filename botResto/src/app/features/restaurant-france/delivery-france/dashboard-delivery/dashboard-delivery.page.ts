@@ -616,8 +616,8 @@ export class DashboardDeliveryPage implements OnInit, OnDestroy {
       
       const orderData = {
         orderNumber: order.order_number,
-        restaurantName: 'Pizza Yolo', // TODO: Récupérer dynamiquement
-        driverName: driver.name || 'Votre livreur',
+        restaurantName: this.currentDriver?.restaurantName || 'Restaurant',
+        driverName: driver.firstName || 'Votre livreur',
         driverPhone: driver.phoneNumber || '',
         estimatedTime: '15-20 min',
         total: this.formatPrice(order.total_amount),

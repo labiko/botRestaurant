@@ -258,19 +258,4 @@ export class LoginFrancePage implements OnInit, OnDestroy {
     toast.present();
   }
 
-  /**
-   * FONCTION DEBUG - Auto-remplissage Jean Dupont (livreur)
-   */
-  debugFillJeanCredentials() {
-    // Sélectionner le profil livreur
-    this.selectProfile('driver');
-    
-    // Attendre que le formulaire soit mis à jour
-    setTimeout(() => {
-      this.loginForm.patchValue({
-        phone: '0667326357',
-        password: '123456'
-      });
-    }, 100);
-  }
 }
