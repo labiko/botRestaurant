@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { FRANCE_CONFIG, CURRENT_ENVIRONMENT } from '../../../config/environment-config';
 
 export interface GreenApiConfig {
   instanceId: string;
@@ -32,12 +33,19 @@ export interface SendMessageResult {
 export class GreenApiFranceService {
   
   private readonly CONFIG: GreenApiConfig = {
-    instanceId: environment.greenApi?.instanceId || '7105313693',
-    apiToken: environment.greenApi?.apiToken || '994e56511a43455693d2c4c1e4be86384a27eb921c394d5693',
-    baseUrl: environment.greenApi?.baseUrl || 'https://7105.api.greenapi.com'
+    instanceId: FRANCE_CONFIG.greenApi.instanceId,
+    apiToken: FRANCE_CONFIG.greenApi.apiToken,
+    baseUrl: FRANCE_CONFIG.greenApi.baseUrl
   };
 
   constructor(private http: HttpClient) {
+    // 🔍 LOGS DEBUG GREEN API
+    console.log('🔍 [GREEN_API_DEBUG] ==========================================');
+    console.log('🔍 [GREEN_API_DEBUG] ENVIRONNEMENT:', CURRENT_ENVIRONMENT);
+    console.log('🔍 [GREEN_API_DEBUG] Instance ID:', this.CONFIG.instanceId);
+    console.log('🔍 [GREEN_API_DEBUG] Base URL:', this.CONFIG.baseUrl);
+    console.log('🔍 [GREEN_API_DEBUG] API Token (20 premiers chars):', this.CONFIG.apiToken.substring(0, 20) + '...');
+    console.log('🔍 [GREEN_API_DEBUG] ==========================================');
   }
 
   /**

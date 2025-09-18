@@ -326,13 +326,33 @@ export class CompositeWorkflowExecutor {
         sizeList.sort((a, b) => a.price_on_site - b.price_on_site);
         
         // Sélectionner la bonne variante selon le mode
+        console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Mode: ${deliveryMode}`);
+        console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Tailles disponibles:`, sizeList.map(s => ({
+          name: s.size_name,
+          price_on_site: s.price_on_site,
+          price_delivery: s.price_delivery
+        })));
+
         let selectedSize;
         if (deliveryMode === 'livraison') {
           // Prendre la variante avec prix livraison (généralement la plus chère)
           selectedSize = sizeList.find(s => s.price_delivery > s.price_on_site) || sizeList[sizeList.length - 1];
+          console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Sélection livraison:`, {
+            found: !!sizeList.find(s => s.price_delivery > s.price_on_site),
+            selectedSize: selectedSize ? {
+              name: selectedSize.size_name,
+              price_on_site: selectedSize.price_on_site,
+              price_delivery: selectedSize.price_delivery
+            } : null
+          });
         } else {
           // Prendre la variante avec prix sur place (généralement la moins chère)
           selectedSize = sizeList[0];
+          console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Sélection sur place:`, {
+            name: selectedSize.size_name,
+            price_on_site: selectedSize.price_on_site,
+            price_delivery: selectedSize.price_delivery
+          });
         }
         
         finalVariants.push({
@@ -399,9 +419,17 @@ export class CompositeWorkflowExecutor {
     
     finalVariants.forEach((variant, index) => {
       // Utiliser le prix selon le mode de livraison
-      const price = deliveryMode === 'livraison' ? 
-        (variant.price_delivery || variant.price_on_site + 1) : 
+      const price = deliveryMode === 'livraison' ?
+        (variant.price_delivery || variant.price_on_site) :
         (variant.price_on_site || variant.base_price);
+
+      console.log(`🔍 [DEBUG_PRICE] Calcul prix final - ${variant.variant_name}:`, {
+        deliveryMode,
+        price_delivery: variant.price_delivery,
+        price_on_site: variant.price_on_site,
+        base_price: variant.base_price,
+        finalPrice: price
+      });
       
       let variantLine = format
         .replace('{variant_name}', variant.variant_name)
@@ -673,7 +701,12 @@ export class CompositeWorkflowExecutor {
     // Récupérer la variante sélectionnée depuis la configuration universelle
     const selectedVariant = availableVariants[choice - 1];
     const product = session.sessionData.selectedProduct;
-    const finalPrice = selectedVariant.price_on_site || selectedVariant.base_price;
+
+    // Utiliser le bon prix selon le mode de livraison
+    const deliveryMode = session.sessionData?.deliveryMode;
+    const finalPrice = deliveryMode === 'livraison' ?
+      selectedVariant.price_delivery :
+      selectedVariant.price_on_site;
     
     console.log(`✅ [VariantSelection] Sélection: ${selectedVariant.variant_name} (${finalPrice}€)`);
     
@@ -735,7 +768,7 @@ export class CompositeWorkflowExecutor {
       },
       completed: false
     };
-    
+
     // Démarrer avec la première étape
     await this.showUniversalWorkflowStep(phoneNumber, session, workflowData, 0);
   }

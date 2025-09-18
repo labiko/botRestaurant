@@ -73,6 +73,28 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !GREEN_API_TOKEN || !GREEN_AP
   Deno.exit(1);
 }
 
+// 🔍 LOGS DÉTAILLÉS DES VARIABLES D'ENVIRONNEMENT UTILISÉES
+console.log('🔍 [ENV_DEBUG] ==========================================');
+console.log('🔍 [ENV_DEBUG] VARIABLES D\'ENVIRONNEMENT RÉELLES UTILISÉES:');
+console.log('🔍 [ENV_DEBUG] ==========================================');
+console.log('🔍 [ENV_DEBUG] SUPABASE_URL:', SUPABASE_URL);
+console.log('🔍 [ENV_DEBUG] SUPABASE_SERVICE_ROLE_KEY (premiers 20 chars):', SUPABASE_SERVICE_ROLE_KEY.substring(0, 20) + '...');
+console.log('🔍 [ENV_DEBUG] GREEN_API_TOKEN (premiers 20 chars):', GREEN_API_TOKEN.substring(0, 20) + '...');
+console.log('🔍 [ENV_DEBUG] GREEN_API_INSTANCE_ID:', GREEN_API_INSTANCE_ID);
+console.log('🔍 [ENV_DEBUG] GREEN_API_URL:', Deno.env.get('GREEN_API_URL') || 'NON_DEFINIE');
+console.log('🔍 [ENV_DEBUG] APP_ENV:', Deno.env.get('APP_ENV') || 'NON_DEFINIE');
+console.log('🔍 [ENV_DEBUG] ==========================================');
+
+// 🔍 DÉTECTION ENVIRONNEMENT PAR URL
+if (SUPABASE_URL.includes('lphvdoyhwaelmwdfkfuh')) {
+  console.log('✅ [ENV_DEBUG] ENVIRONNEMENT DÉTECTÉ: DEV (lphvdoyhwaelmwdfkfuh)');
+} else if (SUPABASE_URL.includes('vywbhlnzvfqtiurwmrac')) {
+  console.log('⚠️ [ENV_DEBUG] ENVIRONNEMENT DÉTECTÉ: PROD (vywbhlnzvfqtiurwmrac)');
+} else {
+  console.log('❓ [ENV_DEBUG] ENVIRONNEMENT INCONNU:', SUPABASE_URL);
+}
+console.log('🔍 [ENV_DEBUG] ==========================================');
+
 // ================================================
 // FACTORY - ASSEMBLAGE DEPENDENCY INJECTION
 // ================================================

@@ -1858,12 +1858,10 @@ export class UniversalBot implements IMessageHandler {
           sizeGroups.forEach(sizeList => {
             sizeList.sort((a, b) => a.price_on_site - b.price_on_site);
             
-            let selectedSize;
+            let selectedSize = sizeList[0];
             if (deliveryMode === 'livraison') {
-              selectedSize = sizeList.find(s => s.price_delivery > s.price_on_site) || sizeList[sizeList.length - 1];
-              filteredPrices.push(selectedSize.price_delivery || selectedSize.price_on_site + 1);
+              filteredPrices.push(selectedSize.price_delivery);
             } else {
-              selectedSize = sizeList[0];
               filteredPrices.push(selectedSize.price_on_site);
             }
           });
@@ -1876,8 +1874,11 @@ export class UniversalBot implements IMessageHandler {
           
           priceText = minPrice === maxPrice ? `${minPrice}€` : `${minPrice}€ - ${maxPrice}€`;
           activePrice = minPrice;
-          priceOnSite = minPrice; // Approximation pour le stockage
-          priceDelivery = minPrice;
+
+          // Récupérer les vrais prix depuis la première taille (pas les prix filtrés)
+          const firstSize = product.france_product_sizes[0];
+          priceOnSite = firstSize.price_on_site;
+          priceDelivery = firstSize.price_delivery;
         } else if (product.france_product_variants && product.france_product_variants.length > 0) {
           // Produit avec variantes - extraire les prix selon le mode choisi
           const variants = product.france_product_variants.filter((v: any) => v.is_active);

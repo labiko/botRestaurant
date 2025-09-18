@@ -1,0 +1,49 @@
+# ========================================
+# SYSTÈME DE BASCULE D'ENVIRONNEMENTS
+# ========================================
+
+# IMPORTANT: Exécuter toutes les commandes depuis le dossier racine :
+# C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant
+
+# ===== BASCULE VERS PRODUCTION =====
+supabase link --project-ref vywbhlnzvfqtiurwmrac
+supabase secrets set GREEN_API_URL=https://7105.api.greenapi.com/waInstance7105313693
+supabase secrets set GREEN_API_TOKEN=994e56511a43455693d2c4c1e4be86384a27eb921c394d5693
+supabase functions deploy bot-resto-france-universel
+
+# ===== BASCULE VERS DÉVELOPPEMENT =====
+supabase link --project-ref lphvdoyhwaelmwdfkfuh
+supabase secrets set GREEN_API_URL=https://7105.api.greenapi.com/waInstanceDEV
+supabase secrets set GREEN_API_TOKEN=token_dev_a_configurer
+supabase functions deploy bot-resto-france-universel
+
+# ========================================
+# INFORMATIONS PROJETS SUPABASE
+# ========================================
+
+# PRODUCTION (vywbhlnzvfqtiurwmrac)
+# - Nom: bot-whatsapp-resto-france
+# - URL: https://vywbhlnzvfqtiurwmrac.supabase.co
+# - SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5d2JobG56dmZxdGl1cndtcmFjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjczMTc3NywiZXhwIjoyMDcyMzA3Nzc3fQ.cT8yZLjOvtCYN6x6Z5qCR4wOeGzKJhLvjM2nP8wQ7XE
+# - Instance Green API: 7105313693
+# - Token Green API: 994e56511a43455693d2c4c1e4be86384a27eb921c394d5693
+
+# DÉVELOPPEMENT (lphvdoyhwaelmwdfkfuh)
+# - Nom: bot-whatsapp-resto-france-dev
+# - URL: https://lphvdoyhwaelmwdfkfuh.supabase.co
+# - SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwaHZkb3lod2FlbG13ZGZrZnVoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1ODIwMzkyNiwiZXhwIjoyMDczNzc5OTI2fQ.JhO4gqZ2qFc2DmLe-ssyWf3GGOiRVopxBVJtyI8DbkY
+# - Instance Green API: À configurer
+# - Token Green API: À configurer
+
+# ========================================
+# VARIABLES AUTOMATIQUES (gérées par Supabase)
+# ========================================
+# ✅ SUPABASE_URL - Change automatiquement selon le projet lié
+# ✅ SUPABASE_SERVICE_ROLE_KEY - Change automatiquement selon le projet lié
+# ✅ SUPABASE_ANON_KEY - Change automatiquement selon le projet lié
+
+# ========================================
+# VARIABLES MANUELLES (à configurer)
+# ========================================
+# 🔧 GREEN_API_URL - À définir pour chaque environnement
+# 🔧 GREEN_API_TOKEN - À définir pour chaque environnement

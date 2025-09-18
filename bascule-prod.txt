@@ -1,0 +1,21 @@
+# ========================================
+# BASCULE ENVIRONNEMENT PRODUCTION
+# ========================================
+
+# Commandes à exécuter pour basculer vers PROD
+supabase secrets set APP_ENV=prod
+supabase secrets set SUPABASE_URL=https://vywbhlnzvfqtiurwmrac.supabase.co
+supabase secrets set SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5d2JobG56dmZxdGl1cndtcmFjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjczMTc3NywiZXhwIjoyMDcyMzA3Nzc3fQ.cT8yZLjOvtCYN6x6Z5qCR4wOeGzKJhLvjM2nP8wQ7XE
+supabase secrets set GREEN_API_URL=https://7105.api.greenapi.com/waInstance7105313693
+supabase secrets set GREEN_API_TOKEN=994e56511a43455693d2c4c1e4be86384a27eb921c394d5693
+
+# Puis déployer
+supabase functions deploy bot-resto-france-universel
+
+# ========================================
+# INFORMATIONS PRODUCTION
+# ========================================
+# Projet: vywbhlnzvfqtiurwmrac (bot-whatsapp-resto-france)
+# Instance Green API: 7105313693
+# Token Green API: 994e56511a43455693d2c4c1e4be86384a27eb921c394d5693
+# URL Base Green API: https://7105.api.greenapi.com

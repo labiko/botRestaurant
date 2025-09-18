@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
+import { FRANCE_CONFIG, CURRENT_ENVIRONMENT } from '../../config/environment-config';
 
 @Injectable({
   providedIn: 'root'
@@ -9,9 +10,19 @@ export class SupabaseFranceService {
   private supabase: SupabaseClient;
 
   constructor() {
-    // Configuration spécifique à la France
-    const supabaseUrl = environment.supabaseFranceUrl || 'https://votre-project-france.supabase.co';
-    const supabaseKey = environment.supabaseFranceAnonKey || 'votre-anon-key-france';
+    // 🔧 UTILISATION CONFIGURATION CENTRALISÉE
+    const supabaseUrl = FRANCE_CONFIG.supabaseFranceUrl;
+    const supabaseKey = FRANCE_CONFIG.supabaseFranceAnonKey;
+
+    // 🔍 LOGS DEBUG ENVIRONNEMENT
+    console.log('🔍 [BACKOFFICE_DEBUG] ==========================================');
+    console.log('🔍 [BACKOFFICE_DEBUG] ENVIRONNEMENT CONFIGURÉ:', CURRENT_ENVIRONMENT);
+    console.log('🔍 [BACKOFFICE_DEBUG] Supabase URL:', supabaseUrl);
+    console.log('🔍 [BACKOFFICE_DEBUG] Supabase KEY (20 premiers chars):', supabaseKey.substring(0, 20) + '...');
+    console.log('🔍 [BACKOFFICE_DEBUG] Green API Instance ID:', FRANCE_CONFIG.greenApi.instanceId);
+    console.log('🔍 [BACKOFFICE_DEBUG] Green API URL:', FRANCE_CONFIG.greenApi.baseUrl);
+    console.log('🔍 [BACKOFFICE_DEBUG] Debug mode:', FRANCE_CONFIG.debugMode);
+    console.log('🔍 [BACKOFFICE_DEBUG] ==========================================');
 
     this.supabase = createClient(supabaseUrl, supabaseKey, {
       auth: {
@@ -20,10 +31,14 @@ export class SupabaseFranceService {
         detectSessionInUrl: false
       }
     });
-    
 
-    // Test de connexion automatique
+    // Test de connexion automatique avec logs
     this.testConnection().then(result => {
+      if (result.success) {
+        console.log(`✅ [BACKOFFICE_DEBUG] Connexion ${CURRENT_ENVIRONMENT} réussie`);
+      } else {
+        console.error(`❌ [BACKOFFICE_DEBUG] Échec connexion ${CURRENT_ENVIRONMENT}:`, result.message);
+      }
     });
   }
 

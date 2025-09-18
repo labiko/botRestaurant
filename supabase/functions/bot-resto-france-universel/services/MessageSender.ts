@@ -22,7 +22,7 @@ export class MessageSender implements IMessageSender {
   constructor(apiToken: string, instanceId: string) {
     this.apiToken = apiToken;
     this.instanceId = instanceId;
-    this.baseUrl = `https://7105.api.greenapi.com/waInstance${instanceId}`;
+    this.baseUrl = Deno.env.get('GREEN_API_URL')!;
   }
 
   /**

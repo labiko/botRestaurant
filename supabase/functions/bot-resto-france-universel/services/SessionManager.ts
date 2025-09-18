@@ -25,6 +25,16 @@ export class SessionManager implements ISessionManager {
   private timezoneService: TimezoneService | null = null;
 
   constructor(supabaseUrl: string, supabaseServiceRoleKey: string) {
+    console.log('🔍 [SESSIONMANAGER_DEBUG] ==========================================');
+    console.log('🔍 [SESSIONMANAGER_DEBUG] CRÉATION CLIENT SUPABASE:');
+    console.log('🔍 [SESSIONMANAGER_DEBUG] URL:', supabaseUrl);
+    console.log('🔍 [SESSIONMANAGER_DEBUG] KEY (20 premiers chars):', supabaseServiceRoleKey.substring(0, 20) + '...');
+    if (supabaseUrl.includes('lphvdoyhwaelmwdfkfuh')) {
+      console.log('✅ [SESSIONMANAGER_DEBUG] ENVIRONNEMENT: DEV');
+    } else if (supabaseUrl.includes('vywbhlnzvfqtiurwmrac')) {
+      console.log('⚠️ [SESSIONMANAGER_DEBUG] ENVIRONNEMENT: PROD');
+    }
+    console.log('🔍 [SESSIONMANAGER_DEBUG] ==========================================');
     this.supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
   }
 
@@ -544,6 +554,10 @@ export class SessionManager implements ISessionManager {
    * Obtenir l'ID du restaurant par défaut
    */
   private async getDefaultRestaurantId(): Promise<number> {
+    console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] ==========================================');
+    console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] RECHERCHE RESTAURANT PAR DÉFAUT');
+    console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] Requête: france_restaurants WHERE slug = pizza-yolo-77');
+
     try {
       const { data, error } = await this.supabase
         .from('france_restaurants')
@@ -551,15 +565,28 @@ export class SessionManager implements ISessionManager {
         .eq('slug', 'pizza-yolo-77')
         .single();
 
+      console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] Résultat requête:');
+      console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] - data:', data);
+      console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] - error:', error);
+
       if (error || !data) {
-        console.warn('⚠️ [SessionManager] Restaurant par défaut non trouvé, utilisation ID=1');
+        console.warn('⚠️ [DEFAULT_RESTAURANT_DEBUG] Restaurant par défaut NON TROUVÉ');
+        console.warn('⚠️ [DEFAULT_RESTAURANT_DEBUG] Erreur Supabase:', error?.message || 'Aucune donnée');
+        console.warn('⚠️ [DEFAULT_RESTAURANT_DEBUG] FALLBACK: utilisation ID=1');
+        console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] ==========================================');
         return 1;
       }
 
+      console.log('✅ [DEFAULT_RESTAURANT_DEBUG] Restaurant trouvé! ID:', data.id);
+      console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] ==========================================');
       return data.id;
-      
+
     } catch (error) {
-      console.error('❌ [SessionManager] Erreur récupération restaurant par défaut:', error);
+      console.error('❌ [DEFAULT_RESTAURANT_DEBUG] EXCEPTION lors de la requête:');
+      console.error('❌ [DEFAULT_RESTAURANT_DEBUG] Message:', error.message);
+      console.error('❌ [DEFAULT_RESTAURANT_DEBUG] Stack:', error.stack);
+      console.error('❌ [DEFAULT_RESTAURANT_DEBUG] FALLBACK: utilisation ID=1');
+      console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] ==========================================');
       return 1; // Fallback
     }
   }
