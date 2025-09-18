@@ -3,7 +3,7 @@
 // MODIFIER SEULEMENT CETTE VARIABLE POUR BASCULER !
 // =========================================================
 
-export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' = 'PROD';
+export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' = 'DEV';
 
 // =========================================================
 // CONFIGURATIONS AUTOMATIQUES
