@@ -299,18 +299,18 @@ export class SessionManager implements ISessionManager {
    * SOLID - Factory Method : Création encapsulée avec valeurs par défaut
    */
   private async createNewSession(phoneNumber: string): Promise<BotSession> {
-    console.log(`🆕 [SessionManager] Création session pour: ${phoneNumber}`);
-    
+    console.log(`🆕 [SessionManager] Création session mode découverte pour: ${phoneNumber}`);
+
     try {
-      // Déterminer le restaurant par défaut (Pizza Yolo pour l'instant)
-      const defaultRestaurantId = await this.getDefaultRestaurantId();
-      
+      // Mode découverte - pas de restaurant par défaut (utilise logique existante)
+      // Aligné avec createRestaurantDiscoverySession() du UniversalBot
+
       // Données de la nouvelle session
       const sessionData = {
         phone_number: phoneNumber,
-        restaurant_id: defaultRestaurantId,
+        restaurant_id: null,
         bot_state: {
-          mode: 'menu_browsing' as const,
+          mode: 'CHOOSING_RESTAURANT_MODE' as const,
           lastInteraction: this.getCurrentTime(),
           language: 'fr',
           context: {}
@@ -550,46 +550,6 @@ export class SessionManager implements ISessionManager {
     return dbData;
   }
 
-  /**
-   * Obtenir l'ID du restaurant par défaut
-   */
-  private async getDefaultRestaurantId(): Promise<number> {
-    console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] ==========================================');
-    console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] RECHERCHE RESTAURANT PAR DÉFAUT');
-    console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] Requête: france_restaurants WHERE slug = pizza-yolo-77');
-
-    try {
-      const { data, error } = await this.supabase
-        .from('france_restaurants')
-        .select('id')
-        .eq('slug', 'pizza-yolo-77')
-        .single();
-
-      console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] Résultat requête:');
-      console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] - data:', data);
-      console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] - error:', error);
-
-      if (error || !data) {
-        console.warn('⚠️ [DEFAULT_RESTAURANT_DEBUG] Restaurant par défaut NON TROUVÉ');
-        console.warn('⚠️ [DEFAULT_RESTAURANT_DEBUG] Erreur Supabase:', error?.message || 'Aucune donnée');
-        console.warn('⚠️ [DEFAULT_RESTAURANT_DEBUG] FALLBACK: utilisation ID=1');
-        console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] ==========================================');
-        return 1;
-      }
-
-      console.log('✅ [DEFAULT_RESTAURANT_DEBUG] Restaurant trouvé! ID:', data.id);
-      console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] ==========================================');
-      return data.id;
-
-    } catch (error) {
-      console.error('❌ [DEFAULT_RESTAURANT_DEBUG] EXCEPTION lors de la requête:');
-      console.error('❌ [DEFAULT_RESTAURANT_DEBUG] Message:', error.message);
-      console.error('❌ [DEFAULT_RESTAURANT_DEBUG] Stack:', error.stack);
-      console.error('❌ [DEFAULT_RESTAURANT_DEBUG] FALLBACK: utilisation ID=1');
-      console.log('🔍 [DEFAULT_RESTAURANT_DEBUG] ==========================================');
-      return 1; // Fallback
-    }
-  }
 
   /**
    * Nettoyer les sessions expirées (maintenance)
