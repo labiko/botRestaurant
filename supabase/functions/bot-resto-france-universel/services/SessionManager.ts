@@ -25,16 +25,6 @@ export class SessionManager implements ISessionManager {
   private timezoneService: TimezoneService | null = null;
 
   constructor(supabaseUrl: string, supabaseServiceRoleKey: string) {
-    console.log('🔍 [SESSIONMANAGER_DEBUG] ==========================================');
-    console.log('🔍 [SESSIONMANAGER_DEBUG] CRÉATION CLIENT SUPABASE:');
-    console.log('🔍 [SESSIONMANAGER_DEBUG] URL:', supabaseUrl);
-    console.log('🔍 [SESSIONMANAGER_DEBUG] KEY (20 premiers chars):', supabaseServiceRoleKey.substring(0, 20) + '...');
-    if (supabaseUrl.includes('lphvdoyhwaelmwdfkfuh')) {
-      console.log('✅ [SESSIONMANAGER_DEBUG] ENVIRONNEMENT: DEV');
-    } else if (supabaseUrl.includes('vywbhlnzvfqtiurwmrac')) {
-      console.log('⚠️ [SESSIONMANAGER_DEBUG] ENVIRONNEMENT: PROD');
-    }
-    console.log('🔍 [SESSIONMANAGER_DEBUG] ==========================================');
     this.supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
   }
 

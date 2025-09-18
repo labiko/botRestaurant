@@ -35,16 +35,9 @@ export class RestaurantDiscoveryService {
    * Initialiser le client Supabase
    */
   private async initSupabase() {
-    console.log('🔍 [RESTAURANT_DISCOVERY_DEBUG] ==========================================');
-    console.log('🔍 [RESTAURANT_DISCOVERY_DEBUG] INITIALISATION CLIENT SUPABASE:');
-    console.log('🔍 [RESTAURANT_DISCOVERY_DEBUG] URL:', this.supabaseUrl);
-    console.log('🔍 [RESTAURANT_DISCOVERY_DEBUG] KEY (20 premiers chars):', this.supabaseKey.substring(0, 20) + '...');
     if (this.supabaseUrl.includes('lphvdoyhwaelmwdfkfuh')) {
-      console.log('✅ [RESTAURANT_DISCOVERY_DEBUG] ENVIRONNEMENT: DEV');
     } else if (this.supabaseUrl.includes('vywbhlnzvfqtiurwmrac')) {
-      console.log('⚠️ [RESTAURANT_DISCOVERY_DEBUG] ENVIRONNEMENT: PROD');
     }
-    console.log('🔍 [RESTAURANT_DISCOVERY_DEBUG] ==========================================');
 
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
@@ -55,9 +48,6 @@ export class RestaurantDiscoveryService {
    */
   async getAvailableRestaurants(): Promise<Restaurant[]> {
     try {
-      console.log('🔍 [RESTAURANTS_QUERY_DEBUG] ==========================================');
-      console.log('🔍 [RESTAURANTS_QUERY_DEBUG] REQUÊTE: SELECT * FROM france_restaurants');
-      console.log('🔍 [RESTAURANTS_QUERY_DEBUG] WHERE is_active = true AND is_exceptionally_closed = false');
 
       const { data, error } = await QueryPerformanceMonitor.measureQuery(
         'RESTAURANTS_WITH_GEOLOCATION',
@@ -69,32 +59,17 @@ export class RestaurantDiscoveryService {
           .order('name')
       );
 
-      console.log('🔍 [RESTAURANTS_QUERY_DEBUG] RÉSULTAT REQUÊTE:');
-      console.log('🔍 [RESTAURANTS_QUERY_DEBUG] - error:', error);
-      console.log('🔍 [RESTAURANTS_QUERY_DEBUG] - data:', data);
-      console.log('🔍 [RESTAURANTS_QUERY_DEBUG] - Nombre de restaurants:', data?.length || 0);
 
       if (data && data.length > 0) {
-        console.log('🔍 [RESTAURANTS_QUERY_DEBUG] - Premier restaurant:', data[0]);
       }
 
       if (error) {
-        console.error('❌ [RESTAURANTS_QUERY_DEBUG] ERREUR Supabase:', error);
-        console.error('❌ [RESTAURANTS_QUERY_DEBUG] Message:', error.message);
-        console.error('❌ [RESTAURANTS_QUERY_DEBUG] Details:', error.details);
-        console.log('🔍 [RESTAURANTS_QUERY_DEBUG] ==========================================');
         return [];
       }
 
-      console.log(`✅ [RESTAURANTS_QUERY_DEBUG] ${data?.length || 0} restaurants trouvés`);
-      console.log('🔍 [RESTAURANTS_QUERY_DEBUG] ==========================================');
       return data || [];
 
     } catch (error) {
-      console.error('❌ [RESTAURANTS_QUERY_DEBUG] EXCEPTION:');
-      console.error('❌ [RESTAURANTS_QUERY_DEBUG] Message:', error.message);
-      console.error('❌ [RESTAURANTS_QUERY_DEBUG] Stack:', error.stack);
-      console.log('🔍 [RESTAURANTS_QUERY_DEBUG] ==========================================');
       return [];
     }
   }
