@@ -8,9 +8,9 @@ export async function GET(request: NextRequest) {
   try {
     console.log('📜 Récupération historique des scripts...');
 
-    // Connexion à la base DEV (où sont stockés les scripts)
+    // Connexion à la base DEV (où sont stockés les scripts) - Configuration corrigée
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Récupération des scripts avec tri par date décroissante
@@ -64,12 +64,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Connexion à la base DEV
+    // Connexion à la base DEV - Configuration corrigée
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Insertion du nouveau script
+    // Insertion du nouveau script (directement exécuté en DEV)
     const { data: newScript, error } = await supabase
       .from('menu_ai_scripts')
       .insert([{
@@ -77,8 +77,9 @@ export async function POST(request: NextRequest) {
         command_source,
         ai_explanation,
         category_name,
-        dev_status: 'pending',
-        prod_status: 'not_applied'
+        dev_status: 'executed',
+        prod_status: 'not_applied',
+        dev_executed_at: new Date().toISOString()
       }])
       .select()
       .single();

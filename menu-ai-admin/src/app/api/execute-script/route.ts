@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Connexion à la base DEV pour récupérer le script
     const supabaseUrlDev = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKeyDev = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!;
+    const supabaseKeyDev = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const supabaseDev = createClient(supabaseUrlDev, supabaseKeyDev);
 
     // Récupération du script
@@ -103,13 +103,21 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // Connexion à la base PROD
+        // Connexion à la base PROD - Configuration corrigée
         const supabaseUrlProd = process.env.NEXT_PUBLIC_SUPABASE_URL_PROD!;
-        const supabaseKeyProd = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY_PROD!;
+        const supabaseKeyProd = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD!;
         const supabaseProd = createClient(supabaseUrlProd, supabaseKeyProd);
 
-        // Note: Pour des raisons de sécurité, nous ne pouvons pas exécuter directement du SQL arbitraire
-        // Cette partie devrait être adaptée selon votre architecture
+        // Exécution réelle du SQL en PROD
+        const { data: execResult, error: execError } = await supabaseProd.rpc('execute_sql', {
+          sql_query: script.script_sql
+        });
+
+        if (execError) {
+          throw new Error(`Erreur exécution PROD: ${execError.message}`);
+        }
+
+        console.log('✅ SQL exécuté en PROD:', execResult);
 
         // Mise à jour du statut
         await supabaseDev

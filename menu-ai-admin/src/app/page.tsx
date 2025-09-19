@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import CategoryEditModal from '@/components/CategoryEditModal';
-import ExecutionModal from '@/components/ExecutionModal';
+import ProdConfirmModal from '@/components/ProdConfirmModal';
 
 interface AIResponse {
   success: boolean;
@@ -45,8 +45,11 @@ export default function MenuAIAdmin() {
   // États pour l'historique des scripts
   const [scripts, setScripts] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [executionModalOpen, setExecutionModalOpen] = useState(false);
-  const [selectedScript, setSelectedScript] = useState<any>(null);
+
+  // États pour la modale PROD
+  const [prodModalOpen, setProdModalOpen] = useState(false);
+  const [selectedProdScript, setSelectedProdScript] = useState<any>(null);
+  const [prodExecuting, setProdExecuting] = useState(false);
 
   const handleAnalyze = async () => {
     if (!command.trim()) return;
@@ -77,32 +80,72 @@ export default function MenuAIAdmin() {
   const handleExecute = async () => {
     if (!result?.sql) return;
 
-    // Confirmation pour l'environnement PROD
-    if (environment === 'PROD') {
-      const confirmed = window.confirm(
-        '⚠️ ATTENTION: Vous êtes sur l\'environnement PRODUCTION!\n\n' +
-        'Cette action va modifier la base de données de production.\n\n' +
-        'Êtes-vous absolument certain de vouloir continuer?'
-      );
-      if (!confirmed) return;
-    }
-
     setLoading(true);
     try {
+      // 1. Sauvegarder dans l'historique AVANT exécution
+      console.log('🔄 [DEBUG] Début sauvegarde historique...');
+      console.log('🔄 [DEBUG] Script SQL:', result.sql);
+      console.log('🔄 [DEBUG] Command source:', command || 'Modification manuelle');
+
+      try {
+        const savePayload = {
+          script_sql: result.sql,
+          command_source: command || 'Modification manuelle',
+          ai_explanation: result.explanation || 'Script généré',
+          category_name: result.preview?.category || 'Modification'
+        };
+
+        console.log('🔄 [DEBUG] Payload sauvegarde:', savePayload);
+
+        const saveResponse = await fetch('/api/scripts-history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(savePayload)
+        });
+
+        console.log('🔄 [DEBUG] Response status sauvegarde:', saveResponse.status);
+
+        const saveData = await saveResponse.json();
+        console.log('🔄 [DEBUG] Response data sauvegarde:', saveData);
+
+        if (saveData.success) {
+          console.log('✅ [DEBUG] Sauvegarde historique réussie');
+        } else {
+          console.error('❌ [DEBUG] Échec sauvegarde historique:', saveData.error);
+        }
+      } catch (saveError) {
+        console.error('⚠️ [DEBUG] Erreur sauvegarde historique:', saveError);
+      }
+
+      // 2. Exécution automatique en DEV (plan mis à jour)
+      console.log('🔄 [DEBUG] Début exécution SQL...');
+
       const response = await fetch('/api/execute-sql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sql: result.sql,
-          environment
+          environment: 'DEV' // Toujours DEV selon le nouveau plan
         })
       });
 
+      console.log('🔄 [DEBUG] Response status exécution:', response.status);
+
       const data = await response.json();
+      console.log('🔄 [DEBUG] Response data exécution:', data);
+
       if (data.success) {
-        setResult({ ...result, executed: true, environment: data.environment });
+        console.log('✅ [DEBUG] Exécution SQL réussie');
+        setResult({ ...result, executed: true, environment: 'DEV' });
         setCommand('');
+        // 3. Recharger l'historique pour afficher le nouveau script
+        console.log('🔄 [DEBUG] showHistory:', showHistory);
+        if (showHistory) {
+          console.log('🔄 [DEBUG] Rechargement historique...');
+          await loadScriptsHistory();
+        }
       } else {
+        console.error('❌ [DEBUG] Échec exécution SQL:', data.error);
         setResult({ ...result, error: data.error });
       }
     } catch (error) {
@@ -235,10 +278,10 @@ export default function MenuAIAdmin() {
     const sqlStatements = changes.map(change => {
       switch (change.type) {
         case 'ADD':
-          return `INSERT INTO france_products (name, slug, category_id, restaurant_id, price_on_site_base, price_delivery_base, product_type, display_order, composition, requires_steps, steps_config, created_at, updated_at) VALUES ('${change.newProduct.name}', '${change.newProduct.slug}', ${change.newProduct.category_id}, ${change.newProduct.restaurant_id}, ${change.newProduct.price_on_site_base}, ${change.newProduct.price_delivery_base}, '${change.newProduct.product_type}', ${change.newProduct.display_order}, '${change.newProduct.composition || ''}', ${change.newProduct.requires_steps}, '${JSON.stringify(change.newProduct.steps_config || {})}', NOW(), NOW())`;
+          return `INSERT INTO france_products (name, category_id, restaurant_id, price_on_site_base, price_delivery_base, product_type, display_order, composition, requires_steps, steps_config, created_at, updated_at) VALUES ('${change.newProduct.name}', ${change.newProduct.category_id}, ${change.newProduct.restaurant_id}, ${change.newProduct.price_on_site_base}, ${change.newProduct.price_delivery_base}, '${change.newProduct.product_type}', ${change.newProduct.display_order}, '${change.newProduct.composition || ''}', ${change.newProduct.requires_steps}, '${JSON.stringify(change.newProduct.steps_config || {})}', NOW(), NOW())`;
 
         case 'UPDATE':
-          return `UPDATE france_products SET name = '${change.newProduct.name}', slug = '${change.newProduct.slug}', price_on_site_base = ${change.newProduct.price_on_site_base}, price_delivery_base = ${change.newProduct.price_delivery_base}, product_type = '${change.newProduct.product_type}', composition = '${change.newProduct.composition || ''}', updated_at = NOW() WHERE id = ${change.productId}`;
+          return `UPDATE france_products SET name = '${change.newProduct.name}', price_on_site_base = ${change.newProduct.price_on_site_base}, price_delivery_base = ${change.newProduct.price_delivery_base}, product_type = '${change.newProduct.product_type}', composition = '${change.newProduct.composition || ''}', updated_at = NOW() WHERE id = ${change.productId}`;
 
         case 'DELETE':
           return `DELETE FROM france_products WHERE id = ${change.productId}`;
@@ -291,6 +334,28 @@ export default function MenuAIAdmin() {
     } catch (error) {
       console.error('Erreur exécution script:', error);
       throw error;
+    }
+  };
+
+  // Fonction : Ouvrir modale confirmation PROD
+  const openProdModal = (script: any) => {
+    setSelectedProdScript(script);
+    setProdModalOpen(true);
+  };
+
+  // Fonction : Exécuter en PROD avec modale moderne
+  const executeScriptInProd = async () => {
+    if (!selectedProdScript) return;
+
+    setProdExecuting(true);
+    try {
+      await executeScript(selectedProdScript.id, 'PROD');
+      setProdModalOpen(false);
+      setSelectedProdScript(null);
+    } catch (error) {
+      console.error('Erreur exécution PROD:', error);
+    } finally {
+      setProdExecuting(false);
     }
   };
 
@@ -631,94 +696,119 @@ export default function MenuAIAdmin() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm table-fixed">
+                    <colgroup>
+                      <col className="w-24" />
+                      <col className="w-40" />
+                      <col className="w-48" />
+                      <col className="w-24" />
+                      <col className="w-28" />
+                      <col className="w-32" />
+                    </colgroup>
                     <thead>
                       <tr className="border-b border-gray-600">
-                        <th className="text-left p-3">Date</th>
-                        <th className="text-left p-3">Commande</th>
-                        <th className="text-left p-3">Script SQL</th>
-                        <th className="text-center p-3">Statut DEV</th>
-                        <th className="text-center p-3">Statut PROD</th>
-                        <th className="text-center p-3">Actions</th>
+                        <th className="text-left p-2 text-xs font-medium">Date</th>
+                        <th className="text-left p-2 text-xs font-medium">Commande</th>
+                        <th className="text-left p-2 text-xs font-medium">Script SQL</th>
+                        <th className="text-center p-2 text-xs font-medium">DEV</th>
+                        <th className="text-center p-2 text-xs font-medium">PROD</th>
+                        <th className="text-center p-2 text-xs font-medium">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {scripts.map((script) => (
                         <tr key={script.id} className="border-b border-gray-700 hover:bg-gray-750">
-                          <td className="p-3">
-                            <div className="text-xs text-gray-300">
-                              {new Date(script.created_at).toLocaleString('fr-FR')}
+                          <td className="p-2">
+                            <div className="text-xs text-gray-300 leading-tight">
+                              {new Date(script.created_at).toLocaleDateString('fr-FR', {
+                                day: '2-digit',
+                                month: '2-digit'
+                              })}
+                              <br />
+                              {new Date(script.created_at).toLocaleTimeString('fr-FR', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
                             </div>
                           </td>
-                          <td className="p-3">
-                            <div className="max-w-48 truncate">
+                          <td className="p-2">
+                            <div className="truncate text-xs">
                               {script.command_source || 'Script généré'}
                             </div>
                             {script.category_name && (
-                              <div className="text-xs text-blue-300">
+                              <div className="text-xs text-blue-300 truncate">
                                 📂 {script.category_name}
                               </div>
                             )}
                           </td>
-                          <td className="p-3">
-                            <div className="max-w-64 truncate bg-gray-900 px-2 py-1 rounded text-green-400 font-mono text-xs">
-                              {script.script_sql}
+                          <td className="p-2">
+                            <div className="relative group">
+                              <div className="bg-gray-900 px-2 py-1 rounded text-green-400 font-mono text-xs truncate cursor-pointer hover:bg-gray-800"
+                                   onClick={() => navigator.clipboard.writeText(script.script_sql)}
+                                   title="Cliquer pour copier le script complet">
+                                {script.script_sql.includes('UPDATE')
+                                  ? script.script_sql.match(/UPDATE[^;]+/)?.[0] || 'UPDATE...'
+                                  : script.script_sql.includes('INSERT')
+                                  ? 'INSERT...'
+                                  : script.script_sql.includes('DELETE')
+                                  ? 'DELETE...'
+                                  : script.script_sql.substring(0, 30) + '...'
+                                }
+                              </div>
+                              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-blue-400 text-xs">📋</span>
+                              </div>
                             </div>
-                            <button
-                              onClick={() => navigator.clipboard.writeText(script.script_sql)}
-                              className="text-blue-400 hover:text-blue-300 text-xs mt-1"
-                            >
-                              📋 Copier
-                            </button>
                           </td>
-                          <td className="p-3 text-center">
-                            <span className={`px-2 py-1 rounded text-xs ${
+                          <td className="p-2 text-center">
+                            <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
                               script.dev_status === 'executed' ? 'bg-green-600' :
                               script.dev_status === 'error' ? 'bg-red-600' :
                               script.dev_status === 'rolled_back' ? 'bg-blue-600' :
                               'bg-yellow-600'
                             }`}>
-                              {script.dev_status === 'pending' && '⏳ En attente'}
-                              {script.dev_status === 'executed' && '✅ Exécuté'}
-                              {script.dev_status === 'error' && '❌ Erreur'}
-                              {script.dev_status === 'rolled_back' && '↩️ Annulé'}
+                              {script.dev_status === 'pending' && '⏳'}
+                              {script.dev_status === 'executed' && '✅'}
+                              {script.dev_status === 'error' && '❌'}
+                              {script.dev_status === 'rolled_back' && '↩️'}
                             </span>
                           </td>
-                          <td className="p-3 text-center">
-                            <span className={`px-2 py-1 rounded text-xs ${
+                          <td className="p-2 text-center">
+                            <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
                               script.prod_status === 'executed' ? 'bg-green-600' :
                               script.prod_status === 'error' ? 'bg-red-600' :
                               script.prod_status === 'rolled_back' ? 'bg-blue-600' :
                               script.prod_status === 'not_applied' ? 'bg-gray-600' :
                               'bg-yellow-600'
                             }`}>
-                              {script.prod_status === 'not_applied' && '➖ Non appliqué'}
-                              {script.prod_status === 'pending' && '⏳ En attente'}
-                              {script.prod_status === 'executed' && '✅ Exécuté'}
-                              {script.prod_status === 'error' && '❌ Erreur'}
-                              {script.prod_status === 'rolled_back' && '↩️ Annulé'}
+                              {script.prod_status === 'not_applied' && '➖'}
+                              {script.prod_status === 'pending' && '⏳'}
+                              {script.prod_status === 'executed' && '✅'}
+                              {script.prod_status === 'error' && '❌'}
+                              {script.prod_status === 'rolled_back' && '↩️'}
                             </span>
                           </td>
-                          <td className="p-3">
-                            <div className="flex flex-col gap-1">
-                              {/* Bouton Exécuter */}
-                              <button
-                                onClick={() => {
-                                  setSelectedScript(script);
-                                  setExecutionModalOpen(true);
-                                }}
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                              >
-                                ▶️ Exécuter
-                              </button>
+                          <td className="p-2">
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {/* Nouveau plan: Icône PROD pour appliquer en production */}
+                              {script.prod_status === 'not_applied' && (
+                                <button
+                                  onClick={() => openProdModal(script)}
+                                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap"
+                                  title="Appliquer en PRODUCTION"
+                                >
+                                  🔴 PROD
+                                </button>
+                              )}
 
-                              {/* Boutons Rollback */}
+                              {/* Boutons Rollback compacts */}
                               {script.dev_status === 'executed' && (
                                 <button
                                   onClick={() => generateRollback(script.id)}
                                   className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-xs"
+                                  title="Rollback DEV"
                                 >
-                                  ↩️ Rollback DEV
+                                  ↩️
                                 </button>
                               )}
 
@@ -726,18 +816,20 @@ export default function MenuAIAdmin() {
                                 <button
                                   onClick={() => generateRollback(script.id)}
                                   className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
+                                  title="Rollback PROD"
                                 >
-                                  ↩️ Rollback PROD
+                                  ↩️
                                 </button>
                               )}
 
-                              {/* Bouton Supprimer */}
-                              {script.dev_status === 'pending' && script.prod_status === 'not_applied' && (
+                              {/* Bouton Supprimer compact */}
+                              {script.prod_status === 'not_applied' && (
                                 <button
                                   onClick={() => deleteScript(script.id)}
-                                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
+                                  className="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs"
+                                  title="Supprimer"
                                 >
-                                  🗑️ Supprimer
+                                  🗑️
                                 </button>
                               )}
                             </div>
@@ -767,13 +859,15 @@ export default function MenuAIAdmin() {
         onSave={handleModalSave}
       />
 
-      {/* Modale d'Exécution */}
-      <ExecutionModal
-        isOpen={executionModalOpen}
-        onClose={() => setExecutionModalOpen(false)}
-        script={selectedScript}
-        onExecute={executeScript}
+      {/* Modale Confirmation PROD */}
+      <ProdConfirmModal
+        isOpen={prodModalOpen}
+        onClose={() => setProdModalOpen(false)}
+        onConfirm={executeScriptInProd}
+        scriptPreview={selectedProdScript?.script_sql || ''}
+        loading={prodExecuting}
       />
+
     </div>
   );
 }

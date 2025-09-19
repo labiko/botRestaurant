@@ -22,7 +22,6 @@ export interface Product {
 export interface Category {
   id: number;
   name: string;
-  slug: string;
   icon: string;
   display_order: number;
   restaurant_id: number;
@@ -31,7 +30,6 @@ export interface Category {
 export interface Restaurant {
   id: number;
   name: string;
-  slug: string;
 }
 
 export class SupabaseDataLoader {
