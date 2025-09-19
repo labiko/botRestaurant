@@ -15,7 +15,6 @@ interface Product {
   composition?: string;
   requires_steps: boolean;
   steps_config?: any;
-  slug: string;
   category_id: number;
   restaurant_id: number;
 }
@@ -69,17 +68,6 @@ export default function CategoryEditModal({
       updatedProducts[index].price_delivery_base = parseFloat(value) + 1;
     }
 
-    // Auto-génération slug
-    if (field === 'name') {
-      updatedProducts[index].slug = value
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9\s-]/g, "")
-        .trim()
-        .replace(/\s+/g, "-");
-    }
-
     setProducts(updatedProducts);
 
     // Tracker les changements
@@ -114,7 +102,6 @@ export default function CategoryEditModal({
       composition: '',
       requires_steps: false,
       steps_config: {},
-      slug: 'nouveau-produit',
       category_id: category.id,
       restaurant_id: 1
     };

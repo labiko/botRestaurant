@@ -42,6 +42,8 @@ export class UniversalBot implements IMessageHandler {
    * ✅ Version finale optimisée avec format Paris validé + DEBUG
    */
   private getCurrentTime(): Date {
+    console.log('🕐 [DEBUG_TIMEZONE] === DÉBUT getCurrentTime() ===');
+
     // Formatter pour timezone Paris (gère automatiquement heure d'été/hiver)
     const parisFormatter = new Intl.DateTimeFormat('fr-FR', {
       timeZone: 'Europe/Paris',
@@ -55,13 +57,17 @@ export class UniversalBot implements IMessageHandler {
     });
 
     const utcNow = new Date();
+    console.log('🕐 [DEBUG_TIMEZONE] UTC brut:', utcNow.toISOString());
+
+    // Format: "17/09/2025 22:06:36" (validé comme correct)
     const parisFormatted = parisFormatter.format(utcNow);
+    console.log('🕐 [DEBUG_TIMEZONE] Paris formaté:', parisFormatted);
 
     // Parsing du format DD/MM/YYYY HH:mm:ss
     const parts = parisFormatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
     if (parts) {
       const [, day, month, year, hour, minute, second] = parts;
-      return new Date(
+      const parisDate = new Date(
         parseInt(year),
         parseInt(month) - 1, // Mois 0-indexé
         parseInt(day),
@@ -69,10 +75,19 @@ export class UniversalBot implements IMessageHandler {
         parseInt(minute),
         parseInt(second)
       );
+
+      console.log('🕐 [DEBUG_TIMEZONE] Paris Date finale:', {
+        date: parisDate,
+        iso: parisDate.toISOString(),
+        difference_hours: Math.round((parisDate.getTime() - utcNow.getTime()) / (1000 * 60 * 60))
+      });
+
+      console.log('🕐 [DEBUG_TIMEZONE] === FIN getCurrentTime() - RETOUR PARIS ===');
+      return parisDate;
     }
 
-    // Fallback UTC si parsing échoue
-    console.warn('⚠️ [getCurrentTime] Parsing Paris échoué, fallback UTC');
+    // Fallback UTC si parsing échoue (ne devrait jamais arriver)
+    console.warn('🕐 [DEBUG_TIMEZONE] === FALLBACK UTC - PARSING ÉCHOUÉ ===');
     return utcNow;
   }
   private compositeWorkflowExecutor: CompositeWorkflowExecutor;
@@ -207,9 +222,11 @@ export class UniversalBot implements IMessageHandler {
    * COPIE EXACTE DE LA LOGIQUE ORIGINALE pour maintenir la compatibilité
    */
   async handleMessage(phoneNumber: string, message: string): Promise<void> {
+    console.log('🔍 RESTAURANT_ID_DEBUG - HANDLE MESSAGE:', { phoneNumber, message });
     try {
       // PRIORITÉ 1: Détection numéro téléphone restaurant (accès QR code)
       const isPhone = this.isPhoneNumberFormat(message);
+      console.log('🔍 RESTAURANT_ID_DEBUG - isPhone:', isPhone);
       
       if (isPhone) {
         console.log('📱 Format téléphone détecté:', message);
@@ -249,12 +266,27 @@ export class UniversalBot implements IMessageHandler {
       // PRIORITÉ 4: Gestion complète des messages selon l'état de session
 
       // ANTI-SESSION PARASITE : Vérifier existence session AVANT getSession()
+      console.log('🔍 DEBUG_SESSION_CREATION - AVANT vérification existence session');
       const sessionExists = await this.sessionManager.checkSessionExists(phoneNumber);
+
+      console.log('🔍 DEBUG_SESSION_CREATION - Contrôle anti-parasite:', {
+        sessionExists: sessionExists,
+        message: message,
+        messageLength: message.length,
+        isResto: message.toLowerCase() === 'resto',
+        isPhoneNumber: this.isPhoneNumber(message),
+        shouldBlock: !sessionExists && message.toLowerCase() !== 'resto' && !this.isPhoneNumber(message)
+      });
 
       if (!sessionExists &&
           message.toLowerCase() !== 'resto' &&
           !this.isPhoneNumber(message)) {
 
+        console.log('🚫 DEBUG_SESSION_CREATION - MESSAGE BLOQUÉ:', {
+          message: message,
+          phoneNumber: phoneNumber,
+          reason: 'Anti-parasite protection - session inexistante'
+        });
 
         await this.messageSender.sendMessage(phoneNumber,
           `⏰ *SESSION EXPIRÉE !*
@@ -272,7 +304,9 @@ export class UniversalBot implements IMessageHandler {
       }
 
       // Maintenant on peut récupérer la session en sécurité
+      console.log('🔍 RESTAURANT_ID_DEBUG - AVANT getSession pour message:', message);
       const session = await this.sessionManager.getSession(phoneNumber);
+      console.log('🔍 RESTAURANT_ID_DEBUG - SESSION récupérée:', {
         exists: !!session,
         id: session?.id,
         restaurantId: session?.restaurantId,
@@ -290,6 +324,7 @@ export class UniversalBot implements IMessageHandler {
         phoneNumber: phoneNumber
       });
 
+      console.log('🔍 RESTAURANT_ID_DEBUG - TEST CONDITIONS:', {
         sessionExists: !!session,
         hasRestaurantId: !!session?.restaurantId,
         restaurantIdValue: session?.restaurantId,
@@ -316,6 +351,7 @@ export class UniversalBot implements IMessageHandler {
       }
       
       // PRIORITÉ 5: Réponse par défaut
+      console.log('📤 DEBUG_SESSION_CREATION - Réponse par défaut sans session:', {
         message: message,
         phoneNumber: phoneNumber,
         reason: 'Aucune session et pas resto/numéro'
@@ -326,6 +362,7 @@ export class UniversalBot implements IMessageHandler {
 
     } catch (error) {
       console.error('❌ [UniversalBot] Erreur traitement message:', error);
+      console.log('💥 DEBUG_SESSION_CREATION - EXCEPTION dans processMessage:', {
         error: error.message,
         phoneNumber: phoneNumber,
         message: message,
@@ -671,6 +708,7 @@ export class UniversalBot implements IMessageHandler {
 
     console.error('💥 [UniversalBot] Erreur globale:', error);
 
+    console.log('🔍 DEBUG_SESSION_CREATION - handleError appelé:', {
       phoneNumber: phoneNumber,
       errorMessage: error.message,
       errorStack: error.stack,
@@ -805,13 +843,19 @@ export class UniversalBot implements IMessageHandler {
       try {
         await this.sessionManager.deleteSessionsByPhone(phoneNumber);
         console.log('✅ [STEP1] Sessions supprimées avec succès');
+        console.log('🔍 [DEBUG_RESTAURANT_ACCESS] === STEP1 SUCCÈS ===');
       } catch (deleteError) {
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] === STEP1 ÉCHEC ===');
         console.error('❌ [STEP1] Erreur suppression sessions:', deleteError);
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] deleteError.message:', deleteError?.message);
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] deleteError.stack:', deleteError?.stack);
         throw deleteError;
       }
       
       // 🎯 [STEP2] Création nouvelle session restaurant
+      console.log('🔍 [DEBUG_RESTAURANT_ACCESS] === STEP2 DÉBUT ===');
       console.log('🎯 [STEP2] Création nouvelle session restaurant...');
+      console.log('🔍 [DEBUG_RESTAURANT_ACCESS] Restaurant data:', JSON.stringify({
         id: restaurant.id,
         name: restaurant.name,
         timezone: restaurant.timezone
@@ -973,6 +1017,11 @@ export class UniversalBot implements IMessageHandler {
    * Maintient la compatibilité exacte avec le workflow existant
    */
   private async handleSessionMessage(phoneNumber: string, session: any, message: string): Promise<void> {
+    console.log(`🔍 DEBUG_MENU: === DÉBUT handleSessionMessage ===`);
+    console.log(`🔍 DEBUG_MENU: Message reçu: "${message}"`);
+    console.log(`🔍 DEBUG_MENU: Session ID: ${session.id}`);
+    console.log(`🔍 DEBUG_MENU: Session currentState: ${session.currentState}`);
+    console.log(`🔍 DEBUG_MENU: Session sessionData:`, session.sessionData ? JSON.stringify(session.sessionData, null, 2) : 'null');
     
     const normalizedMessage = message.toLowerCase().trim();
     
@@ -999,6 +1048,8 @@ export class UniversalBot implements IMessageHandler {
       contextKeys: session.sessionData ? Object.keys(session.sessionData) : []
     });
 
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer TOUS les passages par le routeur principal
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleMessage ROUTER:', {
       phoneNumber,
       message,
       botState: session.botState,
@@ -1052,6 +1103,7 @@ export class UniversalBot implements IMessageHandler {
         break;
         
       case 'MENU_PIZZA_WORKFLOW':
+        console.log(`🔍 DEBUG_MENU: Traitement MENU_PIZZA_WORKFLOW avec message: "${message}"`);
         await this.compositeWorkflowExecutor.handleMenuPizzaResponse(phoneNumber, session, message);
         break;
         
@@ -1076,6 +1128,8 @@ export class UniversalBot implements IMessageHandler {
         break;
         
       case 'AWAITING_QUANTITY':
+        // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer le passage par AWAITING_QUANTITY  
+        console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleMessage AWAITING_QUANTITY:', {
           phoneNumber,
           message,
           selectedProduct: session.sessionData?.selectedProduct?.name || null,
@@ -1125,6 +1179,10 @@ export class UniversalBot implements IMessageHandler {
         break;
         
       default:
+        console.log(`🔍 DEBUG_MENU: ERREUR - État session non géré: "${session.botState}"`);
+        console.log(`🔍 DEBUG_MENU: ERREUR - currentState: "${session.currentState}"`);
+        console.log(`🔍 DEBUG_MENU: ERREUR - Message: "${message}"`);
+        console.log(`🔍 DEBUG_MENU: ERREUR - sessionData:`, session.sessionData);
         await this.messageSender.sendMessage(phoneNumber, 
           `❌ État de session non reconnu.\nTapez le numéro du restaurant pour recommencer.`);
         break;
@@ -1334,6 +1392,8 @@ export class UniversalBot implements IMessageHandler {
       totalPrice: session.sessionData?.totalPrice || 0
     });
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer currentCategoryName au moment de la sélection produit
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection:', {
       phoneNumber,
       message,
       currentCategoryName: session.sessionData?.currentCategoryName,
@@ -1389,6 +1449,7 @@ export class UniversalBot implements IMessageHandler {
     const hasPizzaMap = session.sessionData?.pizzaOptionsMap || session.workflowData?.pizzaOptionsMap;
 
     // 🚨 LOGS CRITIQUES : Analyser détection Menu Pizza vs Pizza simple
+    console.log(`🚨 [PIZZA_DETECTION_DEBUG] Analyse contexte pizza:`, {
       currentCategoryName: session.sessionData?.currentCategoryName,
       currentCategorySlug: session.sessionData?.currentCategorySlug,
       hasPizzaMap: !!hasPizzaMap,
@@ -1404,7 +1465,9 @@ export class UniversalBot implements IMessageHandler {
     if (hasPizzaMap) {
       maxValidChoice = session.sessionData?.totalPizzaOptions || session.workflowData?.totalPizzaOptions || products.length;
       console.log(`🍕 [ProductSelection] Mode pizza unifié - Accepte jusqu'à ${maxValidChoice}`);
+      console.log(`🚨 [PIZZA_DETECTION_DEBUG] LOGIQUE MENU PIZZA ACTIVÉE ! maxValidChoice étendu à ${maxValidChoice}`);
     } else {
+      console.log(`🚨 [PIZZA_DETECTION_DEBUG] LOGIQUE NORMALE - maxValidChoice = ${maxValidChoice}`);
     }
     
     if (isNaN(productNumber) || productNumber < 1 || productNumber > maxValidChoice) {
@@ -1428,6 +1491,7 @@ export class UniversalBot implements IMessageHandler {
     const pizzaOptionsMap = session.sessionData?.pizzaOptionsMap || session.workflowData?.pizzaOptionsMap;
     const totalPizzaOptions = session.sessionData?.totalPizzaOptions || session.workflowData?.totalPizzaOptions;
 
+    console.log(`🧹 [PIZZA_CLEANUP_DEBUG] Validation contexte pizzaOptionsMap:`, {
       currentCategoryName: session.sessionData?.currentCategoryName,
       hasPizzaMap: !!pizzaOptionsMap,
       mapLength: pizzaOptionsMap?.length || 0,
@@ -1516,6 +1580,8 @@ export class UniversalBot implements IMessageHandler {
     // Vérifier si le produit nécessite des étapes (workflow composite)
     let isComposite = selectedProduct.requires_steps || selectedProduct.workflow_type || selectedProduct.type === 'composite';
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer la détection composite initiale
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection composite detection:', {
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       isComposite,
@@ -1544,6 +1610,8 @@ export class UniversalBot implements IMessageHandler {
         isComposite = true;
         console.log(`✅ [ProductSelection] ${selectedProduct.name} détecté comme ayant des variantes de taille`);
         
+        // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer la conversion modular vers composite
+        console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection modular->composite:', {
           productId: selectedProduct.id,
           productName: selectedProduct.name,
           product_type: selectedProduct.product_type,
@@ -1582,6 +1650,8 @@ export class UniversalBot implements IMessageHandler {
         // Lancer le workflow composite universel
         console.log(`🚀 [ProductSelection] Tentative de démarrage workflow composite pour: ${selectedProduct.name}`);
         
+        // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer le démarrage du workflow composite
+        console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection startCompositeWorkflow:', {
           productId: selectedProduct.id,
           productName: selectedProduct.name,
           currentCategoryName: session.sessionData?.currentCategoryName,
@@ -1609,6 +1679,8 @@ export class UniversalBot implements IMessageHandler {
     // Produit simple - Stocker et traiter avec quantité 1
     console.log('📦 [ProductSelection] Produit simple - Traitement direct avec quantité 1');
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer le workflow simple (non-composite)
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection simple workflow:', {
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       product_type: selectedProduct.product_type,
@@ -1621,6 +1693,7 @@ export class UniversalBot implements IMessageHandler {
     const tempSession = {
       ...session,
       sessionData: (() => {
+        console.log('🚨 [SPREAD_DEBUG_001] UniversalBot ligne 1480');
         return {
           ...session.sessionData,
           selectedProduct: selectedProduct
@@ -1701,7 +1774,10 @@ export class UniversalBot implements IMessageHandler {
         );
         
         // Mettre à jour la session pour gérer la sélection
+        console.log('🚨 [SPREAD_DEBUG_002] UniversalBot ligne 1564');
         
+        // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer quand currentCategoryName est défini (ligne 1608)
+        console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.showProductsInCategory ligne 1608:', {
           categoryId,
           categoryName: category.name,
           phoneNumber,
@@ -1870,7 +1946,10 @@ export class UniversalBot implements IMessageHandler {
       // 4. Mettre à jour la session avec les produits et l'état
       console.log('📝 [ShowProducts] Mise à jour session avec produits');
       
+      console.log('🚨 [SPREAD_DEBUG_003] UniversalBot ligne 1725');
       
+      // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer quand currentCategoryName est défini (ligne 1770)
+      console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.showProductsInCategory ligne 1770:', {
         categoryId,
         categoryName: category.name,
         phoneNumber,
@@ -1921,6 +2000,7 @@ export class UniversalBot implements IMessageHandler {
         await this.sessionManager.updateSession(phoneNumber, {
           botState: session.botState,
           sessionData: (() => {
+            console.log('🚨 [SPREAD_DEBUG_004] UniversalBot ligne 1767');
             return {
               ...session.sessionData,
               cart: [],
@@ -2097,6 +2177,7 @@ export class UniversalBot implements IMessageHandler {
       await this.sessionManager.updateSession(session.id, {
         botState: 'AWAITING_ADDRESS_CHOICE',
         sessionData: (() => {
+          console.log('🚨 [SPREAD_DEBUG_005] UniversalBot ligne 1951');
           return {
             ...session.sessionData,
             existingAddresses
@@ -2540,6 +2621,8 @@ export class UniversalBot implements IMessageHandler {
     const quantity = parseInt(message.trim());
     const selectedProduct = session.sessionData?.selectedProduct;
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer handleQuantityInput pour workflow simple
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleQuantityInput:', {
       phoneNumber,
       message,
       productId: selectedProduct?.id,
@@ -2621,6 +2704,7 @@ export class UniversalBot implements IMessageHandler {
     console.log(`⏱️ [PERF] WhatsApp message sent - ${Date.now() - startTime}ms elapsed`);
     
     // Mettre à jour la session
+    console.log('🚨 [SPREAD_DEBUG_006] UniversalBot ligne 2454');
     const updatedData = {
       ...session.sessionData,
       cart: cart,

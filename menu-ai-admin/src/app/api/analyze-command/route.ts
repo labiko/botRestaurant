@@ -89,9 +89,9 @@ Tu dois analyser le PATTERN des produits existants dans chaque catégorie pour :
 1. **IDs RÉELS OBLIGATOIRES** : Utiliser les vrais IDs de la base
 2. **Prix automatiques** : Livraison = Sur place + 1€
 3. **Display_order intelligent** : MAX(display_order) + 1 dans la catégorie
-4. **Slug généré** : Minuscules, tirets, sans accents (ex: "salade-italienne")
-5. **Type auto-détecté** : Selon les patterns de la catégorie
-6. **Composition cohérente** : Respecter le style des descriptions existantes
+4. **Type auto-détecté** : Selon les patterns de la catégorie
+5. **Composition cohérente** : Respecter le style des descriptions existantes
+6. ⚠️ **NE JAMAIS inclure de colonne 'slug'** : N'existe pas dans france_products
 
 🎨 DÉTECTION DE PATTERNS AVANCÉE :
 Analyse les produits existants pour comprendre :
@@ -99,7 +99,6 @@ Analyse les produits existants pour comprendre :
 - Structure des descriptions (courte/longue, avec/sans ingrédients)
 - Gamme de prix par catégorie
 - Type de workflow (simple/composite/modular)
-- Format des slugs
 
 💡 INTELLIGENCE PRÉDICTIVE :
 - Si on ajoute une "Pizza Italienne" → Détecter catégorie "Pizzas", type probable 'composite'
@@ -109,7 +108,7 @@ Analyse les produits existants pour comprendre :
 RÉPONSE JSON ULTRA-STRUCTURÉE :
 {
   "success": true,
-  "sql": "BEGIN; INSERT INTO france_products (name, slug, category_id, restaurant_id, price_on_site_base, price_delivery_base, product_type, display_order, composition, requires_steps, steps_config, created_at, updated_at) VALUES ('Salade Italienne', 'salade-italienne', 15, 1, 9.50, 10.50, 'simple', 7, 'Salade verte, tomates, mozzarella, basilic, vinaigrette italienne', false, '{}', NOW(), NOW()); COMMIT;",
+  "sql": "BEGIN; INSERT INTO france_products (name, category_id, restaurant_id, price_on_site_base, price_delivery_base, product_type, display_order, composition, requires_steps, steps_config, created_at, updated_at) VALUES ('Salade Italienne', 15, 1, 9.50, 10.50, 'simple', 7, 'Salade verte, tomates, mozzarella, basilic, vinaigrette italienne', false, '{}', NOW(), NOW()); COMMIT;",
   "explanation": "Ajout intelligent d'une nouvelle salade en respectant le pattern existant : nom simple, prix cohérent, type 'simple', composition détaillée",
   "preview": {
     "action": "Ajout produit",
@@ -168,6 +167,30 @@ RAPPEL : Réponds UNIQUEMENT avec du JSON valide, pas de texte avant ou après !
         error: 'Réponse IA invalide: ' + aiResponse.substring(0, 200),
         confidence: 0
       };
+    }
+
+    // Sauvegarder le script dans l'historique si succès
+    if (parsedResponse.success && parsedResponse.sql) {
+      try {
+        console.log('💾 Sauvegarde du script dans l\'historique...');
+
+        const saveResponse = await fetch(`${request.url.replace('/analyze-command', '/scripts-history')}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            script_sql: parsedResponse.sql,
+            command_source: command,
+            ai_explanation: parsedResponse.explanation,
+            category_name: parsedResponse.preview?.category
+          })
+        });
+
+        if (!saveResponse.ok) {
+          console.error('⚠️ Erreur sauvegarde historique');
+        }
+      } catch (saveError) {
+        console.error('⚠️ Erreur sauvegarde historique:', saveError);
+      }
     }
 
     return NextResponse.json(parsedResponse);

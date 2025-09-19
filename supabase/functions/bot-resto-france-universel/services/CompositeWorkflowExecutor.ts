@@ -70,28 +70,43 @@ export class CompositeWorkflowExecutor {
     product: any,
     session: any
   ): Promise<void> {
+    console.log(`🔍 DEBUG_MENU: Démarrage startMenuPizzaWorkflow pour: ${product.name}`);
+    console.log(`🔍 DEBUG_MENU: Produit reçu:`, product);
+    console.log(`🔍 DEBUG_MENU: Session reçue:`, { sessionId: session.id, currentState: session.currentState });
     
     try {
+        console.log(`🔍 DEBUG_MENU: Vérification steps_config...`);
+        console.log(`🔍 DEBUG_MENU: product.steps_config existe: ${!!product.steps_config}`);
         
         if (product.steps_config) {
+            console.log(`🔍 DEBUG_MENU: steps_config contenu:`, product.steps_config);
         }
         
         const menuConfig = product.steps_config?.menu_config;
+        console.log(`🔍 DEBUG_MENU: menuConfig extrait: ${!!menuConfig}`);
         
         if (!menuConfig) {
+            console.log(`🔍 DEBUG_MENU: ERREUR - menuConfig manquant`);
+            console.log(`🔍 DEBUG_MENU: steps_config disponible:`, product.steps_config);
             throw new Error('Configuration du menu manquante');
         }
 
+        console.log(`🔍 DEBUG_MENU: menuConfig trouvé:`, menuConfig);
+        console.log(`🔍 DEBUG_MENU: Appel initializeMenuWorkflow...`);
 
         // Initialiser le workflow dans la session
         await this.initializeMenuWorkflow(phoneNumber, session, product, menuConfig);
         
+        console.log(`🔍 DEBUG_MENU: initializeMenuWorkflow terminé, appel processNextMenuComponent...`);
         
         // Démarrer avec le premier composant
         await this.processNextMenuComponent(phoneNumber, session, 0);
         
+        console.log(`🔍 DEBUG_MENU: processNextMenuComponent terminé avec succès`);
         
     } catch (error) {
+        console.error('🔍 DEBUG_MENU: ERREUR CAPTURÉE:', error);
+        console.error('🔍 DEBUG_MENU: Stack trace:', error.stack);
         await this.messageSender.sendMessage(phoneNumber, 
             '❌ Erreur lors de la configuration du menu. Tapez "resto" pour recommencer.');
     }
@@ -108,6 +123,8 @@ export class CompositeWorkflowExecutor {
   ): Promise<void> {
     console.log(`🔄 [CompositeWorkflow] Démarrage workflow pour: ${product.name}`);
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer l'entrée dans CompositeWorkflowExecutor
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - CompositeWorkflowExecutor.startCompositeWorkflow:', {
       productId: product.id,
       productName: product.name,
       currentCategoryName: session.sessionData?.currentCategoryName,
@@ -138,13 +155,18 @@ export class CompositeWorkflowExecutor {
       
       if (error || !productOptions || productOptions.length === 0) {
         // PRIORITÉ 3: Vérifier steps_config si pas d'options dans france_product_options
+        console.log(`🔍 [DEBUG-STEPS-CHICKEN-BOX] Produit: ${product.name}`);
+        console.log(`🔍 [DEBUG-STEPS-CHICKEN-BOX] steps_config brut:`, product.steps_config);
+        console.log(`🔍 [DEBUG-STEPS-CHICKEN-BOX] Type steps_config:`, typeof product.steps_config);
         
         // Convertir steps_config en objet si c'est un string JSON
         let stepsConfig = product.steps_config;
         if (typeof stepsConfig === 'string') {
           try {
             stepsConfig = JSON.parse(stepsConfig);
+            console.log(`🔄 [DEBUG-STEPS-CHICKEN-BOX] steps_config parsé:`, stepsConfig);
           } catch (parseError) {
+            console.error(`❌ [DEBUG-STEPS-CHICKEN-BOX] Erreur parsing JSON:`, parseError);
           }
         }
         
@@ -155,6 +177,7 @@ export class CompositeWorkflowExecutor {
           await this.handleStepsConfigWorkflow(phoneNumber, session, productWithParsedConfig);
           return;
         } else {
+          console.log(`❌ [DEBUG-STEPS-CHICKEN-BOX] steps_config invalide:`, {
             hasStepsConfig: !!stepsConfig,
             hasSteps: !!(stepsConfig && stepsConfig.steps),
             stepsLength: stepsConfig && stepsConfig.steps ? stepsConfig.steps.length : 0
@@ -303,6 +326,8 @@ export class CompositeWorkflowExecutor {
         sizeList.sort((a, b) => a.price_on_site - b.price_on_site);
         
         // Sélectionner la bonne variante selon le mode
+        console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Mode: ${deliveryMode}`);
+        console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Tailles disponibles:`, sizeList.map(s => ({
           name: s.size_name,
           price_on_site: s.price_on_site,
           price_delivery: s.price_delivery
@@ -312,6 +337,7 @@ export class CompositeWorkflowExecutor {
         if (deliveryMode === 'livraison') {
           // Prendre la variante avec prix livraison (généralement la plus chère)
           selectedSize = sizeList.find(s => s.price_delivery > s.price_on_site) || sizeList[sizeList.length - 1];
+          console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Sélection livraison:`, {
             found: !!sizeList.find(s => s.price_delivery > s.price_on_site),
             selectedSize: selectedSize ? {
               name: selectedSize.size_name,
@@ -322,6 +348,7 @@ export class CompositeWorkflowExecutor {
         } else {
           // Prendre la variante avec prix sur place (généralement la moins chère)
           selectedSize = sizeList[0];
+          console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Sélection sur place:`, {
             name: selectedSize.size_name,
             price_on_site: selectedSize.price_on_site,
             price_delivery: selectedSize.price_delivery
@@ -396,6 +423,7 @@ export class CompositeWorkflowExecutor {
         (variant.price_delivery || variant.price_on_site) :
         (variant.price_on_site || variant.base_price);
 
+      console.log(`🔍 [DEBUG_PRICE] Calcul prix final - ${variant.variant_name}:`, {
         deliveryMode,
         price_delivery: variant.price_delivery,
         price_on_site: variant.price_on_site,
@@ -435,6 +463,7 @@ export class CompositeWorkflowExecutor {
     await this.messageSender.sendMessage(phoneNumber, message);
     
     // Mettre à jour la session avec les variantes configurées
+    console.log('🚨 [SPREAD_DEBUG_007] CompositeWorkflowExecutor ligne 381');
     const updatedData = {
       ...session.sessionData,
       variantSelection: true,
@@ -507,6 +536,7 @@ export class CompositeWorkflowExecutor {
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);
 
       // Reset session state vers AWAITING_MENU_CHOICE
+      console.log('🚨 [SPREAD_DEBUG_008] CompositeWorkflowExecutor ligne 451');
       const updatedData = {
         ...session.sessionData,
         selectedProduct: null,
@@ -539,6 +569,7 @@ export class CompositeWorkflowExecutor {
       }
       
       // Chargement dynamique des catégories depuis la BDD
+      console.log(`🔍 [CATBUG_DEBUG] Restaurant ID utilisé: ${restaurant.data.id}`);
       
       const { data: categories, error: catError } = await supabase
         .from('france_menu_categories')
@@ -547,7 +578,10 @@ export class CompositeWorkflowExecutor {
         .eq('is_active', true)
         .order('display_order');
 
+      console.log(`🔍 [CATBUG_DEBUG] Catégories récupérées depuis BDD: ${categories ? categories.length : 'null'}`);
       if (categories) {
+        console.log(`🔍 [CATBUG_DEBUG] Premières catégories: ${categories.slice(0, 5).map(c => c.name).join(', ')}`);
+        console.log(`🔍 [CATBUG_DEBUG] Dernières catégories: ${categories.slice(-3).map(c => c.name).join(', ')}`);
       }
 
       if (catError || !categories || categories.length === 0) {
@@ -574,6 +608,7 @@ export class CompositeWorkflowExecutor {
       await this.messageSender.sendMessage(phoneNumber, menuText);
       
       // Mettre à jour la session vers VIEWING_MENU (comme dans showMenuAfterDeliveryModeChoice)
+      console.log('🚨 [SPREAD_DEBUG_009] CompositeWorkflowExecutor ligne 525');
       const updatedSessionData = {
         ...session.sessionData,
         categories: categories,
@@ -586,7 +621,12 @@ export class CompositeWorkflowExecutor {
         compositeWorkflow: null
       };
       
+      console.log(`🔍 [CATBUG_DEBUG] AVANT sauvegarde session - categories.length: ${categories.length}`);
+      console.log(`🔍 [CATBUG_DEBUG] updatedSessionData.categories.length: ${updatedSessionData.categories.length}`);
+      console.log(`🔍 [CATBUG_DEBUG] Dernières categories dans updatedSessionData: ${updatedSessionData.categories.slice(-3).map(c => c.name).join(', ')}`);
       
+      console.log(`🔄 [STATE_DEBUG] AVANT mise à jour état - Ancien état: ${session.botState}`);
+      console.log(`🔄 [STATE_DEBUG] Transition vers: VIEWING_MENU`);
       
       const { error: updateError } = await supabase
         .from('france_user_sessions')
@@ -597,7 +637,11 @@ export class CompositeWorkflowExecutor {
         .eq('id', session.id);
         
       if (updateError) {
+        console.error(`❌ [CATBUG_DEBUG] Erreur sauvegarde session:`, updateError);
+        console.error(`❌ [STATE_DEBUG] Échec transition état vers VIEWING_MENU`);
       } else {
+        console.log(`✅ [CATBUG_DEBUG] Session sauvegardée avec ${categories.length} catégories`);
+        console.log(`✅ [STATE_DEBUG] État transitionné vers VIEWING_MENU`);
       }
       
       // Vérifier ce qui a été vraiment sauvegardé
@@ -611,10 +655,14 @@ export class CompositeWorkflowExecutor {
         const savedCategories = verifySession.session_data?.categories || [];
         const savedState = verifySession.bot_state;
         
+        console.log(`🔍 [CATBUG_DEBUG] APRÈS sauvegarde - categories sauvegardées: ${savedCategories.length}`);
+        console.log(`🔍 [STATE_DEBUG] APRÈS sauvegarde - état sauvegardé: ${savedState}`);
         
         if (savedCategories.length !== categories.length) {
+          console.error(`❌ [CATBUG_DEBUG] PROBLÈME ! ${categories.length} catégories envoyées mais ${savedCategories.length} sauvegardées`);
         }
         if (savedState !== 'VIEWING_MENU') {
+          console.error(`❌ [STATE_DEBUG] PROBLÈME ! État attendu: VIEWING_MENU, État sauvegardé: ${savedState}`);
         }
       }
       
@@ -944,12 +992,17 @@ export class CompositeWorkflowExecutor {
     workflowData: any,
     stepIndex: number
   ): Promise<void> {
+    console.log(`🚨 [DEBUG-showWorkflowStep] ENTRÉE - stepIndex: ${stepIndex}`);
+    console.log(`🚨 [DEBUG-showWorkflowStep] optionGroups.length: ${workflowData.optionGroups.length}`);
+    console.log(`🔍 [DEBUG-showWorkflowStep] optionGroups:`, workflowData.optionGroups.map(g => g.groupName));
     
     const optionGroup = workflowData.optionGroups[stepIndex];
     
+    console.log(`🚨 [DEBUG-showWorkflowStep] optionGroup:`, optionGroup ? `${optionGroup.groupName}` : 'undefined');
     
     if (!optionGroup) {
       // Workflow terminé - demander la quantité
+      console.log(`🚨 [DEBUG-showWorkflowStep] PAS D'OPTION GROUP - Appel completeWorkflow`);
       await this.completeWorkflow(phoneNumber, session, workflowData);
       return;
     }
@@ -1120,6 +1173,7 @@ export class CompositeWorkflowExecutor {
     // VÉRIFICATION CRITIQUE : Si nextStep dépasse le nombre d'étapes
     if (nextStep >= workflowData.optionGroups.length) {
     } else {
+      console.log(`🚨 [DEBUG-determineNextStep] Prochaine étape: ${workflowData.optionGroups[nextStep]?.groupName}`);
     }
     
     return nextStep;
@@ -1179,6 +1233,8 @@ export class CompositeWorkflowExecutor {
     const rawCart = session.sessionData?.cart || [];
     const cart = Array.isArray(rawCart) ? rawCart : [];
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Analyser pourquoi currentCategoryName est absent
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - CompositeWorkflowExecutor.completeWorkflow:', {
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       currentCategoryName: session.sessionData?.currentCategoryName,
@@ -1522,10 +1578,13 @@ export class CompositeWorkflowExecutor {
    * Initialiser le workflow menu pizza dans la session
    */
   private async initializeMenuWorkflow(phoneNumber: string, session: any, product: any, menuConfig: any): Promise<void> {
+    console.log(`🔍 DEBUG_MENU: DÉBUT initializeMenuWorkflow`);
+    console.log(`🔍 DEBUG_MENU: menuConfig reçu:`, menuConfig);
     
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(this.supabaseUrl, this.supabaseKey);
     
+    console.log(`🔍 DEBUG_MENU: Supabase client créé`);
 
     // Créer les données du workflow
     const workflowData = {
@@ -1538,6 +1597,8 @@ export class CompositeWorkflowExecutor {
       selectionMode: null
     };
     
+    console.log(`🔍 DEBUG_MENU: workflowData créé:`, workflowData);
+    console.log(`🔍 DEBUG_MENU: Tentative mise à jour session ID: ${session.id}`);
 
     // Mettre à jour la session
     const { data: updateResult, error: updateError } = await supabase
@@ -1552,9 +1613,11 @@ export class CompositeWorkflowExecutor {
       .eq('id', session.id);
 
     if (updateError) {
+      console.error(`🔍 DEBUG_MENU: ERREUR mise à jour session:`, updateError);
       throw updateError;
     }
     
+    console.log(`🔍 DEBUG_MENU: Session mise à jour avec succès:`, updateResult);
     console.log(`✅ [MenuPizza] Workflow initialisé pour ${product.name}`);
   }
 
@@ -1619,9 +1682,11 @@ export class CompositeWorkflowExecutor {
         .single();
     
     if (!pizzaCategory) {
+        console.error('🔍 DEBUG_MENU: ERREUR - Catégorie pizzas introuvable');
         throw new Error('Catégorie pizzas introuvable');
     }
     
+    console.log(`🔍 DEBUG_MENU: Catégorie pizzas trouvée - ID: ${pizzaCategory.id}`);
     
     // Récupérer les pizzas disponibles
     const { data: pizzas } = await supabase
@@ -1643,10 +1708,15 @@ export class CompositeWorkflowExecutor {
         .in('product_id', pizzas?.map(p => p.id) || [])
         .eq('variant_name', normalizedSize);
     
+    console.log(`🔍 DEBUG_MENU: pizzas récupérées: ${pizzas?.length || 0}`);
+    console.log(`🔍 DEBUG_MENU: variants récupérées: ${variants?.length || 0}`);
+    console.log(`🔍 DEBUG_MENU: taille recherchée: ${size} → ${normalizedSize}`);
     
     // Construire le message
     let message = `🍕 ${component.title}\n`;
     
+    console.log(`🔍 DEBUG_MENU: session.session_data existe: ${!!session.session_data}`);
+    console.log(`🔍 DEBUG_MENU: session.session_data:`, session.session_data);
     
     const menuPrice = session.session_data?.menuPizzaWorkflow?.menuConfig?.price || 'N/A';
     message += `Prix du menu: ${menuPrice}€\n\n`;

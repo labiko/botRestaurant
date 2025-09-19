@@ -67,9 +67,9 @@ Pour chaque changement détecté, génère le SQL approprié :
 - Prix livraison = Prix sur place + 1€
 - Display_order = Position dans la liste
 - Type de produit = Selon patterns catégorie (${categoryData.productPatterns?.commonType || 'simple'})
-- Slug = Nom en minuscules avec tirets
 - Restaurant_id = ${restaurantId}
 - Category_id = ${categoryId}
+- ⚠️ NE JAMAIS inclure de colonne 'slug' (n'existe pas dans france_products)
 
 RÉPONSE JSON STRUCTURE :
 {
@@ -127,6 +127,34 @@ Compare ligne par ligne et identifie tous les changements.
         success: false,
         error: 'Réponse IA invalide: ' + aiResponse.substring(0, 200)
       });
+    }
+
+    // Sauvegarder les scripts dans l'historique si succès
+    if (parsedResponse.success && parsedResponse.changes) {
+      try {
+        console.log('💾 Sauvegarde des scripts dans l\'historique...');
+
+        for (const change of parsedResponse.changes) {
+          if (change.sql) {
+            const saveResponse = await fetch(`${request.url.replace('/analyze-list', '/scripts-history')}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                script_sql: change.sql,
+                command_source: `${change.type}: ${change.product}`,
+                ai_explanation: change.explanation,
+                category_name: categoryData.category?.name
+              })
+            });
+
+            if (!saveResponse.ok) {
+              console.error('⚠️ Erreur sauvegarde historique pour:', change.product);
+            }
+          }
+        }
+      } catch (saveError) {
+        console.error('⚠️ Erreur sauvegarde historique:', saveError);
+      }
     }
 
     return NextResponse.json(parsedResponse);

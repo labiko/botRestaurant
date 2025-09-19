@@ -3,8 +3,9 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CategoryEditModal from '@/components/CategoryEditModal';
+import ExecutionModal from '@/components/ExecutionModal';
 
 interface AIResponse {
   success: boolean;
@@ -40,6 +41,12 @@ export default function MenuAIAdmin() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalCategory, setModalCategory] = useState<any>(null);
   const [modalProducts, setModalProducts] = useState<any[]>([]);
+
+  // États pour l'historique des scripts
+  const [scripts, setScripts] = useState<any[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [executionModalOpen, setExecutionModalOpen] = useState(false);
+  const [selectedScript, setSelectedScript] = useState<any>(null);
 
   const handleAnalyze = async () => {
     if (!command.trim()) return;
@@ -252,6 +259,82 @@ export default function MenuAIAdmin() {
       confidence: 95
     } as any);
   };
+
+  // Fonction : Charger l'historique des scripts
+  const loadScriptsHistory = async () => {
+    try {
+      const response = await fetch('/api/scripts-history');
+      const data = await response.json();
+      if (data.success) {
+        setScripts(data.scripts);
+      }
+    } catch (error) {
+      console.error('Erreur chargement historique:', error);
+    }
+  };
+
+  // Fonction : Exécuter un script
+  const executeScript = async (scriptId: number, environment: string) => {
+    try {
+      const response = await fetch('/api/execute-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scriptId, environment })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Recharger l'historique
+        await loadScriptsHistory();
+      }
+      return data;
+    } catch (error) {
+      console.error('Erreur exécution script:', error);
+      throw error;
+    }
+  };
+
+  // Fonction : Générer rollback
+  const generateRollback = async (scriptId: number) => {
+    try {
+      const response = await fetch('/api/generate-rollback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scriptId })
+      });
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Erreur génération rollback:', error);
+      throw error;
+    }
+  };
+
+  // Fonction : Supprimer un script
+  const deleteScript = async (scriptId: number) => {
+    try {
+      const response = await fetch(`/api/delete-script?id=${scriptId}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await loadScriptsHistory();
+      }
+      return data;
+    } catch (error) {
+      console.error('Erreur suppression script:', error);
+      throw error;
+    }
+  };
+
+  // Charger l'historique au montage du composant
+  useEffect(() => {
+    if (showHistory) {
+      loadScriptsHistory();
+    }
+  }, [showHistory]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -521,6 +604,154 @@ export default function MenuAIAdmin() {
           </div>
         )}
 
+        {/* Section Historique des Scripts SQL */}
+        <div className="bg-gray-800 rounded-lg shadow-lg p-6 text-white">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              📜 Historique des Scripts SQL
+            </h2>
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                showHistory
+                  ? 'bg-red-500 hover:bg-red-600'
+                  : 'bg-blue-500 hover:bg-blue-600'
+              }`}
+            >
+              {showHistory ? '👁️ Masquer' : '👁️ Afficher'}
+            </button>
+          </div>
+
+          {showHistory && (
+            <div className="space-y-4">
+              {scripts.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <p className="text-lg">📭 Aucun script généré</p>
+                  <p className="text-sm mt-2">Les scripts générés apparaîtront ici automatiquement</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-600">
+                        <th className="text-left p-3">Date</th>
+                        <th className="text-left p-3">Commande</th>
+                        <th className="text-left p-3">Script SQL</th>
+                        <th className="text-center p-3">Statut DEV</th>
+                        <th className="text-center p-3">Statut PROD</th>
+                        <th className="text-center p-3">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scripts.map((script) => (
+                        <tr key={script.id} className="border-b border-gray-700 hover:bg-gray-750">
+                          <td className="p-3">
+                            <div className="text-xs text-gray-300">
+                              {new Date(script.created_at).toLocaleString('fr-FR')}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="max-w-48 truncate">
+                              {script.command_source || 'Script généré'}
+                            </div>
+                            {script.category_name && (
+                              <div className="text-xs text-blue-300">
+                                📂 {script.category_name}
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <div className="max-w-64 truncate bg-gray-900 px-2 py-1 rounded text-green-400 font-mono text-xs">
+                              {script.script_sql}
+                            </div>
+                            <button
+                              onClick={() => navigator.clipboard.writeText(script.script_sql)}
+                              className="text-blue-400 hover:text-blue-300 text-xs mt-1"
+                            >
+                              📋 Copier
+                            </button>
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              script.dev_status === 'executed' ? 'bg-green-600' :
+                              script.dev_status === 'error' ? 'bg-red-600' :
+                              script.dev_status === 'rolled_back' ? 'bg-blue-600' :
+                              'bg-yellow-600'
+                            }`}>
+                              {script.dev_status === 'pending' && '⏳ En attente'}
+                              {script.dev_status === 'executed' && '✅ Exécuté'}
+                              {script.dev_status === 'error' && '❌ Erreur'}
+                              {script.dev_status === 'rolled_back' && '↩️ Annulé'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              script.prod_status === 'executed' ? 'bg-green-600' :
+                              script.prod_status === 'error' ? 'bg-red-600' :
+                              script.prod_status === 'rolled_back' ? 'bg-blue-600' :
+                              script.prod_status === 'not_applied' ? 'bg-gray-600' :
+                              'bg-yellow-600'
+                            }`}>
+                              {script.prod_status === 'not_applied' && '➖ Non appliqué'}
+                              {script.prod_status === 'pending' && '⏳ En attente'}
+                              {script.prod_status === 'executed' && '✅ Exécuté'}
+                              {script.prod_status === 'error' && '❌ Erreur'}
+                              {script.prod_status === 'rolled_back' && '↩️ Annulé'}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex flex-col gap-1">
+                              {/* Bouton Exécuter */}
+                              <button
+                                onClick={() => {
+                                  setSelectedScript(script);
+                                  setExecutionModalOpen(true);
+                                }}
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                              >
+                                ▶️ Exécuter
+                              </button>
+
+                              {/* Boutons Rollback */}
+                              {script.dev_status === 'executed' && (
+                                <button
+                                  onClick={() => generateRollback(script.id)}
+                                  className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-xs"
+                                >
+                                  ↩️ Rollback DEV
+                                </button>
+                              )}
+
+                              {script.prod_status === 'executed' && (
+                                <button
+                                  onClick={() => generateRollback(script.id)}
+                                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
+                                >
+                                  ↩️ Rollback PROD
+                                </button>
+                              )}
+
+                              {/* Bouton Supprimer */}
+                              {script.dev_status === 'pending' && script.prod_status === 'not_applied' && (
+                                <button
+                                  onClick={() => deleteScript(script.id)}
+                                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
+                                >
+                                  🗑️ Supprimer
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Footer */}
         <div className="text-center text-gray-500 text-sm">
           Menu AI Modifier v1.0.0 - Powered by OpenAI & Supabase
@@ -534,6 +765,14 @@ export default function MenuAIAdmin() {
         category={modalCategory}
         products={modalProducts}
         onSave={handleModalSave}
+      />
+
+      {/* Modale d'Exécution */}
+      <ExecutionModal
+        isOpen={executionModalOpen}
+        onClose={() => setExecutionModalOpen(false)}
+        script={selectedScript}
+        onExecute={executeScript}
       />
     </div>
   );
