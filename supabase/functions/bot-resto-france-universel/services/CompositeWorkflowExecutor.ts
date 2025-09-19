@@ -150,6 +150,7 @@ export class CompositeWorkflowExecutor {
         .from('france_product_options')
         .select('*')
         .eq('product_id', product.id)
+        .eq('is_active', true)
         .order('group_order', { ascending: true })
         .order('display_order', { ascending: true });
       
@@ -249,6 +250,7 @@ export class CompositeWorkflowExecutor {
       .from('france_product_options')
       .select('option_group')
       .eq('product_id', productId)
+      .eq('is_active', true)
       .ilike('option_group', '%size%')
       .or('option_group.ilike.%taille%,option_group.ilike.%menu%');
     
@@ -498,6 +500,7 @@ export class CompositeWorkflowExecutor {
         .from('france_product_options')
         .select('*')
         .eq('product_id', product.id)
+        .eq('is_active', true)
         .order('group_order', { ascending: true })
         .order('display_order', { ascending: true })
     );
@@ -738,6 +741,7 @@ export class CompositeWorkflowExecutor {
       .from('france_product_options')
       .select('*')
       .eq('product_id', session.sessionData.selectedProduct.id)
+      .eq('is_active', true)
       .order('group_order', { ascending: true })
       .order('display_order', { ascending: true });
     

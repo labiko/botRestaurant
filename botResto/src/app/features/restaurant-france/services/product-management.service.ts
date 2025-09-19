@@ -272,13 +272,73 @@ export class ProductManagementService {
    */
   updateProductStatus(productId: number, isActive: boolean): Observable<void> {
     return from(
+      // 1. Récupérer le produit avec restaurant_id pour sécurité
       this.supabase
         .from('france_products')
-        .update({ is_active: isActive, updated_at: new Date().toISOString() })
+        .select('name, restaurant_id')
         .eq('id', productId)
+        .single()
     ).pipe(
-      map(({ error }) => {
-        if (error) throw error;
+      switchMap(({ data: product, error: fetchError }) => {
+        if (fetchError) throw fetchError;
+
+        // 2. Mettre à jour le produit (comportement existant préservé)
+        return from(
+          this.supabase
+            .from('france_products')
+            .update({ is_active: isActive, updated_at: new Date().toISOString() })
+            .eq('id', productId)
+        ).pipe(
+          switchMap(({ error: updateError }) => {
+            if (updateError) throw updateError;
+
+            // 3. 🎯 SYNCHRONISER LES OPTIONS WORKFLOW (nouveau comportement)
+            console.log(`🔄 Synchronisation options pour "${product.name}" (restaurant ${product.restaurant_id}): ${isActive}`);
+
+            // D'abord récupérer les IDs des produits de ce restaurant
+            return from(
+              this.supabase
+                .from('france_products')
+                .select('id')
+                .eq('restaurant_id', product.restaurant_id)
+            ).pipe(
+              switchMap(({ data: restaurantProducts, error: productError }) => {
+                if (productError) throw productError;
+
+                const productIds = restaurantProducts?.map(p => p.id) || [];
+
+                // Puis synchroniser les options de ces produits seulement
+                return from(
+                  this.supabase
+                    .from('france_product_options')
+                    .update({ is_active: isActive })
+                    .ilike('option_name', `%${product.name}%`)
+                    .in('product_id', productIds)
+                ).pipe(
+                  switchMap(({ error: syncError }) => {
+                    if (syncError) {
+                      console.error('❌ Erreur synchronisation options:', syncError);
+                      return from([null]);
+                    } else {
+                      console.log('✅ Options workflow synchronisées');
+
+                      // 🎯 RÉORGANISATION TOTALE si désactivation
+                      if (isActive === false) {
+                        console.log('🔄 Réorganisation globale des numéros boissons...');
+                        return from(this.renumberAllBeverageOptions(product.restaurant_id));
+                      }
+
+                      return from([null]);
+                    }
+                  })
+                );
+              })
+            );
+          })
+        );
+      }),
+      map(() => {
+        // Return void as expected (comportement existant préservé)
       })
     );
   }
@@ -618,13 +678,39 @@ export class ProductManagementService {
    */
   updateMenuCategory(categoryId: number, updates: Partial<MenuCategory>): Observable<void> {
     return from(
+      // Récupérer slug de la catégorie
       this.supabase
         .from('france_menu_categories')
-        .update(updates)
+        .select('slug')
         .eq('id', categoryId)
+        .single()
     ).pipe(
-      map(({ error }) => {
-        if (error) throw error;
+      switchMap(({ data: category, error: fetchError }) => {
+        if (fetchError) throw fetchError;
+
+        // Cast explicite pour TypeScript
+        const categoryData = category as { slug: string };
+
+        // Mise à jour standard de la catégorie
+        return from(
+          this.supabase
+            .from('france_menu_categories')
+            .update(updates)
+            .eq('id', categoryId)
+        ).pipe(
+          switchMap(({ error }) => {
+            if (error) throw error;
+
+            // 🚫 SYNCHRONISATION GLOBALE BOISSONS SUPPRIMÉE
+            // Désactiver toute la catégorie casse les workflows qui attendent des boissons incluses
+            // Les restaurateurs gèrent plutôt les ruptures stock boisson par boisson
+
+            return from([null]);
+          })
+        );
+      }),
+      map(() => {
+        // Return void as expected
       })
     );
   }
@@ -670,6 +756,112 @@ export class ProductManagementService {
     return this.getProductSizes(productId).pipe(
       map(sizes => sizes.some(size => size.includes_drink))
     );
+  }
+
+  /**
+   * Renuméroте toutes les options boissons du restaurant
+   */
+  private async renumberAllBeverageOptions(restaurantId: number): Promise<void> {
+    try {
+      // 1. D'abord récupérer les IDs des produits qui ont des options boissons
+      const { data: productsWithBeverageOptions, error: optionsError } = await this.supabase
+        .from('france_product_options')
+        .select('product_id')
+        .eq('option_group', 'Boisson 33CL incluse');
+
+      if (optionsError) throw optionsError;
+      if (!productsWithBeverageOptions || productsWithBeverageOptions.length === 0) return;
+
+      const productIdsWithBeverages = [...new Set(productsWithBeverageOptions.map(item => item.product_id))];
+
+      // 2. Puis filtrer par restaurant
+      const { data: productsWithBeverages, error: productsError } = await this.supabase
+        .from('france_products')
+        .select('id')
+        .eq('restaurant_id', restaurantId)
+        .in('id', productIdsWithBeverages);
+
+      if (productsError) throw productsError;
+      if (!productsWithBeverages || productsWithBeverages.length === 0) return;
+
+      // 3. Renuméroter les options de chaque produit
+      const renumberPromises = productsWithBeverages.map(product =>
+        this.renumberSingleProductOptions(product.id)
+      );
+
+      await Promise.all(renumberPromises);
+
+      console.log(`✅ ${productsWithBeverages.length} produits renumérotés globalement`);
+
+    } catch (error) {
+      console.error('❌ Erreur réorganisation globale:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Renuméroте les options boissons d'un seul produit
+   */
+  private async renumberSingleProductOptions(productId: number): Promise<void> {
+    try {
+      // Récupérer les options actives de ce produit
+      const { data: activeOptions, error: optionsError } = await this.supabase
+        .from('france_product_options')
+        .select('id, option_name, display_order')
+        .eq('product_id', productId)
+        .eq('option_group', 'Boisson 33CL incluse')
+        .eq('is_active', true);
+
+      if (optionsError) throw optionsError;
+      if (!activeOptions || activeOptions.length === 0) return;
+
+      // 🎯 TRIER PAR NOM NETTOYÉ (sans émojis) pour éviter désordre
+      const sortedOptions = activeOptions.sort((a, b) => {
+        const cleanNameA = a.option_name.replace(/^[0-9️⃣🔟]+\s*/, '').trim();
+        const cleanNameB = b.option_name.replace(/^[0-9️⃣🔟]+\s*/, '').trim();
+        return cleanNameA.localeCompare(cleanNameB);
+      });
+
+      // Renuméroter avec séquence propre
+      const updatePromises = sortedOptions.map((option, index) => {
+        const newNumber = this.getNumberEmoji(index + 1);
+        const cleanName = option.option_name.replace(/^[0-9️⃣🔟]+\s*/, '').trim();
+        const newName = `${newNumber} ${cleanName}`;
+
+        return this.supabase
+          .from('france_product_options')
+          .update({
+            option_name: newName,
+            display_order: index + 1 // Mettre à jour l'ordre d'affichage aussi
+          })
+          .eq('id', option.id);
+      });
+
+      await Promise.all(updatePromises);
+
+      console.log(`✅ Produit ${productId}: ${sortedOptions.length} options renumérotées en séquence`);
+
+    } catch (error) {
+      console.error(`❌ Erreur renumérotation produit ${productId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Génère l'emoji numéro correspondant
+   */
+  private getNumberEmoji(num: number): string {
+    const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+
+    if (num <= 10) {
+      return emojis[num - 1];
+    }
+
+    if (num === 11) return '1️⃣1️⃣';
+    if (num === 12) return '1️⃣2️⃣';
+
+    // Pour les nombres > 12, utiliser format textuel
+    return `${num}️⃣`;
   }
 
   /**
