@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import CategoryEditModal from '@/components/CategoryEditModal';
 import ProdConfirmModal from '@/components/ProdConfirmModal';
+import { Restaurant } from '@/lib/types';
 
 interface AIResponse {
   success: boolean;
@@ -51,6 +52,11 @@ export default function MenuAIAdmin() {
   const [selectedProdScript, setSelectedProdScript] = useState<any>(null);
   const [prodExecuting, setProdExecuting] = useState(false);
 
+  // NOUVEAUX ÉTATS POUR LES RESTAURANTS
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [loadingRestaurants, setLoadingRestaurants] = useState(false);
+
   const handleAnalyze = async () => {
     if (!command.trim()) return;
 
@@ -61,7 +67,7 @@ export default function MenuAIAdmin() {
       const response = await fetch('/api/analyze-command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command, restaurantId: 1 })
+        body: JSON.stringify({ command, restaurantId: selectedRestaurant?.id || 1 })
       });
 
       const data = await response.json();
@@ -394,12 +400,38 @@ export default function MenuAIAdmin() {
     }
   };
 
+  // NOUVELLE FONCTION : Charger les restaurants
+  const loadRestaurants = async () => {
+    setLoadingRestaurants(true);
+    try {
+      const response = await fetch('/api/restaurants');
+      const data = await response.json();
+
+      if (data.success) {
+        setRestaurants(data.restaurants);
+        // Sélectionner automatiquement le premier restaurant (Pizza Yolo)
+        if (data.restaurants.length > 0 && !selectedRestaurant) {
+          setSelectedRestaurant(data.restaurants[0]);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erreur chargement restaurants:', error);
+    } finally {
+      setLoadingRestaurants(false);
+    }
+  };
+
   // Charger l'historique au montage du composant
   useEffect(() => {
     if (showHistory) {
       loadScriptsHistory();
     }
   }, [showHistory]);
+
+  // NOUVEAU USEEFFECT : Charger les restaurants au démarrage
+  useEffect(() => {
+    loadRestaurants();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -417,25 +449,40 @@ export default function MenuAIAdmin() {
               </p>
             </div>
 
-            {/* Sélecteur d'environnement */}
+            {/* Sélecteur de restaurant */}
             <div className="flex flex-col items-end">
               <label className="text-sm font-medium text-gray-700 mb-2">
-                Environnement
+                Restaurant
               </label>
               <select
-                value={environment}
-                onChange={(e) => setEnvironment(e.target.value as 'DEV' | 'PROD')}
-                className={`px-3 py-2 border rounded-lg text-sm font-medium ${
-                  environment === 'PROD'
-                    ? 'bg-red-50 border-red-300 text-red-800'
-                    : 'bg-green-50 border-green-300 text-green-800'
-                }`}
+                value={selectedRestaurant?.id || ''}
+                onChange={(e) => {
+                  const restaurantId = parseInt(e.target.value);
+                  const restaurant = restaurants.find(r => r.id === restaurantId);
+                  setSelectedRestaurant(restaurant || null);
+                }}
+                disabled={loadingRestaurants || restaurants.length === 0}
+                className="px-3 py-2 border rounded-lg text-sm font-medium bg-blue-50 border-blue-300 text-blue-800"
               >
-                <option value="DEV">🧪 DÉVELOPPEMENT</option>
-                <option value="PROD">🚀 PRODUCTION</option>
+                {loadingRestaurants ? (
+                  <option value="">⏳ Chargement...</option>
+                ) : restaurants.length === 0 ? (
+                  <option value="">❌ Aucun restaurant</option>
+                ) : (
+                  <>
+                    <option value="">Sélectionner un restaurant</option>
+                    {restaurants.map((restaurant) => (
+                      <option key={restaurant.id} value={restaurant.id}>
+                        🏪 {restaurant.name}
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                {environment === 'PROD' ? '⚠️ Attention - Base PROD' : '✅ Base de test'}
+                {selectedRestaurant
+                  ? `✅ Restaurant: ${selectedRestaurant.name}`
+                  : '⚠️ Sélectionnez un restaurant'}
               </p>
             </div>
           </div>

@@ -29,6 +29,15 @@ export interface Category {
   restaurant_name?: string;
 }
 
+export interface Restaurant {
+  id: number;
+  name: string;
+  slug?: string;
+  address?: string;
+  phone?: string;
+  description?: string;
+}
+
 export interface ModificationCommand {
   type: 'DUPLICATE' | 'ADD_TO_CATEGORY' | 'MODIFY_EXISTING' | 'ADD_CATEGORY';
   command: string;

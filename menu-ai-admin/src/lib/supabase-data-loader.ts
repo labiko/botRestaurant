@@ -30,6 +30,10 @@ export interface Category {
 export interface Restaurant {
   id: number;
   name: string;
+  slug?: string;
+  address?: string;
+  phone?: string;
+  description?: string;
 }
 
 export class SupabaseDataLoader {
@@ -303,6 +307,29 @@ export class SupabaseDataLoader {
     } catch (error) {
       console.error('❌ Erreur display_order:', error);
       return 1;
+    }
+  }
+
+  /**
+   * Récupère tous les restaurants disponibles
+   */
+  async getRestaurants(): Promise<Restaurant[]> {
+    try {
+      console.log('🔄 Chargement des restaurants...');
+
+      const { data: restaurants, error } = await this.supabase
+        .from('france_restaurants')
+        .select('id, name, slug, address, phone')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+
+      console.log(`✅ ${restaurants?.length || 0} restaurants chargés`);
+
+      return restaurants || [];
+    } catch (error) {
+      console.error('❌ Erreur chargement restaurants:', error);
+      return [];
     }
   }
 }
