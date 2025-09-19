@@ -12,6 +12,7 @@ import { ProductManagementComponent } from './components/product-management/prod
 import { ModularConfigModalComponent } from './components/product-management/modular-config-modal.component';
 import { UniversalProductModalComponent } from './components/product-management/universal-product-modal.component';
 import { CategoryManagementModalComponent } from './components/product-management/category-management-modal.component';
+import { OptionsManagementComponent } from './components/options-management/options-management.component';
 import { WorkflowConfigComponent } from './components/workflow-config/workflow-config.component';
 import { ServiceModesComponent } from './components/service-modes/service-modes.component';
 import { AudioNotificationsConfigComponent } from './components/audio-notifications-config/audio-notifications-config.component';
@@ -31,6 +32,7 @@ import { AudioNotificationsConfigComponent } from './components/audio-notificati
     ModularConfigModalComponent,
     UniversalProductModalComponent,
     CategoryManagementModalComponent,
+    OptionsManagementComponent,
     WorkflowConfigComponent,
     ServiceModesComponent,
     AudioNotificationsConfigComponent

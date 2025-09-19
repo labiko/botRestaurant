@@ -865,6 +865,75 @@ export class ProductManagementService {
   }
 
   /**
+   * Récupère toutes les options de produits pour un restaurant (pour gestion centralisée)
+   */
+  getAllProductOptions(restaurantId: number): Observable<any[]> {
+    return from(
+      this.supabase
+        .from('france_product_options')
+        .select(`
+          id,
+          product_id,
+          option_group,
+          option_name,
+          price_modifier,
+          is_required,
+          max_selections,
+          display_order,
+          is_active,
+          group_order,
+          france_products!inner(restaurant_id)
+        `)
+        .eq('france_products.restaurant_id', restaurantId)
+        .order('option_group')
+        .order('display_order')
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return data || [];
+      })
+    );
+  }
+
+  /**
+   * Met à jour le nom d'une option de produit
+   */
+  updateProductOptionName(optionId: number, newName: string): Observable<void> {
+    console.log(`🔄 [ProductManagementService] updateProductOptionName - optionId: ${optionId}, newName: "${newName}"`);
+
+    return from(
+      this.supabase
+        .from('france_product_options')
+        .update({ option_name: newName })
+        .eq('id', optionId)
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) {
+          console.error(`❌ [ProductManagementService] Erreur updateProductOptionName - optionId: ${optionId}`, error);
+          throw error;
+        }
+        console.log(`✅ [ProductManagementService] updateProductOptionName réussi - optionId: ${optionId}`, data);
+      })
+    );
+  }
+
+  /**
+   * Supprime une option de produit
+   */
+  deleteProductOption(optionId: number): Observable<void> {
+    return from(
+      this.supabase
+        .from('france_product_options')
+        .delete()
+        .eq('id', optionId)
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+      })
+    );
+  }
+
+  /**
    * Récupère tous les détails d'un produit selon son type
    */
   getFullProductDetails(productId: number, productType: ProductType): Observable<any> {
