@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import CategoryEditModal from '@/components/CategoryEditModal';
 import ProdConfirmModal from '@/components/ProdConfirmModal';
+import RestaurantDeletion from '@/components/RestaurantDeletion';
 import { Restaurant } from '@/lib/types';
 
 interface AIResponse {
@@ -31,8 +32,8 @@ export default function MenuAIAdmin() {
   const [environment, setEnvironment] = useState<'DEV' | 'PROD'>('DEV');
   const [copied, setCopied] = useState(false);
 
-  // Nouveau mode liste
-  const [mode, setMode] = useState<'command' | 'list' | 'modal'>('command');
+  // Modes d'interface
+  const [mode, setMode] = useState<'command' | 'list' | 'modal' | 'clone' | 'delete'>('command');
   const [categoryName, setCategoryName] = useState('');
   const [originalList, setOriginalList] = useState('');
   const [modifiedList, setModifiedList] = useState('');
@@ -56,6 +57,20 @@ export default function MenuAIAdmin() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [loadingRestaurants, setLoadingRestaurants] = useState(false);
+
+  // NOUVEAUX ÉTATS POUR LE CLONAGE DE RESTAURANTS
+  const [sourceRestaurant, setSourceRestaurant] = useState<Restaurant | null>(null);
+  const [newRestaurantName, setNewRestaurantName] = useState('');
+  const [newRestaurantData, setNewRestaurantData] = useState({
+    address: '',
+    phone: '',
+    city: '',
+    deliveryZone: 5,
+    deliveryFee: 2.50
+  });
+  const [menuData, setMenuData] = useState('');
+  const [cloneResult, setCloneResult] = useState<any>(null);
+  const [cloningLoading, setCloningLoading] = useState(false);
 
   const handleAnalyze = async () => {
     if (!command.trim()) return;
@@ -433,19 +448,110 @@ export default function MenuAIAdmin() {
     loadRestaurants();
   }, []);
 
+  // NOUVELLE FONCTION : Analyser le clonage de restaurant
+  const handleCloneAnalyze = async () => {
+    if (!sourceRestaurant || !newRestaurantName.trim() || !menuData.trim()) {
+      alert('Veuillez remplir tous les champs requis');
+      return;
+    }
+
+    setCloningLoading(true);
+    setCloneResult(null);
+
+    try {
+      const response = await fetch('/api/clone-restaurant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceRestaurantId: sourceRestaurant.id,
+          targetRestaurantName: newRestaurantName,
+          targetRestaurantData: newRestaurantData,
+          menuData: menuData
+        })
+      });
+
+      const data = await response.json();
+      setCloneResult(data);
+
+      if (data.success) {
+        console.log('✅ Analyse clonage réussie:', data);
+      } else {
+        console.error('❌ Erreur analyse clonage:', data.error);
+      }
+    } catch (error) {
+      console.error('❌ Erreur requête clonage:', error);
+      setCloneResult({
+        success: false,
+        error: 'Erreur de connexion au serveur',
+        confidence: 0
+      });
+    } finally {
+      setCloningLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6">
+          {/* Navigation */}
+          <div className="flex justify-center mb-6">
+            <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+              <button
+                onClick={() => setMode('command')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  mode === 'command'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white'
+                }`}
+              >
+                💬 Commandes IA
+              </button>
+              <button
+                onClick={() => setMode('modal')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  mode === 'modal'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white'
+                }`}
+              >
+                ✨ Édition Moderne
+              </button>
+              <button
+                onClick={() => setMode('clone')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  mode === 'clone'
+                    ? 'bg-green-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white'
+                }`}
+              >
+                🔄 Clonage Restaurant
+              </button>
+              <button
+                onClick={() => setMode('delete')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  mode === 'delete'
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white'
+                }`}
+              >
+                🗑️ Suppression Restaurant
+              </button>
+            </div>
+          </div>
+
           <div className="flex justify-between items-center mb-4">
             <div className="text-center flex-1">
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
                 🤖 Menu AI Modifier
               </h1>
               <p className="text-gray-600">
-                Automatisation intelligente des modifications de menu
+                {mode === 'command' && 'Automatisation intelligente des modifications de menu'}
+                {mode === 'modal' && 'Interface révolutionnaire pour édition complète'}
+                {mode === 'clone' && 'Clonage automatique de restaurants avec IA'}
+                {mode === 'delete' && 'Suppression complète et sécurisée des restaurants pour tests'}
               </p>
             </div>
 
@@ -489,95 +595,224 @@ export default function MenuAIAdmin() {
         </div>
 
         {/* Section Édition Modale Moderne */}
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg shadow-lg p-6 text-white">
-          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            ✨ Édition Modale Moderne (Recommandé)
-          </h2>
-          <p className="mb-4 text-purple-100">
-            Interface révolutionnaire : Chargez une catégorie complète et éditez tous les produits en temps réel
-          </p>
+        {mode === 'modal' && (
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg shadow-lg p-6 text-white">
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              ✨ Édition Modale Moderne (Recommandé)
+            </h2>
+            <p className="mb-4 text-purple-100">
+              Interface révolutionnaire : Chargez une catégorie complète et éditez tous les produits en temps réel
+            </p>
 
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-purple-100 mb-2">
-                Nom de la catégorie
-              </label>
-              <input
-                type="text"
-                value={categoryName}
-                onChange={(e) => setCategoryName(e.target.value)}
-                placeholder="Ex: SALADES, PIZZAS, BURGERS, TACOS..."
-                className="w-full p-3 border border-purple-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-white focus:border-transparent"
-              />
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-purple-100 mb-2">
+                  Nom de la catégorie
+                </label>
+                <input
+                  type="text"
+                  value={categoryName}
+                  onChange={(e) => setCategoryName(e.target.value)}
+                  placeholder="Ex: SALADES, PIZZAS, BURGERS, TACOS..."
+                  className="w-full p-3 border border-purple-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-white focus:border-transparent"
+                />
+              </div>
+              <button
+                onClick={handleOpenModal}
+                disabled={loading || !categoryName.trim()}
+                className="bg-white text-purple-600 px-8 py-3 rounded-lg hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed font-bold flex items-center gap-2 transition-all transform hover:scale-105"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  '🎛️'
+                )}
+                Ouvrir l'Éditeur
+              </button>
             </div>
-            <button
-              onClick={handleOpenModal}
-              disabled={loading || !categoryName.trim()}
-              className="bg-white text-purple-600 px-8 py-3 rounded-lg hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed font-bold flex items-center gap-2 transition-all transform hover:scale-105"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                '🎛️'
-              )}
-              Ouvrir l'Éditeur
-            </button>
-          </div>
 
-          <div className="mt-4 text-sm text-purple-200">
-            💡 <strong>Avantages :</strong> Visualisation complète • Édition directe • Auto-calculs • Workflows complexes
+            <div className="mt-4 text-sm text-purple-200">
+              💡 <strong>Avantages :</strong> Visualisation complète • Édition directe • Auto-calculs • Workflows complexes
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* NOUVELLE SECTION : Clonage de Restaurant IA */}
+        {mode === 'clone' && (
+          <div className="bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg shadow-lg p-6 text-gray-800">
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              🔄 Clonage de Restaurant IA (Révolutionnaire)
+            </h2>
+            <p className="mb-4 text-gray-600">
+              Dupliquez automatiquement un restaurant complet avec l'IA : workflows, catégories, produits - en 5 minutes !
+            </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Colonne 1: Configuration */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    🏪 Restaurant Modèle
+                  </label>
+                  <select
+                    value={sourceRestaurant?.id || ''}
+                    onChange={(e) => {
+                      const restaurantId = parseInt(e.target.value);
+                      const restaurant = restaurants.find(r => r.id === restaurantId);
+                      setSourceRestaurant(restaurant || null);
+                    }}
+                    className="w-full p-3 border border-blue-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Sélectionner un modèle</option>
+                    {restaurants.map((restaurant) => (
+                      <option key={restaurant.id} value={restaurant.id}>
+                        🏪 {restaurant.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    🆕 Nom Nouveau Restaurant
+                  </label>
+                  <input
+                    type="text"
+                    value={newRestaurantName}
+                    onChange={(e) => setNewRestaurantName(e.target.value)}
+                    placeholder="Ex: McDonald's Conakry"
+                    className="w-full p-3 border border-blue-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      📍 Adresse
+                    </label>
+                    <input
+                      type="text"
+                      value={newRestaurantData.address}
+                      onChange={(e) => setNewRestaurantData({...newRestaurantData, address: e.target.value})}
+                      placeholder="Centre-ville Conakry"
+                      className="w-full p-2 border border-blue-300 rounded-lg text-gray-800 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      📞 Téléphone
+                    </label>
+                    <input
+                      type="text"
+                      value={newRestaurantData.phone}
+                      onChange={(e) => setNewRestaurantData({...newRestaurantData, phone: e.target.value})}
+                      placeholder="+224 123 456 789"
+                      className="w-full p-2 border border-blue-300 rounded-lg text-gray-800 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Colonne 2: Menu Source */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  📋 Menu Source (Texte brut ou JSON ChatGPT)
+                </label>
+                <textarea
+                  value={menuData}
+                  onChange={(e) => setMenuData(e.target.value)}
+                  placeholder="🍔 BURGERS
+- Big Mac - 2 steaks, sauce spéciale - 8€
+- Royal Deluxe - poulet grillé - 7€
+
+🍟 ACCOMPAGNEMENTS
+- Frites Small/Medium/Large - 2€/3€/4€
+
+OU coller directement le JSON ChatGPT..."
+                  className="w-full h-40 p-3 border border-blue-300 rounded-lg text-gray-800 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleCloneAnalyze}
+                disabled={cloningLoading || !sourceRestaurant || !newRestaurantName.trim() || !menuData.trim()}
+                className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-bold flex items-center gap-2 transition-all transform hover:scale-105"
+              >
+                {cloningLoading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  '🧠'
+                )}
+                Analyser avec IA
+              </button>
+
+              <button
+                onClick={() => setMode('command')}
+                className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 font-medium"
+              >
+                📝 Mode Normal
+              </button>
+            </div>
+
+            <div className="mt-4 text-sm text-gray-600">
+              🚀 <strong>Résultat :</strong> Restaurant complet • Workflows automatiques • Bot fonctionnel en 5 minutes
+            </div>
+          </div>
+        )}
 
         {/* Input Section */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">💬 Commande</h2>
+        {mode === 'command' && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">💬 Commande</h2>
 
-          <textarea
-            value={command}
-            onChange={(e) => setCommand(e.target.value)}
-            placeholder="Exemple: Duplique L'AMERICAIN en MINI AMERICAIN à 8€"
-            className="w-full h-32 p-4 border border-gray-300 rounded-lg text-base resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+            <textarea
+              value={command}
+              onChange={(e) => setCommand(e.target.value)}
+              placeholder="Exemple: Duplique L'AMERICAIN en MINI AMERICAIN à 8€"
+              className="w-full h-32 p-4 border border-gray-300 rounded-lg text-base resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
 
-          <div className="flex gap-3 mt-4">
-            <button
-              onClick={handleAnalyze}
-              disabled={loading || !command.trim()}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                '🧠'
-              )}
-              Analyser
-            </button>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={handleAnalyze}
+                disabled={loading || !command.trim()}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  '🧠'
+                )}
+                Analyser
+              </button>
 
-            <button
-              onClick={() => setCommand("Duplique L'AMERICAIN en MINI AMERICAIN à 8€")}
-              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
-            >
-              Exemple
-            </button>
-          </div>
-
-          {/* Exemples de commandes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
-            <div
-              className="bg-blue-50 border border-blue-200 rounded-lg p-3 cursor-pointer hover:bg-blue-100 text-sm"
-              onClick={() => setCommand("Ajouter Coca Cherry 33CL - 2.50€ dans BOISSONS")}
-            >
-              Ajouter Coca Cherry 33CL - 2.50€ dans BOISSONS
+              <button
+                onClick={() => setCommand("Duplique L'AMERICAIN en MINI AMERICAIN à 8€")}
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
+              >
+                Exemple
+              </button>
             </div>
-            <div
-              className="bg-blue-50 border border-blue-200 rounded-lg p-3 cursor-pointer hover:bg-blue-100 text-sm"
-              onClick={() => setCommand("Changer prix AMERICAIN de 13.50€ à 14€")}
-            >
-              Changer prix AMERICAIN de 13.50€ à 14€
+
+            {/* Exemples de commandes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
+              <div
+                className="bg-blue-50 border border-blue-200 rounded-lg p-3 cursor-pointer hover:bg-blue-100 text-sm"
+                onClick={() => setCommand("Ajouter Coca Cherry 33CL - 2.50€ dans BOISSONS")}
+              >
+                Ajouter Coca Cherry 33CL - 2.50€ dans BOISSONS
+              </div>
+              <div
+                className="bg-blue-50 border border-blue-200 rounded-lg p-3 cursor-pointer hover:bg-blue-100 text-sm"
+                onClick={() => setCommand("Changer prix AMERICAIN de 13.50€ à 14€")}
+              >
+                Changer prix AMERICAIN de 13.50€ à 14€
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Results Section */}
         {result && (
@@ -711,6 +946,216 @@ export default function MenuAIAdmin() {
             ) : (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
                 {result.error || 'Erreur inconnue'}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Cloning Results Section */}
+        {cloneResult && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className={cloneResult.success ? "text-green-600" : "text-red-600"}>
+                {cloneResult.success ? "✅" : "❌"}
+              </span>
+              <h2 className="text-xl font-semibold">🔄 Résultat du Clonage IA</h2>
+              <span className={`px-3 py-1 rounded-full text-sm ${
+                cloneResult.confidence > 80 ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+              }`}>
+                Confiance: {cloneResult.confidence}%
+              </span>
+            </div>
+
+            {cloneResult.success ? (
+              <div className="space-y-6">
+                {/* AI Analysis Overview */}
+                {cloneResult.analysis && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-semibold mb-3 text-blue-800">🧠 Analyse IA</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p><strong>Stratégie de mapping:</strong></p>
+                        <p className="text-gray-700 mt-1">{cloneResult.analysis.mapping_strategy}</p>
+                      </div>
+                      <div>
+                        <p><strong>Complexité estimée:</strong></p>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          cloneResult.analysis.estimated_complexity === 'Facile' ? 'bg-green-100 text-green-800' :
+                          cloneResult.analysis.estimated_complexity === 'Moyen' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {cloneResult.analysis.estimated_complexity}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Restaurant Preview */}
+                {cloneResult.preview && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3">🏪 Aperçu du Restaurant</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p><strong>Nom:</strong> {cloneResult.preview.restaurant.name}</p>
+                        <p><strong>Catégories:</strong> {cloneResult.preview.restaurant.categories}</p>
+                        <p><strong>Produits:</strong> {cloneResult.preview.restaurant.products}</p>
+                      </div>
+                      <div>
+                        <p><strong>Mapping:</strong></p>
+                        <p className="text-gray-700">{cloneResult.preview.mapping}</p>
+                      </div>
+                      <div>
+                        <p><strong>Complexité:</strong></p>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          cloneResult.preview.complexity === 'Facile' ? 'bg-green-100 text-green-800' :
+                          cloneResult.preview.complexity === 'Moyen' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {cloneResult.preview.complexity}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Categories Mapping */}
+                {cloneResult.analysis?.categories && cloneResult.analysis.categories.length > 0 && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h4 className="font-semibold mb-3 text-purple-800">📂 Mapping des Catégories</h4>
+                    <div className="space-y-2">
+                      {cloneResult.analysis.categories.map((cat: any, index: number) => (
+                        <div key={index} className="flex items-center gap-3 p-2 bg-white rounded border">
+                          <span className="text-sm">
+                            <strong>{cat.originalName}</strong> → <span className="text-purple-600">{cat.newName}</span>
+                          </span>
+                          <span className="text-lg">{cat.icon}</span>
+                          <span className="text-xs text-gray-500 ml-auto">{cat.mapping}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Products Preview */}
+                {cloneResult.analysis?.products && cloneResult.analysis.products.length > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="font-semibold mb-3 text-green-800">🍽️ Aperçu des Produits ({cloneResult.analysis.products.length} articles)</h4>
+                    <div className="max-h-60 overflow-y-auto space-y-2">
+                      {cloneResult.analysis.products.slice(0, 10).map((product: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
+                          <div>
+                            <span className="font-medium">{product.newName}</span>
+                            <span className="text-gray-500 ml-2">({product.category})</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-green-600 font-medium">{product.price_on_site}€ / {product.price_delivery}€</span>
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              product.workflow_type === 'simple' ? 'bg-gray-100 text-gray-700' :
+                              product.workflow_type === 'composite' ? 'bg-blue-100 text-blue-700' :
+                              'bg-purple-100 text-purple-700'
+                            }`}>
+                              {product.workflow_type}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {cloneResult.analysis.products.length > 10 && (
+                        <div className="text-center text-gray-500 text-sm py-2">
+                          ... et {cloneResult.analysis.products.length - 10} autres produits
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Generated SQL */}
+                {cloneResult.sql && (
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-semibold">💾 SQL de Clonage Généré:</h4>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(cloneResult.sql);
+                          // Simple feedback without state management for now
+                          const btn = event?.target as HTMLButtonElement;
+                          if (btn) {
+                            const originalText = btn.textContent;
+                            btn.textContent = '✅ Copié !';
+                            btn.className = btn.className.replace('bg-gray-100 text-gray-700 hover:bg-gray-200', 'bg-green-100 text-green-800');
+                            setTimeout(() => {
+                              btn.textContent = originalText;
+                              btn.className = btn.className.replace('bg-green-100 text-green-800', 'bg-gray-100 text-gray-700 hover:bg-gray-200');
+                            }, 2000);
+                          }
+                        }}
+                        className="px-3 py-1 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 transition-all"
+                      >
+                        📋 Copier SQL
+                      </button>
+                    </div>
+                    <pre className="bg-gray-900 text-green-400 p-4 rounded-lg text-sm overflow-x-auto max-h-60">
+                      {cloneResult.sql}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4 border-t">
+                  <button
+                    onClick={() => {
+                      // Execute the cloning SQL
+                      if (cloneResult.sql) {
+                        // For now, just copy to clipboard - could be enhanced to execute directly
+                        navigator.clipboard.writeText(cloneResult.sql);
+                        alert('SQL copié dans le presse-papiers ! Vous pouvez maintenant l\'exécuter dans votre console SQL.');
+                      }
+                    }}
+                    disabled={!cloneResult.sql}
+                    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center gap-2"
+                  >
+                    🚀 Copier & Exécuter SQL
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      // Start a new analysis with the same settings
+                      setCloneResult(null);
+                    }}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                  >
+                    🔄 Nouveau Clonage
+                  </button>
+
+                  <button
+                    onClick={() => setCloneResult(null)}
+                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
+                  >
+                    ❌ Fermer
+                  </button>
+                </div>
+
+                {/* Warning about execution */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-yellow-600">⚠️</span>
+                    <div className="text-sm text-yellow-800">
+                      <p className="font-medium">Important:</p>
+                      <p>Ce SQL doit être exécuté manuellement dans votre console de base de données. Vérifiez toujours le contenu avant l'exécution.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+                <h4 className="font-semibold mb-2">❌ Erreur de Clonage</h4>
+                <p>{cloneResult.error || 'Erreur inconnue lors du clonage'}</p>
+                <button
+                  onClick={() => setCloneResult(null)}
+                  className="mt-3 bg-red-100 text-red-700 px-3 py-1 rounded text-sm hover:bg-red-200"
+                >
+                  Réessayer
+                </button>
               </div>
             )}
           </div>
@@ -890,6 +1335,16 @@ export default function MenuAIAdmin() {
             </div>
           )}
         </div>
+
+        {/* Mode Suppression Restaurant */}
+        {mode === 'delete' && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <RestaurantDeletion onDeletionComplete={() => {
+              // Optionnel: Recharger la liste des restaurants après suppression
+              loadRestaurants();
+            }} />
+          </div>
+        )}
 
         {/* Footer */}
         <div className="text-center text-gray-500 text-sm">
