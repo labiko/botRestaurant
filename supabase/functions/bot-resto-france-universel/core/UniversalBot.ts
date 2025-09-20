@@ -2521,8 +2521,13 @@ export class UniversalBot implements IMessageHandler {
       );
       
       await this.messageSender.sendMessage(phoneNumber, confirmationMessage);
+
+      // Supprimer l'ancienne session AVANT de créer la nouvelle
       await this.deleteSession(phoneNumber);
-      
+
+      // Créer session pour notes post-commande
+      await this.createPostOrderNotesSession(phoneNumber, order, restaurantId);
+
     } catch (error) {
       console.error('❌ [OrderWithAddress] Erreur:', error);
       await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de la création de commande. Veuillez réessayer.');
