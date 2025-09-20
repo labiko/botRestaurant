@@ -33,8 +33,8 @@ export default function MenuAIAdmin() {
   const [environment, setEnvironment] = useState<'DEV' | 'PROD'>('DEV');
   const [copied, setCopied] = useState(false);
 
-  // Modes d'interface
-  const [mode, setMode] = useState<'command' | 'list' | 'modal' | 'clone' | 'delete' | 'analysis'>('command');
+  // Mode interface avec Édition Moderne réactivée
+  const [mode, setMode] = useState<'command' | 'list' | 'modal'>('command');
   const [categoryName, setCategoryName] = useState('');
   const [originalList, setOriginalList] = useState('');
   const [modifiedList, setModifiedList] = useState('');
@@ -562,6 +562,13 @@ export default function MenuAIAdmin() {
   // NOUVEAU USEEFFECT : Charger les restaurants au démarrage
   useEffect(() => {
     loadRestaurants();
+
+    // Détecter le mode depuis l'URL (pour la sidebar)
+    const params = new URLSearchParams(window.location.search);
+    const urlMode = params.get('mode');
+    if (urlMode === 'modal') {
+      setMode('modal');
+    }
   }, []);
 
   // NOUVELLE FONCTION : Analyser le clonage de restaurant
@@ -612,73 +619,6 @@ export default function MenuAIAdmin() {
 
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6">
-          {/* Navigation */}
-          <div className="flex justify-center mb-6">
-            <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
-              <button
-                onClick={() => setMode('command')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  mode === 'command'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white'
-                }`}
-              >
-                💬 Commandes IA
-              </button>
-              <button
-                onClick={() => setMode('modal')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  mode === 'modal'
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white'
-                }`}
-              >
-                ✨ Édition Moderne
-              </button>
-              <button
-                onClick={() => window.location.href = '/duplicate'}
-                className="px-4 py-2 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900 hover:bg-white bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600"
-              >
-                🔄 Dupliquer Restaurant
-              </button>
-              <button
-                onClick={() => window.location.href = '/duplicate/history'}
-                className="px-4 py-2 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900 hover:bg-white bg-gradient-to-r from-gray-500 to-gray-600 text-white hover:from-gray-600 hover:to-gray-700"
-              >
-                📚 Historique Duplications
-              </button>
-              <button
-                onClick={() => setMode('clone')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  mode === 'clone'
-                    ? 'bg-green-600 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white'
-                }`}
-              >
-                🤖 Créer avec IA
-              </button>
-              <button
-                onClick={() => setMode('delete')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  mode === 'delete'
-                    ? 'bg-red-600 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white'
-                }`}
-              >
-                🗑️ Suppression Restaurant
-              </button>
-              <button
-                onClick={() => setMode('analysis')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  mode === 'analysis'
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white'
-                }`}
-              >
-                🔍 Analyse Configs
-              </button>
-            </div>
-          </div>
 
           <div className="flex justify-between items-center mb-4">
             <div className="text-center flex-1">
@@ -686,11 +626,7 @@ export default function MenuAIAdmin() {
                 🤖 Menu AI Modifier
               </h1>
               <p className="text-gray-600">
-                {mode === 'command' && 'Automatisation intelligente des modifications de menu'}
-                {mode === 'modal' && 'Interface révolutionnaire pour édition complète'}
-                {mode === 'clone' && 'Clonage automatique de restaurants avec IA'}
-                {mode === 'delete' && 'Suppression complète et sécurisée des restaurants pour tests'}
-                {mode === 'analysis' && 'Analyse et diagnostic des configurations existantes'}
+                Automatisation intelligente des modifications de menu
               </p>
             </div>
 
@@ -766,17 +702,30 @@ export default function MenuAIAdmin() {
           </div>
         )}
 
-        {/* Section Édition Modale Moderne AMÉLIORÉE */}
+        {/* Section Édition Moderne RÉACTIVÉE */}
         {mode === 'modal' && (
           <div className="bg-white rounded-lg shadow-lg">
             {/* En-tête avec titre */}
             <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-t-lg p-6 text-white">
-              <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
-                ✨ Édition Moderne Avancée
-              </h2>
-              <p className="text-purple-100">
-                Interface complète : Éditez vos catégories ou dupliquez depuis d'autres restaurants
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                    ✨ Édition Moderne Avancée
+                  </h2>
+                  <p className="text-purple-100">
+                    Interface complète : Éditez vos catégories ou dupliquez depuis d'autres restaurants
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setMode('command');
+                    window.history.pushState({}, '', '/');
+                  }}
+                  className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  ← Retour Commandes IA
+                </button>
+              </div>
             </div>
 
             {/* Navigation par onglets */}
@@ -1009,8 +958,8 @@ export default function MenuAIAdmin() {
           </div>
         )}
 
-        {/* NOUVELLE SECTION : Clonage de Restaurant IA */}
-        {mode === 'clone' && (
+        {/* Section Clonage supprimée - disponible via sidebar */}
+        {false && (
           <div className="bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg shadow-lg p-6 text-gray-800">
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
               🔄 Clonage de Restaurant IA (Révolutionnaire)
@@ -1708,8 +1657,8 @@ OU coller directement le JSON ChatGPT..."
           )}
         </div>
 
-        {/* Mode Suppression Restaurant */}
-        {mode === 'delete' && (
+        {/* Section Suppression supprimée - disponible via sidebar */}
+        {false && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <RestaurantDeletion onDeletionComplete={() => {
               // Optionnel: Recharger la liste des restaurants après suppression
@@ -1718,8 +1667,8 @@ OU coller directement le JSON ChatGPT..."
           </div>
         )}
 
-        {/* Mode Analyse Configurations */}
-        {mode === 'analysis' && (
+        {/* Section Analyse supprimée - disponible via sidebar */}
+        {false && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <ConfigAnalysis onAnalysisComplete={(analysis) => {
               console.log('🔍 Analyse terminée:', analysis);
