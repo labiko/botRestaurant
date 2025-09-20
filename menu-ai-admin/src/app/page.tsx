@@ -334,10 +334,10 @@ export default function MenuAIAdmin() {
     const sqlStatements = changes.map(change => {
       switch (change.type) {
         case 'ADD':
-          return `INSERT INTO france_products (name, category_id, restaurant_id, price_on_site_base, price_delivery_base, product_type, display_order, composition, requires_steps, steps_config, created_at, updated_at) VALUES ('${change.newProduct.name}', ${change.newProduct.category_id}, ${change.newProduct.restaurant_id}, ${change.newProduct.price_on_site_base}, ${change.newProduct.price_delivery_base}, '${change.newProduct.product_type}', ${change.newProduct.display_order}, '${change.newProduct.composition || ''}', ${change.newProduct.requires_steps}, '${JSON.stringify(change.newProduct.steps_config || {})}', NOW(), NOW())`;
+          return `INSERT INTO france_products (name, category_id, restaurant_id, price_on_site_base, price_delivery_base, product_type, display_order, composition, requires_steps, steps_config, is_active, created_at, updated_at) VALUES ('${change.newProduct.name}', ${change.newProduct.category_id}, ${change.newProduct.restaurant_id}, ${change.newProduct.price_on_site_base}, ${change.newProduct.price_delivery_base}, '${change.newProduct.product_type}', ${change.newProduct.display_order}, '${change.newProduct.composition || ''}', ${change.newProduct.requires_steps}, '${JSON.stringify(change.newProduct.steps_config || {})}', ${change.newProduct.is_active}, NOW(), NOW())`;
 
         case 'UPDATE':
-          return `UPDATE france_products SET name = '${change.newProduct.name}', price_on_site_base = ${change.newProduct.price_on_site_base}, price_delivery_base = ${change.newProduct.price_delivery_base}, product_type = '${change.newProduct.product_type}', composition = '${change.newProduct.composition || ''}', updated_at = NOW() WHERE id = ${change.productId}`;
+          return `UPDATE france_products SET name = '${change.newProduct.name}', price_on_site_base = ${change.newProduct.price_on_site_base}, price_delivery_base = ${change.newProduct.price_delivery_base}, product_type = '${change.newProduct.product_type}', composition = '${change.newProduct.composition || ''}', is_active = ${change.newProduct.is_active}, updated_at = NOW() WHERE id = ${change.productId}`;
 
         case 'DELETE':
           return `DELETE FROM france_products WHERE id = ${change.productId}`;

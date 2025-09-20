@@ -346,16 +346,13 @@ async function duplicateProductOptions(
       return { success: true, optionsCreated: 0 };
     }
 
-    // Préparer les nouvelles options
+    // Préparer les nouvelles options (colonnes existantes uniquement)
     const newOptions = sourceOptions.map(option => ({
       product_id: productMapping[option.product_id],
       option_group: option.option_group,
       option_name: option.option_name,
       price_modifier: option.price_modifier,
-      is_required: option.is_required,
-      max_selections: option.max_selections,
-      display_order: option.display_order,
-      is_active: option.is_active
+      display_order: option.display_order
     }));
 
     // Insérer les nouvelles options

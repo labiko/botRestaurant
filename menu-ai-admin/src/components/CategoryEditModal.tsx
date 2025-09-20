@@ -17,6 +17,7 @@ interface Product {
   steps_config?: any;
   category_id: number;
   restaurant_id: number;
+  is_active: boolean;
 }
 
 interface Category {
@@ -50,6 +51,7 @@ export default function CategoryEditModal({
     if (initialProducts) {
       setProducts([...initialProducts]);
       setNextId(Math.max(...initialProducts.map(p => p.id), 999) + 1);
+      setChanges([]); // Reset des changements
     }
   }, [initialProducts]);
 
@@ -129,7 +131,8 @@ export default function CategoryEditModal({
       requires_steps: existingProducts[0]?.requires_steps || false, // Configuration cohérente
       steps_config: existingProducts[0]?.steps_config || {},
       category_id: category.id,
-      restaurant_id: selectedRestaurant?.id || existingProducts[0]?.restaurant_id || initialProducts[0]?.restaurant_id || 1 // CRITIQUE: Restaurant sélectionné
+      restaurant_id: selectedRestaurant?.id || existingProducts[0]?.restaurant_id || initialProducts[0]?.restaurant_id || 1, // CRITIQUE: Restaurant sélectionné
+      is_active: true // Par défaut activé
     };
 
     // 🔍 DEBUG: Log du produit créé
@@ -212,9 +215,13 @@ export default function CategoryEditModal({
             {products.map((product, index) => (
               <div
                 key={product.id}
-                className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                className={`bg-gray-50 rounded-lg p-4 border transition-all ${
+                  product.is_active
+                    ? 'border-gray-200 hover:shadow-md'
+                    : 'border-red-200 bg-red-50 opacity-75'
+                }`}
               >
-                <div className="grid grid-cols-12 gap-4 items-center">
+                <div className="grid grid-cols-13 gap-4 items-center">
 
                   {/* Position */}
                   <div className="col-span-1 text-center">
@@ -274,6 +281,27 @@ export default function CategoryEditModal({
                       <option value="composite">Composite</option>
                       <option value="modular">Modular</option>
                     </select>
+                  </div>
+
+                  {/* Toggle Actif/Inactif */}
+                  <div className="col-span-1 text-center">
+                    <div className="flex flex-col items-center">
+                      <button
+                        onClick={() => handleProductChange(index, 'is_active', !product.is_active)}
+                        className={`w-12 h-6 rounded-full transition-colors ${
+                          product.is_active
+                            ? 'bg-green-500'
+                            : 'bg-gray-300'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                          product.is_active ? 'translate-x-7' : 'translate-x-1'
+                        }`} />
+                      </button>
+                      <div className="text-xs mt-1">
+                        {product.is_active ? '✅ Actif' : '❌ Inactif'}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Actions */}
