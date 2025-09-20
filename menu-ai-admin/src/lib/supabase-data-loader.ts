@@ -319,7 +319,7 @@ export class SupabaseDataLoader {
 
       const { data: restaurants, error } = await this.supabase
         .from('france_restaurants')
-        .select('id, name, slug, address, phone')
+        .select('id, name, slug, address, phone, created_at')
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -330,6 +330,68 @@ export class SupabaseDataLoader {
     } catch (error) {
       console.error('❌ Erreur chargement restaurants:', error);
       return [];
+    }
+  }
+
+  /**
+   * Récupère les statistiques d'un restaurant
+   */
+  async getRestaurantStats(restaurantId: number): Promise<any> {
+    try {
+      // Compter les catégories
+      const { count: categoriesCount, error: categoriesError } = await this.supabase
+        .from('france_menu_categories')
+        .select('*', { count: 'exact', head: true })
+        .eq('restaurant_id', restaurantId);
+
+      if (categoriesError) {
+        console.error('❌ Erreur comptage catégories:', categoriesError);
+      }
+
+      // Compter les produits
+      const { count: productsCount, error: productsError } = await this.supabase
+        .from('france_products')
+        .select('*', { count: 'exact', head: true })
+        .eq('restaurant_id', restaurantId);
+
+      if (productsError) {
+        console.error('❌ Erreur comptage produits:', productsError);
+      }
+
+      // Compter les workflows (produits avec workflow_type non null)
+      const { count: workflowsCount, error: workflowsError } = await this.supabase
+        .from('france_products')
+        .select('*', { count: 'exact', head: true })
+        .eq('restaurant_id', restaurantId)
+        .not('workflow_type', 'is', null);
+
+      if (workflowsError) {
+        console.error('❌ Erreur comptage workflows:', workflowsError);
+      }
+
+      // Compter les options (france_composite_items)
+      const { count: optionsCount, error: optionsError } = await this.supabase
+        .from('france_composite_items')
+        .select('france_products!inner(restaurant_id)', { count: 'exact', head: true })
+        .eq('france_products.restaurant_id', restaurantId);
+
+      if (optionsError) {
+        console.error('❌ Erreur comptage options:', optionsError);
+      }
+
+      const stats = {
+        categories: categoriesCount || 0,
+        products: productsCount || 0,
+        workflows: workflowsCount || 0,
+        options: optionsCount || 0
+      };
+
+      console.log(`📊 Stats restaurant ${restaurantId}:`, stats);
+
+      return stats;
+    } catch (error) {
+      console.error('❌ Erreur calcul statistiques restaurant:', error);
+      return { categories: 0, products: 0, workflows: 0, options: 0 };
     }
   }
 }

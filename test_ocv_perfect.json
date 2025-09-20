@@ -1,0 +1,158 @@
+{
+  "confidence": 95,
+  "categories": [
+    {"newName": "Les Menus Solo", "icon": "🍗"},
+    {"newName": "Les Menus Family", "icon": "👨‍👩‍👧‍👦"},
+    {"newName": "Nos Paninis", "icon": "🥪"},
+    {"newName": "Menu Kids", "icon": "🧒"},
+    {"newName": "Nos Boxes", "icon": "📦"},
+    {"newName": "Offres Midi", "icon": "🌅"},
+    {"newName": "Extra", "icon": "➕"}
+  ],
+  "products": [
+    {
+      "newName": "Menu Tenders",
+      "price_on_site": 9.00,
+      "price_delivery": 10.00,
+      "category": "Les Menus Solo",
+      "composition": "6 Pieces de tenders + frites + boisson 33 cl"
+    },
+    {
+      "newName": "Menu Wings",
+      "price_on_site": 9.00,
+      "price_delivery": 10.00,
+      "category": "Les Menus Solo",
+      "composition": "8 Pieces de wings + frites + boisson 33 cl"
+    },
+    {
+      "newName": "Menu Wings XL",
+      "price_on_site": 10.00,
+      "price_delivery": 11.00,
+      "category": "Les Menus Solo",
+      "composition": "10 Pieces de wings + frites + boisson 33 cl"
+    },
+    {
+      "newName": "Menu Family",
+      "price_on_site": 25.00,
+      "price_delivery": 26.00,
+      "category": "Les Menus Family",
+      "composition": "33 Wings + frites + maxi boisson 2 l"
+    },
+    {
+      "newName": "Panini 4 Fromages",
+      "price_on_site": 5.50,
+      "price_delivery": 6.50,
+      "category": "Nos Paninis",
+      "composition": "Panini avec 4 fromages + boisson 33 cl"
+    },
+    {
+      "newName": "Panini Poulet",
+      "price_on_site": 5.50,
+      "price_delivery": 6.50,
+      "category": "Nos Paninis",
+      "composition": "Panini au poulet + boisson 33 cl"
+    },
+    {
+      "newName": "Panini Thon",
+      "price_on_site": 5.50,
+      "price_delivery": 6.50,
+      "category": "Nos Paninis",
+      "composition": "Panini au thon + boisson 33 cl"
+    },
+    {
+      "newName": "Panini Merguez",
+      "price_on_site": 5.50,
+      "price_delivery": 6.50,
+      "category": "Nos Paninis",
+      "composition": "Panini a la merguez + boisson 33 cl"
+    },
+    {
+      "newName": "Panini Viande Hachee",
+      "price_on_site": 5.50,
+      "price_delivery": 6.50,
+      "category": "Nos Paninis",
+      "composition": "Panini a la viande hachee + boisson 33 cl"
+    },
+    {
+      "newName": "Panini Saumon",
+      "price_on_site": 5.50,
+      "price_delivery": 6.50,
+      "category": "Nos Paninis",
+      "composition": "Panini au saumon + boisson 33 cl"
+    },
+    {
+      "newName": "Menu Kids",
+      "price_on_site": 7.50,
+      "price_delivery": 8.50,
+      "category": "Menu Kids",
+      "composition": "1 Margherita Junior ou 1 Cheese Burger + frites ou 5 Nuggets + frites + Kinder Surprise + compote"
+    },
+    {
+      "newName": "Boxe 1",
+      "price_on_site": 20.00,
+      "price_delivery": 21.00,
+      "category": "Nos Boxes",
+      "composition": "8 Hot Wings + 8 Tenders + 1 Grande Frites + 1 Maxi Boisson"
+    },
+    {
+      "newName": "Boxe 2",
+      "price_on_site": 25.00,
+      "price_delivery": 26.00,
+      "category": "Nos Boxes",
+      "composition": "12 Hot Wings + 12 Tenders + 1 Grande Frites + 1 Maxi Boisson"
+    },
+    {
+      "newName": "Boxe 3",
+      "price_on_site": 30.00,
+      "price_delivery": 31.00,
+      "category": "Nos Boxes",
+      "composition": "15 Hot Wings + 15 Tenders + 1 Grande Frites + 1 Maxi Boisson"
+    },
+    {
+      "newName": "Offre Midi",
+      "price_on_site": 11.50,
+      "price_delivery": 12.50,
+      "category": "Offres Midi",
+      "composition": "1 Cheese Naan ou salade au choix + 1 Boisson 33 cl + 1 Dessert au choix"
+    }
+  ],
+  "supplements": [
+    {
+      "name": "4 Hot Wings",
+      "price_on_site": 3.50,
+      "price_delivery": 4.50,
+      "category": "Supplements"
+    },
+    {
+      "name": "1 Tenders",
+      "price_on_site": 1.50,
+      "price_delivery": 2.50,
+      "category": "Supplements"
+    },
+    {
+      "name": "4 Oignons Rings",
+      "price_on_site": 3.50,
+      "price_delivery": 4.50,
+      "category": "Supplements"
+    },
+    {
+      "name": "4 Nuggets",
+      "price_on_site": 3.00,
+      "price_delivery": 4.00,
+      "category": "Supplements"
+    },
+    {
+      "name": "4 Mozza Sticks",
+      "price_on_site": 3.50,
+      "price_delivery": 4.50,
+      "category": "Supplements"
+    },
+    {
+      "name": "4 Jalapenos",
+      "price_on_site": 3.50,
+      "price_delivery": 4.50,
+      "category": "Supplements"
+    }
+  ],
+  "total_products_found": 17
+}

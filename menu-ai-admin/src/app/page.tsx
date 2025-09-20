@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import CategoryEditModal from '@/components/CategoryEditModal';
 import ProdConfirmModal from '@/components/ProdConfirmModal';
 import RestaurantDeletion from '@/components/RestaurantDeletion';
+import ConfigAnalysis from '@/components/ConfigAnalysis';
 import { Restaurant } from '@/lib/types';
 
 interface AIResponse {
@@ -33,7 +34,7 @@ export default function MenuAIAdmin() {
   const [copied, setCopied] = useState(false);
 
   // Modes d'interface
-  const [mode, setMode] = useState<'command' | 'list' | 'modal' | 'clone' | 'delete'>('command');
+  const [mode, setMode] = useState<'command' | 'list' | 'modal' | 'clone' | 'delete' | 'analysis'>('command');
   const [categoryName, setCategoryName] = useState('');
   const [originalList, setOriginalList] = useState('');
   const [modifiedList, setModifiedList] = useState('');
@@ -520,6 +521,12 @@ export default function MenuAIAdmin() {
                 ✨ Édition Moderne
               </button>
               <button
+                onClick={() => window.location.href = '/duplicate'}
+                className="px-4 py-2 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900 hover:bg-white bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600"
+              >
+                🔄 Dupliquer Restaurant
+              </button>
+              <button
                 onClick={() => setMode('clone')}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                   mode === 'clone'
@@ -527,7 +534,7 @@ export default function MenuAIAdmin() {
                     : 'text-gray-600 hover:text-gray-900 hover:bg-white'
                 }`}
               >
-                🔄 Clonage Restaurant
+                🤖 Créer avec IA
               </button>
               <button
                 onClick={() => setMode('delete')}
@@ -538,6 +545,16 @@ export default function MenuAIAdmin() {
                 }`}
               >
                 🗑️ Suppression Restaurant
+              </button>
+              <button
+                onClick={() => setMode('analysis')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  mode === 'analysis'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white'
+                }`}
+              >
+                🔍 Analyse Configs
               </button>
             </div>
           </div>
@@ -552,6 +569,7 @@ export default function MenuAIAdmin() {
                 {mode === 'modal' && 'Interface révolutionnaire pour édition complète'}
                 {mode === 'clone' && 'Clonage automatique de restaurants avec IA'}
                 {mode === 'delete' && 'Suppression complète et sécurisée des restaurants pour tests'}
+                {mode === 'analysis' && 'Analyse et diagnostic des configurations existantes'}
               </p>
             </div>
 
@@ -1342,6 +1360,15 @@ OU coller directement le JSON ChatGPT..."
             <RestaurantDeletion onDeletionComplete={() => {
               // Optionnel: Recharger la liste des restaurants après suppression
               loadRestaurants();
+            }} />
+          </div>
+        )}
+
+        {/* Mode Analyse Configurations */}
+        {mode === 'analysis' && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <ConfigAnalysis onAnalysisComplete={(analysis) => {
+              console.log('🔍 Analyse terminée:', analysis);
             }} />
           </div>
         )}
