@@ -280,44 +280,6 @@ export default function DuplicationHistoryPage() {
                           >
                             👁️ Voir détail
                           </button>
-
-                          {dup.status === 'completed' && dup.target_restaurant && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  if (dup.target_restaurant?.name) {
-                                    const restaurantSlug = dup.target_restaurant.name
-                                      .toLowerCase()
-                                      .replace(/[^a-z0-9\s-]/g, '')
-                                      .replace(/\s+/g, '-');
-                                    window.open(`/?restaurant=${restaurantSlug}`, '_blank');
-                                  }
-                                }}
-                                className="text-blue-600 hover:text-blue-900"
-                              >
-                                📝 Éditer
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (dup.target_restaurant?.name) {
-                                    window.open(`https://web.whatsapp.com/`, '_blank');
-                                  }
-                                }}
-                                className="text-green-600 hover:text-green-900"
-                              >
-                                🤖 Tester
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => {
-                              // Afficher les détails dans une popup ou modal
-                              alert(`Détails duplication #DUP-${String(dup.id).padStart(3, '0')}:\n\nSource: ${dup.source_restaurant?.name || 'N/A'}\nCible: ${dup.target_restaurant?.name || 'N/A'}\nStatut: ${dup.status}\nDébut: ${formatDate(dup.started_at)}\n${dup.completed_at ? `Fin: ${formatDate(dup.completed_at)}` : ''}\n${dup.duration_seconds ? `Durée: ${formatDuration(dup.duration_seconds)}` : ''}\n${dup.error_message ? `Erreur: ${dup.error_message}` : ''}`);
-                            }}
-                            className="text-gray-600 hover:text-gray-900"
-                          >
-                            👁️ Détails
-                          </button>
                         </div>
                       </td>
                     </tr>

@@ -229,7 +229,7 @@ export default function MenuAIAdmin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           categoryName: categoryName.trim(),
-          restaurantId: 1
+          restaurantId: selectedRestaurant?.id || 1  // 🔧 CORRECTION: Utiliser le restaurant sélectionné
         })
       });
 
@@ -295,6 +295,12 @@ export default function MenuAIAdmin() {
   const handleOpenModal = async () => {
     if (!categoryName.trim()) return;
 
+    // 🔍 DEBUG: Logs avant ouverture modale
+    console.log('🔍 [MODAL OPEN DEBUG] Ouverture modale d\'\u00e9dition:');
+    console.log('📝 categoryName:', categoryName.trim());
+    console.log('🏪 selectedRestaurant:', selectedRestaurant);
+    console.log('🆔 restaurantId envoy\u00e9:', selectedRestaurant?.id || 1);
+
     setLoading(true);
     try {
       const response = await fetch('/api/load-category', {
@@ -302,7 +308,7 @@ export default function MenuAIAdmin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           categoryName: categoryName.trim(),
-          restaurantId: 1
+          restaurantId: selectedRestaurant?.id || 1  // 🔧 CORRECTION: Utiliser le restaurant sélectionné
         })
       });
 
@@ -1711,6 +1717,7 @@ OU coller directement le JSON ChatGPT..."
         category={modalCategory}
         products={modalProducts}
         onSave={handleModalSave}
+        selectedRestaurant={selectedRestaurant}
       />
 
       {/* Modale Confirmation PROD */}

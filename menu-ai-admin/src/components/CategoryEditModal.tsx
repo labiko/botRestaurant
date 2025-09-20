@@ -31,6 +31,7 @@ interface CategoryEditModalProps {
   category: Category | null;
   products: Product[];
   onSave: (changes: any[]) => void;
+  selectedRestaurant: { id: number; name: string } | null;
 }
 
 export default function CategoryEditModal({
@@ -38,7 +39,8 @@ export default function CategoryEditModal({
   onClose,
   category,
   products: initialProducts,
-  onSave
+  onSave,
+  selectedRestaurant
 }: CategoryEditModalProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [changes, setChanges] = useState<any[]>([]);
@@ -51,6 +53,17 @@ export default function CategoryEditModal({
     }
   }, [initialProducts]);
 
+  // 🔍 DEBUG: Logs à l'ouverture de la modale
+  useEffect(() => {
+    if (isOpen && category) {
+      console.log('🔍 [MODAL DEBUG] Ouverture modale d\'édition:');
+      console.log('📂 Category:', category);
+      console.log('🏪 Selected Restaurant:', selectedRestaurant);
+      console.log('📦 Initial Products:', initialProducts);
+      console.log('📋 Products with category_id:', initialProducts?.map(p => ({ name: p.name, category_id: p.category_id, restaurant_id: p.restaurant_id })));
+    }
+  }, [isOpen, category, selectedRestaurant, initialProducts]);
+
   if (!isOpen || !category) return null;
 
   const handleProductChange = (index: number, field: string, value: any) => {
@@ -62,10 +75,10 @@ export default function CategoryEditModal({
       [field]: value
     };
 
-    // Auto-calcul prix livraison
-    if (field === 'price_on_site_base') {
-      updatedProducts[index].price_delivery_base = parseFloat(value) + 1;
-    }
+    // Auto-calcul prix livraison désactivé - modification manuelle désormais
+    // if (field === 'price_on_site_base') {
+    //   updatedProducts[index].price_delivery_base = parseFloat(value) + 1;
+    // }
 
     setProducts(updatedProducts);
 
@@ -91,19 +104,38 @@ export default function CategoryEditModal({
   };
 
   const addNewProduct = () => {
+    // Analyser les produits existants pour maintenir la cohérence
+    const existingProducts = initialProducts.filter(p => p.id <= 900); // Vrais produits (pas les nouveaux)
+    const avgPriceOnSite = existingProducts.length > 0
+      ? existingProducts.reduce((sum, p) => sum + p.price_on_site_base, 0) / existingProducts.length
+      : 9.50;
+
+    // 🔍 DEBUG: Logs avant création du nouveau produit
+    console.log('🔍 [ADD PRODUCT DEBUG] Création nouveau produit:');
+    console.log('📂 category.id:', category.id);
+    console.log('🏪 selectedRestaurant?.id:', selectedRestaurant?.id);
+    console.log('📦 existingProducts[0]?.category_id:', existingProducts[0]?.category_id);
+    console.log('📦 existingProducts[0]?.restaurant_id:', existingProducts[0]?.restaurant_id);
+    console.log('📊 Prix moyen calculé:', avgPriceOnSite);
+
     const newProduct: Product = {
       id: nextId,
-      name: 'NOUVEAU PRODUIT',
-      price_on_site_base: 9.50,
-      price_delivery_base: 10.50,
-      product_type: 'simple',
+      name: `NOUVEAU ${category.name.slice(0, -1)}`, // NOUVEAU GOURMET au lieu de NOUVEAU PRODUIT
+      price_on_site_base: Math.round(avgPriceOnSite * 2) / 2, // Prix moyen arrondi à 0.50
+      price_delivery_base: Math.round((avgPriceOnSite + 1) * 2) / 2, // +1€ arrondi à 0.50
+      product_type: existingProducts[0]?.product_type || 'simple', // Type cohérent avec catégorie
       display_order: products.length + 1,
       composition: '',
-      requires_steps: false,
-      steps_config: {},
+      requires_steps: existingProducts[0]?.requires_steps || false, // Configuration cohérente
+      steps_config: existingProducts[0]?.steps_config || {},
       category_id: category.id,
-      restaurant_id: 1
+      restaurant_id: selectedRestaurant?.id || existingProducts[0]?.restaurant_id || initialProducts[0]?.restaurant_id || 1 // CRITIQUE: Restaurant sélectionné
     };
+
+    // 🔍 DEBUG: Log du produit créé
+    console.log('✨ [ADD PRODUCT DEBUG] Nouveau produit créé:', newProduct);
+    console.log('🎯 category_id final:', newProduct.category_id);
+    console.log('🏪 restaurant_id final:', newProduct.restaurant_id);
 
     setProducts([...products, newProduct]);
     setChanges([...changes, {
@@ -223,8 +255,8 @@ export default function CategoryEditModal({
                         type="number"
                         step="0.50"
                         value={product.price_delivery_base}
-                        className="w-full p-2 border border-gray-200 rounded-lg text-center bg-gray-100"
-                        readOnly
+                        onChange={(e) => handleProductChange(index, 'price_delivery_base', parseFloat(e.target.value))}
+                        className="w-full p-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500"
                       />
                       <span className="text-gray-600">€</span>
                     </div>
@@ -235,8 +267,8 @@ export default function CategoryEditModal({
                   <div className="col-span-2">
                     <select
                       value={product.product_type}
-                      onChange={(e) => handleProductChange(index, 'product_type', e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      disabled
+                      className="w-full p-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
                     >
                       <option value="simple">Simple</option>
                       <option value="composite">Composite</option>
