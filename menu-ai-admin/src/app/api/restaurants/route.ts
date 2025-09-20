@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { SupabaseDataLoader } from '@/lib/supabase-data-loader';
+import { TimezoneService } from '@/lib/timezone-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,14 +29,14 @@ export async function GET(request: NextRequest) {
           return {
             ...restaurant,
             stats,
-            created_at: restaurant.created_at || new Date().toISOString()
+            created_at: restaurant.created_at || TimezoneService.getCurrentTimeForDB()
           };
         } catch (error) {
           console.error(`❌ Erreur stats pour ${restaurant.name}:`, error);
           return {
             ...restaurant,
             stats: { categories: 0, products: 0, workflows: 0, options: 0 },
-            created_at: restaurant.created_at || new Date().toISOString()
+            created_at: restaurant.created_at || TimezoneService.getCurrentTimeForDB()
           };
         }
       })

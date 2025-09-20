@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { TimezoneService } from '@/lib/timezone-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     // Préparer les données de mise à jour
     const updateData: any = {
-      updated_at: new Date().toISOString()
+      updated_at: TimezoneService.getCurrentTimeForDB()
     };
 
     if (dev_status) {

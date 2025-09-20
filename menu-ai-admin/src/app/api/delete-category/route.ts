@@ -4,12 +4,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Configuration Supabase selon l'environnement
-const environment = process.env.NEXT_PUBLIC_ENVIRONMENT || 'DEV';
-const supabaseUrl = environment === 'PROD'
-  ? process.env.NEXT_PUBLIC_SUPABASE_URL_PROD
-  : process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Configuration Supabase DEV par défaut
+const environment = 'DEV'; // Force DEV
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const supabase = createClient(supabaseUrl!, supabaseKey!);
 

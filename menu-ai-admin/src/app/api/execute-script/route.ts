@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { TimezoneService } from '@/lib/timezone-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
           .from('menu_ai_scripts')
           .update({
             dev_status: 'executed',
-            dev_executed_at: new Date().toISOString()
+            dev_executed_at: TimezoneService.getCurrentTimeForDB()
           })
           .eq('id', scriptId);
 
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
           .from('menu_ai_scripts')
           .update({
             prod_status: 'executed',
-            prod_executed_at: new Date().toISOString()
+            prod_executed_at: TimezoneService.getCurrentTimeForDB()
           })
           .eq('id', scriptId);
 

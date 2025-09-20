@@ -47,6 +47,10 @@ export default function CategoryEditModal({
   const [changes, setChanges] = useState<any[]>([]);
   const [nextId, setNextId] = useState(1000); // ID temporaire pour nouveaux produits
 
+  // États pour l'édition inline du nom de catégorie
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState('');
+
   useEffect(() => {
     if (initialProducts) {
       setProducts([...initialProducts]);
@@ -103,6 +107,35 @@ export default function CategoryEditModal({
       });
     }
     setChanges([...changes]);
+  };
+
+  // Fonction pour sauvegarder le nom de catégorie
+  const saveCategoryName = async () => {
+    if (!category || !selectedRestaurant || !tempName.trim() || tempName.trim() === category.name) {
+      setIsEditingName(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/restaurant-categories/update-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: category.id,
+          restaurantId: selectedRestaurant.id,
+          newName: tempName.trim()
+        })
+      });
+
+      if (response.ok) {
+        // Mettre à jour le nom de la catégorie localement
+        category.name = tempName.trim();
+        setIsEditingName(false);
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde nom:', error);
+      setIsEditingName(false);
+    }
   };
 
   const addNewProduct = () => {
@@ -195,7 +228,33 @@ export default function CategoryEditModal({
         <div className="p-6 border-b border-gray-200 flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              {category.icon} Édition - {category.name}
+              {category.icon} Édition - {
+                isEditingName ? (
+                  <input
+                    type="text"
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    onBlur={saveCategoryName}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveCategoryName();
+                      if (e.key === 'Escape') setIsEditingName(false);
+                    }}
+                    className="bg-blue-50 border border-blue-300 rounded px-2 py-1 text-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                ) : (
+                  <span
+                    onClick={() => {
+                      setTempName(category.name);
+                      setIsEditingName(true);
+                    }}
+                    className="cursor-pointer hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                    title="Cliquer pour renommer"
+                  >
+                    {category.name}
+                  </span>
+                )
+              }
             </h2>
             <p className="text-gray-600 mt-1">
               {products.length} produits • {changes.length} modification(s) en attente

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SupabaseDataLoader } from '@/lib/supabase-data-loader';
+import { TimezoneService } from '@/lib/timezone-service';
 
 /**
  * API d'extraction complète Pizza Yolo 77 en LECTURE SEULE
@@ -165,7 +166,7 @@ export async function GET(request: NextRequest) {
       successful_templates: successfulTemplates,
       patterns: patterns,
       statistics: statistics,
-      extraction_timestamp: new Date().toISOString()
+      extraction_timestamp: TimezoneService.getCurrentTimeForDB()
     };
 
     console.log('✅ Extraction Pizza Yolo 77 terminée !');

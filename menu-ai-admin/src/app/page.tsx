@@ -4,12 +4,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import CategoryEditModal from '@/components/CategoryEditModal';
 import ProdConfirmModal from '@/components/ProdConfirmModal';
 import RestaurantDeletion from '@/components/RestaurantDeletion';
-import ConfigAnalysis from '@/components/ConfigAnalysis';
 import { Restaurant } from '@/lib/types';
 import { useRestaurant } from '@/contexts/RestaurantContext';
+import { TimezoneService } from '@/lib/timezone-service';
 
 interface AIResponse {
   success: boolean;
@@ -28,6 +29,7 @@ interface AIResponse {
 }
 
 export default function MenuAIAdmin() {
+  const searchParams = useSearchParams();
   const [command, setCommand] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AIResponse | null>(null);
@@ -62,6 +64,11 @@ export default function MenuAIAdmin() {
     details?: string;
   } | null>(null);
   const [isDuplicating, setIsDuplicating] = useState(false);
+
+  // États pour modal de confirmation suppression catégorie
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<any>(null);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
 
   // Auto-masquage des notifications
   useEffect(() => {
@@ -520,30 +527,29 @@ export default function MenuAIAdmin() {
     }
   };
 
-  // Fonction : Supprimer une catégorie complète
-  const handleDeleteCategory = async () => {
-    if (!selectedCategory || !selectedRestaurant) {
-      setNotification({
-        type: 'error',
-        message: 'Paramètres de suppression manquants',
-        details: 'Veuillez sélectionner une catégorie à supprimer.'
-      });
-      return;
-    }
+  // Fonction d'exécution réelle de la suppression (appelée depuis le modal)
+  const executeDeleteCategory = async () => {
+    if (!categoryToDelete) return;
 
-    // Double confirmation
-    const firstConfirm = window.confirm(
-      `⚠️ ATTENTION : Vous êtes sur le point de supprimer définitivement la catégorie "${selectedCategory.name}" et tous ses produits.\n\nCette action est IRRÉVERSIBLE.\n\nÊtes-vous absolument certain de vouloir continuer ?`
-    );
+    // Fermer le modal et réinitialiser
+    setShowDeleteConfirmModal(false);
+    setDeleteConfirmationText('');
 
-    if (!firstConfirm) return;
+    // Temporairement assigner la catégorie à supprimer à selectedCategory
+    // pour que la logique existante fonctionne
+    const originalCategory = selectedCategory;
+    setSelectedCategory(categoryToDelete);
 
-    const secondConfirm = window.confirm(
-      `🗑️ CONFIRMATION FINALE\n\nCatégorie : ${selectedCategory.name}\nProduits à supprimer : ${selectedCategory.stats?.products || 0}\nOptions à supprimer : ${selectedCategory.stats?.options || 0}\n\nTapez "SUPPRIMER" pour confirmer :`
-    );
+    // Exécuter la logique de suppression originale (sans les confirmations)
+    await executeOriginalDeletion();
 
-    if (!secondConfirm) return;
+    // Restaurer la sélection originale et nettoyer
+    setSelectedCategory(originalCategory);
+    setCategoryToDelete(null);
+  };
 
+  // Logique de suppression originale (extraite de handleDeleteCategory)
+  const executeOriginalDeletion = async () => {
     setLoadingCategories(true);
     setNotification({
       type: 'info',
@@ -592,6 +598,22 @@ export default function MenuAIAdmin() {
     } finally {
       setLoadingCategories(false);
     }
+  };
+
+  // Fonction : Supprimer une catégorie complète
+  const handleDeleteCategory = async () => {
+    if (!selectedCategory || !selectedRestaurant) {
+      setNotification({
+        type: 'error',
+        message: 'Paramètres de suppression manquants',
+        details: 'Veuillez sélectionner une catégorie à supprimer.'
+      });
+      return;
+    }
+
+    // Afficher le modal de confirmation sécurisé
+    setCategoryToDelete(selectedCategory);
+    setShowDeleteConfirmModal(true);
   };
 
   // Fonction : Supprimer un script
@@ -662,6 +684,22 @@ export default function MenuAIAdmin() {
       console.log('🔍 DEBUG: Aucune section dans URL, params:', params.toString());
     }
   }, []);
+
+  // USEEFFECT : Écouter les changements d'URL via sidebar
+  useEffect(() => {
+    const urlMode = searchParams.get('mode');
+    const urlSection = searchParams.get('section');
+
+    console.log('🔄 DEBUG: Mise à jour navigation - mode:', urlMode, 'section:', urlSection);
+
+    if (urlMode === 'modal') {
+      setMode('modal');
+      setActiveSection('');
+    } else if (urlSection) {
+      setActiveSection(urlSection);
+      setMode('command');
+    }
+  }, [searchParams]);
 
   // USEEFFECT : Recharger catégories quand restaurant change
   useEffect(() => {
@@ -1725,13 +1763,13 @@ OU coller directement le JSON ChatGPT..."
                         <tr key={script.id} className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                           <td className="p-3">
                             <div className="text-xs text-gray-700 leading-tight font-medium">
-                              {new Date(script.created_at).toLocaleDateString('fr-FR', {
+                              {TimezoneService.formatDateWithOptions(script.created_at, {
                                 day: '2-digit',
                                 month: '2-digit'
                               })}
                               <br />
                               <span className="text-gray-500">
-                                {new Date(script.created_at).toLocaleTimeString('fr-FR', {
+                                {TimezoneService.formatDateWithOptions(script.created_at, {
                                   hour: '2-digit',
                                   minute: '2-digit'
                                 })}
@@ -1833,14 +1871,6 @@ OU coller directement le JSON ChatGPT..."
         {/* DEBUG: État activeSection */}
         {console.log('🔍 DEBUG: activeSection actuel:', activeSection)}
 
-        {/* Section Analyse - activée via sidebar */}
-        {activeSection === 'analyse' && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <ConfigAnalysis onAnalysisComplete={(analysis) => {
-              console.log('🔍 Analyse terminée:', analysis);
-            }} />
-          </div>
-        )}
 
         {/* Footer */}
         <div className="text-center text-gray-500 text-sm">
@@ -1866,6 +1896,102 @@ OU coller directement le JSON ChatGPT..."
         scriptPreview={selectedProdScript?.script_sql || ''}
         loading={prodExecuting}
       />
+
+      {/* Modal de confirmation suppression catégorie */}
+      {showDeleteConfirmModal && categoryToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full">
+            {/* Header avec icône d'attention */}
+            <div className="bg-red-50 border-b border-red-200 p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <span className="text-2xl">⚠️</span>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-medium text-red-800">
+                    ATTENTION : Suppression définitive
+                  </h3>
+                </div>
+              </div>
+            </div>
+
+            {/* Corps du modal */}
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-gray-900 mb-2">
+                  Vous êtes sur le point de supprimer définitivement la catégorie <strong>"{categoryToDelete.name}"</strong> et tous ses produits.
+                </p>
+                <p className="text-red-600 font-medium">
+                  Cette action est IRRÉVERSIBLE.
+                </p>
+              </div>
+
+              {/* Aperçu des conséquences */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <h4 className="font-medium text-gray-900 mb-2">Aperçu de la suppression :</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>📁 Catégorie :</span>
+                    <span className="font-medium">{categoryToDelete.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>🍕 Produits :</span>
+                    <span className="text-red-600 font-medium">{categoryToDelete.stats?.products || 0} supprimés</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>⚙️ Options :</span>
+                    <span className="text-red-600 font-medium">{categoryToDelete.stats?.options || 0} supprimées</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-gray-700 font-medium mb-2">
+                  Êtes-vous absolument certain de vouloir continuer ?
+                </p>
+                <p className="text-sm text-gray-600">
+                  Pour confirmer, tapez le nom exact de la catégorie :
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmationText}
+                  onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                  placeholder={categoryToDelete.name}
+                  className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                />
+                <div className="mt-2 text-xs text-gray-500">
+                  {deleteConfirmationText === categoryToDelete.name ? (
+                    <span className="text-green-600">✅ Nom confirmé</span>
+                  ) : (
+                    <span className="text-gray-500">❌ Veuillez taper le nom exact</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Boutons */}
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirmModal(false);
+                    setDeleteConfirmationText('');
+                    setCategoryToDelete(null);
+                  }}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={executeDeleteCategory}
+                  disabled={deleteConfirmationText !== categoryToDelete.name || loadingCategories}
+                  className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loadingCategories ? 'Suppression...' : 'OK'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

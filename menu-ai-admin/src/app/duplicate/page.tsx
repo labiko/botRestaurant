@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { TimezoneService } from '@/lib/timezone-service';
 
 interface Restaurant {
   id: number;
@@ -188,7 +189,7 @@ export default function DuplicateRestaurantPage() {
                           {restaurant.stats.categories} catégories • {restaurant.stats.products} produits • {restaurant.stats.workflows} workflows
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          Dernière mise à jour: {new Date(restaurant.created_at).toLocaleDateString('fr-FR')}
+                          Dernière mise à jour: {TimezoneService.formatDateWithOptions(restaurant.created_at, { dateStyle: 'short' })}
                         </p>
                       </div>
                       <div className="text-right">

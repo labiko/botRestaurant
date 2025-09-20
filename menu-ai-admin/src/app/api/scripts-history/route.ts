@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { TimezoneService } from '@/lib/timezone-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
         category_name,
         dev_status: 'executed',
         prod_status: 'not_applied',
-        dev_executed_at: new Date().toISOString()
+        dev_executed_at: TimezoneService.getCurrentTimeForDB()
       }])
       .select()
       .single();

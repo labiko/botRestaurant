@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DuplicationDetailModal from '@/components/DuplicationDetailModal';
+import { TimezoneService } from '@/lib/timezone-service';
 
 interface DuplicationHistory {
   id: number;
@@ -85,7 +86,7 @@ export default function DuplicationHistoryPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('fr-FR');
+    return TimezoneService.formatDate(dateString);
   };
 
   const formatDuration = (seconds: number | null) => {

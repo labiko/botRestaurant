@@ -78,15 +78,6 @@ export default function Sidebar() {
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       description: 'Suppression sécurisée'
-    },
-    {
-      id: 'analyse',
-      label: 'Analyse Configs',
-      icon: '🔍',
-      path: '/?section=analyse',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      description: 'Analyse des configurations'
     }
   ];
 

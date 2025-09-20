@@ -63,7 +63,7 @@ export class SupabaseDataLoader {
       // Récupération restaurant
       const { data: restaurant, error: restaurantError } = await this.supabase
         .from('france_restaurants')
-        .select('*')
+        .select('id, name, slug, address, phone, created_at')
         .eq('id', restaurantId)
         .single();
 

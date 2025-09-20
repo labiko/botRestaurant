@@ -3,13 +3,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { TimezoneService } from '@/lib/timezone-service';
 
-// Configuration Supabase selon l'environnement (DEV par défaut)
-const environment = process.env.NEXT_PUBLIC_ENVIRONMENT || 'DEV';
-const supabaseUrl = environment === 'PROD'
-  ? process.env.NEXT_PUBLIC_SUPABASE_URL_PROD
-  : process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Configuration Supabase DEV par défaut
+const environment = 'DEV'; // Force DEV
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const supabase = createClient(supabaseUrl!, supabaseKey!);
 
@@ -47,7 +46,7 @@ export async function POST(request: NextRequest) {
         source_restaurant_id: sourceRestaurantId,
         target_restaurant_id: targetRestaurantId,
         status: 'started',
-        started_at: new Date().toISOString()
+        started_at: TimezoneService.getCurrentTimeForDB()
       })
       .select('id')
       .single();
@@ -157,32 +156,33 @@ export async function POST(request: NextRequest) {
           duplicatedProductsCount++;
           console.log(`✅ Produit dupliqué: ${newProduct.name}`);
 
-          // ÉTAPE 5: Dupliquer les options du produit si elles existent
-          if (duplicateWorkflows) {
-            const { data: productOptions, error: optionsError } = await supabase
-              .from('france_product_options')
-              .select('*')
-              .eq('product_id', sourceProduct.id);
+          // ÉTAPE 5: Dupliquer les options du produit (TOUJOURS, même pour produits simples)
+          const { data: productOptions, error: optionsError } = await supabase
+            .from('france_product_options')
+            .select('*')
+            .eq('product_id', sourceProduct.id);
 
-            if (!optionsError && productOptions && productOptions.length > 0) {
-              for (const option of productOptions) {
-                const { error: newOptionError } = await supabase
-                  .from('france_product_options')
-                  .insert({
-                    product_id: newProduct.id,
-                    name: option.name,
-                    price_modifier: option.price_modifier,
-                    is_required: option.is_required,
-                    display_order: option.display_order
-                  });
+          if (!optionsError && productOptions && productOptions.length > 0) {
+            for (const option of productOptions) {
+              const { error: newOptionError } = await supabase
+                .from('france_product_options')
+                .insert({
+                  product_id: newProduct.id,
+                  option_name: option.option_name,
+                  option_group: option.option_group,
+                  price_modifier: option.price_modifier,
+                  is_required: option.is_required,
+                  display_order: option.display_order
+                });
 
-                if (!newOptionError) {
-                  duplicatedOptionsCount++;
-                }
+              if (!newOptionError) {
+                duplicatedOptionsCount++;
               }
             }
+          }
 
-            // Dupliquer les éléments composites si ils existent
+          // ÉTAPE 6: Dupliquer les éléments composites SEULEMENT si workflows activés
+          if (duplicateWorkflows) {
             const { data: compositeItems, error: compositeError } = await supabase
               .from('france_composite_items')
               .select('*')
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
         .from('duplication_logs')
         .update({
           status: 'completed',
-          completed_at: new Date().toISOString(),
+          completed_at: TimezoneService.getCurrentTimeForDB(),
           summary: {
             categoriesDuplicated: 1,
             productsDuplicated: duplicatedProductsCount,
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
         .from('duplication_logs')
         .update({
           status: 'failed',
-          completed_at: new Date().toISOString(),
+          completed_at: TimezoneService.getCurrentTimeForDB(),
           error_message: error instanceof Error ? error.message : 'Erreur inconnue'
         })
         .eq('id', duplicationLog.id);

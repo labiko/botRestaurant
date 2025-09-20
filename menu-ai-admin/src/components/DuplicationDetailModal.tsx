@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { TimezoneService } from '@/lib/timezone-service';
 
 interface Product {
   id: number;
@@ -108,7 +109,7 @@ export default function DuplicationDetailModal({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('fr-FR');
+    return TimezoneService.formatDate(dateString);
   };
 
   if (!isOpen) return null;
