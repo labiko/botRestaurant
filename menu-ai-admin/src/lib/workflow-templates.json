@@ -1,0 +1,364 @@
+{
+  "base_template": {
+    "meta": {
+      "name": "Template de base",
+      "description": "Template générique extensible pour tous types de workflows",
+      "version": "1.0",
+      "created_at": "2025-09-20"
+    },
+    "workflow_config": {
+      "workflow_type": "composite_workflow",
+      "requires_steps": true,
+      "steps": [
+        {
+          "step": 1,
+          "type": "options_selection",
+          "prompt": "Choisissez votre [ELEMENT_PRINCIPAL]",
+          "option_groups": ["[GROUPE_PRINCIPAL]"],
+          "required": true,
+          "max_selections": 1,
+          "description": "Étape principale - choix obligatoire"
+        },
+        {
+          "step": 2,
+          "type": "options_selection",
+          "prompt": "Choisissez votre [ELEMENT_SECONDAIRE]",
+          "option_groups": ["[GROUPE_SECONDAIRE]"],
+          "required": true,
+          "max_selections": 1,
+          "description": "Étape secondaire - généralement boisson/accompagnement"
+        },
+        {
+          "step": 3,
+          "type": "options_selection",
+          "prompt": "[ELEMENT_OPTIONNEL] :",
+          "option_groups": ["[GROUPE_OPTIONNEL]"],
+          "required": false,
+          "max_selections": 1,
+          "description": "Étape optionnelle - suppléments, sauces, etc."
+        }
+      ]
+    },
+    "placeholders": {
+      "[ELEMENT_PRINCIPAL]": "viande/plat principal/base",
+      "[GROUPE_PRINCIPAL]": "Choix viande/Plat principal/Base",
+      "[ELEMENT_SECONDAIRE]": "boisson/accompagnement/garniture",
+      "[GROUPE_SECONDAIRE]": "Boisson 33CL/Accompagnements/Garnitures",
+      "[ELEMENT_OPTIONNEL]": "SUPPLÉMENTS/SAUCES/EXTRAS",
+      "[GROUPE_OPTIONNEL]": "Suppléments/Sauces/Extras"
+    }
+  },
+
+  "preset_templates": {
+    "menu_enfant": {
+      "meta": {
+        "name": "Menu Enfant",
+        "description": "Template pour menus enfants - plat + boisson",
+        "use_case": "Restaurants familiaux, fast-food"
+      },
+      "workflow_config": {
+        "workflow_type": "composite_workflow",
+        "requires_steps": true,
+        "steps": [
+          {
+            "step": 1,
+            "type": "options_selection",
+            "prompt": "Choisissez votre plat principal",
+            "option_groups": ["Plat principal"],
+            "required": true,
+            "max_selections": 1
+          },
+          {
+            "step": 2,
+            "type": "options_selection",
+            "prompt": "Choisissez votre boisson",
+            "option_groups": ["Boisson enfant"],
+            "required": true,
+            "max_selections": 1
+          }
+        ]
+      }
+    },
+
+    "bowl_personalise": {
+      "meta": {
+        "name": "Bowl Personnalisé",
+        "description": "Template pour bowls - viande + boisson + suppléments",
+        "use_case": "Restaurants healthy, poke bowls, salades"
+      },
+      "workflow_config": {
+        "workflow_type": "composite_workflow",
+        "requires_steps": true,
+        "steps": [
+          {
+            "step": 1,
+            "type": "options_selection",
+            "prompt": "Choisissez votre viande :",
+            "option_groups": ["Choix viande"],
+            "required": true,
+            "max_selections": 1
+          },
+          {
+            "step": 2,
+            "type": "options_selection",
+            "prompt": "Choisissez votre boisson (incluse) :",
+            "option_groups": ["Boisson 33CL incluse"],
+            "required": true,
+            "max_selections": 1
+          },
+          {
+            "step": 3,
+            "type": "options_selection",
+            "prompt": "SUPPLÉMENTS :",
+            "option_groups": ["Suppléments"],
+            "required": true,
+            "max_selections": 1
+          }
+        ]
+      }
+    },
+
+    "menu_complet": {
+      "meta": {
+        "name": "Menu Complet",
+        "description": "Template pour menus complets - entrée + plat + dessert + boisson",
+        "use_case": "Restaurants traditionnels, brasseries"
+      },
+      "workflow_config": {
+        "workflow_type": "composite_workflow",
+        "requires_steps": true,
+        "steps": [
+          {
+            "step": 1,
+            "type": "options_selection",
+            "prompt": "Choisissez votre entrée",
+            "option_groups": ["Entrées"],
+            "required": true,
+            "max_selections": 1
+          },
+          {
+            "step": 2,
+            "type": "options_selection",
+            "prompt": "Choisissez votre plat principal",
+            "option_groups": ["Plats principaux"],
+            "required": true,
+            "max_selections": 1
+          },
+          {
+            "step": 3,
+            "type": "options_selection",
+            "prompt": "Choisissez votre dessert",
+            "option_groups": ["Desserts"],
+            "required": true,
+            "max_selections": 1
+          },
+          {
+            "step": 4,
+            "type": "options_selection",
+            "prompt": "Choisissez votre boisson",
+            "option_groups": ["Boissons"],
+            "required": true,
+            "max_selections": 1
+          }
+        ]
+      }
+    },
+
+    "burger_customise": {
+      "meta": {
+        "name": "Burger Customisé",
+        "description": "Template pour burgers personnalisables",
+        "use_case": "Fast-food, burger joints"
+      },
+      "workflow_config": {
+        "workflow_type": "composite_workflow",
+        "requires_steps": true,
+        "steps": [
+          {
+            "step": 1,
+            "type": "options_selection",
+            "prompt": "Choisissez votre viande",
+            "option_groups": ["Viandes"],
+            "required": true,
+            "max_selections": 1
+          },
+          {
+            "step": 2,
+            "type": "options_selection",
+            "prompt": "Choisissez votre pain",
+            "option_groups": ["Pains"],
+            "required": true,
+            "max_selections": 1
+          },
+          {
+            "step": 3,
+            "type": "options_selection",
+            "prompt": "Choisissez vos sauces",
+            "option_groups": ["Sauces"],
+            "required": false,
+            "max_selections": 3
+          },
+          {
+            "step": 4,
+            "type": "options_selection",
+            "prompt": "Ajoutez des extras",
+            "option_groups": ["Extras"],
+            "required": false,
+            "max_selections": 5
+          },
+          {
+            "step": 5,
+            "type": "options_selection",
+            "prompt": "Choisissez votre boisson",
+            "option_groups": ["Boissons"],
+            "required": true,
+            "max_selections": 1
+          }
+        ]
+      }
+    },
+
+    "pizza_personnalisee": {
+      "meta": {
+        "name": "Pizza Personnalisée",
+        "description": "Template pour pizzas avec ingrédients au choix",
+        "use_case": "Pizzerias avec customisation"
+      },
+      "workflow_config": {
+        "workflow_type": "composite_workflow",
+        "requires_steps": true,
+        "steps": [
+          {
+            "step": 1,
+            "type": "options_selection",
+            "prompt": "Choisissez votre taille",
+            "option_groups": ["Tailles"],
+            "required": true,
+            "max_selections": 1
+          },
+          {
+            "step": 2,
+            "type": "options_selection",
+            "prompt": "Choisissez votre pâte",
+            "option_groups": ["Types de pâte"],
+            "required": true,
+            "max_selections": 1
+          },
+          {
+            "step": 3,
+            "type": "options_selection",
+            "prompt": "Choisissez votre sauce de base",
+            "option_groups": ["Sauces de base"],
+            "required": true,
+            "max_selections": 1
+          },
+          {
+            "step": 4,
+            "type": "options_selection",
+            "prompt": "Ajoutez vos ingrédients",
+            "option_groups": ["Ingrédients"],
+            "required": false,
+            "max_selections": 10
+          }
+        ]
+      }
+    }
+  },
+
+  "modular_components": {
+    "steps_library": {
+      "choix_base": {
+        "type": "options_selection",
+        "prompt": "Choisissez votre base",
+        "option_groups": ["Bases"],
+        "required": true,
+        "max_selections": 1
+      },
+      "choix_proteine": {
+        "type": "options_selection",
+        "prompt": "Choisissez votre protéine",
+        "option_groups": ["Protéines"],
+        "required": true,
+        "max_selections": 1
+      },
+      "choix_accompagnement": {
+        "type": "options_selection",
+        "prompt": "Choisissez votre accompagnement",
+        "option_groups": ["Accompagnements"],
+        "required": true,
+        "max_selections": 1
+      },
+      "choix_boisson_33cl": {
+        "type": "options_selection",
+        "prompt": "Choisissez votre boisson (33cl incluse)",
+        "option_groups": ["Boisson 33CL incluse"],
+        "required": true,
+        "max_selections": 1
+      },
+      "choix_boisson_enfant": {
+        "type": "options_selection",
+        "prompt": "Choisissez votre boisson",
+        "option_groups": ["Boisson enfant"],
+        "required": true,
+        "max_selections": 1
+      },
+      "choix_sauces": {
+        "type": "options_selection",
+        "prompt": "Choisissez vos sauces",
+        "option_groups": ["Sauces"],
+        "required": false,
+        "max_selections": 3
+      },
+      "choix_supplements": {
+        "type": "options_selection",
+        "prompt": "SUPPLÉMENTS :",
+        "option_groups": ["Suppléments"],
+        "required": false,
+        "max_selections": 5
+      },
+      "choix_taille": {
+        "type": "options_selection",
+        "prompt": "Choisissez votre taille",
+        "option_groups": ["Tailles"],
+        "required": true,
+        "max_selections": 1
+      },
+      "choix_cuisson": {
+        "type": "options_selection",
+        "prompt": "Choisissez votre cuisson",
+        "option_groups": ["Cuissons"],
+        "required": true,
+        "max_selections": 1
+      }
+    },
+
+    "option_groups_library": {
+      "bases_standards": ["Riz", "Pâtes", "Salade", "Pain"],
+      "proteines_standards": ["Poulet", "Bœuf", "Porc", "Poisson", "Végétarien"],
+      "boissons_33cl": ["Coca 33cl", "Fanta 33cl", "Sprite 33cl", "Eau 33cl"],
+      "boissons_enfant": ["Compote", "Caprisun", "Lait", "Eau"],
+      "sauces_standards": ["Ketchup", "Mayonnaise", "Moutarde", "BBQ"],
+      "supplements_standards": ["Fromage +1€", "Bacon +2€", "Avocat +1.50€"],
+      "tailles_standards": ["Petite", "Moyenne", "Grande"],
+      "cuissons_viande": ["Saignant", "À point", "Bien cuit"]
+    }
+  },
+
+  "usage_instructions": {
+    "comment_utiliser": [
+      "1. Choisissez un template de base ou preset selon votre besoin",
+      "2. Modifiez les placeholders [ELEMENT] avec vos valeurs",
+      "3. Réorganisez les steps selon votre workflow (drag & drop mental)",
+      "4. Ajoutez/supprimez des steps selon vos besoins",
+      "5. Utilisez la steps_library pour des composants pré-faits",
+      "6. Passez le JSON final à l'outil de génération SQL"
+    ],
+    "exemples_modifications": {
+      "reordonner_steps": "Changez les numéros de step pour réorganiser (boissons avant desserts)",
+      "ajouter_step": "Copiez un step de la library et ajustez le numéro",
+      "rendre_optionnel": "Changez required: true vers false",
+      "choix_multiples": "Augmentez max_selections pour permettre plusieurs choix",
+      "personnaliser_prompt": "Modifiez le texte du prompt selon votre style"
+    }
+  }
+}

@@ -62,6 +62,15 @@ export default function Sidebar() {
       description: 'Historique des duplications'
     },
     {
+      id: 'workflow-universal',
+      label: 'Workflow Universel V2',
+      icon: '🚀',
+      path: '/workflow-universal',
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50',
+      description: 'Générateur universel 100% compatible bot'
+    },
+    {
       id: 'creer-ia',
       label: 'Créer avec IA',
       icon: '🤖',
