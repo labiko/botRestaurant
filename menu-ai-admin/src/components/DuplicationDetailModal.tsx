@@ -21,11 +21,12 @@ interface Category {
 
 interface Option {
   id: number;
+  product_id: number;
   option_name: string;
   option_group: string;
   price_modifier: number;
   display_order: number;
-  product: { name: string };
+  product: { id: number; name: string };
 }
 
 interface DuplicationDetail {
@@ -258,35 +259,48 @@ export default function DuplicationDetailModal({
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {options.length === 0 ? (
                       <div className="text-center text-gray-500 py-8">
                         Aucune option trouvée
                       </div>
                     ) : (
-                      options.map((option) => (
-                        <div
-                          key={option.id}
-                          className="p-4 bg-gray-50 rounded-lg flex justify-between items-start"
-                        >
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{option.option_name}</h4>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Groupe: {option.option_group}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">
-                              Produit: {option.product.name}
-                            </p>
-                          </div>
-                          <div className="text-right ml-4">
-                            <div className={`font-medium ${
-                              option.price_modifier >= 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {option.price_modifier >= 0 ? '+' : ''}{formatPrice(option.price_modifier)}
-                            </div>
+                      // Afficher directement la liste dédupliquée d'options
+                      <div className="bg-white rounded-lg border border-gray-200">
+                        <div className="p-4 bg-gray-50 border-b border-gray-200">
+                          <h4 className="font-semibold text-gray-900 flex items-center">
+                            <span className="text-blue-600 mr-2">⚙️</span>
+                            Options disponibles
+                            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                              {options.length} option{options.length > 1 ? 's' : ''} unique{options.length > 1 ? 's' : ''}
+                            </span>
+                          </h4>
+                        </div>
+                        <div className="p-4">
+                          <div className="space-y-3">
+                            {options.map((option) => (
+                              <div
+                                key={option.id}
+                                className="flex justify-between items-start py-3 px-4 bg-gray-50 rounded-lg border border-gray-100"
+                              >
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {option.option_name}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Groupe: {option.option_group}
+                                  </p>
+                                </div>
+                                <div className={`text-sm font-medium ${
+                                  option.price_modifier >= 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {option.price_modifier >= 0 ? '+' : ''}{formatPrice(option.price_modifier)}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      ))
+                      </div>
                     )}
                   </div>
                 )}

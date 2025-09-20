@@ -66,29 +66,54 @@ export async function GET(
       }, { status: 500 });
     }
 
-    // Récupérer les options dupliquées
+    // Récupérer les options dupliquées - groupées par produit pour éviter les doublons
+    const productIds = categories?.flatMap(cat =>
+      cat.france_products?.map(p => p.id) || []
+    ) || [];
+
     const { data: options, error: optError } = await dataLoader.supabase
       .from('france_product_options')
       .select(`
         id,
+        product_id,
         option_name,
         option_group,
         price_modifier,
         display_order,
-        product:france_products(name)
+        product:france_products(id, name)
       `)
-      .in('product_id',
-        categories?.flatMap(cat =>
-          cat.france_products?.map(p => p.id) || []
-        ) || []
-      )
-      .order('display_order');
+      .in('product_id', productIds)
+      .order('product_id, option_group, display_order');
 
     if (optError) {
       console.error('❌ Erreur récupération options:', optError);
     }
 
-    console.log(`✅ Détails duplication ${duplicationId} chargés: ${categories?.length} catégories, ${options?.length || 0} options`);
+    // Dédupliquer les options basé uniquement sur option_name et option_group
+    // (car toutes les boissons sont identiques pour tous les produits)
+    console.log(`🔍 Début déduplication: ${options?.length || 0} options récupérées`);
+
+    const uniqueOptions = options?.reduce((acc, option) => {
+      // Normaliser la clé pour éviter les problèmes d'encodage
+      const normalizedName = option.option_name?.trim().toLowerCase();
+      const normalizedGroup = option.option_group?.trim().toLowerCase();
+      const key = `${normalizedGroup}_${normalizedName}`;
+
+      // Garder seulement la première occurrence de chaque combinaison unique
+      if (!acc.has(key)) {
+        acc.set(key, option);
+        console.log(`➕ Nouvelle option ajoutée: "${option.option_name}" (groupe: "${option.option_group}") - clé: "${key}"`);
+      } else {
+        console.log(`⏭️ Option dupliquée ignorée: "${option.option_name}" (groupe: "${option.option_group}") - clé: "${key}"`);
+      }
+
+      return acc;
+    }, new Map());
+
+    const deduplicatedOptions = Array.from(uniqueOptions?.values() || []);
+
+    console.log(`✅ Détails duplication ${duplicationId} chargés: ${categories?.length} catégories, ${deduplicatedOptions.length} options uniques (sur ${options?.length || 0} total)`);
+    console.log(`📋 Options finales:`, deduplicatedOptions.map(opt => `"${opt.option_name}" (${opt.option_group})`));
 
     return NextResponse.json({
       success: true,
@@ -98,7 +123,7 @@ export async function GET(
         target_restaurant: duplication.target_restaurant
       },
       categories: categories || [],
-      options: options || []
+      options: deduplicatedOptions
     });
 
   } catch (error) {
