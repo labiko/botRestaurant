@@ -98,7 +98,31 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // ÉTAPE 4: Statistiques finales
+    // ÉTAPE 4: Dupliquer la configuration bot (NOUVELLE ÉTAPE)
+    const botConfigResult = await duplicateBotConfig(sourceRestaurantId, newRestaurantId);
+    if (!botConfigResult.success) {
+      console.warn('⚠️ Échec duplication config bot:', botConfigResult.error);
+    } else {
+      console.log('✅ Configuration bot dupliquée');
+    }
+
+    // ÉTAPE 4b: Dupliquer les configurations d'affichage produit
+    const productDisplayResult = await duplicateProductDisplayConfigs(sourceRestaurantId, newRestaurantId);
+    if (!productDisplayResult.success) {
+      console.warn('⚠️ Échec duplication config affichage:', productDisplayResult.error);
+    } else {
+      console.log('✅ Configurations affichage produit dupliquées');
+    }
+
+    // ÉTAPE 4c: Dupliquer les templates workflow
+    const workflowTemplatesResult = await duplicateWorkflowTemplates(sourceRestaurantId, newRestaurantId);
+    if (!workflowTemplatesResult.success) {
+      console.warn('⚠️ Échec duplication templates workflow:', workflowTemplatesResult.error);
+    } else {
+      console.log('✅ Templates workflow dupliqués');
+    }
+
+    // ÉTAPE 5: Statistiques finales
     const stats = await getDuplicationStats(newRestaurantId);
 
     console.log('🎉 Duplication terminée avec succès !', stats);
@@ -417,6 +441,161 @@ async function getDuplicationStats(restaurantId: number) {
       workflows: 0,
       options: 0
     };
+  }
+}
+
+// FONCTION 6: Dupliquer la configuration bot (NOUVELLE FONCTION)
+async function duplicateBotConfig(sourceRestaurantId: number, targetRestaurantId: number) {
+  try {
+    // Récupérer la config bot du restaurant source
+    const { data: sourceBotConfig, error: fetchError } = await supabase
+      .from('restaurant_bot_configs')
+      .select('*')
+      .eq('restaurant_id', sourceRestaurantId)
+      .single();
+
+    if (fetchError) {
+      console.warn('⚠️ Aucune config bot trouvée pour le restaurant source:', fetchError.message);
+      return { success: true, message: 'Aucune config bot à dupliquer' };
+    }
+
+    if (!sourceBotConfig) {
+      return { success: true, message: 'Aucune config bot trouvée' };
+    }
+
+    // Préparer la nouvelle config bot
+    const newBotConfig = {
+      restaurant_id: targetRestaurantId,
+      config_name: sourceBotConfig.config_name,
+      brand_name: sourceBotConfig.brand_name,
+      welcome_message: sourceBotConfig.welcome_message,
+      available_workflows: sourceBotConfig.available_workflows,
+      features: sourceBotConfig.features,
+      is_active: sourceBotConfig.is_active
+    };
+
+    // Insérer la nouvelle config bot
+    const { data: insertedBotConfig, error: insertError } = await supabase
+      .from('restaurant_bot_configs')
+      .insert(newBotConfig)
+      .select('id');
+
+    if (insertError) {
+      console.error('❌ Erreur insertion config bot:', insertError);
+      return { success: false, error: insertError.message };
+    }
+
+    console.log('✅ Configuration bot dupliquée avec ID:', insertedBotConfig![0].id);
+
+    return {
+      success: true,
+      botConfigId: insertedBotConfig![0].id
+    };
+  } catch (error) {
+    console.error('❌ Erreur duplicateBotConfig:', error);
+    return { success: false, error: 'Erreur lors de la duplication de la config bot' };
+  }
+}
+
+// FONCTION 7: Dupliquer les configurations d'affichage produit
+async function duplicateProductDisplayConfigs(sourceRestaurantId: number, targetRestaurantId: number) {
+  try {
+    // Récupérer les configs d'affichage du restaurant source
+    const { data: sourceConfigs, error: fetchError } = await supabase
+      .from('france_product_display_configs')
+      .select('*')
+      .eq('restaurant_id', sourceRestaurantId);
+
+    if (fetchError) {
+      console.warn('⚠️ Erreur récupération configs affichage:', fetchError.message);
+      return { success: true, message: 'Aucune config affichage à dupliquer' };
+    }
+
+    if (!sourceConfigs || sourceConfigs.length === 0) {
+      return { success: true, message: 'Aucune config affichage trouvée' };
+    }
+
+    // Préparer les nouvelles configs d'affichage
+    const newConfigs = sourceConfigs.map(config => ({
+      restaurant_id: targetRestaurantId,
+      product_id: config.product_id, // Note: les IDs produits seront différents, mais on garde la structure
+      display_type: config.display_type,
+      template_name: config.template_name,
+      show_variants_first: config.show_variants_first,
+      custom_header_text: config.custom_header_text,
+      custom_footer_text: config.custom_footer_text,
+      emoji_icon: config.emoji_icon
+    }));
+
+    // Insérer les nouvelles configs
+    const { data: insertedConfigs, error: insertError } = await supabase
+      .from('france_product_display_configs')
+      .insert(newConfigs)
+      .select('id');
+
+    if (insertError) {
+      console.error('❌ Erreur insertion configs affichage:', insertError);
+      return { success: false, error: insertError.message };
+    }
+
+    console.log('✅ Configurations affichage dupliquées:', insertedConfigs!.length);
+
+    return {
+      success: true,
+      configsCreated: insertedConfigs!.length
+    };
+  } catch (error) {
+    console.error('❌ Erreur duplicateProductDisplayConfigs:', error);
+    return { success: false, error: 'Erreur lors de la duplication des configs affichage' };
+  }
+}
+
+// FONCTION 8: Dupliquer les templates workflow
+async function duplicateWorkflowTemplates(sourceRestaurantId: number, targetRestaurantId: number) {
+  try {
+    // Récupérer les templates workflow du restaurant source
+    const { data: sourceTemplates, error: fetchError } = await supabase
+      .from('france_workflow_templates')
+      .select('*')
+      .eq('restaurant_id', sourceRestaurantId);
+
+    if (fetchError) {
+      console.warn('⚠️ Erreur récupération templates workflow:', fetchError.message);
+      return { success: true, message: 'Aucun template workflow à dupliquer' };
+    }
+
+    if (!sourceTemplates || sourceTemplates.length === 0) {
+      return { success: true, message: 'Aucun template workflow trouvé' };
+    }
+
+    // Préparer les nouveaux templates workflow
+    const newTemplates = sourceTemplates.map(template => ({
+      restaurant_id: targetRestaurantId,
+      template_name: template.template_name,
+      description: template.description,
+      steps_config: template.steps_config
+    }));
+
+    // Insérer les nouveaux templates
+    const { data: insertedTemplates, error: insertError } = await supabase
+      .from('france_workflow_templates')
+      .insert(newTemplates)
+      .select('id');
+
+    if (insertError) {
+      console.error('❌ Erreur insertion templates workflow:', insertError);
+      return { success: false, error: insertError.message };
+    }
+
+    console.log('✅ Templates workflow dupliqués:', insertedTemplates!.length);
+
+    return {
+      success: true,
+      templatesCreated: insertedTemplates!.length
+    };
+  } catch (error) {
+    console.error('❌ Erreur duplicateWorkflowTemplates:', error);
+    return { success: false, error: 'Erreur lors de la duplication des templates workflow' };
   }
 }
 

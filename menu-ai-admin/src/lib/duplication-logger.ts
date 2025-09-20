@@ -2,6 +2,7 @@
 // ======================================
 
 import { createClient } from '@supabase/supabase-js';
+import { TimezoneService } from './timezone-service';
 
 export interface DuplicationReport {
   id: number;
@@ -82,7 +83,7 @@ export class DuplicationLogger {
             targetName,
             actions: []
           },
-          started_at: this.startTime.toISOString()
+          started_at: TimezoneService.getCurrentTimeForDB()
         })
         .select('id')
         .single();
@@ -208,7 +209,7 @@ export class DuplicationLogger {
         .update({
           status: 'completed',
           summary,
-          completed_at: endTime.toISOString(),
+          completed_at: TimezoneService.getCurrentTimeForDB(),
           duration_seconds: durationSeconds
         })
         .eq('id', this.logId);
@@ -234,7 +235,7 @@ export class DuplicationLogger {
         .update({
           status: 'failed',
           error_message: errorMessage,
-          completed_at: endTime.toISOString(),
+          completed_at: TimezoneService.getCurrentTimeForDB(),
           duration_seconds: durationSeconds
         })
         .eq('id', this.logId);

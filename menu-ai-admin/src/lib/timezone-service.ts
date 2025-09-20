@@ -17,32 +17,9 @@ export class TimezoneService {
    * Remplace: new Date().toISOString()
    */
   static getCurrentTimeForDB(): string {
-    // Pour les colonnes "timestamp with time zone", utiliser directement
-    // l'heure locale avec l'offset correct
-    const now = new Date();
-
-    // Obtenir l'offset actuel de Europe/Paris (en minutes)
-    const offsetMinutes = this.getTimezoneOffset();
-    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
-    const offsetMins = Math.abs(offsetMinutes) % 60;
-    const offsetSign = offsetMinutes <= 0 ? '+' : '-';
-    const offsetString = `${offsetSign}${offsetHours.toString().padStart(2, '0')}:${offsetMins.toString().padStart(2, '0')}`;
-
-    // Créer le timestamp avec l'offset correct
-    const formatter = new Intl.DateTimeFormat('sv-SE', {
-      timeZone: this.TIMEZONE,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-
-    const formatted = formatter.format(now);
-
-    // Retourner avec l'offset Europe/Paris au lieu de Z
-    return formatted.replace(' ', 'T') + '.000' + offsetString;
+    // Solution simple et fiable : utiliser toISOString() standard
+    // PostgreSQL gère automatiquement la conversion vers le timezone configuré
+    return new Date().toISOString();
   }
 
   /**
@@ -61,7 +38,13 @@ export class TimezoneService {
    */
   static formatDate(dateString: string): string {
     return new Date(dateString).toLocaleString(this.LOCALE, {
-      timeZone: this.TIMEZONE
+      timeZone: this.TIMEZONE,
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
     });
   }
 
