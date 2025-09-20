@@ -163,8 +163,8 @@ export default function SelectCategoriesPage() {
         sessionStorage.removeItem('duplication-source');
         sessionStorage.removeItem('duplication-target');
 
-        // Rediriger vers la page de résultats
-        router.push('/duplicate/success');
+        // Rediriger vers l'historique des duplications
+        router.push('/duplicate/history');
       } else {
         setError(data.error || 'Erreur lors de la duplication');
       }

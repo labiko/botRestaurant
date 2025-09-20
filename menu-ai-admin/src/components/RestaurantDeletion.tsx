@@ -11,9 +11,18 @@ interface Restaurant {
 interface DeletionPreview {
   categories: number;
   products: number;
-  supplements: number;
-  categoryNames: string[];
-  productNames: string[];
+  orders: number;
+  delivery_drivers?: number;
+  whatsapp_numbers?: number;
+  workflow_definitions?: number;
+  options?: number;
+  composite_items?: number;
+  product_sizes?: number;
+  product_variants?: number;
+  delivery_logs?: number;
+  supplements?: number;
+  categoryNames?: string[];
+  productNames?: string[];
 }
 
 interface RestaurantDeletionProps {
@@ -127,9 +136,24 @@ export default function RestaurantDeletion({ onDeletionComplete }: RestaurantDel
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <h3 className="font-bold text-green-800">✅ Suppression réussie !</h3>
             <div className="text-sm text-green-600 mt-2">
-              <p>Restaurant supprimé: <strong>{result.deletedRestaurant.name}</strong></p>
-              <p>Catégories supprimées: {result.statistics.categoriesDeleted}</p>
-              <p>Produits supprimés: {result.statistics.productsDeleted}</p>
+              <p>Restaurant supprimé: <strong>{result.deletedRestaurant?.name || result.deleted_restaurant?.name}</strong></p>
+              {result.statisticsDeleted && (
+                <div className="mt-2">
+                  <p>Catégories supprimées: {result.statisticsDeleted.categories_deleted || 0}</p>
+                  <p>Produits supprimés: {result.statisticsDeleted.products_deleted || 0}</p>
+                  <p>Commandes supprimées: {result.statisticsDeleted.orders_deleted || 0}</p>
+                  {result.statisticsDeleted.options_deleted > 0 && (
+                    <p>Options supprimées: {result.statisticsDeleted.options_deleted}</p>
+                  )}
+                </div>
+              )}
+              {result.statistics && (
+                <div className="mt-2">
+                  <p>Catégories supprimées: {result.statistics.categoriesDeleted || 0}</p>
+                  <p>Produits supprimés: {result.statistics.productsDeleted || 0}</p>
+                  <p>Commandes supprimées: {result.statistics.ordersDeleted || 0}</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -187,7 +211,7 @@ export default function RestaurantDeletion({ onDeletionComplete }: RestaurantDel
 
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <h3 className="font-bold text-gray-800 mb-3">📋 Statistiques</h3>
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-4 gap-4 text-center">
             <div className="bg-blue-50 p-3 rounded">
               <div className="text-2xl font-bold text-blue-600">{preview.categories}</div>
               <div className="text-sm text-blue-800">Catégories</div>
@@ -196,14 +220,35 @@ export default function RestaurantDeletion({ onDeletionComplete }: RestaurantDel
               <div className="text-2xl font-bold text-green-600">{preview.products}</div>
               <div className="text-sm text-green-800">Produits</div>
             </div>
+            <div className="bg-red-50 p-3 rounded">
+              <div className="text-2xl font-bold text-red-600">{preview.orders}</div>
+              <div className="text-sm text-red-800">Commandes</div>
+            </div>
             <div className="bg-purple-50 p-3 rounded">
-              <div className="text-2xl font-bold text-purple-600">{preview.supplements}</div>
-              <div className="text-sm text-purple-800">Suppléments</div>
+              <div className="text-2xl font-bold text-purple-600">{preview.options || 0}</div>
+              <div className="text-sm text-purple-800">Options</div>
             </div>
           </div>
+
+          {(preview.delivery_drivers || preview.workflow_definitions || preview.whatsapp_numbers) && (
+            <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+              <div className="bg-yellow-50 p-2 rounded">
+                <div className="text-lg font-bold text-yellow-600">{preview.delivery_drivers || 0}</div>
+                <div className="text-xs text-yellow-800">Livreurs</div>
+              </div>
+              <div className="bg-indigo-50 p-2 rounded">
+                <div className="text-lg font-bold text-indigo-600">{preview.workflow_definitions || 0}</div>
+                <div className="text-xs text-indigo-800">Workflows</div>
+              </div>
+              <div className="bg-pink-50 p-2 rounded">
+                <div className="text-lg font-bold text-pink-600">{preview.whatsapp_numbers || 0}</div>
+                <div className="text-xs text-pink-800">WhatsApp</div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {preview.categoryNames.length > 0 && (
+        {preview.categoryNames && Array.isArray(preview.categoryNames) && preview.categoryNames.length > 0 && (
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <h3 className="font-bold text-gray-800 mb-2">📂 Catégories à supprimer:</h3>
             <div className="flex flex-wrap gap-2">

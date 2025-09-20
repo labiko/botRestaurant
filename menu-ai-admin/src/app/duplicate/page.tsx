@@ -135,12 +135,22 @@ export default function DuplicateRestaurantPage() {
       <div className="max-w-4xl mx-auto px-4">
         {/* En-tête */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            🔄 Dupliquer Restaurant
-          </h1>
-          <p className="text-gray-600">
-            Créez un nouveau restaurant en dupliquant la configuration d'un restaurant existant
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                🔄 Dupliquer Restaurant
+              </h1>
+              <p className="text-gray-600">
+                Créez un nouveau restaurant en dupliquant la configuration d'un restaurant existant
+              </p>
+            </div>
+            <button
+              onClick={() => router.push('/duplicate/history')}
+              className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
+            >
+              📚 Voir l'Historique
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6">

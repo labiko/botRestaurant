@@ -45,6 +45,33 @@ export default function MenuAIAdmin() {
   const [modalCategory, setModalCategory] = useState<any>(null);
   const [modalProducts, setModalProducts] = useState<any[]>([]);
 
+  // NOUVEAUX ÉTATS pour les onglets d'édition (ajout non-intrusif)
+  const [activeEditTab, setActiveEditTab] = useState<'edit' | 'duplicate'>('edit');
+  const [availableCategories, setAvailableCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<any>(null);
+  const [duplicateSourceRestaurant, setDuplicateSourceRestaurant] = useState<any>(null);
+  const [duplicateSourceCategory, setDuplicateSourceCategory] = useState<any>(null);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+
+  // États pour feedback et notifications
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error' | 'info' | 'warning';
+    message: string;
+    details?: string;
+  } | null>(null);
+  const [isDuplicating, setIsDuplicating] = useState(false);
+
+  // Auto-masquage des notifications
+  useEffect(() => {
+    if (notification && notification.type !== 'info') {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000); // 5 secondes
+
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
   // États pour l'historique des scripts
   const [scripts, setScripts] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -398,6 +425,94 @@ export default function MenuAIAdmin() {
     }
   };
 
+  // NOUVELLES FONCTIONS pour l'édition avancée (ajout non-intrusif)
+  const loadRestaurantCategories = async (restaurantId: number) => {
+    if (!restaurantId) return;
+
+    try {
+      setLoadingCategories(true);
+      const response = await fetch(`/api/restaurant-categories/${restaurantId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setAvailableCategories(data.categories);
+        console.log(`✅ ${data.categories.length} catégories chargées pour restaurant ${restaurantId}`);
+      } else {
+        console.error('❌ Erreur chargement catégories:', data.error);
+        setAvailableCategories([]);
+      }
+    } catch (error) {
+      console.error('❌ Erreur chargement catégories:', error);
+      setAvailableCategories([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const handleDuplicateCategory = async () => {
+    if (!duplicateSourceRestaurant || !duplicateSourceCategory || !selectedRestaurant) {
+      setNotification({
+        type: 'error',
+        message: 'Paramètres de duplication manquants',
+        details: 'Veuillez sélectionner un restaurant source, une catégorie et un restaurant cible.'
+      });
+      return;
+    }
+
+    setIsDuplicating(true);
+    setNotification({
+      type: 'info',
+      message: 'Duplication en cours...',
+      details: `Duplication de "${duplicateSourceCategory.name}" vers "${selectedRestaurant.name}"`
+    });
+
+    try {
+      const response = await fetch('/api/duplicate-category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceRestaurantId: duplicateSourceRestaurant.id,
+          sourceCategoryId: duplicateSourceCategory.id,
+          targetRestaurantId: selectedRestaurant.id,
+          action: 'create_new',
+          duplicateWorkflows: true
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setNotification({
+          type: 'success',
+          message: '🎉 Catégorie dupliquée avec succès !',
+          details: `${data.result.duplicatedProducts} produits et ${data.result.duplicatedOptions} options dupliqués dans "${data.result.newCategoryName}"`
+        });
+
+        // Recharger les catégories du restaurant cible
+        await loadRestaurantCategories(selectedRestaurant.id);
+
+        // Reset sélections
+        setDuplicateSourceCategory(null);
+        setDuplicateSourceRestaurant(null);
+      } else {
+        setNotification({
+          type: 'error',
+          message: 'Erreur lors de la duplication',
+          details: data.error || 'Une erreur inconnue s\'est produite'
+        });
+      }
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: 'Erreur de connexion',
+        details: 'Impossible de contacter le serveur. Veuillez réessayer.'
+      });
+      console.error('❌ Erreur duplication catégorie:', error);
+    } finally {
+      setIsDuplicating(false);
+    }
+  };
+
   // Fonction : Supprimer un script
   const deleteScript = async (scriptId: number) => {
     try {
@@ -527,6 +642,12 @@ export default function MenuAIAdmin() {
                 🔄 Dupliquer Restaurant
               </button>
               <button
+                onClick={() => window.location.href = '/duplicate/history'}
+                className="px-4 py-2 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900 hover:bg-white bg-gradient-to-r from-gray-500 to-gray-600 text-white hover:from-gray-600 hover:to-gray-700"
+              >
+                📚 Historique Duplications
+              </button>
+              <button
                 onClick={() => setMode('clone')}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                   mode === 'clone'
@@ -612,45 +733,278 @@ export default function MenuAIAdmin() {
           </div>
         </div>
 
-        {/* Section Édition Modale Moderne */}
-        {mode === 'modal' && (
-          <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg shadow-lg p-6 text-white">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              ✨ Édition Modale Moderne (Recommandé)
-            </h2>
-            <p className="mb-4 text-purple-100">
-              Interface révolutionnaire : Chargez une catégorie complète et éditez tous les produits en temps réel
-            </p>
-
-            <div className="flex gap-4 items-end">
+        {/* Composant de notification */}
+        {notification && (
+          <div className={`fixed top-4 right-4 z-50 max-w-md rounded-lg shadow-lg p-4 transition-all duration-300 ${
+            notification.type === 'success' ? 'bg-green-100 border border-green-400 text-green-800' :
+            notification.type === 'error' ? 'bg-red-100 border border-red-400 text-red-800' :
+            notification.type === 'warning' ? 'bg-yellow-100 border border-yellow-400 text-yellow-800' :
+            'bg-blue-100 border border-blue-400 text-blue-800'
+          }`}>
+            <div className="flex items-start justify-between">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-purple-100 mb-2">
-                  Nom de la catégorie
-                </label>
-                <input
-                  type="text"
-                  value={categoryName}
-                  onChange={(e) => setCategoryName(e.target.value)}
-                  placeholder="Ex: SALADES, PIZZAS, BURGERS, TACOS..."
-                  className="w-full p-3 border border-purple-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-white focus:border-transparent"
-                />
+                <div className="font-medium mb-1">
+                  {notification.type === 'success' && '✅ '}
+                  {notification.type === 'error' && '❌ '}
+                  {notification.type === 'warning' && '⚠️ '}
+                  {notification.type === 'info' && 'ℹ️ '}
+                  {notification.message}
+                </div>
+                {notification.details && (
+                  <div className="text-sm opacity-90">
+                    {notification.details}
+                  </div>
+                )}
               </div>
               <button
-                onClick={handleOpenModal}
-                disabled={loading || !categoryName.trim()}
-                className="bg-white text-purple-600 px-8 py-3 rounded-lg hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed font-bold flex items-center gap-2 transition-all transform hover:scale-105"
+                onClick={() => setNotification(null)}
+                className="ml-3 flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity"
               >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  '🎛️'
-                )}
-                Ouvrir l'Éditeur
+                ✕
               </button>
             </div>
+          </div>
+        )}
 
-            <div className="mt-4 text-sm text-purple-200">
-              💡 <strong>Avantages :</strong> Visualisation complète • Édition directe • Auto-calculs • Workflows complexes
+        {/* Section Édition Modale Moderne AMÉLIORÉE */}
+        {mode === 'modal' && (
+          <div className="bg-white rounded-lg shadow-lg">
+            {/* En-tête avec titre */}
+            <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-t-lg p-6 text-white">
+              <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                ✨ Édition Moderne Avancée
+              </h2>
+              <p className="text-purple-100">
+                Interface complète : Éditez vos catégories ou dupliquez depuis d'autres restaurants
+              </p>
+            </div>
+
+            {/* Navigation par onglets */}
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex">
+                <button
+                  onClick={() => setActiveEditTab('edit')}
+                  className={`py-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+                    activeEditTab === 'edit'
+                      ? 'border-purple-500 text-purple-600 bg-purple-50'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  📝 Éditer Catégorie
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveEditTab('duplicate');
+                    if (selectedRestaurant) {
+                      loadRestaurantCategories(selectedRestaurant.id);
+                    }
+                  }}
+                  className={`py-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+                    activeEditTab === 'duplicate'
+                      ? 'border-purple-500 text-purple-600 bg-purple-50'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  🔄 Dupliquer Catégorie
+                </button>
+              </nav>
+            </div>
+
+            {/* Contenu des onglets */}
+            <div className="p-6">
+              {/* ONGLET ÉDITION (amélioré avec dropdown) */}
+              {activeEditTab === 'edit' && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    📝 Éditer une catégorie existante
+                  </h3>
+
+                  <div className="space-y-4">
+                    {/* Sélecteur de catégorie (nouveau) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          📋 Catégorie à éditer (Moderne)
+                        </label>
+                        <select
+                          value={selectedCategory?.id || ''}
+                          onChange={(e) => {
+                            const categoryId = parseInt(e.target.value);
+                            const category = availableCategories.find(c => c.id === categoryId);
+                            setSelectedCategory(category || null);
+                            setCategoryName(category?.name || '');
+                          }}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
+                          disabled={!selectedRestaurant || loadingCategories}
+                        >
+                          <option value="">
+                            {loadingCategories ? 'Chargement...' : 'Sélectionner une catégorie'}
+                          </option>
+                          {availableCategories.map(category => (
+                            <option key={category.id} value={category.id}>
+                              {category.icon} {category.name} ({category.stats.products} produits)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          📝 Saisie libre (Classique)
+                        </label>
+                        <input
+                          type="text"
+                          value={categoryName}
+                          onChange={(e) => {
+                            setCategoryName(e.target.value);
+                            setSelectedCategory(null);
+                          }}
+                          placeholder="Ex: SALADES, PIZZAS, BURGERS, TACOS..."
+                          className="w-full p-3 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Aperçu de la catégorie sélectionnée */}
+                    {selectedCategory && (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <h4 className="font-medium text-purple-900 mb-2">📋 Catégorie sélectionnée</h4>
+                        <div className="text-sm text-purple-800 space-y-1">
+                          <div><strong>Nom :</strong> {selectedCategory.name}</div>
+                          <div><strong>Produits :</strong> {selectedCategory.stats.products}</div>
+                          <div><strong>Workflows :</strong> {selectedCategory.stats.workflows}</div>
+                          <div><strong>Types :</strong> {selectedCategory.stats.simple} simples, {selectedCategory.stats.composite} composites</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bouton d'édition */}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={handleOpenModal}
+                        disabled={loading || !categoryName.trim()}
+                        className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-bold flex items-center gap-2 transition-all transform hover:scale-105"
+                      >
+                        {loading ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          '🎛️'
+                        )}
+                        Ouvrir l'Éditeur {selectedCategory ? `(${selectedCategory.stats.products} produits)` : ''}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 text-sm text-gray-600 bg-purple-50 p-3 rounded-lg">
+                    💡 <strong>Double mode :</strong> Sélectionnez depuis la liste OU tapez directement le nom • Édition temps réel • Auto-calculs • Workflows préservés
+                  </div>
+                </div>
+              )}
+
+              {/* ONGLET DUPLICATION (nouveau) */}
+              {activeEditTab === 'duplicate' && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    🔄 Dupliquer une catégorie depuis un autre restaurant
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Restaurant source */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          🏪 Restaurant Source
+                        </label>
+                        <select
+                          value={duplicateSourceRestaurant?.id || ''}
+                          onChange={(e) => {
+                            const sourceId = parseInt(e.target.value);
+                            const sourceRestaurant = restaurants.find(r => r.id === sourceId);
+                            setDuplicateSourceRestaurant(sourceRestaurant || null);
+                            setDuplicateSourceCategory(null);
+                            if (sourceRestaurant) {
+                              loadRestaurantCategories(sourceRestaurant.id);
+                            }
+                          }}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        >
+                          <option value="">Sélectionner un restaurant</option>
+                          {restaurants.filter(r => r.id !== selectedRestaurant?.id).map(restaurant => (
+                            <option key={restaurant.id} value={restaurant.id}>
+                              {restaurant.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Catégorie source */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          📋 Catégorie à dupliquer
+                        </label>
+                        <select
+                          value={duplicateSourceCategory?.id || ''}
+                          onChange={(e) => {
+                            const categoryId = parseInt(e.target.value);
+                            const category = availableCategories.find(c => c.id === categoryId);
+                            setDuplicateSourceCategory(category || null);
+                          }}
+                          disabled={!duplicateSourceRestaurant || loadingCategories}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
+                        >
+                          <option value="">
+                            {loadingCategories ? 'Chargement...' : 'Sélectionner une catégorie'}
+                          </option>
+                          {availableCategories.map(category => (
+                            <option key={category.id} value={category.id}>
+                              {category.icon} {category.name} ({category.stats.products} produits)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Aperçu de la duplication */}
+                    {duplicateSourceCategory && selectedRestaurant && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 className="font-medium text-blue-900 mb-2">📋 Aperçu de la duplication</h4>
+                        <div className="text-sm text-blue-800 space-y-1">
+                          <div>✅ <strong>Nouvelle catégorie :</strong> "{duplicateSourceCategory.name}" sera créée dans {selectedRestaurant.name}</div>
+                          <div>✅ <strong>Produits :</strong> {duplicateSourceCategory.stats.products} produits seront ajoutés</div>
+                          <div>✅ <strong>Workflows :</strong> {duplicateSourceCategory.stats.workflows} workflows seront préservés</div>
+                          <div>⚠️ <strong>Sécurité :</strong> Aucune catégorie existante ne sera modifiée</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bouton de duplication */}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={handleDuplicateCategory}
+                        disabled={!duplicateSourceCategory || !selectedRestaurant || isDuplicating}
+                        className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all ${
+                          isDuplicating
+                            ? 'bg-blue-400 cursor-not-allowed'
+                            : !duplicateSourceCategory || !selectedRestaurant
+                              ? 'bg-gray-400 cursor-not-allowed'
+                              : 'bg-blue-600 hover:bg-blue-700 hover:scale-105'
+                        } text-white`}
+                      >
+                        {isDuplicating ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Duplication en cours...
+                          </>
+                        ) : (
+                          <>
+                            🔄 Dupliquer {duplicateSourceCategory?.stats.products || 0} produits
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

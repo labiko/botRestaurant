@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { DuplicationLogger } from '@/lib/duplication-logger';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,6 +22,8 @@ interface DuplicationRequest {
 }
 
 export async function POST(request: NextRequest) {
+  const logger = new DuplicationLogger();
+
   try {
     const {
       sourceRestaurantId,
@@ -35,9 +38,21 @@ export async function POST(request: NextRequest) {
       categories: selectedCategories.length
     });
 
+    // 📊 LOGGING: Démarrer la session de duplication
+    await logger.startDuplication(
+      sourceRestaurantId,
+      targetRestaurant.name,
+      selectedCategories,
+      duplicateWorkflows,
+      `user-${Date.now()}`
+    );
+    await logger.updateStatus('in_progress');
+
     // ÉTAPE 1: Créer le nouveau restaurant
     const newRestaurantResult = await createTargetRestaurant(targetRestaurant);
     if (!newRestaurantResult.success) {
+      // 📊 LOGGING: Échec création restaurant
+      await logger.failDuplication(`Échec création restaurant: ${newRestaurantResult.error}`);
       return NextResponse.json({
         success: false,
         error: newRestaurantResult.error
@@ -46,6 +61,10 @@ export async function POST(request: NextRequest) {
 
     const newRestaurantId = newRestaurantResult.restaurantId!;
     console.log('✅ Restaurant créé avec ID:', newRestaurantId);
+
+    // 📊 LOGGING: Restaurant créé avec succès
+    await logger.logRestaurantCreation(targetRestaurant.name, newRestaurantId);
+    await logger.updateTargetRestaurant(newRestaurantId);
 
     // ÉTAPE 2: Dupliquer les catégories sélectionnées
     const categoriesResult = await duplicateCategories(
@@ -82,6 +101,14 @@ export async function POST(request: NextRequest) {
 
     console.log('🎉 Duplication terminée avec succès !', stats);
 
+    // 📊 LOGGING: Finaliser la duplication avec succès
+    await logger.completeDuplication({
+      categoriesDuplicated: categoriesResult.categoriesCreated || 0,
+      productsDuplicated: productsResult.productsCreated || 0,
+      optionsDuplicated: productsResult.optionsCreated || 0,
+      workflowsConfigured: stats.workflows || 0
+    });
+
     return NextResponse.json({
       success: true,
       restaurantId: newRestaurantId,
@@ -91,6 +118,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Erreur duplication restaurant:', error);
+
+    // 📊 LOGGING: Marquer la duplication comme échouée
+    await logger.failDuplication(error instanceof Error ? error.message : 'Erreur inconnue lors de la duplication');
+
     return NextResponse.json({
       success: false,
       error: 'Erreur lors de la duplication du restaurant'
@@ -263,6 +294,7 @@ async function duplicateProducts(
     console.log('✅ Produits dupliqués:', insertedProducts!.length);
 
     // Dupliquer les options de produits si workflows activés
+    let optionsCreated = 0;
     if (duplicateWorkflows && insertedProducts) {
       const productMapping: { [key: number]: number } = {};
       sourceProducts.forEach((sourceProduct, index) => {
@@ -278,12 +310,14 @@ async function duplicateProducts(
         console.error('⚠️ Erreur duplication options:', optionsResult.error);
       } else {
         console.log('✅ Options dupliquées:', optionsResult.optionsCreated);
+        optionsCreated = optionsResult.optionsCreated || 0;
       }
     }
 
     return {
       success: true,
-      productsCreated: insertedProducts!.length
+      productsCreated: insertedProducts!.length,
+      optionsCreated: optionsCreated
     };
   } catch (error) {
     console.error('❌ Erreur duplicateProducts:', error);

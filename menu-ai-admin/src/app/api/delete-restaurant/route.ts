@@ -20,102 +20,63 @@ export async function DELETE(request: NextRequest) {
 
     const dataLoader = new SupabaseDataLoader();
 
-    // 1. Récupérer les informations du restaurant
-    console.log('🔍 Recherche du restaurant...');
-    let restaurant;
+    // Déterminer l'ID du restaurant
+    let targetRestaurantId = restaurantId;
 
-    if (restaurantId) {
+    if (!targetRestaurantId && restaurantName) {
       const { data, error } = await dataLoader.supabase
         .from('france_restaurants')
-        .select('*')
-        .eq('id', restaurantId)
-        .single();
-
-      if (error) throw error;
-      restaurant = data;
-    } else {
-      const { data, error } = await dataLoader.supabase
-        .from('france_restaurants')
-        .select('*')
+        .select('id')
         .eq('name', restaurantName)
         .single();
 
-      if (error) throw error;
-      restaurant = data;
+      if (error || !data) {
+        return NextResponse.json({
+          success: false,
+          error: 'Restaurant non trouvé'
+        }, { status: 404 });
+      }
+
+      targetRestaurantId = data.id;
     }
 
-    if (!restaurant) {
+    console.log(`🎯 Suppression du restaurant ID: ${targetRestaurantId}`);
+
+    // Exécuter la fonction PostgreSQL de suppression complète
+    console.log('🗑️ Exécution fonction PostgreSQL de suppression complète...');
+    const { data: result, error: functionError } = await dataLoader.supabase
+      .rpc('delete_restaurant_complete', {
+        p_restaurant_id: targetRestaurantId
+      });
+
+    if (functionError) {
+      console.error('❌ Erreur fonction PostgreSQL:', functionError);
       return NextResponse.json({
         success: false,
-        error: 'Restaurant non trouvé'
-      }, { status: 404 });
+        error: 'Erreur lors de l\'exécution de la fonction de suppression',
+        details: functionError.message
+      }, { status: 500 });
     }
 
-    console.log(`🎯 Restaurant trouvé: ${restaurant.name} (ID: ${restaurant.id})`);
+    console.log('📊 Résultat fonction PostgreSQL:', result);
 
-    // 2. Compter les données avant suppression
-    const [categoriesCount, productsCount] = await Promise.all([
-      dataLoader.supabase
-        .from('france_menu_categories')
-        .select('*', { count: 'exact', head: true })
-        .eq('restaurant_id', restaurant.id),
-      dataLoader.supabase
-        .from('france_products')
-        .select('*', { count: 'exact', head: true })
-        .eq('restaurant_id', restaurant.id)
-    ]);
-
-    const stats = {
-      categories: categoriesCount.count || 0,
-      products: productsCount.count || 0
-    };
-
-    console.log('📊 Données à supprimer:', stats);
-
-    // 3. Exécuter la suppression en transaction
-    console.log('🗑️ Démarrage suppression en cascade...');
-
-    // Suppression des produits (inclut les suppléments)
-    console.log('🗑️ Suppression des produits...');
-    const { error: productsError } = await dataLoader.supabase
-      .from('france_products')
-      .delete()
-      .eq('restaurant_id', restaurant.id);
-
-    if (productsError) throw productsError;
-
-    // Suppression des catégories
-    console.log('🗑️ Suppression des catégories...');
-    const { error: categoriesError } = await dataLoader.supabase
-      .from('france_menu_categories')
-      .delete()
-      .eq('restaurant_id', restaurant.id);
-
-    if (categoriesError) throw categoriesError;
-
-    // Suppression du restaurant principal
-    console.log('🗑️ Suppression du restaurant...');
-    const { error: restaurantError } = await dataLoader.supabase
-      .from('france_restaurants')
-      .delete()
-      .eq('id', restaurant.id);
-
-    if (restaurantError) throw restaurantError;
+    // Vérifier le succès de la fonction
+    if (!result || !result.success) {
+      return NextResponse.json({
+        success: false,
+        error: result?.error || 'Erreur lors de la suppression',
+        details: result?.details
+      }, { status: 400 });
+    }
 
     console.log('✅ Suppression terminée avec succès !');
 
     return NextResponse.json({
       success: true,
-      message: 'Restaurant supprimé avec succès',
-      deletedRestaurant: {
-        id: restaurant.id,
-        name: restaurant.name
-      },
-      statistics: {
-        categoriesDeleted: stats.categories,
-        productsDeleted: stats.products,
-        supplementsDeleted: 0 // Inclus dans products
-      }
+      message: result.message,
+      deletedRestaurant: result.deleted_restaurant,
+      statisticsBefore: result.statistics_before,
+      statisticsDeleted: result.statistics_deleted
     });
 
   } catch (error) {
@@ -147,67 +108,59 @@ export async function POST(request: NextRequest) {
 
     const dataLoader = new SupabaseDataLoader();
 
-    // Récupérer les informations du restaurant
-    let restaurant;
+    // Déterminer l'ID du restaurant
+    let targetRestaurantId = restaurantId;
 
-    if (restaurantId) {
+    if (!targetRestaurantId && restaurantName) {
       const { data, error } = await dataLoader.supabase
         .from('france_restaurants')
-        .select('*')
-        .eq('id', restaurantId)
-        .single();
-
-      if (error) throw error;
-      restaurant = data;
-    } else {
-      const { data, error } = await dataLoader.supabase
-        .from('france_restaurants')
-        .select('*')
+        .select('id')
         .eq('name', restaurantName)
         .single();
 
-      if (error) throw error;
-      restaurant = data;
+      if (error || !data) {
+        return NextResponse.json({
+          success: false,
+          error: 'Restaurant non trouvé'
+        }, { status: 404 });
+      }
+
+      targetRestaurantId = data.id;
     }
 
-    if (!restaurant) {
+    console.log(`👁️ Aperçu suppression restaurant ID: ${targetRestaurantId}`);
+
+    // Exécuter la fonction PostgreSQL d'aperçu
+    console.log('👁️ Exécution fonction PostgreSQL d\'aperçu...');
+    const { data: result, error: functionError } = await dataLoader.supabase
+      .rpc('preview_restaurant_deletion', {
+        p_restaurant_id: targetRestaurantId
+      });
+
+    if (functionError) {
+      console.error('❌ Erreur fonction PostgreSQL:', functionError);
       return NextResponse.json({
         success: false,
-        error: 'Restaurant non trouvé'
-      }, { status: 404 });
+        error: 'Erreur lors de l\'exécution de la fonction d\'aperçu',
+        details: functionError.message
+      }, { status: 500 });
     }
 
-    // Compter toutes les données liées
-    const [categoriesResult, productsResult, supplementsResult] = await Promise.all([
-      dataLoader.supabase
-        .from('france_menu_categories')
-        .select('name', { count: 'exact' })
-        .eq('restaurant_id', restaurant.id),
-      dataLoader.supabase
-        .from('france_products')
-        .select('name', { count: 'exact' })
-        .eq('restaurant_id', restaurant.id),
-      dataLoader.supabase
-        .from('france_products')
-        .select('name', { count: 'exact' })
-        .eq('restaurant_id', restaurant.id)
-        .eq('category_id', await getCategoryId(dataLoader, restaurant.id, 'Suppléments'))
-    ]);
+    console.log('📊 Résultat aperçu PostgreSQL:', result);
+
+    // Vérifier le succès de la fonction
+    if (!result || !result.success) {
+      return NextResponse.json({
+        success: false,
+        error: result?.error || 'Erreur lors de la génération de l\'aperçu',
+        details: result?.details
+      }, { status: 400 });
+    }
 
     return NextResponse.json({
       success: true,
-      restaurant: {
-        id: restaurant.id,
-        name: restaurant.name,
-        address: restaurant.address
-      },
-      preview: {
-        categories: categoriesResult.count || 0,
-        products: productsResult.count || 0,
-        supplements: supplementsResult.count || 0,
-        categoryNames: categoriesResult.data?.map(c => c.name) || [],
-        productNames: productsResult.data?.map(p => p.name) || []
-      }
+      restaurant: result.restaurant,
+      preview: result.preview
     });
 
   } catch (error) {
