@@ -46,6 +46,7 @@ export async function GET(
         name,
         icon,
         display_order,
+        created_at,
         france_products(
           id,
           name,

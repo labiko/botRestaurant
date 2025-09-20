@@ -204,12 +204,26 @@ export default function DuplicationDetailModal({
                             onClick={() => toggleCategory(category.id)}
                             className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 text-left flex items-center justify-between transition-colors"
                           >
-                            <div className="flex items-center space-x-3">
-                              <span className="text-xl">{category.icon}</span>
-                              <span className="font-medium">{category.name}</span>
-                              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                                {category.france_products.length} produits
-                              </span>
+                            <div className="flex flex-col space-y-1">
+                              <div className="flex items-center space-x-3">
+                                <span className="text-xl">{category.icon}</span>
+                                <span className="font-medium">{category.name}</span>
+                                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                                  {category.france_products.length} produits
+                                </span>
+                              </div>
+                              {category.created_at && (
+                                <div className="flex items-center space-x-1 text-xs text-gray-500 ml-8">
+                                  <span>🕒</span>
+                                  <span>Dupliquée le {TimezoneService.formatDateWithOptions(category.created_at, {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}</span>
+                                </div>
+                              )}
                             </div>
                             <svg
                               className={`w-5 h-5 transition-transform ${
