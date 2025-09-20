@@ -246,7 +246,7 @@ export default function CategoryEditModal({
                       <input
                         type="number"
                         step="0.50"
-                        value={product.price_on_site_base}
+                        value={product.price_on_site_base || ''}
                         onChange={(e) => handleProductChange(index, 'price_on_site_base', parseFloat(e.target.value))}
                         className="w-full p-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500"
                       />
@@ -261,7 +261,7 @@ export default function CategoryEditModal({
                       <input
                         type="number"
                         step="0.50"
-                        value={product.price_delivery_base}
+                        value={product.price_delivery_base || ''}
                         onChange={(e) => handleProductChange(index, 'price_delivery_base', parseFloat(e.target.value))}
                         className="w-full p-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500"
                       />

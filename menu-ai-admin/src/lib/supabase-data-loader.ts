@@ -33,7 +33,6 @@ export interface Restaurant {
   slug?: string;
   address?: string;
   phone?: string;
-  description?: string;
 }
 
 export class SupabaseDataLoader {

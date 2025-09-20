@@ -4,10 +4,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Configuration Supabase selon l'environnement (DEV par défaut)
+const environment = process.env.NEXT_PUBLIC_ENVIRONMENT || 'DEV';
+const supabaseUrl = environment === 'PROD'
+  ? process.env.NEXT_PUBLIC_SUPABASE_URL_PROD
+  : process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabase = createClient(supabaseUrl!, supabaseKey!);
 
 interface DuplicateCategoryRequest {
   sourceRestaurantId: number;
@@ -35,6 +39,18 @@ export async function POST(request: NextRequest) {
       target: targetRestaurantId,
       action
     });
+
+    // Créer l'entrée dans duplication_logs
+    const { data: duplicationLog, error: logError } = await supabase
+      .from('duplication_logs')
+      .insert({
+        source_restaurant_id: sourceRestaurantId,
+        target_restaurant_id: targetRestaurantId,
+        status: 'started',
+        started_at: new Date().toISOString()
+      })
+      .select('id')
+      .single();
 
     // ÉTAPE 1: Récupérer la catégorie source
     const { data: sourceCategory, error: sourceCategoryError } = await supabase
@@ -197,6 +213,23 @@ export async function POST(request: NextRequest) {
 
     console.log(`🎉 Duplication terminée: ${duplicatedProductsCount} produits, ${duplicatedOptionsCount} options`);
 
+    // Mettre à jour le log avec le succès
+    if (duplicationLog?.id) {
+      await supabase
+        .from('duplication_logs')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          summary: {
+            categoriesDuplicated: 1,
+            productsDuplicated: duplicatedProductsCount,
+            optionsDuplicated: duplicatedOptionsCount,
+            workflowsConfigured: duplicateWorkflows ? 1 : 0
+          }
+        })
+        .eq('id', duplicationLog.id);
+    }
+
     return NextResponse.json({
       success: true,
       message: `Catégorie "${targetCategoryName}" créée avec succès !`,
@@ -211,6 +244,19 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Erreur duplication catégorie:', error);
+
+    // Mettre à jour le log avec l'échec
+    if (duplicationLog?.id) {
+      await supabase
+        .from('duplication_logs')
+        .update({
+          status: 'failed',
+          completed_at: new Date().toISOString(),
+          error_message: error instanceof Error ? error.message : 'Erreur inconnue'
+        })
+        .eq('id', duplicationLog.id);
+    }
+
     return NextResponse.json({
       success: false,
       error: 'Erreur lors de la duplication de la catégorie'

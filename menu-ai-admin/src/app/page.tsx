@@ -48,7 +48,7 @@ export default function MenuAIAdmin() {
   const [modalProducts, setModalProducts] = useState<any[]>([]);
 
   // NOUVEAUX ÉTATS pour les onglets d'édition (ajout non-intrusif)
-  const [activeEditTab, setActiveEditTab] = useState<'edit' | 'duplicate'>('edit');
+  const [activeEditTab, setActiveEditTab] = useState<'edit' | 'duplicate' | 'delete'>('edit');
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [duplicateSourceRestaurant, setDuplicateSourceRestaurant] = useState<any>(null);
@@ -520,6 +520,80 @@ export default function MenuAIAdmin() {
     }
   };
 
+  // Fonction : Supprimer une catégorie complète
+  const handleDeleteCategory = async () => {
+    if (!selectedCategory || !selectedRestaurant) {
+      setNotification({
+        type: 'error',
+        message: 'Paramètres de suppression manquants',
+        details: 'Veuillez sélectionner une catégorie à supprimer.'
+      });
+      return;
+    }
+
+    // Double confirmation
+    const firstConfirm = window.confirm(
+      `⚠️ ATTENTION : Vous êtes sur le point de supprimer définitivement la catégorie "${selectedCategory.name}" et tous ses produits.\n\nCette action est IRRÉVERSIBLE.\n\nÊtes-vous absolument certain de vouloir continuer ?`
+    );
+
+    if (!firstConfirm) return;
+
+    const secondConfirm = window.confirm(
+      `🗑️ CONFIRMATION FINALE\n\nCatégorie : ${selectedCategory.name}\nProduits à supprimer : ${selectedCategory.stats?.products || 0}\nOptions à supprimer : ${selectedCategory.stats?.options || 0}\n\nTapez "SUPPRIMER" pour confirmer :`
+    );
+
+    if (!secondConfirm) return;
+
+    setLoadingCategories(true);
+    setNotification({
+      type: 'info',
+      message: 'Suppression en cours...',
+      details: `Suppression de "${selectedCategory.name}" et de tous ses éléments`
+    });
+
+    try {
+      const response = await fetch('/api/delete-category', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: selectedCategory.id,
+          restaurantId: selectedRestaurant.id
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setNotification({
+          type: 'success',
+          message: '🗑️ Catégorie supprimée avec succès !',
+          details: `${data.deleted.products_count} produits et ${data.deleted.options_count} options ont été supprimés définitivement`
+        });
+
+        // Recharger les catégories
+        await loadRestaurantCategories(selectedRestaurant.id);
+
+        // Reset sélection
+        setSelectedCategory(null);
+      } else {
+        setNotification({
+          type: 'error',
+          message: 'Erreur lors de la suppression',
+          details: data.error || 'Une erreur inconnue s\'est produite'
+        });
+      }
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: 'Erreur de connexion',
+        details: 'Impossible de contacter le serveur. Veuillez réessayer.'
+      });
+      console.error('❌ Erreur suppression catégorie:', error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
   // Fonction : Supprimer un script
   const deleteScript = async (scriptId: number) => {
     try {
@@ -781,6 +855,22 @@ export default function MenuAIAdmin() {
                 >
                   🔄 Dupliquer Catégorie
                 </button>
+
+                <button
+                  onClick={() => {
+                    setActiveEditTab('delete');
+                    if (selectedRestaurant) {
+                      loadRestaurantCategories(selectedRestaurant.id);
+                    }
+                  }}
+                  className={`py-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+                    activeEditTab === 'delete'
+                      ? 'border-red-500 text-red-600 bg-red-50'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  🗑️ Supprimer Catégorie
+                </button>
               </nav>
             </div>
 
@@ -972,6 +1062,83 @@ export default function MenuAIAdmin() {
                         ) : (
                           <>
                             🔄 Dupliquer {duplicateSourceCategory?.stats.products || 0} produits
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ONGLET SUPPRESSION */}
+              {activeEditTab === 'delete' && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    🗑️ Supprimer une catégorie existante
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                      <div className="flex items-center mb-2">
+                        <span className="text-red-600 text-lg mr-2">⚠️</span>
+                        <span className="font-semibold text-red-800">Attention : Action irréversible</span>
+                      </div>
+                      <p className="text-red-700 text-sm">
+                        La suppression d'une catégorie supprimera définitivement tous les produits et options associés.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          📋 Catégorie à supprimer
+                        </label>
+                        <select
+                          value={selectedCategory?.id || ''}
+                          onChange={(e) => {
+                            const categoryId = parseInt(e.target.value);
+                            const category = availableCategories.find(c => c.id === categoryId);
+                            setSelectedCategory(category || null);
+                          }}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                        >
+                          <option value="">Sélectionner une catégorie à supprimer</option>
+                          {availableCategories.map(category => (
+                            <option key={category.id} value={category.id}>
+                              {category.icon} {category.name} ({category.stats?.products || 0} produits)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        {selectedCategory && (
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <h4 className="font-semibold text-gray-800 mb-2">Aperçu de la suppression :</h4>
+                            <ul className="text-sm text-gray-600 space-y-1">
+                              <li>📂 Catégorie : <span className="font-medium">{selectedCategory.name}</span></li>
+                              <li>📦 Produits : <span className="font-medium text-red-600">{selectedCategory.stats?.products || 0} supprimés</span></li>
+                              <li>⚙️ Options : <span className="font-medium text-red-600">{selectedCategory.stats?.options || 0} supprimées</span></li>
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-center pt-4">
+                      <button
+                        onClick={() => handleDeleteCategory()}
+                        disabled={!selectedCategory || loadingCategories}
+                        className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-bold py-3 px-8 rounded-lg transition-colors disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {loadingCategories ? (
+                          <>
+                            <span className="animate-spin">⏳</span>
+                            Chargement...
+                          </>
+                        ) : (
+                          <>
+                            🗑️ Supprimer définitivement
                           </>
                         )}
                       </button>
@@ -1508,32 +1675,32 @@ OU coller directement le JSON ChatGPT..."
         )}
 
         {/* Section Historique des Scripts SQL */}
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6 text-white">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              📜 Historique des Scripts SQL
+            <h2 className="text-2xl font-bold flex items-center gap-3 text-gray-800">
+              📊 Historique des Scripts SQL
             </h2>
             <button
               onClick={() => setShowHistory(!showHistory)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              className={`px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
                 showHistory
-                  ? 'bg-red-500 hover:bg-red-600'
-                  : 'bg-blue-500 hover:bg-blue-600'
+                  ? 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200'
               }`}
             >
-              {showHistory ? '👁️ Masquer' : '👁️ Afficher'}
+              {showHistory ? '🙈 Masquer' : '👀 Afficher'}
             </button>
           </div>
 
           {showHistory && (
             <div className="space-y-4">
               {scripts.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  <p className="text-lg">📭 Aucun script généré</p>
-                  <p className="text-sm mt-2">Les scripts générés apparaîtront ici automatiquement</p>
+                <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                  <p className="text-xl text-gray-600">💻 Aucun script généré</p>
+                  <p className="text-sm mt-2 text-gray-500">Les scripts générés apparaîtront ici automatiquement</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
                   <table className="w-full text-sm table-fixed">
                     <colgroup>
                       <col className="w-24" />
@@ -1544,44 +1711,46 @@ OU coller directement le JSON ChatGPT..."
                       <col className="w-32" />
                     </colgroup>
                     <thead>
-                      <tr className="border-b border-gray-600">
-                        <th className="text-left p-2 text-xs font-medium">Date</th>
-                        <th className="text-left p-2 text-xs font-medium">Commande</th>
-                        <th className="text-left p-2 text-xs font-medium">Script SQL</th>
-                        <th className="text-center p-2 text-xs font-medium">DEV</th>
-                        <th className="text-center p-2 text-xs font-medium">PROD</th>
-                        <th className="text-center p-2 text-xs font-medium">Actions</th>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left p-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Date</th>
+                        <th className="text-left p-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">💬 Commande</th>
+                        <th className="text-left p-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">⚡ Script SQL</th>
+                        <th className="text-center p-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">🧪 DEV</th>
+                        <th className="text-center p-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">🚀 PROD</th>
+                        <th className="text-center p-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">⚙️ Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {scripts.map((script) => (
-                        <tr key={script.id} className="border-b border-gray-700 hover:bg-gray-750">
-                          <td className="p-2">
-                            <div className="text-xs text-gray-300 leading-tight">
+                      {scripts.map((script, index) => (
+                        <tr key={script.id} className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                          <td className="p-3">
+                            <div className="text-xs text-gray-700 leading-tight font-medium">
                               {new Date(script.created_at).toLocaleDateString('fr-FR', {
                                 day: '2-digit',
                                 month: '2-digit'
                               })}
                               <br />
-                              {new Date(script.created_at).toLocaleTimeString('fr-FR', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
+                              <span className="text-gray-500">
+                                {new Date(script.created_at).toLocaleTimeString('fr-FR', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
                             </div>
                           </td>
-                          <td className="p-2">
-                            <div className="truncate text-xs">
+                          <td className="p-3">
+                            <div className="truncate text-xs text-gray-800 font-medium">
                               {script.command_source || 'Script généré'}
                             </div>
                             {script.category_name && (
-                              <div className="text-xs text-blue-300 truncate">
-                                📂 {script.category_name}
+                              <div className="text-xs text-blue-600 truncate mt-1 flex items-center gap-1">
+                                🗂️ {script.category_name}
                               </div>
                             )}
                           </td>
-                          <td className="p-2">
+                          <td className="p-3">
                             <div className="relative group">
-                              <div className="bg-gray-900 px-2 py-1 rounded text-green-400 font-mono text-xs truncate cursor-pointer hover:bg-gray-800"
+                              <div className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-green-700 font-mono text-xs truncate cursor-pointer hover:bg-green-50 hover:border-green-300 transition-all"
                                    onClick={() => navigator.clipboard.writeText(script.script_sql)}
                                    title="Cliquer pour copier le script complet">
                                 {script.script_sql.includes('UPDATE')
@@ -1594,82 +1763,51 @@ OU coller directement le JSON ChatGPT..."
                                 }
                               </div>
                               <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-blue-400 text-xs">📋</span>
+                                <span className="text-blue-500 text-xs">📄</span>
                               </div>
                             </div>
                           </td>
-                          <td className="p-2 text-center">
-                            <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
-                              script.dev_status === 'executed' ? 'bg-green-600' :
-                              script.dev_status === 'error' ? 'bg-red-600' :
-                              script.dev_status === 'rolled_back' ? 'bg-blue-600' :
-                              'bg-yellow-600'
+                          <td className="p-3 text-center">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap flex items-center justify-center gap-1 ${
+                              script.dev_status === 'executed' ? 'bg-green-100 text-green-700 border border-green-200' :
+                              script.dev_status === 'error' ? 'bg-red-100 text-red-700 border border-red-200' :
+                              script.dev_status === 'rolled_back' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                              'bg-amber-100 text-amber-700 border border-amber-200'
                             }`}>
-                              {script.dev_status === 'pending' && '⏳'}
+                              {script.dev_status === 'pending' && '🔄'}
                               {script.dev_status === 'executed' && '✅'}
-                              {script.dev_status === 'error' && '❌'}
-                              {script.dev_status === 'rolled_back' && '↩️'}
+                              {script.dev_status === 'error' && '🚫'}
+                              {script.dev_status === 'rolled_back' && '⏪'}
                             </span>
                           </td>
-                          <td className="p-2 text-center">
-                            <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
-                              script.prod_status === 'executed' ? 'bg-green-600' :
-                              script.prod_status === 'error' ? 'bg-red-600' :
-                              script.prod_status === 'rolled_back' ? 'bg-blue-600' :
-                              script.prod_status === 'not_applied' ? 'bg-gray-600' :
-                              'bg-yellow-600'
+                          <td className="p-3 text-center">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap flex items-center justify-center gap-1 ${
+                              script.prod_status === 'executed' ? 'bg-green-100 text-green-700 border border-green-200' :
+                              script.prod_status === 'error' ? 'bg-red-100 text-red-700 border border-red-200' :
+                              script.prod_status === 'rolled_back' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                              script.prod_status === 'not_applied' ? 'bg-gray-100 text-gray-600 border border-gray-200' :
+                              'bg-amber-100 text-amber-700 border border-amber-200'
                             }`}>
-                              {script.prod_status === 'not_applied' && '➖'}
-                              {script.prod_status === 'pending' && '⏳'}
+                              {script.prod_status === 'not_applied' && '⏸️'}
+                              {script.prod_status === 'pending' && '🔄'}
                               {script.prod_status === 'executed' && '✅'}
-                              {script.prod_status === 'error' && '❌'}
-                              {script.prod_status === 'rolled_back' && '↩️'}
+                              {script.prod_status === 'error' && '🚫'}
+                              {script.prod_status === 'rolled_back' && '⏪'}
                             </span>
                           </td>
-                          <td className="p-2">
-                            <div className="flex flex-wrap gap-1 justify-center">
-                              {/* Nouveau plan: Icône PROD pour appliquer en production */}
+                          <td className="p-3">
+                            <div className="flex flex-wrap gap-2 justify-center">
+                              {/* Bouton déploiement PROD moderne */}
                               {script.prod_status === 'not_applied' && (
                                 <button
                                   onClick={() => openProdModal(script)}
-                                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap"
-                                  title="Appliquer en PRODUCTION"
+                                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-3 py-1 rounded-lg text-xs font-medium shadow-sm hover:shadow transition-all flex items-center gap-1"
+                                  title="Déployer en PRODUCTION"
                                 >
-                                  🔴 PROD
+                                  🚀 PROD
                                 </button>
                               )}
 
-                              {/* Boutons Rollback compacts */}
-                              {script.dev_status === 'executed' && (
-                                <button
-                                  onClick={() => generateRollback(script.id)}
-                                  className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-xs"
-                                  title="Rollback DEV"
-                                >
-                                  ↩️
-                                </button>
-                              )}
-
-                              {script.prod_status === 'executed' && (
-                                <button
-                                  onClick={() => generateRollback(script.id)}
-                                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
-                                  title="Rollback PROD"
-                                >
-                                  ↩️
-                                </button>
-                              )}
-
-                              {/* Bouton Supprimer compact */}
-                              {script.prod_status === 'not_applied' && (
-                                <button
-                                  onClick={() => deleteScript(script.id)}
-                                  className="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs"
-                                  title="Supprimer"
-                                >
-                                  🗑️
-                                </button>
-                              )}
                             </div>
                           </td>
                         </tr>
