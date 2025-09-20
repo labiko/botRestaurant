@@ -121,6 +121,9 @@ export default function RestaurantDeletion({ onDeletionComplete }: RestaurantDel
     setResult(null);
   };
 
+  // DEBUG
+  console.log('🗑️ DEBUG RestaurantDeletion - step actuel:', step);
+
   // Étape 1: Sélection du restaurant
   if (step === 'select') {
     return (

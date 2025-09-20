@@ -1,21 +1,47 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useRestaurant } from '@/contexts/RestaurantContext';
+import { Restaurant } from '@/lib/types';
 
-interface TopNavbarProps {
-  selectedRestaurant?: string;
-}
-
-export default function TopNavbar({ selectedRestaurant = "Le Nouveau O'CV Moissy" }: TopNavbarProps) {
+export default function TopNavbar() {
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const {
+    selectedRestaurant,
+    setSelectedRestaurant,
+    restaurants,
+    setRestaurants,
+    isLoading,
+    setIsLoading
+  } = useRestaurant();
 
-  const restaurants = [
-    "Pizza Yolo 77",
-    "Le Nouveau O'CV Moissy",
-    "Autres restaurants..."
-  ];
+  // Charger les restaurants depuis l'API
+  useEffect(() => {
+    async function loadRestaurants() {
+      try {
+        setIsLoading(true);
+        const response = await fetch('/api/restaurants');
+        const data = await response.json();
+
+        if (data.success) {
+          setRestaurants(data.restaurants);
+
+          // Si aucun restaurant sélectionné, prendre le premier
+          if (!selectedRestaurant && data.restaurants.length > 0) {
+            setSelectedRestaurant(data.restaurants[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur chargement restaurants:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadRestaurants();
+  }, []);
 
   return (
     <nav className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg relative z-50">
@@ -35,9 +61,14 @@ export default function TopNavbar({ selectedRestaurant = "Le Nouveau O'CV Moissy
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition-colors flex items-center space-x-2"
+              disabled={isLoading}
             >
               <span className="text-sm font-medium">Restaurant:</span>
-              <span className="font-semibold">{selectedRestaurant}</span>
+              {isLoading ? (
+                <span className="font-semibold">Chargement...</span>
+              ) : (
+                <span className="font-semibold">{selectedRestaurant?.name || "Aucun"}</span>
+              )}
               <svg
                 className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
                 fill="none"
@@ -49,20 +80,20 @@ export default function TopNavbar({ selectedRestaurant = "Le Nouveau O'CV Moissy
             </button>
 
             {/* Dropdown Menu */}
-            {isDropdownOpen && (
+            {isDropdownOpen && !isLoading && (
               <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-xl py-2 z-50">
-                {restaurants.map((restaurant, index) => (
+                {restaurants.map((restaurant) => (
                   <button
-                    key={index}
+                    key={restaurant.id}
                     onClick={() => {
+                      setSelectedRestaurant(restaurant);
                       setIsDropdownOpen(false);
-                      // Ici on pourrait ajouter la logique de changement de restaurant
                     }}
                     className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
-                      restaurant === selectedRestaurant ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'
+                      restaurant.id === selectedRestaurant?.id ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'
                     }`}
                   >
-                    🍕 {restaurant}
+                    🍕 {restaurant.name}
                   </button>
                 ))}
               </div>

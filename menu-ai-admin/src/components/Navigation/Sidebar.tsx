@@ -1,11 +1,12 @@
 'use client';
 
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -64,7 +65,7 @@ export default function Sidebar() {
       id: 'creer-ia',
       label: 'Créer avec IA',
       icon: '🤖',
-      path: '/',
+      path: '/?section=creer-ia',
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       description: 'Création automatisée par IA'
@@ -73,7 +74,7 @@ export default function Sidebar() {
       id: 'suppression',
       label: 'Suppression Restaurant',
       icon: '🗑️',
-      path: '/',
+      path: '/?section=suppression',
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       description: 'Suppression sécurisée'
@@ -82,7 +83,7 @@ export default function Sidebar() {
       id: 'analyse',
       label: 'Analyse Configs',
       icon: '🔍',
-      path: '/',
+      path: '/?section=analyse',
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       description: 'Analyse des configurations'
@@ -91,10 +92,14 @@ export default function Sidebar() {
 
   const isActive = (path: string) => {
     if (path === '/') {
-      return pathname === '/' && !window.location.search.includes('mode=');
+      return pathname === '/' && !searchParams.get('mode') && !searchParams.get('section');
     }
     if (path === '/?mode=modal') {
-      return pathname === '/' && window.location.search.includes('mode=modal');
+      return pathname === '/' && searchParams.get('mode') === 'modal';
+    }
+    if (path.includes('?section=')) {
+      const sectionParam = path.split('?section=')[1];
+      return pathname === '/' && searchParams.get('section') === sectionParam;
     }
     return pathname.startsWith(path);
   };

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import DuplicationDetailModal from '@/components/DuplicationDetailModal';
 
 interface DuplicationHistory {
   id: number;
@@ -26,6 +27,10 @@ export default function DuplicationHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'completed' | 'failed'>('all');
+
+  // États pour le modal de détail
+  const [selectedDuplicationId, setSelectedDuplicationId] = useState<number | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -86,6 +91,16 @@ export default function DuplicationHistoryPage() {
   const formatDuration = (seconds: number | null) => {
     if (!seconds) return 'N/A';
     return `${seconds}s`;
+  };
+
+  const openDetailModal = (duplicationId: number) => {
+    setSelectedDuplicationId(duplicationId);
+    setIsDetailModalOpen(true);
+  };
+
+  const closeDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedDuplicationId(null);
   };
 
   const filteredDuplications = duplications.filter(dup => {
@@ -258,6 +273,14 @@ export default function DuplicationHistoryPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
+                          {/* Bouton Voir détail - disponible pour toutes les duplications */}
+                          <button
+                            onClick={() => openDetailModal(dup.id)}
+                            className="text-indigo-600 hover:text-indigo-900"
+                          >
+                            👁️ Voir détail
+                          </button>
+
                           {dup.status === 'completed' && dup.target_restaurant && (
                             <>
                               <button
@@ -319,6 +342,13 @@ export default function DuplicationHistoryPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de détail */}
+      <DuplicationDetailModal
+        duplicationId={selectedDuplicationId}
+        isOpen={isDetailModalOpen}
+        onClose={closeDetailModal}
+      />
     </div>
   );
 }

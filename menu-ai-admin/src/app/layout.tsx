@@ -4,6 +4,7 @@ import "./globals.css";
 import TopNavbar from "@/components/Navigation/TopNavbar";
 import Sidebar from "@/components/Navigation/Sidebar";
 import Breadcrumbs from "@/components/Navigation/Breadcrumbs";
+import { RestaurantProvider } from "@/contexts/RestaurantContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,23 +31,25 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
       >
-        {/* Navigation moderne ajoutée */}
-        <TopNavbar />
+        <RestaurantProvider>
+          {/* Navigation moderne ajoutée */}
+          <TopNavbar />
 
-        <div className="flex min-h-screen">
-          {/* Sidebar moderne - visible sur toutes les tailles */}
-          <Sidebar />
+          <div className="flex min-h-screen">
+            {/* Sidebar moderne - visible sur toutes les tailles */}
+            <Sidebar />
 
-          {/* Contenu principal avec breadcrumbs */}
-          <main className="flex-1 flex flex-col">
-            <Breadcrumbs />
+            {/* Contenu principal avec breadcrumbs */}
+            <main className="flex-1 flex flex-col">
+              <Breadcrumbs />
 
-            {/* Zone de contenu existant - AUCUNE MODIFICATION */}
-            <div className="flex-1 p-3 md:p-6">
-              {children}
-            </div>
-          </main>
-        </div>
+              {/* Zone de contenu existant - AUCUNE MODIFICATION */}
+              <div className="flex-1 p-3 md:p-6">
+                {children}
+              </div>
+            </main>
+          </div>
+        </RestaurantProvider>
       </body>
     </html>
   );

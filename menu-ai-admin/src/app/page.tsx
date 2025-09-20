@@ -9,6 +9,7 @@ import ProdConfirmModal from '@/components/ProdConfirmModal';
 import RestaurantDeletion from '@/components/RestaurantDeletion';
 import ConfigAnalysis from '@/components/ConfigAnalysis';
 import { Restaurant } from '@/lib/types';
+import { useRestaurant } from '@/contexts/RestaurantContext';
 
 interface AIResponse {
   success: boolean;
@@ -35,6 +36,7 @@ export default function MenuAIAdmin() {
 
   // Mode interface avec Édition Moderne réactivée
   const [mode, setMode] = useState<'command' | 'list' | 'modal'>('command');
+  const [activeSection, setActiveSection] = useState<string>('');
   const [categoryName, setCategoryName] = useState('');
   const [originalList, setOriginalList] = useState('');
   const [modifiedList, setModifiedList] = useState('');
@@ -82,8 +84,7 @@ export default function MenuAIAdmin() {
   const [prodExecuting, setProdExecuting] = useState(false);
 
   // NOUVEAUX ÉTATS POUR LES RESTAURANTS
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const { selectedRestaurant, restaurants, setRestaurants, setSelectedRestaurant } = useRestaurant();
   const [loadingRestaurants, setLoadingRestaurants] = useState(false);
 
   // NOUVEAUX ÉTATS POUR LE CLONAGE DE RESTAURANTS
@@ -566,10 +567,28 @@ export default function MenuAIAdmin() {
     // Détecter le mode depuis l'URL (pour la sidebar)
     const params = new URLSearchParams(window.location.search);
     const urlMode = params.get('mode');
+    const urlSection = params.get('section');
+
     if (urlMode === 'modal') {
       setMode('modal');
     }
+
+    // Détecter la section pour navigation - sauvegarder section active
+    if (urlSection) {
+      console.log('🔍 DEBUG: Section détectée dans URL:', urlSection);
+      setActiveSection(urlSection);
+      setMode('command'); // Utiliser mode existant pour toutes les sections
+    } else {
+      console.log('🔍 DEBUG: Aucune section dans URL, params:', params.toString());
+    }
   }, []);
+
+  // USEEFFECT : Recharger catégories quand restaurant change
+  useEffect(() => {
+    if (selectedRestaurant) {
+      loadRestaurantCategories(selectedRestaurant.id);
+    }
+  }, [selectedRestaurant]);
 
   // NOUVELLE FONCTION : Analyser le clonage de restaurant
   const handleCloneAnalyze = async () => {
@@ -1657,18 +1676,21 @@ OU coller directement le JSON ChatGPT..."
           )}
         </div>
 
-        {/* Section Suppression supprimée - disponible via sidebar */}
-        {false && (
+        {/* Section Suppression - activée via sidebar */}
+        {activeSection === 'suppression' && (
           <div className="bg-white rounded-lg shadow-lg p-6">
+            {console.log('🗑️ DEBUG: Affichage section Suppression')}
             <RestaurantDeletion onDeletionComplete={() => {
               // Optionnel: Recharger la liste des restaurants après suppression
               loadRestaurants();
             }} />
           </div>
         )}
+        {/* DEBUG: État activeSection */}
+        {console.log('🔍 DEBUG: activeSection actuel:', activeSection)}
 
-        {/* Section Analyse supprimée - disponible via sidebar */}
-        {false && (
+        {/* Section Analyse - activée via sidebar */}
+        {activeSection === 'analyse' && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <ConfigAnalysis onAnalysisComplete={(analysis) => {
               console.log('🔍 Analyse terminée:', analysis);
