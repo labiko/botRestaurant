@@ -36,6 +36,133 @@ export interface OptionItem {
 export class WorkflowGeneratorV2 {
 
   /**
+   * Génère le SQL UPDATE pour modifier un workflow existant
+   */
+  static generateUpdateSQL(workflow: UniversalWorkflow, productId: number): string {
+    const {
+      productName,
+      onSitePrice,
+      deliveryPrice,
+      steps,
+      optionGroups
+    } = workflow;
+
+    // Construire la configuration des steps
+    const stepsConfig = {
+      steps: steps.map(step => ({
+        step: step.step,
+        type: step.type,
+        prompt: this.fixPromptWording(step.prompt),
+        option_groups: step.option_groups,
+        required: step.required,
+        max_selections: step.max_selections
+      }))
+    };
+
+    let sql = `-- =========================================
+-- MISE À JOUR WORKFLOW : ${productName}
+-- =========================================
+-- Généré le: ${new Date().toLocaleDateString('fr-FR')}
+-- Product ID: ${productId}
+-- Prix sur site: ${onSitePrice.toFixed(2)}€
+-- Prix livraison: ${deliveryPrice.toFixed(2)}€
+-- ⚠️ MISE À JOUR WORKFLOW UNIVERSAL V2
+-- 🔥 CONSERVATION DES group_order EXISTANTS
+
+BEGIN;
+
+-- =========================================
+-- 1. MISE À JOUR DU PRODUIT
+-- =========================================
+
+UPDATE france_products
+SET
+  name = '${productName}',
+  price_on_site_base = ${onSitePrice.toFixed(2)},
+  price_delivery_base = ${deliveryPrice.toFixed(2)},
+  steps_config = '${JSON.stringify(stepsConfig).replace(/'/g, "''")}'
+WHERE id = ${productId};
+
+-- =========================================
+-- 2. SUPPRESSION DES ANCIENNES OPTIONS
+-- =========================================
+
+DELETE FROM france_composite_items
+WHERE product_id = ${productId};
+
+-- =========================================
+-- 3. INSERTION DES NOUVELLES OPTIONS
+-- =========================================
+
+`;
+
+    // Générer les insertions pour chaque groupe d'options
+    let globalGroupOrder = 1;
+
+    Object.entries(optionGroups).forEach(([groupName, options]) => {
+      if (options.length > 0) {
+        sql += `-- Groupe: ${groupName}\n`;
+
+        options.forEach((option, index) => {
+          sql += `INSERT INTO france_composite_items (
+  product_id,
+  name,
+  price_modifier,
+  display_order,
+  group_order,
+  option_group
+) VALUES (
+  ${productId},
+  '${option.name.replace(/'/g, "''")}',
+  ${option.price_modifier.toFixed(2)},
+  ${option.display_order},
+  ${globalGroupOrder},
+  '${groupName.replace(/'/g, "''")}'
+);
+
+`;
+        });
+
+        globalGroupOrder++;
+      }
+    });
+
+    sql += `-- =========================================
+-- 4. VÉRIFICATIONS
+-- =========================================
+
+-- Vérifier le produit mis à jour
+SELECT
+  id,
+  name,
+  price_on_site_base,
+  price_delivery_base,
+  workflow_type
+FROM france_products
+WHERE id = ${productId};
+
+-- Vérifier les options mises à jour
+SELECT
+  option_group,
+  name,
+  price_modifier,
+  display_order,
+  group_order
+FROM france_composite_items
+WHERE product_id = ${productId}
+ORDER BY group_order, display_order;
+
+COMMIT;
+
+-- 🎯 Mise à jour terminée pour le produit ID ${productId}
+-- 📋 ${Object.keys(optionGroups).length} groupes d'options
+-- 📦 ${Object.values(optionGroups).reduce((total, group) => total + group.length, 0)} options au total
+`;
+
+    return sql;
+  }
+
+  /**
    * Corriger les prompts questions en messages de confirmation
    */
   private static fixPromptWording(prompt: string): string {

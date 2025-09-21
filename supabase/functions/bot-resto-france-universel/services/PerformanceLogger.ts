@@ -157,7 +157,6 @@ export class PerformanceLogger {
   clearSession(): void {
     this.sessionMetrics = [];
     this.metrics.clear();
-    console.log(`🔄 [PERF] Session métriques réinitialisées`);
   }
 
   /**

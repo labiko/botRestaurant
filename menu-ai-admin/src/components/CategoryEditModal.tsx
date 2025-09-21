@@ -15,6 +15,7 @@ interface Product {
   composition?: string;
   requires_steps: boolean;
   steps_config?: any;
+  workflow_type?: string;
   category_id: number;
   restaurant_id: number;
   is_active: boolean;
@@ -280,110 +281,167 @@ export default function CategoryEditModal({
                     : 'border-red-200 bg-red-50 opacity-75'
                 }`}
               >
-                <div className="grid grid-cols-13 gap-4 items-center">
-
-                  {/* Position */}
-                  <div className="col-span-1 text-center">
-                    <span className="text-lg font-bold text-gray-600">
-                      {getProductIcon(product.name)} {index + 1}
-                    </span>
-                  </div>
-
-                  {/* Nom */}
-                  <div className="col-span-4">
-                    <input
-                      type="text"
-                      value={product.name}
-                      onChange={(e) => handleProductChange(index, 'name', e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-lg font-medium focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* Prix sur place */}
-                  <div className="col-span-2">
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        step="0.50"
-                        value={product.price_on_site_base || ''}
-                        onChange={(e) => handleProductChange(index, 'price_on_site_base', parseFloat(e.target.value))}
-                        className="w-full p-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500"
-                      />
-                      <span className="text-gray-600">€</span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">Sur place</div>
-                  </div>
-
-                  {/* Prix livraison */}
-                  <div className="col-span-2">
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        step="0.50"
-                        value={product.price_delivery_base || ''}
-                        onChange={(e) => handleProductChange(index, 'price_delivery_base', parseFloat(e.target.value))}
-                        className="w-full p-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500"
-                      />
-                      <span className="text-gray-600">€</span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">Livraison</div>
-                  </div>
-
-                  {/* Type */}
-                  <div className="col-span-2">
-                    <select
-                      value={product.product_type}
-                      disabled
-                      className="w-full p-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
-                    >
-                      <option value="simple">Simple</option>
-                      <option value="composite">Composite</option>
-                      <option value="modular">Modular</option>
-                    </select>
-                  </div>
-
-                  {/* Toggle Actif/Inactif */}
-                  <div className="col-span-1 text-center">
-                    <div className="flex flex-col items-center">
-                      <button
-                        onClick={() => handleProductChange(index, 'is_active', !product.is_active)}
-                        className={`w-12 h-6 rounded-full transition-colors ${
-                          product.is_active
-                            ? 'bg-green-500'
-                            : 'bg-gray-300'
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                          product.is_active ? 'translate-x-7' : 'translate-x-1'
-                        }`} />
-                      </button>
-                      <div className="text-xs mt-1">
-                        {product.is_active ? '✅ Actif' : '❌ Inactif'}
+                {/* Gestion spéciale pour Universal Workflow V2 */}
+                {product.workflow_type === 'universal_workflow_v2' ? (
+                  // Affichage spécial pour Universal Workflow V2
+                  <div className="col-span-13">
+                    <div className="bg-gradient-to-r from-purple-100 to-blue-100 border-2 border-purple-300 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">⚡</span>
+                          <div>
+                            <h4 className="font-bold text-purple-800 text-lg">{product.name}</h4>
+                            <p className="text-purple-600 text-sm">
+                              🔧 Configuration Universal Workflow V2 - 6 étapes interactives
+                            </p>
+                            <div className="flex gap-4 mt-2">
+                              <span className="bg-white px-3 py-1 rounded-full text-sm font-medium text-purple-700">
+                                🏪 Sur place: {product.price_on_site_base}€
+                              </span>
+                              <span className="bg-white px-3 py-1 rounded-full text-sm font-medium text-purple-700">
+                                🚚 Livraison: {product.price_delivery_base}€
+                              </span>
+                              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                product.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              }`}>
+                                {product.is_active ? '✅ Actif' : '❌ Inactif'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              const url = `/workflow-edit?edit=${product.id}&restaurant=${selectedRestaurant?.id}`;
+                              window.open(url, '_blank');
+                            }}
+                            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2 font-medium"
+                          >
+                            🔧 Modifier la configuration
+                          </button>
+                          <button
+                            onClick={() => handleProductChange(index, 'is_active', !product.is_active)}
+                            className={`px-4 py-2 rounded-lg font-medium ${
+                              product.is_active
+                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            }`}
+                          >
+                            {product.is_active ? '❌ Désactiver' : '✅ Activer'}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
+                ) : (
+                  // Affichage normal pour les autres produits
+                  <div className="grid grid-cols-13 gap-4 items-center">
 
-                  {/* Actions */}
-                  <div className="col-span-1 text-center">
-                    <button
-                      onClick={() => deleteProduct(index)}
-                      className="text-red-500 hover:text-red-700 font-bold text-lg"
-                    >
-                      🗑️
-                    </button>
+                    {/* Position */}
+                    <div className="col-span-1 text-center">
+                      <span className="text-lg font-bold text-gray-600">
+                        {getProductIcon(product.name)} {index + 1}
+                      </span>
+                    </div>
+
+                    {/* Nom */}
+                    <div className="col-span-4">
+                      <input
+                        type="text"
+                        value={product.name}
+                        onChange={(e) => handleProductChange(index, 'name', e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-lg font-medium focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* Prix sur place */}
+                    <div className="col-span-2">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          step="0.50"
+                          value={product.price_on_site_base || ''}
+                          onChange={(e) => handleProductChange(index, 'price_on_site_base', parseFloat(e.target.value))}
+                          className="w-full p-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-gray-600">€</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">Sur place</div>
+                    </div>
+
+                    {/* Prix livraison */}
+                    <div className="col-span-2">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          step="0.50"
+                          value={product.price_delivery_base || ''}
+                          onChange={(e) => handleProductChange(index, 'price_delivery_base', parseFloat(e.target.value))}
+                          className="w-full p-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-gray-600">€</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">Livraison</div>
+                    </div>
+
+                    {/* Type */}
+                    <div className="col-span-2">
+                      <select
+                        value={product.product_type}
+                        disabled
+                        className="w-full p-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                      >
+                        <option value="simple">Simple</option>
+                        <option value="composite">Composite</option>
+                        <option value="modular">Modular</option>
+                      </select>
+                    </div>
+
+                    {/* Toggle Actif/Inactif */}
+                    <div className="col-span-1 text-center">
+                      <div className="flex flex-col items-center">
+                        <button
+                          onClick={() => handleProductChange(index, 'is_active', !product.is_active)}
+                          className={`w-12 h-6 rounded-full transition-colors ${
+                            product.is_active
+                              ? 'bg-green-500'
+                              : 'bg-gray-300'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                            product.is_active ? 'translate-x-7' : 'translate-x-1'
+                          }`} />
+                        </button>
+                        <div className="text-xs mt-1">
+                          {product.is_active ? '✅ Actif' : '❌ Inactif'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="col-span-1 text-center">
+                      <button
+                        onClick={() => deleteProduct(index)}
+                        className="text-red-500 hover:text-red-700 font-bold text-lg"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Composition (expandable) */}
-                <div className="mt-3">
-                  <textarea
-                    value={product.composition || ''}
-                    onChange={(e) => handleProductChange(index, 'composition', e.target.value)}
-                    placeholder="Description/composition du produit..."
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                    rows={2}
-                  />
-                </div>
+                {/* Composition (expandable) - Seulement pour les produits non-Universal Workflow V2 */}
+                {product.workflow_type !== 'universal_workflow_v2' && (
+                  <div className="mt-3">
+                    <textarea
+                      value={product.composition || ''}
+                      onChange={(e) => handleProductChange(index, 'composition', e.target.value)}
+                      placeholder="Description/composition du produit..."
+                      className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      rows={2}
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </div>

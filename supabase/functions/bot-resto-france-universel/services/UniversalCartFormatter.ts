@@ -66,7 +66,8 @@ export class UniversalCartFormatter {
     quantity: number = 1
   ): string {
     let message = '';
-    
+
+
     // Section 1: Confirmation
     const productName = this.extractProductName(product.name);
     message += `✅ ${productName} ajouté !\n\n`;
@@ -204,9 +205,14 @@ export class UniversalCartFormatter {
         }
       }
       
-      // Prix
-      const totalPrice = item.unitPrice * item.quantity;
-      summary += `   💰 ${totalPrice} EUR\n`;
+      // Prix - DIAGNOSTIC BOWL SUPPLÉMENTS
+      const calculatedPrice = item.unitPrice * item.quantity;
+
+      // 🚨 LOGS DIAGNOSTIC BOWL - Analyser le problème suppléments
+      // Utiliser item.totalPrice si disponible, sinon calculatedPrice
+      const finalPrice = item.totalPrice || calculatedPrice;
+
+      summary += `   💰 ${finalPrice} EUR\n`;
       
       if (index < cart.length - 1) {
         summary += '\n';
