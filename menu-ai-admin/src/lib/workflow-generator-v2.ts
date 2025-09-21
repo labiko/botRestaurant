@@ -36,6 +36,176 @@ export interface OptionItem {
 export class WorkflowGeneratorV2 {
 
   /**
+   * Génère le SQL SMART UPDATE qui préserve les IDs existants
+   * Stratégie: UPDATE + INSERT + DELETE pour éviter la perte d'IDs
+   */
+  static generateSmartUpdateSQL(workflow: UniversalWorkflow, productId: number): string {
+    const {
+      productName,
+      onSitePrice,
+      deliveryPrice,
+      steps,
+      optionGroups
+    } = workflow;
+
+    // Construire la configuration des steps
+    const stepsConfig = {
+      steps: steps.map(step => ({
+        step: step.step,
+        type: step.type,
+        prompt: this.fixPromptWording(step.prompt),
+        option_groups: step.option_groups,
+        required: step.required,
+        max_selections: step.max_selections
+      }))
+    };
+
+    let sql = `-- =========================================
+-- MISE À JOUR INTELLIGENTE WORKFLOW : ${productName}
+-- =========================================
+-- Généré le: ${new Date().toLocaleDateString('fr-FR')}
+-- Product ID: ${productId}
+-- Prix sur site: ${onSitePrice.toFixed(2)}€
+-- Prix livraison: ${deliveryPrice.toFixed(2)}€
+-- ⚡ STRATÉGIE SMART UPDATE: UPDATE + INSERT + DELETE
+-- 🔒 PRÉSERVE LES IDS EXISTANTS
+-- 🚫 ÉVITE L'ACCUMULATION DE DONNÉES
+
+BEGIN;
+
+-- =========================================
+-- 1. MISE À JOUR DU PRODUIT
+-- =========================================
+
+UPDATE france_products
+SET
+  name = '${productName}',
+  price_on_site_base = ${onSitePrice.toFixed(2)},
+  price_delivery_base = ${deliveryPrice.toFixed(2)},
+  steps_config = '${JSON.stringify(stepsConfig).replace(/'/g, "''")}'
+WHERE id = ${productId};
+
+-- =========================================
+-- 2. MISE À JOUR INTELLIGENTE DES OPTIONS
+-- =========================================
+
+`;
+
+    // Générer les opérations pour chaque groupe
+    let globalGroupOrder = 1;
+
+    Object.entries(optionGroups).forEach(([groupName, options]) => {
+      if (options.length > 0) {
+        sql += `-- Groupe: ${groupName} (group_order: ${globalGroupOrder})\n`;
+
+        options.forEach((option, index) => {
+          sql += `-- Option: ${option.name}\n`;
+          sql += `UPDATE france_product_options
+SET
+  option_name = '${option.name.replace(/'/g, "''")}',
+  price_modifier = ${option.price_modifier.toFixed(2)},
+  display_order = ${option.display_order},
+  group_order = ${globalGroupOrder},
+  option_group = '${groupName.replace(/'/g, "''")}'
+WHERE product_id = ${productId}
+  AND option_group = '${groupName.replace(/'/g, "''")}'
+  AND display_order = ${option.display_order};
+
+-- Insérer si n'existe pas
+INSERT INTO france_product_options (
+  product_id,
+  option_name,
+  price_modifier,
+  display_order,
+  group_order,
+  option_group,
+  is_active
+)
+SELECT
+  ${productId},
+  '${option.name.replace(/'/g, "''")}',
+  ${option.price_modifier.toFixed(2)},
+  ${option.display_order},
+  ${globalGroupOrder},
+  '${groupName.replace(/'/g, "''")}',
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM france_product_options
+  WHERE product_id = ${productId}
+    AND option_group = '${groupName.replace(/'/g, "''")}'
+    AND display_order = ${option.display_order}
+);
+
+`;
+        });
+
+        // Supprimer les options orphelines de ce groupe
+        sql += `-- Supprimer les options orphelines du groupe ${groupName}\n`;
+        sql += `DELETE FROM france_product_options
+WHERE product_id = ${productId}
+  AND option_group = '${groupName.replace(/'/g, "''")}'
+  AND display_order NOT IN (${options.map(opt => opt.display_order).join(', ')});
+
+`;
+
+        globalGroupOrder++;
+      }
+    });
+
+    // Supprimer les groupes complets qui ne sont plus utilisés
+    const groupNames = Object.keys(optionGroups).map(name => `'${name.replace(/'/g, "''")}'`).join(', ');
+    sql += `-- Supprimer les groupes non utilisés\n`;
+    sql += `DELETE FROM france_product_options
+WHERE product_id = ${productId}
+  AND option_group NOT IN (${groupNames});
+
+`;
+
+    sql += `-- =========================================
+-- 3. VÉRIFICATIONS FINALES
+-- =========================================
+
+-- Vérifier le produit mis à jour
+SELECT
+  id,
+  name,
+  price_on_site_base,
+  price_delivery_base,
+  workflow_type
+FROM france_products
+WHERE id = ${productId};
+
+-- Vérifier les options après mise à jour
+SELECT
+  option_group,
+  option_name,
+  price_modifier,
+  display_order,
+  group_order,
+  id as option_id
+FROM france_product_options
+WHERE product_id = ${productId}
+ORDER BY group_order, display_order;
+
+-- Statistiques finales
+SELECT
+  COUNT(*) as total_options,
+  COUNT(DISTINCT option_group) as nb_groupes
+FROM france_product_options
+WHERE product_id = ${productId};
+
+COMMIT;
+
+-- 🎯 Mise à jour intelligente terminée pour le produit ID ${productId}
+-- 📋 ${Object.keys(optionGroups).length} groupes d'options traités
+-- 📦 ${Object.values(optionGroups).reduce((total, group) => total + group.length, 0)} options au total
+-- ✅ IDs préservés, pas d'accumulation de données
+`;
+
+    return sql;
+  }
+
+  /**
    * Génère le SQL UPDATE pour modifier un workflow existant
    */
   static generateUpdateSQL(workflow: UniversalWorkflow, productId: number): string {

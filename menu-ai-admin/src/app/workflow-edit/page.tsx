@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { WorkflowGeneratorV2, UniversalWorkflow, WorkflowStep, OptionItem } from '@/lib/workflow-generator-v2';
+import WorkflowSqlHistory, { WorkflowSqlHistoryRef } from '@/components/WorkflowSqlHistory';
 
 // Interfaces pour les vraies données
 interface RealOption {
@@ -43,6 +44,9 @@ export default function WorkflowEditPage() {
 
   const [generatedSQL, setGeneratedSQL] = useState('');
   const [validationResult, setValidationResult] = useState<any>(null);
+
+  // Référence pour le composant d'historique SQL
+  const sqlHistoryRef = useRef<WorkflowSqlHistoryRef>(null);
 
   // Charger les données au démarrage
   useEffect(() => {
@@ -232,6 +236,30 @@ export default function WorkflowEditPage() {
   const handleGenerateUpdateSQL = () => {
     if (!editProductId) return;
 
+    // Convertir realOptionGroups vers le format attendu par UniversalWorkflow
+    let finalOptionGroups: Record<string, OptionItem[]> = {};
+
+    if (useGenericInterface && realOptionGroups.length > 0) {
+      // Convertir les vraies données groupées vers le format OptionItem[]
+      realOptionGroups.forEach(group => {
+        finalOptionGroups[group.group_name] = group.options.map(option => ({
+          name: option.option_name,
+          price_modifier: option.price_modifier,
+          display_order: option.display_order,
+          emoji: getEmojiForGroup(group.group_name, option.option_name)
+        }));
+      });
+
+      console.log('📊 [WORKFLOW-EDIT] Options converties pour validation:', {
+        groupCount: Object.keys(finalOptionGroups).length,
+        groups: Object.keys(finalOptionGroups),
+        totalOptions: Object.values(finalOptionGroups).reduce((sum, opts) => sum + opts.length, 0)
+      });
+    } else {
+      // Utiliser les anciennes données si pas d'interface générique
+      finalOptionGroups = optionGroups;
+    }
+
     const workflow: UniversalWorkflow = {
       productName,
       restaurantId: editRestaurantId || 0,
@@ -239,7 +267,7 @@ export default function WorkflowEditPage() {
       onSitePrice,
       deliveryPrice,
       steps,
-      optionGroups
+      optionGroups: finalOptionGroups
     };
 
     // Valider le workflow
@@ -247,9 +275,14 @@ export default function WorkflowEditPage() {
     setValidationResult(validation);
 
     if (validation.valid) {
-      // Générer le SQL UPDATE
-      const sql = WorkflowGeneratorV2.generateUpdateSQL(workflow, editProductId);
+      // Générer le SQL SMART UPDATE qui préserve les IDs
+      const sql = WorkflowGeneratorV2.generateSmartUpdateSQL(workflow, editProductId);
       setGeneratedSQL(sql);
+
+      // Sauvegarder automatiquement dans l'historique
+      if (sqlHistoryRef.current && editProductId) {
+        sqlHistoryRef.current.saveScript(sql, productName);
+      }
     }
   };
 
@@ -597,6 +630,12 @@ export default function WorkflowEditPage() {
               </button>
             </div>
           )}
+
+          {/* Historique des scripts SQL */}
+          <WorkflowSqlHistory
+            productId={editProductId}
+            ref={sqlHistoryRef}
+          />
         </div>
       ) : (
         // INTERFACE HÉRITÉE INCHANGÉE
