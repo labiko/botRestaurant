@@ -89,27 +89,55 @@ export default forwardRef<WorkflowSqlHistoryRef, { productId: number | null }>(f
       return;
     }
 
+    const script = scripts.find(s => s.id === scriptId);
+    if (!script) return;
+
     setExecuting(`${scriptId}-${environment}`);
 
-    // Simulation d'exécution (remplacer par API réelle)
-    setTimeout(() => {
-      const updatedScripts = scripts.map(s => {
-        if (s.id === scriptId) {
-          if (environment === 'DEV') {
-            return { ...s, executed_dev: true, dev_executed_at: new Date().toISOString() };
-          } else {
-            return { ...s, executed_prod: true, prod_executed_at: new Date().toISOString() };
-          }
-        }
-        return s;
+    try {
+      console.log(`🔄 Exécution SQL ${environment}:`, script.sql_script);
+
+      // Appel API réel pour exécuter le script
+      const response = await fetch('/api/execute-sql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sql: script.sql_script,
+          environment
+        })
       });
 
-      setScripts(updatedScripts);
-      localStorage.setItem(`workflow_scripts_${productId}`, JSON.stringify(updatedScripts));
+      const result = await response.json();
+
+      if (result.success) {
+        // Mise à jour du statut d'exécution
+        const updatedScripts = scripts.map(s => {
+          if (s.id === scriptId) {
+            if (environment === 'DEV') {
+              return { ...s, executed_dev: true, dev_executed_at: new Date().toISOString() };
+            } else {
+              return { ...s, executed_prod: true, prod_executed_at: new Date().toISOString() };
+            }
+          }
+          return s;
+        });
+
+        setScripts(updatedScripts);
+        localStorage.setItem(`workflow_scripts_${productId}`, JSON.stringify(updatedScripts));
+
+        alert(`✅ Script exécuté avec succès en ${environment}`);
+      } else {
+        console.error('Erreur exécution SQL:', result.error);
+        alert(`❌ Erreur lors de l'exécution: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Erreur API execute-sql:', error);
+      alert(`❌ Erreur de communication: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    } finally {
       setExecuting(null);
       setShowModal(false);
       setConfirmProd(false);
-    }, 2000);
+    }
   };
 
   // Formater la date

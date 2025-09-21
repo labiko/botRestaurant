@@ -42,6 +42,9 @@ export default function WorkflowEditPage() {
   const [activeTabIndex, setActiveTabIndex] = useState(0);
   const [useGenericInterface, setUseGenericInterface] = useState(false);
 
+  // État pour les onglets principaux de la page
+  const [mainActiveTab, setMainActiveTab] = useState('edition'); // 'edition' ou 'historique'
+
   const [generatedSQL, setGeneratedSQL] = useState('');
   const [validationResult, setValidationResult] = useState<any>(null);
 
@@ -420,8 +423,39 @@ export default function WorkflowEditPage() {
         </div>
       </div>
 
-      {/* Interface générique à onglets ou interface héritée */}
-      {useGenericInterface ? (
+      {/* Onglets principaux */}
+      <div className="mb-6">
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8" aria-label="Tabs">
+            <button
+              onClick={() => setMainActiveTab('edition')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                mainActiveTab === 'edition'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              ✏️ Édition Produit
+            </button>
+            <button
+              onClick={() => setMainActiveTab('historique')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                mainActiveTab === 'historique'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              📊 Historique des Scripts SQL Workflow
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      {/* Contenu des onglets */}
+      {mainActiveTab === 'edition' && (
+        <>
+          {/* Interface générique à onglets ou interface héritée */}
+          {useGenericInterface ? (
         // NOUVELLE INTERFACE GÉNÉRIQUE À ONGLETS
         <div className="space-y-6">
           {/* Header avec informations produit */}
@@ -631,16 +665,23 @@ export default function WorkflowEditPage() {
             </div>
           )}
 
-          {/* Historique des scripts SQL */}
-          <WorkflowSqlHistory
-            productId={editProductId}
-            ref={sqlHistoryRef}
-          />
         </div>
       ) : (
         // INTERFACE HÉRITÉE INCHANGÉE
         <div className="text-center py-8">
           <p>Interface héritée - En cours de chargement...</p>
+        </div>
+      )}
+        </>
+      )}
+
+      {/* Onglet Historique SQL */}
+      {mainActiveTab === 'historique' && (
+        <div className="space-y-6">
+          <WorkflowSqlHistory
+            productId={editProductId}
+            ref={sqlHistoryRef}
+          />
         </div>
       )}
     </div>
