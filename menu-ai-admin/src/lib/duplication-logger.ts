@@ -340,7 +340,15 @@ export class DuplicationLogger {
         .select(`
           *,
           source_restaurant:source_restaurant_id(name),
-          target_restaurant:target_restaurant_id(name)
+          target_restaurant:target_restaurant_id(name),
+          duplication_type:CASE
+            WHEN EXISTS (
+              SELECT 1 FROM duplication_actions
+              WHERE duplication_log_id = duplication_logs.id
+              AND action_type = 'create_restaurant'
+            ) THEN 'restaurant'
+            ELSE 'category'
+          END
         `)
         .order('created_at', { ascending: false })
         .limit(limit);

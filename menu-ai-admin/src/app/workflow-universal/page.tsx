@@ -133,6 +133,24 @@ export default function WorkflowUniversalPage() {
     }
   };
 
+  const handleRemoveGroup = (groupName: string) => {
+    const updatedGroups = { ...optionGroups };
+    delete updatedGroups[groupName];
+    setOptionGroups(updatedGroups);
+  };
+
+  const handleRemoveOption = (groupName: string, optionIndex: number) => {
+    const updatedGroups = { ...optionGroups };
+    if (updatedGroups[groupName]) {
+      updatedGroups[groupName].splice(optionIndex, 1);
+      // Réajuster les display_order
+      updatedGroups[groupName].forEach((option, index) => {
+        option.display_order = index + 1;
+      });
+      setOptionGroups(updatedGroups);
+    }
+  };
+
   const handleGenerate = () => {
     if (!selectedRestaurant) {
       alert('Veuillez sélectionner un restaurant');
@@ -648,12 +666,21 @@ export default function WorkflowUniversalPage() {
                       }}
                       className="font-semibold bg-transparent border-b border-gray-300 focus:border-blue-500 focus:outline-none"
                     />
-                    <button
-                      onClick={() => handleAddOption(groupName)}
-                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded"
-                    >
-                      + Option
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleAddOption(groupName)}
+                        className="px-2 py-1 bg-blue-600 text-white text-xs rounded"
+                      >
+                        + Option
+                      </button>
+                      <button
+                        onClick={() => handleRemoveGroup(groupName)}
+                        className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                        title="Supprimer le groupe"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
 
                   {options.map((option, optIndex) => (
@@ -669,8 +696,12 @@ export default function WorkflowUniversalPage() {
                         type="number"
                         step="0.1"
                         placeholder="Prix"
-                        value={option.price_modifier}
-                        onChange={(e) => handleUpdateOption(groupName, optIndex, 'price_modifier', parseFloat(e.target.value))}
+                        value={option.price_modifier || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const numericValue = value === '' ? 0 : parseFloat(value);
+                          handleUpdateOption(groupName, optIndex, 'price_modifier', isNaN(numericValue) ? 0 : numericValue);
+                        }}
                         className="w-20 px-2 py-1 border rounded text-sm"
                       />
                       <input
@@ -680,6 +711,13 @@ export default function WorkflowUniversalPage() {
                         onChange={(e) => handleUpdateOption(groupName, optIndex, 'emoji', e.target.value)}
                         className="w-16 px-2 py-1 border rounded text-sm"
                       />
+                      <button
+                        onClick={() => handleRemoveOption(groupName, optIndex)}
+                        className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                        title="Supprimer cette option"
+                      >
+                        🗑️
+                      </button>
                     </div>
                   ))}
                 </div>

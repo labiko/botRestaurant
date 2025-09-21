@@ -7,6 +7,7 @@ import { TimezoneService } from '@/lib/timezone-service';
 
 interface DuplicationHistory {
   id: number;
+  duplication_type: 'restaurant' | 'category';
   source_restaurant: { name: string } | null;
   target_restaurant: { name: string } | null;
   status: 'started' | 'in_progress' | 'completed' | 'failed';
@@ -226,7 +227,10 @@ export default function DuplicationHistoryPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col">
                           <div className="text-sm font-medium text-gray-900">
-                            #DUP-{String(dup.id).padStart(3, '0')}
+                            {dup.duplication_type === 'category'
+                              ? `📁 CAT-${String(dup.id).padStart(3, '0')}`
+                              : `🏪 REST-${String(dup.id).padStart(3, '0')}`
+                            }
                           </div>
                           <div className="mt-1">
                             {getStatusBadge(dup.status)}
@@ -235,11 +239,26 @@ export default function DuplicationHistoryPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
+                          {/* Badge de type */}
+                          <div className="mb-1">
+                            {dup.duplication_type === 'category' ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                📁 Catégorie
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                🏪 Restaurant complet
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Source → Cible */}
                           <div className="text-sm text-gray-900">
                             <span className="font-medium">{dup.source_restaurant?.name || 'Restaurant source'}</span>
                             <span className="mx-2">→</span>
                             <span className="font-medium text-blue-600">{dup.target_restaurant?.name || 'Restaurant cible'}</span>
                           </div>
+
                           {dup.error_message && (
                             <div className="text-xs text-red-600 mt-1">
                               {dup.error_message}
