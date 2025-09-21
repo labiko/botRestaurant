@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WorkflowGeneratorV2, UniversalWorkflow, WorkflowStep, OptionItem } from '@/lib/workflow-generator-v2';
 import universalTemplate from '@/lib/universal-workflow-template.json';
 import WorkflowHelpModal from '@/components/WorkflowHelpModal';
@@ -8,9 +8,11 @@ import WorkflowHelpModal from '@/components/WorkflowHelpModal';
 export default function WorkflowUniversalPage() {
   const [showHelp, setShowHelp] = useState(false);
   const [productName, setProductName] = useState('MON MENU CUSTOM');
-  const [restaurantId, setRestaurantId] = useState(15);
-  const [categoryId, setCategoryId] = useState(45);
-  const [basePrice, setBasePrice] = useState(10.00);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
+  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [onSitePrice, setOnSitePrice] = useState(10.00);
+  const [deliveryPrice, setDeliveryPrice] = useState(11.00);
 
   const [steps, setSteps] = useState<WorkflowStep[]>([
     {
@@ -47,6 +49,27 @@ export default function WorkflowUniversalPage() {
   const [generatedSQL, setGeneratedSQL] = useState('');
   const [botSimulation, setBotSimulation] = useState('');
   const [validationResult, setValidationResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Charger la liste des restaurants au démarrage
+  useEffect(() => {
+    loadRestaurants();
+  }, []);
+
+  const loadRestaurants = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/restaurants');
+      if (response.ok) {
+        const data = await response.json();
+        setRestaurants(data.restaurants || []);
+      }
+    } catch (error) {
+      console.error('Erreur chargement restaurants:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddStep = () => {
     const newStep: WorkflowStep = {
@@ -111,11 +134,21 @@ export default function WorkflowUniversalPage() {
   };
 
   const handleGenerate = () => {
+    if (!selectedRestaurant) {
+      alert('Veuillez sélectionner un restaurant');
+      return;
+    }
+    if (!newCategoryName.trim()) {
+      alert('Veuillez saisir un nom de catégorie');
+      return;
+    }
+
     const workflow: UniversalWorkflow = {
       productName,
-      restaurantId,
-      categoryId,
-      basePrice,
+      restaurantId: selectedRestaurant.id,
+      categoryName: newCategoryName.trim(),
+      onSitePrice,
+      deliveryPrice,
       steps,
       optionGroups
     };
@@ -138,9 +171,9 @@ export default function WorkflowUniversalPage() {
   const loadExampleTemplate = (type: string) => {
     if (type === 'simple') {
       setProductName('MENU SIMPLE');
-      setRestaurantId(15);
-      setCategoryId(45);
-      setBasePrice(10.00);
+      setNewCategoryName('Menus simples');
+      setOnSitePrice(10.00);
+      setDeliveryPrice(11.00);
       setSteps([
         {
           step: 1,
@@ -171,14 +204,14 @@ export default function WorkflowUniversalPage() {
       });
     } else if (type === 'complex') {
       setProductName('MENU COMPLEXE');
-      setRestaurantId(15);
-      setCategoryId(45);
-      setBasePrice(15.00);
+      setNewCategoryName('Menus complexes');
+      setOnSitePrice(15.00);
+      setDeliveryPrice(16.00);
       setSteps([
         {
           step: 1,
           type: 'options_selection',
-          prompt: 'Souhaitez-vous une entrée ?',
+          prompt: 'Choisissez votre entrée',
           option_groups: ['Entrées'],
           required: false,
           max_selections: 1
@@ -228,14 +261,14 @@ export default function WorkflowUniversalPage() {
       });
     } else if (type === 'pizza_complete') {
       setProductName('FORMULE PIZZA COMPLÈTE');
-      setRestaurantId(15);
-      setCategoryId(45);
-      setBasePrice(18.00);
+      setNewCategoryName('Formules pizza');
+      setOnSitePrice(18.00);
+      setDeliveryPrice(19.00);
       setSteps([
         {
           step: 1,
           type: 'options_selection',
-          prompt: 'Souhaitez-vous une entrée ?',
+          prompt: 'Choisissez votre entrée',
           option_groups: ['Entrées'],
           required: false,
           max_selections: 1
@@ -259,7 +292,7 @@ export default function WorkflowUniversalPage() {
         {
           step: 4,
           type: 'options_selection',
-          prompt: 'Ajoutez des garnitures (max 5)',
+          prompt: 'Choisissez vos garnitures (max 5)',
           option_groups: ['Garnitures extra'],
           required: false,
           max_selections: 5
@@ -275,7 +308,7 @@ export default function WorkflowUniversalPage() {
         {
           step: 6,
           type: 'options_selection',
-          prompt: 'Terminez avec un dessert ?',
+          prompt: 'Choisissez votre dessert',
           option_groups: ['Desserts'],
           required: false,
           max_selections: 1
@@ -358,47 +391,6 @@ export default function WorkflowUniversalPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Configuration */}
         <div className="space-y-6">
-          {/* Informations de base */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">📝 Informations Produit</h2>
-            <div className="space-y-4">
-              <input
-                type="text"
-                placeholder="Nom du produit"
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-              <div className="grid grid-cols-3 gap-4">
-                <input
-                  type="number"
-                  placeholder="Restaurant ID"
-                  value={restaurantId}
-                  onChange={(e) => setRestaurantId(parseInt(e.target.value))}
-                  className="px-3 py-2 border border-gray-300 rounded-md"
-                />
-                <input
-                  type="number"
-                  placeholder="Catégorie ID"
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(parseInt(e.target.value))}
-                  className="px-3 py-2 border border-gray-300 rounded-md"
-                />
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Prix base"
-                  value={basePrice}
-                  onChange={(e) => setBasePrice(parseFloat(e.target.value))}
-                  className="px-3 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <p className="text-sm text-gray-500">
-                Prix livraison : {(basePrice + 1).toFixed(2)}€ (automatique +1€)
-              </p>
-            </div>
-          </div>
-
           {/* Templates pré-configurés */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">⚡ Templates Pré-configurés</h2>
@@ -442,6 +434,100 @@ export default function WorkflowUniversalPage() {
                   <li>• Étape 6: Dessert (optionnelle) - 4 desserts</li>
                   <li>• Prix base: 18€ → Prix livraison: 19€</li>
                 </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Informations de base */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">📝 Informations Produit</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom du produit
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nom du produit"
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Restaurant
+                </label>
+                <select
+                  value={selectedRestaurant?.id || ''}
+                  onChange={(e) => {
+                    const restaurant = restaurants.find(r => r.id === parseInt(e.target.value));
+                    setSelectedRestaurant(restaurant);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={loading}
+                >
+                  <option value="">
+                    {loading ? 'Chargement...' : 'Sélectionnez un restaurant'}
+                  </option>
+                  {restaurants.map(restaurant => (
+                    <option key={restaurant.id} value={restaurant.id}>
+                      {restaurant.name} - {restaurant.address}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom de la nouvelle catégorie à créer
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Formules, Menus, Pizzas..."
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Une nouvelle catégorie sera créée avec ce nom
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prix sur site (€)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Prix sur site"
+                    value={onSitePrice}
+                    onChange={(e) => setOnSitePrice(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prix livraison (€)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Prix livraison"
+                    value={deliveryPrice}
+                    onChange={(e) => setDeliveryPrice(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  💡 <strong>Conseil</strong> : Le prix de livraison est généralement de +1€ par rapport au prix sur site
+                </p>
               </div>
             </div>
           </div>
@@ -530,7 +616,38 @@ export default function WorkflowUniversalPage() {
               {Object.entries(optionGroups).map(([groupName, options]) => (
                 <div key={groupName} className="border rounded-lg p-4">
                   <div className="flex justify-between items-center mb-3">
-                    <h3 className="font-semibold">{groupName}</h3>
+                    <input
+                      type="text"
+                      value={groupName}
+                      onChange={(e) => {
+                        const newGroupName = e.target.value;
+                        if (newGroupName !== groupName) {
+                          // Renommer le groupe en préservant l'ordre
+                          const updatedGroups: Record<string, OptionItem[]> = {};
+
+                          // Reconstruire l'objet en préservant l'ordre original
+                          Object.entries(optionGroups).forEach(([key, value]) => {
+                            if (key === groupName) {
+                              updatedGroups[newGroupName] = value;
+                            } else {
+                              updatedGroups[key] = value;
+                            }
+                          });
+
+                          setOptionGroups(updatedGroups);
+
+                          // Mettre à jour les steps qui référencent ce groupe
+                          const updatedSteps = steps.map(step => ({
+                            ...step,
+                            option_groups: step.option_groups.map(group =>
+                              group === groupName ? newGroupName : group
+                            )
+                          }));
+                          setSteps(updatedSteps);
+                        }
+                      }}
+                      className="font-semibold bg-transparent border-b border-gray-300 focus:border-blue-500 focus:outline-none"
+                    />
                     <button
                       onClick={() => handleAddOption(groupName)}
                       className="px-2 py-1 bg-blue-600 text-white text-xs rounded"

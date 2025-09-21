@@ -51,6 +51,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Le bot universel est la version de production active qui gère tous les pays. Ne travailler sur les bots spécifiques que si l'utilisateur le demande explicitement.
 
+## 🤖 RÈGLE ABSOLUE - BOT UNIVERSEL UNIQUEMENT
+
+**⚠️ CRITIQUE**: TOUJOURS travailler sur le **bot universel** exclusivement :
+- **Fichier principal** : `supabase/functions/bot-resto-france-universel/core/UniversalBot.ts`
+- **Services** : `supabase/functions/bot-resto-france-universel/services/`
+- **Types** : `supabase/functions/bot-resto-france-universel/types.ts`
+- **Deploy** : `supabase functions deploy bot-resto-france-universel`
+
+**❌ INTERDICTION ABSOLUE** :
+- **NE JAMAIS analyser** les autres bots (`webhook-whatsapp`, `bot-whatsapp-france`, etc.)
+- **NE JAMAIS modifier** les anciens bots
+- **NE JAMAIS référencer** les tables obsolètes (`menus`, `restaurant_categories`)
+- **IGNORER COMPLÈTEMENT** tout autre bot que `bot-resto-france-universel`
+
+**✅ Le bot universel utilise** :
+- Tables : `france_restaurants`, `france_menu_categories`, `france_products`
+- Architecture moderne avec services séparés
+- Workflows composites avec `steps_config`
+
 ## 🚨 COMMANDES INTERDITES - BASE DE DONNÉES ET FICHIERS
 
 **⚠️ CRITIQUE**: NE JAMAIS exécuter les commandes suivantes qui détruisent les données :

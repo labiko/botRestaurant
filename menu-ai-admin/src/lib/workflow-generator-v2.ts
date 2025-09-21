@@ -5,8 +5,9 @@
 export interface UniversalWorkflow {
   productName: string;
   restaurantId: number;
-  categoryId: number;
-  basePrice: number;
+  categoryName: string;
+  onSitePrice: number;
+  deliveryPrice: number;
   steps: WorkflowStep[];
   optionGroups: Record<string, OptionItem[]>;
 }
@@ -35,27 +36,47 @@ export interface OptionItem {
 export class WorkflowGeneratorV2 {
 
   /**
+   * Corriger les prompts questions en messages de confirmation
+   */
+  private static fixPromptWording(prompt: string): string {
+    const promptMappings: Record<string, string> = {
+      'Souhaitez-vous une entrée ?': 'Votre entrée',
+      'Choisissez votre entrée': 'Votre entrée',
+      'Choisissez la taille de votre pizza': 'Taille choisie',
+      'Choisissez votre base': 'Base sélectionnée',
+      'Ajoutez des garnitures (max 5)': 'Garnitures ajoutées',
+      'Choisissez vos garnitures (max 5)': 'Garnitures ajoutées',
+      'Choisissez votre boisson (incluse)': 'Votre boisson',
+      'Terminez avec un dessert ?': 'Votre dessert',
+      'Choisissez votre dessert': 'Votre dessert'
+    };
+
+    return promptMappings[prompt] || prompt;
+  }
+
+  /**
    * Génère le SQL complet pour un workflow universel
    */
   static generateCompleteSQL(workflow: UniversalWorkflow): string {
     const {
       productName,
       restaurantId,
-      categoryId,
-      basePrice,
+      categoryName,
+      onSitePrice,
+      deliveryPrice,
       steps,
       optionGroups
     } = workflow;
 
     const slug = this.generateSlug(productName);
-    const deliveryPrice = basePrice + 1; // Toujours +1€ en livraison
+    const categorySlug = this.generateSlug(categoryName);
 
     // Construire la configuration des steps
     const stepsConfig = {
       steps: steps.map(step => ({
         step: step.step,
         type: step.type,
-        prompt: step.prompt,
+        prompt: this.fixPromptWording(step.prompt),
         option_groups: step.option_groups,
         required: step.required,
         max_selections: step.max_selections
@@ -67,49 +88,84 @@ export class WorkflowGeneratorV2 {
 -- =========================================
 -- Généré le: ${new Date().toLocaleDateString('fr-FR')}
 -- Restaurant ID: ${restaurantId}
+-- Catégorie: ${categoryName}
+-- Prix sur site: ${onSitePrice.toFixed(2)}€
+-- Prix livraison: ${deliveryPrice.toFixed(2)}€
 -- ⚠️ CE WORKFLOW EST 100% COMPATIBLE AVEC LE BOT
+-- 🔥 CORRECTION APPLIQUÉE: group_order calculé automatiquement
+-- 🔥 RÉSOUT LE PROBLÈME: Ordre des steps respecté dans le bot
 
 BEGIN;
 
 -- =========================================
--- 1. CRÉATION DU PRODUIT COMPOSITE
+-- 1. CRÉATION DE LA CATÉGORIE (SI ELLE N'EXISTE PAS)
+-- =========================================
+INSERT INTO france_menu_categories (
+  restaurant_id,
+  name,
+  slug,
+  display_order,
+  is_active
+)
+SELECT
+  ${restaurantId},
+  '${categoryName.replace(/'/g, "''")}',
+  '${categorySlug}',
+  (SELECT COALESCE(MAX(display_order), 0) + 1 FROM france_menu_categories WHERE restaurant_id = ${restaurantId}),
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM france_menu_categories
+  WHERE restaurant_id = ${restaurantId} AND name = '${categoryName.replace(/'/g, "''")}'
+);
+
+-- =========================================
+-- 2. CRÉATION DU PRODUIT COMPOSITE
 -- =========================================
 INSERT INTO france_products (
   restaurant_id,
   category_id,
   name,
-  slug,
   description,
+  product_type,
   base_price,
-  delivery_price,
+  price_delivery_base,
   workflow_type,
   requires_steps,
   steps_config,
-  is_available,
+  is_active,
   display_order
 ) VALUES (
   ${restaurantId},
-  ${categoryId},
+  (SELECT id FROM france_menu_categories WHERE restaurant_id = ${restaurantId} AND name = '${categoryName.replace(/'/g, "''")}'),
   '${productName.replace(/'/g, "''")}',
-  '${slug}',
-  'Produit avec workflow personnalisé',
-  ${basePrice.toFixed(2)},
+  'Produit avec workflow personnalisé - Catégorie: ${categoryName}',
+  'composite',
+  ${onSitePrice.toFixed(2)},
   ${deliveryPrice.toFixed(2)},
-  'composite_workflow',
+  'universal_workflow_v2',
   true,
-  '${JSON.stringify(stepsConfig).replace(/'/g, "''")}'::jsonb,
+  '${JSON.stringify(stepsConfig).replace(/'/g, "''")}'::json,
   true,
-  (SELECT COALESCE(MAX(display_order), 0) + 1 FROM france_products WHERE category_id = ${categoryId})
+  (SELECT COALESCE(MAX(display_order), 0) + 1 FROM france_products
+   WHERE category_id = (SELECT id FROM france_menu_categories WHERE restaurant_id = ${restaurantId} AND name = '${categoryName.replace(/'/g, "''")}'))
 ) RETURNING id AS new_product_id;
 
 -- =========================================
--- 2. CRÉATION DES OPTIONS POUR CHAQUE GROUPE
+-- 3. CRÉATION DES OPTIONS POUR CHAQUE GROUPE
 -- =========================================
 `;
 
-    // Générer les inserts pour chaque groupe d'options
+    // Générer les inserts pour chaque groupe d'options avec group_order correct
     Object.entries(optionGroups).forEach(([groupName, options]) => {
       sql += `\n-- Groupe: ${groupName}\n`;
+
+      // 🔥 CORRECTION CRITIQUE: Calculer group_order depuis l'ordre des steps
+      const stepIndex = steps.findIndex(step =>
+        step.option_groups.includes(groupName)
+      );
+      const groupOrder = stepIndex >= 0 ? stepIndex + 1 : 999; // 1, 2, 3, 4... ou 999 si orphelin
+
+      sql += `-- ⚠️ ORDRE CRITIQUE: group_order = ${groupOrder} (step ${stepIndex + 1})\n`;
 
       // Déterminer si c'est un step optionnel
       const isOptional = steps.some(s =>
@@ -127,13 +183,17 @@ INSERT INTO france_products (
   option_group,
   option_name,
   price_modifier,
-  display_order
+  display_order,
+  group_order,
+  is_active
 ) VALUES (
-  (SELECT id FROM france_products WHERE slug = '${slug}' AND restaurant_id = ${restaurantId}),
+  (SELECT id FROM france_products WHERE name = '${productName.replace(/'/g, "''")}' AND restaurant_id = ${restaurantId}),
   '${groupName.replace(/'/g, "''")}',
   '${option.name.replace(/'/g, "''")}',
   ${option.price_modifier.toFixed(2)},
-  ${option.display_order}
+  ${option.display_order},
+  ${groupOrder},
+  true
 );
 
 `;
@@ -149,21 +209,33 @@ SELECT
   p.name,
   p.workflow_type,
   p.base_price,
-  p.delivery_price,
-  jsonb_pretty(p.steps_config) as steps_config
+  p.price_delivery_base,
+  p.steps_config
 FROM france_products p
-WHERE p.slug = '${slug}' AND p.restaurant_id = ${restaurantId};
+WHERE p.name = '${productName.replace(/'/g, "''")}' AND p.restaurant_id = ${restaurantId};
 
--- Vérifier les options créées
+-- Vérifier les options créées AVEC ORDRE CORRECT
 SELECT
   po.option_group,
+  po.group_order,
   COUNT(*) as nb_options,
-  STRING_AGG(po.option_name || ' (+' || po.price_modifier || '€)', ', ') as options
+  STRING_AGG(po.option_name || ' (+' || po.price_modifier || '€)', ', ' ORDER BY po.display_order) as options
 FROM france_product_options po
 JOIN france_products p ON po.product_id = p.id
-WHERE p.slug = '${slug}' AND p.restaurant_id = ${restaurantId}
-GROUP BY po.option_group
-ORDER BY po.option_group;
+WHERE p.name = '${productName.replace(/'/g, "''")}' AND p.restaurant_id = ${restaurantId}
+GROUP BY po.option_group, po.group_order
+ORDER BY po.group_order, po.option_group;
+
+-- 🔥 VÉRIFICATION CRITIQUE: Ordre des steps dans le bot
+SELECT
+  po.group_order,
+  po.option_group,
+  'STEP ' || po.group_order || ' → ' || po.option_group as ordre_bot_attendu
+FROM france_product_options po
+JOIN france_products p ON po.product_id = p.id
+WHERE p.name = '${productName.replace(/'/g, "''")}' AND p.restaurant_id = ${restaurantId}
+GROUP BY po.group_order, po.option_group
+ORDER BY po.group_order;
 
 -- =========================================
 -- 4. TEST DU WORKFLOW DANS LE BOT
@@ -200,6 +272,17 @@ COMMIT;
 -- 2. Steps avec required:false → Bot affiche option 0
 -- 3. max_selections > 1 → Format "1,2,3" accepté
 -- 4. Testez TOUJOURS dans le bot après insertion
+--
+-- 🔥 CORRECTIONS APPLIQUÉES (V2.1):
+-- 1. group_order calculé automatiquement selon l'ordre des steps
+-- 2. Résout le bug d'ordre aléatoire des étapes dans le bot
+-- 3. Garantit que Step 1 s'affiche en premier, Step 2 en second, etc.
+-- 4. workflow_type: 'universal_workflow_v2' (SANS RÉGRESSION)
+-- 5. Compatible avec l'architecture actuelle du bot universel
+--
+-- ⚠️ AVANT CES CORRECTIONS: Tous les group_order étaient NULL
+-- ✅ APRÈS CES CORRECTIONS: group_order = 1, 2, 3, 4...
+-- 🛡️ SÉCURITÉ: Aucun produit existant n'est affecté
 -- =========================================`;
 
     return sql;
@@ -237,8 +320,11 @@ COMMIT;
     });
 
     // Vérifier les prix
-    if (workflow.basePrice < 0) {
-      errors.push('❌ Le prix de base ne peut pas être négatif');
+    if (workflow.onSitePrice < 0) {
+      errors.push('❌ Le prix sur site ne peut pas être négatif');
+    }
+    if (workflow.deliveryPrice < 0) {
+      errors.push('❌ Le prix de livraison ne peut pas être négatif');
     }
 
     // Vérifier l'ordre des steps
@@ -248,6 +334,23 @@ COMMIT;
         errors.push(`❌ Les steps doivent être séquentiels (1, 2, 3...). Manquant: Step ${i + 1}`);
         break;
       }
+    }
+
+    // 🔥 NOUVELLE VALIDATION: Vérifier que tous les groupes référencés ont un step
+    Object.keys(workflow.optionGroups).forEach(groupName => {
+      const isReferenced = workflow.steps.some(step =>
+        step.option_groups.includes(groupName)
+      );
+      if (!isReferenced) {
+        warnings.push(`⚠️ Groupe "${groupName}" défini mais pas utilisé dans les steps`);
+      }
+    });
+
+    // Vérifier l'unicité des groups dans les steps
+    const allGroups = workflow.steps.flatMap(s => s.option_groups);
+    const duplicates = allGroups.filter((group, index) => allGroups.indexOf(group) !== index);
+    if (duplicates.length > 0) {
+      errors.push(`❌ Groupes utilisés dans plusieurs steps: ${[...new Set(duplicates)].join(', ')}`);
     }
 
     return {
