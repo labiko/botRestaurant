@@ -125,11 +125,9 @@ export default function WorkflowEditPage() {
         hasRealOptions: data.debug.has_real_options
       });
 
-      // Si on a des vraies données structurées, activer l'interface générique
-      if (data.realOptions && data.realOptions.length > 0) {
-        loadRealOptionGroups(editProductId);
-        setUseGenericInterface(true);
-      }
+      // TOUJOURS essayer de charger les vraies données pour l'interface générique
+      console.log('🔍 [WORKFLOW-EDIT] Tentative chargement vraies données pour produit:', productId);
+      await loadRealOptionGroups(productId);
 
     } catch (error) {
       console.error('❌ [WORKFLOW-EDIT] Erreur chargement:', error);
@@ -181,15 +179,31 @@ export default function WorkflowEditPage() {
     try {
       setLoading(true);
 
+      // Validation de l'ID produit
+      if (!productId || isNaN(productId) || productId <= 0) {
+        console.error('❌ [WORKFLOW-EDIT] ID produit invalide:', productId);
+        return;
+      }
+
       // Appel API pour charger les options réelles groupées
-      const response = await fetch(`/api/products/${productId}/options-grouped`);
+      const apiUrl = `/api/products/${productId}/options-grouped`;
+      console.log('🔍 [WORKFLOW-EDIT] Appel API:', apiUrl);
+      const response = await fetch(apiUrl);
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.optionGroups) {
+        if (data.success && data.optionGroups && data.optionGroups.length > 0) {
           setRealOptionGroups(data.optionGroups);
-          console.log('✅ [WORKFLOW-EDIT] Groupes réels chargés:', data.optionGroups.length);
+          setUseGenericInterface(true); // ACTIVER l'interface générique
+          console.log('✅ [WORKFLOW-EDIT] Groupes réels chargés:', data.optionGroups.length, 'groupes');
+          console.log('🎯 [WORKFLOW-EDIT] Interface générique ACTIVÉE');
+        } else {
+          console.log('⚠️ [WORKFLOW-EDIT] Aucun groupe trouvé, interface héritée conservée');
         }
+      } else {
+        const errorText = await response.text();
+        console.error('❌ [WORKFLOW-EDIT] Erreur API options-grouped:', response.status, errorText);
+        console.error('❌ [WORKFLOW-EDIT] URL appelée:', apiUrl);
       }
     } catch (error) {
       console.error('❌ [WORKFLOW-EDIT] Erreur chargement groupes:', error);
@@ -237,6 +251,60 @@ export default function WorkflowEditPage() {
       const sql = WorkflowGeneratorV2.generateUpdateSQL(workflow, editProductId);
       setGeneratedSQL(sql);
     }
+  };
+
+  // Fonction pour générer des emojis selon le groupe
+  const getEmojiForGroup = (groupName: string, optionName: string = '') => {
+    const group = groupName.toLowerCase();
+    const option = optionName.toLowerCase();
+
+    if (group.includes('entrée')) {
+      if (option.includes('salade')) return '🥗';
+      if (option.includes('bruschetta')) return '🍞';
+      if (option.includes('carpaccio')) return '🥩';
+      if (option.includes('soupe')) return '🍲';
+      return '🥗';
+    }
+    if (group.includes('taille')) {
+      if (option.includes('petite')) return '🍕';
+      if (option.includes('moyenne')) return '🍕';
+      if (option.includes('grande')) return '🍕';
+      if (option.includes('géante')) return '🍕';
+      return '📏';
+    }
+    if (group.includes('base')) {
+      if (option.includes('tomate')) return '🍅';
+      if (option.includes('crème')) return '🥛';
+      if (option.includes('sans')) return '⚪';
+      return '🍅';
+    }
+    if (group.includes('garniture')) {
+      if (option.includes('fromage')) return '🧀';
+      if (option.includes('champignon')) return '🍄';
+      if (option.includes('jambon')) return '🥓';
+      if (option.includes('pepperoni')) return '🌶️';
+      if (option.includes('olive')) return '🫒';
+      if (option.includes('oignon')) return '🧅';
+      if (option.includes('poivron')) return '🌶️';
+      if (option.includes('anchois')) return '🐟';
+      return '🧀';
+    }
+    if (group.includes('boisson')) {
+      if (option.includes('coca')) return '🥤';
+      if (option.includes('sprite')) return '🥤';
+      if (option.includes('eau')) return '💧';
+      if (option.includes('bière')) return '🍺';
+      if (option.includes('vin')) return '🍷';
+      return '🥤';
+    }
+    if (group.includes('dessert')) {
+      if (option.includes('tiramisu')) return '🍰';
+      if (option.includes('panna')) return '🍮';
+      if (option.includes('glace')) return '🍨';
+      if (option.includes('café')) return '☕';
+      return '🍰';
+    }
+    return '🍽️';
   };
 
   // Nouvelles fonctions pour l'interface générique
@@ -418,54 +486,67 @@ export default function WorkflowEditPage() {
                   </button>
                 </div>
 
-                {/* Liste des options du groupe */}
-                <div className="space-y-3">
-                  {realOptionGroups[activeTabIndex].options.map((option, optionIndex) => (
-                    <div key={option.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                      <div className="grid grid-cols-5 gap-4 items-center">
-                        <div className="col-span-2">
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Nom</label>
-                          <input
-                            type="text"
-                            value={option.option_name}
-                            onChange={(e) => handleUpdateRealOption(activeTabIndex, optionIndex, 'option_name', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Prix (€)</label>
-                          <input
-                            type="number"
-                            step="0.5"
-                            value={option.price_modifier}
-                            onChange={(e) => handleUpdateRealOption(activeTabIndex, optionIndex, 'price_modifier', parseFloat(e.target.value) || 0)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                          />
-                        </div>
-                        <div className="text-center">
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Statut</label>
-                          <button
-                            onClick={() => handleUpdateRealOption(activeTabIndex, optionIndex, 'is_active', !option.is_active)}
-                            className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              option.is_active
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            {option.is_active ? '✅ Actif' : '❌ Inactif'}
-                          </button>
-                        </div>
-                        <div className="text-center">
-                          <button
-                            onClick={() => handleDeleteRealOption(activeTabIndex, optionIndex)}
-                            className="text-red-500 hover:text-red-700 font-bold"
-                          >
-                            🗑️
-                          </button>
+                {/* Liste des options du groupe avec formatage selon le plan */}
+                <div className="space-y-2">
+                  {realOptionGroups[activeTabIndex].options.map((option, optionIndex) => {
+                    const emoji = getEmojiForGroup(realOptionGroups[activeTabIndex].group_name, option.option_name);
+                    const priceDisplay = option.price_modifier === 0 ? '(gratuit)' :
+                                       option.price_modifier > 0 ? `(+${option.price_modifier.toFixed(2)}€)` :
+                                       `(${option.price_modifier.toFixed(2)}€)`;
+
+                    return (
+                      <div key={option.id} className="border border-gray-200 rounded-lg p-3 bg-white hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          {/* Affichage formaté comme dans le plan */}
+                          <div className="flex items-center space-x-3 flex-1">
+                            <span className="text-lg">{emoji}</span>
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="text"
+                                  value={option.option_name}
+                                  onChange={(e) => handleUpdateRealOption(activeTabIndex, optionIndex, 'option_name', e.target.value)}
+                                  className="font-medium text-gray-800 bg-transparent border-none focus:outline-none focus:bg-white focus:border focus:border-green-500 rounded px-2 py-1"
+                                />
+                                <div className="flex items-center space-x-1">
+                                  <input
+                                    type="number"
+                                    step="0.5"
+                                    value={option.price_modifier}
+                                    onChange={(e) => handleUpdateRealOption(activeTabIndex, optionIndex, 'price_modifier', parseFloat(e.target.value) || 0)}
+                                    className="w-16 text-sm text-green-600 bg-transparent border-none focus:outline-none focus:bg-white focus:border focus:border-green-500 rounded px-1"
+                                  />
+                                  <span className="text-sm text-green-600 font-medium">{priceDisplay}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Actions sur la droite */}
+                          <div className="flex items-center space-x-2 ml-4">
+                            <button
+                              onClick={() => handleUpdateRealOption(activeTabIndex, optionIndex, 'is_active', !option.is_active)}
+                              className={`px-2 py-1 rounded text-xs font-medium ${
+                                option.is_active
+                                  ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                  : 'bg-red-100 text-red-800 hover:bg-red-200'
+                              }`}
+                              title={option.is_active ? 'Désactiver' : 'Activer'}
+                            >
+                              {option.is_active ? '✅' : '❌'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRealOption(activeTabIndex, optionIndex)}
+                              className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
+                              title="Supprimer"
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {realOptionGroups[activeTabIndex].options.length === 0 && (
