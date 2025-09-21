@@ -879,7 +879,10 @@ export class CompositeWorkflowExecutor {
     // Récapitulatif avec format standard universel
     const productName = workflowData.productName.split(' ')[0]; // Ex: "TACOS" depuis "TACOS MENU M"
     let recap = `✅ *${productName} configuré avec succès !*\n\n`;
-    recap += `🍽 *${workflowData.productName} (${workflowData.productPrice} EUR)*\n`;
+
+    // Calculer le prix total avec price_modifier pour Workflow Universal V2
+    const calculatedPrice = this.calculateUniversalWorkflowPrice(workflowData);
+    recap += `🍽 *${workflowData.productName} (${calculatedPrice.toFixed(2)} EUR)*\n`;
     
     for (const [groupName, selections] of Object.entries(workflowData.selections)) {
       const items = (selections as any[]).map(s => s.option_name).join(', ');
@@ -903,7 +906,7 @@ export class CompositeWorkflowExecutor {
       selectedProduct: {
         id: workflowData.productId,
         name: workflowData.productName,
-        price: workflowData.productPrice,
+        price: this.calculateUniversalWorkflowPrice(workflowData),
         configuration: workflowData.selections
       },
       universalWorkflow: null,
@@ -1511,6 +1514,24 @@ export class CompositeWorkflowExecutor {
     };
 
     return displayNames[groupName.toLowerCase()] || groupName;
+  }
+
+  /**
+   * Calculer le prix total pour Workflow Universal V2 avec price_modifier
+   */
+  private calculateUniversalWorkflowPrice(workflowData: any): number {
+    let totalPrice = workflowData.productPrice; // Prix de base
+
+    // Additionner tous les price_modifier des options sélectionnées
+    for (const [groupName, selections] of Object.entries(workflowData.selections)) {
+      (selections as any[]).forEach(option => {
+        if (option.price_modifier) {
+          totalPrice += parseFloat(option.price_modifier);
+        }
+      });
+    }
+
+    return totalPrice;
   }
 
   /**
