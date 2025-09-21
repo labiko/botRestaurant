@@ -40,15 +40,45 @@ export async function POST(request: NextRequest) {
 
     // Validation basique du SQL pour éviter les commandes dangereuses
     const sqlUpper = sql.toUpperCase();
-    const dangerousCommands = ['DROP', 'TRUNCATE', 'DELETE FROM', 'ALTER TABLE'];
 
-    for (const command of dangerousCommands) {
+    // Commandes absolument interdites
+    const forbiddenCommands = ['DROP', 'TRUNCATE', 'ALTER TABLE'];
+
+    for (const command of forbiddenCommands) {
       if (sqlUpper.includes(command)) {
         return NextResponse.json({
           success: false,
-          error: `Commande SQL dangereuse détectée: ${command}. Pour la sécurité, seules les commandes INSERT et UPDATE sont autorisées.`
+          error: `Commande SQL dangereuse détectée: ${command}. Cette commande est interdite.`
         });
       }
+    }
+
+    // Validation spéciale pour DELETE - autoriser seulement les DELETE sécurisés avec WHERE
+    if (sqlUpper.includes('DELETE FROM')) {
+      // Vérifier que tous les DELETE ont des conditions WHERE sécurisées
+      const deleteStatements = sql.match(/DELETE FROM[\s\S]*?(?=;|$)/gi) || [];
+
+      for (const deleteStmt of deleteStatements) {
+        const deleteUpper = deleteStmt.toUpperCase();
+
+        // Vérifier que le DELETE a une clause WHERE
+        if (!deleteUpper.includes('WHERE')) {
+          return NextResponse.json({
+            success: false,
+            error: 'DELETE sans clause WHERE détecté. Pour la sécurité, tous les DELETE doivent avoir une condition WHERE.'
+          });
+        }
+
+        // Vérifier que c'est un DELETE sur france_product_options avec product_id
+        if (!deleteUpper.includes('FRANCE_PRODUCT_OPTIONS') || !deleteUpper.includes('PRODUCT_ID')) {
+          return NextResponse.json({
+            success: false,
+            error: 'DELETE autorisé uniquement sur france_product_options avec condition product_id.'
+          });
+        }
+      }
+
+      console.log(`⚠️ DELETE sécurisé autorisé: ${deleteStatements.length} statement(s) validé(s)`);
     }
 
     // Exécution du SQL

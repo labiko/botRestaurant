@@ -823,8 +823,9 @@ export class CompositeWorkflowExecutor {
     // Lister les options avec numérotation simple compatible mobile
     optionGroup.options.forEach((option: any, index: number) => {
       message += `${index + 1}. ${option.option_name}`;
-      if (option.price_modifier && option.price_modifier > 0) {
-        message += ` (+${option.price_modifier}€)`;
+      if (option.price_modifier && option.price_modifier !== 0) {
+        const sign = option.price_modifier > 0 ? '+' : '';
+        message += ` (${sign}${option.price_modifier}€)`;
       }
       message += '\n';
     });
@@ -1521,15 +1522,33 @@ export class CompositeWorkflowExecutor {
    */
   private calculateUniversalWorkflowPrice(workflowData: any): number {
     let totalPrice = workflowData.productPrice; // Prix de base
+    let totalModifiers = 0;
+
+    console.log(`🔍 [DEBUG_PRIX] Workflow - Produit: ${workflowData.productName}`);
+    console.log(`🔍 [DEBUG_PRIX] Prix de base: ${workflowData.productPrice}€`);
 
     // Additionner tous les price_modifier des options sélectionnées
     for (const [groupName, selections] of Object.entries(workflowData.selections)) {
-      (selections as any[]).forEach(option => {
+      console.log(`🔍 [DEBUG_PRIX] Groupe: ${groupName}`);
+
+      (selections as any[]).forEach((option, index) => {
+        const modifier = option.price_modifier ? parseFloat(option.price_modifier) : 0;
+
+        console.log(`🔍 [DEBUG_PRIX] Option ${index + 1}: ${option.option_name}`);
+        console.log(`🔍 [DEBUG_PRIX] price_modifier: ${option.price_modifier || 0}€`);
+
         if (option.price_modifier) {
-          totalPrice += parseFloat(option.price_modifier);
+          totalPrice += modifier;
+          totalModifiers += modifier;
+          console.log(`🔍 [DEBUG_PRIX] ✅ AJOUTÉ: +${modifier}€`);
+        } else {
+          console.log(`🔍 [DEBUG_PRIX] ⚪ GRATUIT: +0€`);
         }
       });
     }
+
+    console.log(`🔍 [DEBUG_PRIX] Total suppléments: +${totalModifiers}€`);
+    console.log(`🔍 [DEBUG_PRIX] Prix final: ${totalPrice}€ (${workflowData.productPrice}€ + ${totalModifiers}€)`);
 
     return totalPrice;
   }

@@ -2507,11 +2507,22 @@ export class UniversalBot implements IMessageHandler {
       configuration: selectedProduct.configuration || null
     };
 
+    // 🔍 DEBUG PANIER - Vérifier l'ajout au panier
+    console.log(`🔍 [DEBUG_PRIX] Panier - Ajout produit:`);
+    console.log(`🔍 [DEBUG_PRIX] Produit: ${cartItem.productName}`);
+    console.log(`🔍 [DEBUG_PRIX] Quantité: ${cartItem.quantity}`);
+    console.log(`🔍 [DEBUG_PRIX] Prix unitaire: ${cartItem.unitPrice}€`);
+    console.log(`🔍 [DEBUG_PRIX] Prix total (avec suppléments): ${cartItem.totalPrice}€`);
+    console.log(`🔍 [DEBUG_PRIX] Différence suppléments: ${cartItem.totalPrice - cartItem.unitPrice}€`);
+    if (cartItem.configuration) {
+      console.log(`🔍 [DEBUG_PRIX] Configuration: ${JSON.stringify(cartItem.configuration)}`);
+    }
 
     cart.push(cartItem);
-    
+
     // Calculer le total du panier
     const cartTotal = cart.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
+    console.log(`🔍 [DEBUG_PRIX] Total panier: ${cartTotal}€ (${cart.length} items)`);
     
     // Utiliser le formatter universel pour le message
     const { UniversalCartFormatter } = await import('../services/UniversalCartFormatter.ts');

@@ -277,15 +277,51 @@ export default function WorkflowEditPage() {
     const validation = WorkflowGeneratorV2.validateForBot(workflow);
     setValidationResult(validation);
 
+    console.log('🔍 [WORKFLOW-EDIT] Résultat validation:', {
+      valid: validation.valid,
+      errors: validation.errors,
+      warnings: validation.warnings
+    });
+
     if (validation.valid) {
+      console.log('✅ [WORKFLOW-EDIT] Validation OK, génération SQL...');
       // Générer le SQL SMART UPDATE qui préserve les IDs
       const sql = WorkflowGeneratorV2.generateSmartUpdateSQL(workflow, editProductId);
       setGeneratedSQL(sql);
 
-      // Sauvegarder automatiquement dans l'historique
+      // Sauvegarder automatiquement dans l'historique via API
+      console.log('🔍 [WORKFLOW-EDIT] Vérification avant sauvegarde:', {
+        sqlHistoryRef: !!sqlHistoryRef.current,
+        editProductId,
+        productName,
+        sqlLength: sql.length
+      });
+
       if (sqlHistoryRef.current && editProductId) {
-        sqlHistoryRef.current.saveScript(sql, productName);
+        console.log('🔄 [WORKFLOW-EDIT] Appel saveScript:', { editProductId, productName, sqlHistoryRef: !!sqlHistoryRef.current });
+
+        // Appel async de saveScript
+        sqlHistoryRef.current.saveScript(sql, productName)
+          .then(() => {
+            console.log('✅ [WORKFLOW-EDIT] saveScript terminé avec succès');
+          })
+          .catch((error) => {
+            console.error('❌ [WORKFLOW-EDIT] Erreur saveScript:', error);
+          });
+      } else {
+        console.warn('❌ [WORKFLOW-EDIT] Impossible de sauvegarder:', {
+          sqlHistoryRef: !!sqlHistoryRef.current,
+          sqlHistoryRefType: typeof sqlHistoryRef.current,
+          editProductId,
+          editProductIdType: typeof editProductId,
+          productName
+        });
       }
+    } else {
+      console.warn('❌ [WORKFLOW-EDIT] Validation échouée, pas de sauvegarde:', {
+        errors: validation.errors,
+        warnings: validation.warnings
+      });
     }
   };
 
@@ -676,8 +712,19 @@ export default function WorkflowEditPage() {
       )}
 
       {/* Onglet Historique SQL */}
+      {/* Historique visible selon l'onglet */}
       {mainActiveTab === 'historique' && (
         <div className="space-y-6">
+          <WorkflowSqlHistory
+            productId={editProductId}
+            ref={sqlHistoryRef}
+          />
+        </div>
+      )}
+
+      {/* WorkflowSqlHistory toujours monté mais invisible pour maintenir la ref */}
+      {mainActiveTab !== 'historique' && (
+        <div style={{ display: 'none' }}>
           <WorkflowSqlHistory
             productId={editProductId}
             ref={sqlHistoryRef}
