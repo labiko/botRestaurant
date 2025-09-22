@@ -1,0 +1,277 @@
+<div class="options-management-container">
+  <div class="page-header">
+    <h2>🏪 Gestion Centralisée des Options</h2>
+    <p>Gérez toutes les options (viandes, sauces, suppléments) en un seul endroit</p>
+  </div>
+
+  <!-- Navigation par tabs -->
+  <div class="tabs-navigation">
+    <ion-segment [(ngModel)]="activeTab" [ngModelOptions]="{standalone: true}" (ionChange)="switchTab($event.detail.value)" scrollable>
+      <ion-segment-button value="meats">
+        <ion-label>🥩 Viandes ({{ meatOptions.length }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="sauces">
+        <ion-label>🌶️ Sauces ({{ sauceOptions.length }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="supplements">
+        <ion-label>🧀 Suppléments ({{ supplementOptions.length }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="beverages">
+        <ion-label>🥤 Boissons ({{ beverageOptions.length }})</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </div>
+
+  <!-- Section Boissons supprimée -->
+
+  <!-- Section Viandes -->
+  <ion-card class="option-group-card" *ngIf="activeTab === 'meats'">
+    <ion-card-header>
+      <div class="group-header">
+        <ion-card-title color="danger">
+          <ion-icon name="nutrition" slot="start"></ion-icon>
+          🥩 VIANDES
+        </ion-card-title>
+        <div class="stats">{{ meatOptions.length }} options • {{ getActiveCount(meatOptions) }} actives</div>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="options-grid" *ngIf="meatOptions.length > 0">
+        <div *ngFor="let option of meatOptions; let i = index" class="option-item">
+          <div class="option-info">
+            <div class="option-name-container">
+              <h4 *ngIf="!option.isEditing" (click)="startEditing(option)" class="editable-name">
+                {{ option.name }}
+                <ion-icon name="create-outline" class="edit-icon"></ion-icon>
+              </h4>
+              <ion-input
+                *ngIf="option.isEditing"
+                [(ngModel)]="option.name"
+                (keyup.enter)="saveOptionName(option)"
+                (ionBlur)="saveOptionName(option)"
+                #editInput
+                class="editing-input">
+              </ion-input>
+            </div>
+            <p class="option-details">
+              {{ option.price_modifier > 0 ? '+' + option.price_modifier + '€' : 'Inclus' }} •
+              Utilisé dans {{ option.affectedProducts }} produit(s)
+            </p>
+          </div>
+          <div class="option-actions">
+            <ion-toggle
+              [checked]="option.is_active"
+              (ionChange)="onOptionToggle(option, $event)"
+              color="success">
+            </ion-toggle>
+            <ion-button fill="clear" color="danger" size="small" (click)="deleteOption(option)">
+              <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bouton Ajouter -->
+      <div class="add-option-container">
+        <ion-button expand="block" fill="outline" color="primary" (click)="addNewOption('meats')">
+          <ion-icon name="add" slot="start"></ion-icon>
+          Ajouter une viande
+        </ion-button>
+      </div>
+      <div *ngIf="meatOptions.length === 0" class="empty-state">
+        <ion-icon name="restaurant" color="medium"></ion-icon>
+        <p>Aucune viande configurée</p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Section Sauces -->
+  <ion-card class="option-group-card" *ngIf="activeTab === 'sauces'">
+    <ion-card-header>
+      <div class="group-header">
+        <ion-card-title color="warning">
+          <ion-icon name="water" slot="start"></ion-icon>
+          🌶️ SAUCES
+        </ion-card-title>
+        <div class="stats">{{ sauceOptions.length }} options • {{ getActiveCount(sauceOptions) }} actives</div>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="options-grid" *ngIf="sauceOptions.length > 0">
+        <div *ngFor="let option of sauceOptions; let i = index" class="option-item">
+          <div class="option-info">
+            <div class="option-name-container">
+              <h4 *ngIf="!option.isEditing" (click)="startEditing(option)" class="editable-name">
+                {{ option.name }}
+                <ion-icon name="create-outline" class="edit-icon"></ion-icon>
+              </h4>
+              <ion-input
+                *ngIf="option.isEditing"
+                [(ngModel)]="option.name"
+                (keyup.enter)="saveOptionName(option)"
+                (ionBlur)="saveOptionName(option)"
+                #editInput
+                class="editing-input">
+              </ion-input>
+            </div>
+            <p class="option-details">
+              {{ option.price_modifier > 0 ? '+' + option.price_modifier + '€' : 'Gratuit' }} •
+              Utilisé dans {{ option.affectedProducts }} produit(s)
+            </p>
+          </div>
+          <div class="option-actions">
+            <ion-toggle
+              [checked]="option.is_active"
+              (ionChange)="onOptionToggle(option, $event)"
+              color="success">
+            </ion-toggle>
+            <ion-button fill="clear" color="danger" size="small" (click)="deleteOption(option)">
+              <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bouton Ajouter -->
+      <div class="add-option-container">
+        <ion-button expand="block" fill="outline" color="warning" (click)="addNewOption('sauces')">
+          <ion-icon name="add" slot="start"></ion-icon>
+          Ajouter une sauce
+        </ion-button>
+      </div>
+      <div *ngIf="sauceOptions.length === 0" class="empty-state">
+        <ion-icon name="water" color="medium"></ion-icon>
+        <p>Aucune sauce configurée</p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Section Suppléments -->
+  <ion-card class="option-group-card" *ngIf="activeTab === 'supplements'">
+    <ion-card-header>
+      <div class="group-header">
+        <ion-card-title color="secondary">
+          <ion-icon name="add-circle" slot="start"></ion-icon>
+          🧀 SUPPLÉMENTS
+        </ion-card-title>
+        <div class="stats">{{ supplementOptions.length }} options • {{ getActiveCount(supplementOptions) }} actives</div>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="options-grid" *ngIf="supplementOptions.length > 0">
+        <div *ngFor="let option of supplementOptions; let i = index" class="option-item">
+          <div class="option-info">
+            <div class="option-name-container">
+              <h4 *ngIf="!option.isEditing" (click)="startEditing(option)" class="editable-name">
+                {{ option.name }}
+                <ion-icon name="create-outline" class="edit-icon"></ion-icon>
+              </h4>
+              <ion-input
+                *ngIf="option.isEditing"
+                [(ngModel)]="option.name"
+                (keyup.enter)="saveOptionName(option)"
+                (ionBlur)="saveOptionName(option)"
+                #editInput
+                class="editing-input">
+              </ion-input>
+            </div>
+            <p class="option-details">
+              {{ option.price_modifier > 0 ? '+' + option.price_modifier + '€' : 'Inclus' }} •
+              Utilisé dans {{ option.affectedProducts }} produit(s)
+            </p>
+          </div>
+          <div class="option-actions">
+            <ion-toggle
+              [checked]="option.is_active"
+              (ionChange)="onOptionToggle(option, $event)"
+              color="success">
+            </ion-toggle>
+            <ion-button fill="clear" color="danger" size="small" (click)="deleteOption(option)">
+              <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bouton Ajouter -->
+      <div class="add-option-container">
+        <ion-button expand="block" fill="outline" color="secondary" (click)="addNewOption('supplements')">
+          <ion-icon name="add" slot="start"></ion-icon>
+          Ajouter un supplément
+        </ion-button>
+      </div>
+      <div *ngIf="supplementOptions.length === 0" class="empty-state">
+        <ion-icon name="add-circle" color="medium"></ion-icon>
+        <p>Aucun supplément configuré</p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Section Boissons -->
+  <ion-card class="option-group-card" *ngIf="activeTab === 'beverages'">
+    <ion-card-header>
+      <div class="group-header">
+        <ion-card-title color="primary">
+          <ion-icon name="wine" slot="start"></ion-icon>
+          🥤 BOISSONS
+        </ion-card-title>
+        <div class="stats">{{ beverageOptions.length }} options • {{ getActiveCount(beverageOptions) }} actives</div>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="options-grid" *ngIf="beverageOptions.length > 0">
+        <div *ngFor="let option of beverageOptions; let i = index" class="option-item">
+          <div class="option-info">
+            <div class="option-name-container">
+              <h4 *ngIf="!option.isEditing" (click)="startEditing(option)" class="editable-name">
+                {{ option.name }}
+                <ion-icon name="create-outline" class="edit-icon"></ion-icon>
+              </h4>
+              <ion-input
+                *ngIf="option.isEditing"
+                [(ngModel)]="option.name"
+                (keyup.enter)="saveOptionName(option)"
+                (ionBlur)="saveOptionName(option)"
+                #editInput
+                class="editing-input">
+              </ion-input>
+            </div>
+            <p class="option-details">
+              {{ option.price_modifier > 0 ? '+' + option.price_modifier + '€' : 'Inclus' }} •
+              Utilisé dans {{ option.affectedProducts }} produit(s)
+            </p>
+          </div>
+          <div class="option-actions">
+            <ion-toggle
+              [checked]="option.is_active"
+              (ionChange)="onOptionToggle(option, $event)"
+              color="success">
+            </ion-toggle>
+            <ion-button fill="clear" color="danger" size="small" (click)="deleteOption(option)">
+              <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bouton Ajouter -->
+      <div class="add-option-container">
+        <ion-button expand="block" fill="outline" color="primary" (click)="addNewOption('beverages')">
+          <ion-icon name="add" slot="start"></ion-icon>
+          Ajouter une boisson
+        </ion-button>
+      </div>
+      <div *ngIf="beverageOptions.length === 0" class="empty-state">
+        <ion-icon name="wine" color="medium"></ion-icon>
+        <p>Aucune boisson configurée</p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-container">
+    <ion-spinner name="circular"></ion-spinner>
+    <p>Chargement des options...</p>
+  </div>
+
+</div>

@@ -129,27 +129,22 @@ export class OrderService {
   async createOrder(orderData: OrderData): Promise<any> {
     const startTime = getCurrentTime().getTime();
     try {
-      console.log(`⏱️ [PERF] createOrder START - Time: ${getCurrentTime().toISOString()}`);
       console.log(`📦 [OrderService] Création commande...`);
       console.log(`💰 [OrderService] Total: ${orderData.total_amount}€`);
       
-      console.log(`⏱️ [PERF] Starting Supabase INSERT france_orders - ${getCurrentTime().getTime() - startTime}ms elapsed`);
       // Insérer la commande
       const { data: order, error } = await this.supabase
         .from('france_orders')
         .insert(orderData)
         .select()
         .single();
-      console.log(`⏱️ [PERF] Supabase INSERT completed - ${getCurrentTime().getTime() - startTime}ms elapsed`);
       
       if (error) {
         console.error('❌ [OrderService] Erreur insertion:', error);
-        console.log(`⏱️ [PERF] createOrder FAILED - ${getCurrentTime().getTime() - startTime}ms`);
         throw error;
       }
       
       console.log(`✅ [OrderService] Commande créée: #${order.order_number}`);
-      console.log(`⏱️ [PERF] createOrder SUCCESS - ${getCurrentTime().getTime() - startTime}ms TOTAL`);
       return order;
       
     } catch (error) {
@@ -401,7 +396,6 @@ export class OrderService {
     deliveryAddress?: any
   ): Promise<any> {
     const startTime = getCurrentTime().getTime();
-    console.log(`⏱️ [PERF] createOrderWorkflow START - Time: ${getCurrentTime().toISOString()}`);
     try {
       console.log(`📦 [OrderWorkflow] Début pour: ${phoneNumber}`);
       

@@ -40,7 +40,6 @@ export class SessionManager implements ISessionManager {
    * ✅ Version finale optimisée avec format Paris validé + DEBUG
    */
   private getCurrentTime(): Date {
-    console.log('🕐 [DEBUG_TIMEZONE] === DÉBUT getCurrentTime() ===');
 
     // Formatter pour timezone Paris (gère automatiquement heure d'été/hiver)
     const parisFormatter = new Intl.DateTimeFormat('fr-FR', {
@@ -55,11 +54,9 @@ export class SessionManager implements ISessionManager {
     });
 
     const utcNow = new Date();
-    console.log('🕐 [DEBUG_TIMEZONE] UTC brut:', utcNow.toISOString());
 
     // Format: "17/09/2025 22:06:36" (validé comme correct)
     const parisFormatted = parisFormatter.format(utcNow);
-    console.log('🕐 [DEBUG_TIMEZONE] Paris formaté:', parisFormatted);
 
     // Parsing du format DD/MM/YYYY HH:mm:ss
     const parts = parisFormatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
@@ -74,13 +71,7 @@ export class SessionManager implements ISessionManager {
         parseInt(second)
       );
 
-      console.log('🕐 [DEBUG_TIMEZONE] Paris Date finale:', {
-        date: parisDate,
-        iso: parisDate.toISOString(),
-        difference_hours: Math.round((parisDate.getTime() - utcNow.getTime()) / (1000 * 60 * 60))
-      });
 
-      console.log('🕐 [DEBUG_TIMEZONE] === FIN getCurrentTime() - RETOUR PARIS ===');
       return parisDate;
     }
 
@@ -131,35 +122,17 @@ export class SessionManager implements ISessionManager {
 
       if (existingSession && !error) {
         console.log(`✅ [SessionManager] Session existante trouvée: ${existingSession.id}`);
-        console.log(`🔍 [SESSION_DEBUG] Session DB brute:`, {
-          id: existingSession.id,
-          bot_state: existingSession.bot_state,
-          bot_state_type: typeof existingSession.bot_state,
-          current_step: existingSession.current_step,
-          restaurant_id: existingSession.restaurant_id
-        });
         return this.mapDatabaseToSession(existingSession);
       }
 
       // Créer nouvelle session
       console.log(`🆕 [SessionManager] Création nouvelle session pour: ${phoneNumber}`);
-      console.log('🔍 DEBUG_SESSION_CREATION - AUTO-CRÉATION par getSession:', {
-        phoneNumber: phoneNumber,
-        reason: 'Aucune session trouvée - création automatique',
-        caller: 'SessionManager.getSession'
-      });
       return await this.createNewSession(phoneNumber);
       
     } catch (error) {
       console.error('❌ [SessionManager] Erreur récupération session:', error);
       
       // En cas d'erreur, créer session de secours
-      console.log('🔍 DEBUG_SESSION_CREATION - CRÉATION SECOURS par getSession:', {
-        phoneNumber: phoneNumber,
-        reason: 'Erreur récupération - session de secours',
-        error: error.message,
-        caller: 'SessionManager.getSession.catch'
-      });
       return await this.createNewSession(phoneNumber);
     }
   }
@@ -191,7 +164,6 @@ export class SessionManager implements ISessionManager {
           });
           
           // FUSION: Préserver les données existantes non présentes dans l'update
-          console.log('🔍 [CORRUPTION_DEBUG] AVANT spread SessionManager ligne 123 - Type existingSession.session_data:', typeof existingSession.session_data);
           
           // ✅ CORRUPTION FIX: Parser le JSON si c'est un string avant le spread
           const existingData = typeof existingSession.session_data === 'string' ? JSON.parse(existingSession.session_data) : existingSession.session_data;
@@ -201,7 +173,6 @@ export class SessionManager implements ISessionManager {
             ...updates.sessionData            // Puis les nouvelles (écrasent si même clé)
           };
           
-          console.log('✅ [CORRUPTION_DEBUG] APRÈS spread SessionManager ligne 123 - Type updates.sessionData:', typeof updates.sessionData);
           
           // Préserver spécifiquement pizzaOptionsMap si elle existait et n'est pas dans l'update
           if (existingSession.session_data.pizzaOptionsMap && !updates.sessionData.pizzaOptionsMap) {
@@ -289,18 +260,18 @@ export class SessionManager implements ISessionManager {
    * SOLID - Factory Method : Création encapsulée avec valeurs par défaut
    */
   private async createNewSession(phoneNumber: string): Promise<BotSession> {
-    console.log(`🆕 [SessionManager] Création session mode découverte pour: ${phoneNumber}`);
-
+    console.log(`🆕 [SessionManager] Création session pour: ${phoneNumber}`);
+    
     try {
-      // Mode découverte - pas de restaurant par défaut (utilise logique existante)
-      // Aligné avec createRestaurantDiscoverySession() du UniversalBot
-
+      // Déterminer le restaurant par défaut (Pizza Yolo pour l'instant)
+      const defaultRestaurantId = await this.getDefaultRestaurantId();
+      
       // Données de la nouvelle session
       const sessionData = {
         phone_number: phoneNumber,
-        restaurant_id: null,
+        restaurant_id: defaultRestaurantId,
         bot_state: {
-          mode: 'CHOOSING_RESTAURANT_MODE' as const,
+          mode: 'menu_browsing' as const,
           lastInteraction: this.getCurrentTime(),
           language: 'fr',
           context: {}
@@ -540,6 +511,29 @@ export class SessionManager implements ISessionManager {
     return dbData;
   }
 
+  /**
+   * Obtenir l'ID du restaurant par défaut
+   */
+  private async getDefaultRestaurantId(): Promise<number> {
+    try {
+      const { data, error } = await this.supabase
+        .from('france_restaurants')
+        .select('id')
+        .eq('slug', 'pizza-yolo-77')
+        .single();
+
+      if (error || !data) {
+        console.warn('⚠️ [SessionManager] Restaurant par défaut NON TROUVÉ - utilisation ID=1');
+        return 1;
+      }
+
+      return data.id;
+
+    } catch (error) {
+      console.error('❌ [SessionManager] Erreur récupération restaurant défaut - utilisation ID=1');
+      return 1; // Fallback
+    }
+  }
 
   /**
    * Nettoyer les sessions expirées (maintenance)
@@ -652,7 +646,6 @@ export class SessionManager implements ISessionManager {
    * SOLID - Single Responsibility : Suppression complète des sessions utilisateur
    */
   async deleteSessionsByPhone(phoneNumber: string): Promise<void> {
-    console.log('🔍 [DEBUG_SESSION_DELETE] === DÉBUT SUPPRESSION ===');
     console.log(`🗑️ [SessionManager] Suppression sessions pour: ${phoneNumber}`);
     
     try {
@@ -662,18 +655,13 @@ export class SessionManager implements ISessionManager {
         .eq('phone_number', phoneNumber);
 
       if (error) {
-        console.error('🚨 [DEBUG_SESSION_DELETE] === ERREUR SUPABASE ===');
         console.error('❌ [SessionManager] Erreur suppression sessions:', error);
-        console.error('🚨 [DEBUG_SESSION_DELETE] error.message:', error?.message);
-        console.error('🚨 [DEBUG_SESSION_DELETE] error.code:', error?.code);
         throw error;
       }
 
       console.log(`✅ [SessionManager] Sessions supprimées pour: ${phoneNumber}`);
-      console.log('🔍 [DEBUG_SESSION_DELETE] === SUCCÈS SUPPRESSION ===');
       
     } catch (error) {
-      console.error('🚨 [DEBUG_SESSION_DELETE] === ERREUR CATCH ===');
       console.error('❌ [SessionManager] Erreur deleteSessionsByPhone:', error);
       throw error;
     }
@@ -692,20 +680,6 @@ export class SessionManager implements ISessionManager {
     console.log(`📝 [SessionManager] Création session restaurant pour: ${phoneNumber}`);
     console.log(`📝 [SessionManager] Restaurant: ${restaurant.name} (ID: ${restaurant.id})`);
 
-    console.log('🔍 DEBUG_SESSION_CREATION - SESSION CRÉÉE PAR SessionManager:', {
-      phoneNumber: phoneNumber,
-      restaurantId: restaurant.id,
-      restaurantName: restaurant.name,
-      currentStep: currentStep,
-      sessionDataKeys: Object.keys(sessionData),
-      caller: 'SessionManager.createSessionForRestaurant'
-    });
-
-    // 🚨 CAPTURE STACK TRACE pour identifier qui appelle cette création
-    console.log('🔍 DEBUG_SESSION_CREATION - STACK TRACE CRÉATION:', {
-      stack: new Error().stack,
-      timestamp: new Date().toISOString()
-    });
 
     try {
       const expiresAt = this.getCurrentTime();

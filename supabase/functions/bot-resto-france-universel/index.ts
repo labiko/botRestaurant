@@ -73,13 +73,13 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !GREEN_API_TOKEN || !GREEN_AP
   Deno.exit(1);
 }
 
-// 🔍 DÉTECTION ENVIRONNEMENT
+// Variables d'environnement configurées
 if (SUPABASE_URL.includes('lphvdoyhwaelmwdfkfuh')) {
-  console.log('✅ [Startup] ENVIRONNEMENT: DEV');
+  // Environnement DEV
 } else if (SUPABASE_URL.includes('vywbhlnzvfqtiurwmrac')) {
-  console.log('✅ [Startup] ENVIRONNEMENT: PROD');
+  // Environnement PROD
 } else {
-  console.log('❓ [Startup] ENVIRONNEMENT: INCONNU');
+  // Environnement inconnu
 }
 
 // ================================================

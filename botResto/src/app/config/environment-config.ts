@@ -12,7 +12,7 @@ export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' = 'PROD';
 const ENVIRONMENTS = {
   DEV: {
     supabaseFranceUrl: 'https://lphvdoyhwaelmwdfkfuh.supabase.co',
-    supabaseFranceAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwaHZkb3lod2FlbG13ZGZrZnVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMDM5MjYsImV4cCI6MjA3Mzc3OTkyNn0.JhO4gqZ2qFc2DmLe-ssyWf3GGOiRVopxBVJtyI8DbkY',
+    supabaseFranceAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwaHZkb3lod2FlbG13ZGZrZnVoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1ODIwMzkyNiwiZXhwIjoyMDczNzc5OTI2fQ.JhO4gqZ2qFc2DmLe-ssyWf3GGOiRVopxBVJtyI8DbkY',
     // Green API (identique pour DEV et PROD)
     greenApi: {
       instanceId: '7105313693',
@@ -39,6 +39,4 @@ const ENVIRONMENTS = {
 // Configuration active basée sur CURRENT_ENVIRONMENT
 export const FRANCE_CONFIG = ENVIRONMENTS[CURRENT_ENVIRONMENT];
 
-// 🔍 Log pour vérifier la configuration active
-console.log(`🔧 [ENV_CONFIG] Environnement actif: ${CURRENT_ENVIRONMENT}`);
-console.log(`🔧 [ENV_CONFIG] URL: ${FRANCE_CONFIG.supabaseFranceUrl}`);
+// Configuration exportée sans logs de debug

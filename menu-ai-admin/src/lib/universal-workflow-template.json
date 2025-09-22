@@ -1,0 +1,234 @@
+{
+  "template_universel": {
+    "meta": {
+      "name": "TEMPLATE UNIVERSEL MODIFIABLE",
+      "description": "Template générique adaptable à tous les cas",
+      "version": "2.0",
+      "instructions": "Modifiez directement ce JSON selon vos besoins"
+    },
+
+    "configuration_bot": {
+      "affichage_options": {
+        "format_numerotation": "emoji_numero",
+        "message_option_zero": "0️⃣ Ne pas choisir (passer cette étape)",
+        "message_retour": "↩️ Retour au menu précédent",
+        "message_annuler": "❌ Annuler la commande"
+      },
+      "comportement": {
+        "autoriser_multiples_selections": true,
+        "format_selection": "1,2,3",
+        "confirmation_apres_chaque_step": false,
+        "recap_avant_validation": true
+      }
+    },
+
+    "workflow_config": {
+      "workflow_type": "composite_workflow",
+      "requires_steps": true,
+      "steps": [
+        {
+          "step": 1,
+          "type": "options_selection",
+          "prompt": "[VOTRE QUESTION ICI]",
+          "option_groups": ["[NOM_GROUPE_OPTIONS]"],
+          "required": true,
+          "max_selections": 1,
+          "bot_behavior": {
+            "show_zero_option": false,
+            "zero_option_text": null,
+            "validation_message": "✅ Choix confirmé",
+            "error_message": "❌ Choix invalide, veuillez réessayer"
+          },
+          "rules": {
+            "skip_if_previous": null,
+            "required_if": "always",
+            "price_calculation": "addition"
+          }
+        },
+        {
+          "step": 2,
+          "type": "options_selection",
+          "prompt": "[QUESTION OPTIONNELLE]",
+          "option_groups": ["[GROUPE_OPTIONNEL]"],
+          "required": false,
+          "max_selections": 3,
+          "bot_behavior": {
+            "show_zero_option": true,
+            "zero_option_text": "0️⃣ Passer sans choisir",
+            "validation_message": "✅ Options ajoutées",
+            "error_message": "❌ Maximum 3 choix autorisés"
+          },
+          "rules": {
+            "skip_if_previous": null,
+            "required_if": "optional",
+            "price_calculation": "addition"
+          }
+        }
+      ]
+    },
+
+    "options_definitions": {
+      "[NOM_GROUPE_OPTIONS]": [
+        {
+          "name": "Option 1",
+          "price_modifier": 0,
+          "display_order": 1,
+          "emoji": "🍕",
+          "description": "Description optionnelle"
+        },
+        {
+          "name": "Option 2",
+          "price_modifier": 2,
+          "display_order": 2,
+          "emoji": "🍔",
+          "description": null
+        }
+      ],
+      "[GROUPE_OPTIONNEL]": [
+        {
+          "name": "Supplément 1",
+          "price_modifier": 1,
+          "display_order": 1,
+          "emoji": "🧀",
+          "description": "Fromage supplémentaire"
+        },
+        {
+          "name": "Supplément 2",
+          "price_modifier": 1.5,
+          "display_order": 2,
+          "emoji": "🥓",
+          "description": "Bacon croustillant"
+        }
+      ]
+    }
+  },
+
+  "exemples_configurations": {
+    "step_obligatoire": {
+      "description": "Step obligatoire - Le client DOIT choisir",
+      "config": {
+        "required": true,
+        "max_selections": 1,
+        "bot_behavior": {
+          "show_zero_option": false
+        }
+      },
+      "bot_output": "1️⃣ Option A\n2️⃣ Option B\n3️⃣ Option C\n\nVotre choix :"
+    },
+
+    "step_optionnel_simple": {
+      "description": "Step optionnel - Le client peut passer",
+      "config": {
+        "required": false,
+        "max_selections": 1,
+        "bot_behavior": {
+          "show_zero_option": true,
+          "zero_option_text": "0️⃣ Non merci"
+        }
+      },
+      "bot_output": "Souhaitez-vous un supplément ?\n\n0️⃣ Non merci\n1️⃣ Fromage (+1€)\n2️⃣ Bacon (+2€)\n\nVotre choix :"
+    },
+
+    "step_optionnel_multiple": {
+      "description": "Choix multiples optionnels",
+      "config": {
+        "required": false,
+        "max_selections": 5,
+        "bot_behavior": {
+          "show_zero_option": true,
+          "zero_option_text": "0️⃣ Passer cette étape"
+        }
+      },
+      "bot_output": "Choisissez vos suppléments (max 5) :\n\n0️⃣ Passer cette étape\n1️⃣ Tomate\n2️⃣ Oignon\n3️⃣ Cornichon\n4️⃣ Salade\n5️⃣ Fromage (+1€)\n\nVos choix (ex: 1,3,5) :"
+    },
+
+    "step_conditionnel": {
+      "description": "Step qui apparaît selon conditions",
+      "config": {
+        "required": true,
+        "max_selections": 1,
+        "rules": {
+          "skip_if_previous": "vegetarien",
+          "required_if": "contains_meat"
+        }
+      },
+      "bot_output": "Cuisson de votre viande :\n\n1️⃣ Saignant\n2️⃣ À point\n3️⃣ Bien cuit"
+    }
+  },
+
+  "regles_metier": {
+    "prix": {
+      "toujours_ajouter_1_euro_livraison": true,
+      "afficher_prix_dans_bot": true,
+      "format_prix": "X,XX €"
+    },
+    "validation": {
+      "confirmer_avant_paiement": true,
+      "permettre_modification": true,
+      "timeout_session": 30
+    },
+    "affichage_bot": {
+      "max_options_par_page": 9,
+      "utiliser_emojis": true,
+      "format_liste": "numerote"
+    }
+  },
+
+  "guide_personnalisation": {
+    "etapes": [
+      "1. Copiez ce template",
+      "2. Remplacez [VOTRE QUESTION ICI] par vos prompts",
+      "3. Remplacez [NOM_GROUPE_OPTIONS] par vos groupes",
+      "4. Définissez vos options dans options_definitions",
+      "5. Ajustez required true/false selon vos besoins",
+      "6. Si required: false → show_zero_option: true",
+      "7. Ajustez max_selections (1 = choix unique, >1 = multiple)",
+      "8. Testez avec l'interface web",
+      "9. Générez le SQL"
+    ],
+
+    "cas_usage_frequents": {
+      "menu_simple": {
+        "steps": 2,
+        "step1": "Plat principal (required: true, max: 1)",
+        "step2": "Boisson (required: true, max: 1)"
+      },
+      "menu_complexe": {
+        "steps": 5,
+        "step1": "Entrée (required: false, max: 1, zero_option: 'Pas d'entrée')",
+        "step2": "Plat (required: true, max: 1)",
+        "step3": "Accompagnement (required: true, max: 2)",
+        "step4": "Suppléments (required: false, max: 5, zero_option: 'Aucun supplément')",
+        "step5": "Dessert (required: false, max: 1, zero_option: 'Pas de dessert')"
+      },
+      "burger_custom": {
+        "steps": 4,
+        "step1": "Taille (required: true, max: 1)",
+        "step2": "Viande (required: true, max: 1)",
+        "step3": "Sauces (required: false, max: 3, zero_option: 'Sans sauce')",
+        "step4": "Extras (required: false, max: 5, zero_option: 'Pas d'extras')"
+      }
+    }
+  },
+
+  "mappings_bot": {
+    "required_true": {
+      "comportement": "Le bot force le choix",
+      "message": "Veuillez choisir une option",
+      "option_zero": "NON AFFICHÉ"
+    },
+    "required_false": {
+      "comportement": "Le bot permet de passer",
+      "message": "Tapez 0 pour passer",
+      "option_zero": "0️⃣ [Votre texte]"
+    },
+    "max_selections_1": {
+      "comportement": "Choix unique",
+      "format_reponse": "2"
+    },
+    "max_selections_multiple": {
+      "comportement": "Choix multiples",
+      "format_reponse": "1,3,5"
+    }
+  }
+}

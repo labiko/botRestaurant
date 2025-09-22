@@ -51,6 +51,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Le bot universel est la version de production active qui gère tous les pays. Ne travailler sur les bots spécifiques que si l'utilisateur le demande explicitement.
 
+## 🤖 RÈGLE ABSOLUE - BOT UNIVERSEL UNIQUEMENT
+
+**⚠️ CRITIQUE**: TOUJOURS travailler sur le **bot universel** exclusivement :
+- **Fichier principal** : `supabase/functions/bot-resto-france-universel/core/UniversalBot.ts`
+- **Services** : `supabase/functions/bot-resto-france-universel/services/`
+- **Types** : `supabase/functions/bot-resto-france-universel/types.ts`
+- **Deploy** : `supabase functions deploy bot-resto-france-universel`
+
+**❌ INTERDICTION ABSOLUE** :
+- **NE JAMAIS analyser** les autres bots (`webhook-whatsapp`, `bot-whatsapp-france`, etc.)
+- **NE JAMAIS modifier** les anciens bots
+- **NE JAMAIS référencer** les tables obsolètes (`menus`, `restaurant_categories`)
+- **IGNORER COMPLÈTEMENT** tout autre bot que `bot-resto-france-universel`
+
+**✅ Le bot universel utilise** :
+- Tables : `france_restaurants`, `france_menu_categories`, `france_products`
+- Architecture moderne avec services séparés
+- Workflows composites avec `steps_config`
+
 ## 🚨 COMMANDES INTERDITES - BASE DE DONNÉES ET FICHIERS
 
 **⚠️ CRITIQUE**: NE JAMAIS exécuter les commandes suivantes qui détruisent les données :
@@ -60,6 +79,25 @@ Le bot universel est la version de production active qui gère tous les pays. Ne
 - **NE JAMAIS exécuter de requêtes SQL directement en base** - INTERDIT ! Toujours donner le SQL à l'utilisateur
 - **`rm`** - INTERDIT ! Ne jamais supprimer de fichiers automatiquement
 - **`del`** - INTERDIT ! Ne jamais supprimer de fichiers automatiquement
+
+## 🔒 RÈGLE ABSOLUE - ÉCRITURE BASE DE DONNÉES
+
+**⚠️ INTERDICTION TOTALE D'ÉCRITURE EN BASE** :
+- **NE JAMAIS exécuter d'INSERT, UPDATE, DELETE** directement en base de données
+- **NE JAMAIS modifier les données** de production ou développement
+- **UNIQUEMENT DES REQUÊTES SELECT** pour la lecture/consultation
+- **TOUJOURS donner le SQL à l'utilisateur** pour qu'il l'exécute lui-même
+- **JAMAIS de psql avec des commandes d'écriture** - Lecture seule exclusivement
+
+**✅ Autorisé :**
+- `SELECT` pour consulter les données
+- `DESCRIBE` ou `SHOW` pour la structure
+- `EXPLAIN` pour analyser les requêtes
+
+**❌ STRICTEMENT INTERDIT :**
+- `INSERT`, `UPDATE`, `DELETE`
+- `CREATE`, `ALTER`, `DROP`
+- Toute commande qui modifie les données ou la structure
 
 **✅ Commandes autorisées :**
 - `supabase db push` - Applique les migrations sans supprimer les données

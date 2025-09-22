@@ -42,6 +42,7 @@ export class UniversalBot implements IMessageHandler {
    * ✅ Version finale optimisée avec format Paris validé + DEBUG
    */
   private getCurrentTime(): Date {
+
     // Formatter pour timezone Paris (gère automatiquement heure d'été/hiver)
     const parisFormatter = new Intl.DateTimeFormat('fr-FR', {
       timeZone: 'Europe/Paris',
@@ -55,13 +56,15 @@ export class UniversalBot implements IMessageHandler {
     });
 
     const utcNow = new Date();
+
+    // Format: "17/09/2025 22:06:36" (validé comme correct)
     const parisFormatted = parisFormatter.format(utcNow);
 
     // Parsing du format DD/MM/YYYY HH:mm:ss
     const parts = parisFormatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
     if (parts) {
       const [, day, month, year, hour, minute, second] = parts;
-      return new Date(
+      const parisDate = new Date(
         parseInt(year),
         parseInt(month) - 1, // Mois 0-indexé
         parseInt(day),
@@ -69,10 +72,13 @@ export class UniversalBot implements IMessageHandler {
         parseInt(minute),
         parseInt(second)
       );
+
+
+      return parisDate;
     }
 
-    // Fallback UTC si parsing échoue
-    console.warn('⚠️ [getCurrentTime] Parsing Paris échoué, fallback UTC');
+    // Fallback UTC si parsing échoue (ne devrait jamais arriver)
+    console.warn('🕐 [DEBUG_TIMEZONE] === FALLBACK UTC - PARSING ÉCHOUÉ ===');
     return utcNow;
   }
   private compositeWorkflowExecutor: CompositeWorkflowExecutor;
@@ -251,6 +257,7 @@ export class UniversalBot implements IMessageHandler {
       // ANTI-SESSION PARASITE : Vérifier existence session AVANT getSession()
       const sessionExists = await this.sessionManager.checkSessionExists(phoneNumber);
 
+
       if (!sessionExists &&
           message.toLowerCase() !== 'resto' &&
           !this.isPhoneNumber(message)) {
@@ -273,11 +280,6 @@ export class UniversalBot implements IMessageHandler {
 
       // Maintenant on peut récupérer la session en sécurité
       const session = await this.sessionManager.getSession(phoneNumber);
-        exists: !!session,
-        id: session?.id,
-        restaurantId: session?.restaurantId,
-        botState: session?.botState
-      });
 
       console.log('🔄 [SESSION_GET] Session récupérée:', {
         sessionExists: !!session,
@@ -290,11 +292,6 @@ export class UniversalBot implements IMessageHandler {
         phoneNumber: phoneNumber
       });
 
-        sessionExists: !!session,
-        hasRestaurantId: !!session?.restaurantId,
-        restaurantIdValue: session?.restaurantId,
-        restaurantIdType: typeof session?.restaurantId
-      });
 
       if (session && (session.restaurantId || session.botState === 'CHOOSING_RESTAURANT_MODE')) {
         // L'utilisateur a une session active avec restaurant sélectionné
@@ -316,21 +313,12 @@ export class UniversalBot implements IMessageHandler {
       }
       
       // PRIORITÉ 5: Réponse par défaut
-        message: message,
-        phoneNumber: phoneNumber,
-        reason: 'Aucune session et pas resto/numéro'
-      });
 
       await this.messageSender.sendMessage(phoneNumber,
         `🤖 Message reçu : "${message}"\n🚧 Bot universel opérationnel.\n💡 **Comment commander :**\n• Scannez le QR code du restaurant\n• Ou tapez "salut" pour voir les infos\nStatus : Bot universel ✅`);
 
     } catch (error) {
       console.error('❌ [UniversalBot] Erreur traitement message:', error);
-        error: error.message,
-        phoneNumber: phoneNumber,
-        message: message,
-        stack: error.stack
-      });
       await this.handleError(phoneNumber, error as Error);
     }
   }
@@ -671,11 +659,6 @@ export class UniversalBot implements IMessageHandler {
 
     console.error('💥 [UniversalBot] Erreur globale:', error);
 
-      phoneNumber: phoneNumber,
-      errorMessage: error.message,
-      errorStack: error.stack,
-      willCreateSession: false
-    });
 
     await this.messageSender.sendMessage(
       phoneNumber,
@@ -806,16 +789,15 @@ export class UniversalBot implements IMessageHandler {
         await this.sessionManager.deleteSessionsByPhone(phoneNumber);
         console.log('✅ [STEP1] Sessions supprimées avec succès');
       } catch (deleteError) {
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] === STEP1 ÉCHEC ===');
         console.error('❌ [STEP1] Erreur suppression sessions:', deleteError);
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] deleteError.message:', deleteError?.message);
+        console.error('🚨 [DEBUG_RESTAURANT_ACCESS] deleteError.stack:', deleteError?.stack);
         throw deleteError;
       }
       
       // 🎯 [STEP2] Création nouvelle session restaurant
       console.log('🎯 [STEP2] Création nouvelle session restaurant...');
-        id: restaurant.id,
-        name: restaurant.name,
-        timezone: restaurant.timezone
-      }));
       let session;
       try {
         session = await this.sessionManager.createSessionForRestaurant(
@@ -989,23 +971,6 @@ export class UniversalBot implements IMessageHandler {
       return;
     }
 
-    console.log('🔍 [DEBUG] État session AVANT traitement:', {
-      phoneNumber,
-      message,
-      normalizedMessage,
-      sessionState: session.botState,
-      sessionId: session.id,
-      hasContext: !!session.sessionData,
-      contextKeys: session.sessionData ? Object.keys(session.sessionData) : []
-    });
-
-      phoneNumber,
-      message,
-      botState: session.botState,
-      currentCategoryName: session.sessionData?.currentCategoryName,
-      selectedProduct: session.sessionData?.selectedProduct?.name || null,
-      hasCart: !!session.sessionData?.cart
-    });
 
     switch (session.botState) {
       case 'POST_ORDER_NOTES':
@@ -1033,17 +998,14 @@ export class UniversalBot implements IMessageHandler {
         break;
         
       case 'VIEWING_MENU':
-        console.log(`🔄 [STATE_DEBUG] Routage vers handleMenuNavigation - État: VIEWING_MENU`);
         await this.handleMenuNavigation(phoneNumber, session, message);
         break;
         
       case 'VIEWING_CATEGORY':
-        console.log(`🔄 [STATE_DEBUG] Routage vers handleCategoryNavigation - État: VIEWING_CATEGORY`);
         await this.handleCategoryNavigation(phoneNumber, session, message);
         break;
         
       case 'SELECTING_PRODUCTS':
-        console.log(`🔄 [STATE_DEBUG] Routage vers ProductSelection - État: SELECTING_PRODUCTS`);
         await this.handleProductSelection(phoneNumber, session, message);
         break;
         
@@ -1076,12 +1038,6 @@ export class UniversalBot implements IMessageHandler {
         break;
         
       case 'AWAITING_QUANTITY':
-          phoneNumber,
-          message,
-          selectedProduct: session.sessionData?.selectedProduct?.name || null,
-          currentCategoryName: session.sessionData?.currentCategoryName,
-          productType: session.sessionData?.selectedProduct?.product_type
-        });
         await this.handleQuantityInput(phoneNumber, session, message);
         break;
         
@@ -1110,17 +1066,14 @@ export class UniversalBot implements IMessageHandler {
       // =================================
       
       case 'CHOOSING_RESTAURANT_MODE':
-        console.log(`🔄 [STATE_DEBUG] Routage vers handleRestaurantModeSelection - État: CHOOSING_RESTAURANT_MODE`);
         await this.handleRestaurantModeSelection(phoneNumber, session, message);
         break;
 
       case 'AWAITING_USER_LOCATION':
-        console.log(`🔄 [STATE_DEBUG] Routage vers handleLocationMessage - État: AWAITING_USER_LOCATION`);
         await this.handleLocationMessage(phoneNumber, session, message);
         break;
         
       case 'SELECTING_FROM_LIST':
-        console.log(`🔄 [STATE_DEBUG] Routage vers handleRestaurantSelection - État: SELECTING_FROM_LIST`);
         await this.handleRestaurantSelection(phoneNumber, session, message);
         break;
         
@@ -1264,12 +1217,9 @@ export class UniversalBot implements IMessageHandler {
     console.log(`🔍 [handleMenuNavigation] État de session: ${session.botState}`);
     console.log(`🔍 [handleMenuNavigation] Session data keys:`, Object.keys(session.sessionData || {}));
     
-    // DIAGNOSTIC: Vérifier incohérence d'état
-    console.log(`🔄 [STATE_DEBUG] État de session actuel: ${session.botState}`);
-    console.log(`🔄 [STATE_DEBUG] État attendu pour handleMenuNavigation: VIEWING_MENU`);
+    // Vérifier incohérence d'état
     if (session.botState !== 'VIEWING_MENU') {
-      console.error(`❌ [STATE_DEBUG] INCOHÉRENCE DÉTECTÉE ! handleMenuNavigation appelé mais état = ${session.botState}`);
-      console.error(`❌ [STATE_DEBUG] Ceci pourrait expliquer les problèmes de validation`);
+      console.error(`❌ [handleMenuNavigation] INCOHÉRENCE DÉTECTÉE ! handleMenuNavigation appelé mais état = ${session.botState}`);
     }
     
     if (isNaN(categoryNumber)) {
@@ -1324,23 +1274,6 @@ export class UniversalBot implements IMessageHandler {
     console.log(`🛒 [ProductSelection] État session actuel:`, session.currentState);
     console.log(`🛒 [ProductSelection] Session complète:`, JSON.stringify(session.sessionData, null, 2));
 
-    // 🚨 DEBUG CRITIQUE : Ajouter logs pour analyser le bug panier
-    console.log(`🚨 [BUG_DEBUG_PANIER] État session:`, {
-      botState: session.botState,
-      current_step: session.currentStep,
-      message: message,
-      hasCart: !!(session.sessionData?.cart && Object.keys(session.sessionData.cart).length > 0),
-      cartKeys: session.sessionData?.cart ? Object.keys(session.sessionData.cart) : [],
-      totalPrice: session.sessionData?.totalPrice || 0
-    });
-    
-      phoneNumber,
-      message,
-      currentCategoryName: session.sessionData?.currentCategoryName,
-      currentCategoryId: session.sessionData?.currentCategoryId,
-      hasProducts: !!session.sessionData?.products,
-      productCount: session.sessionData?.products?.length || 0
-    });
     
     // RÉUTILISATION: Vérifier les actions rapides 99, 00 avant parseInt
     const choice = message.trim();
@@ -1388,23 +1321,9 @@ export class UniversalBot implements IMessageHandler {
     // Si c'est un affichage unifié de pizzas, accepter les choix étendus
     const hasPizzaMap = session.sessionData?.pizzaOptionsMap || session.workflowData?.pizzaOptionsMap;
 
-    // 🚨 LOGS CRITIQUES : Analyser détection Menu Pizza vs Pizza simple
-      currentCategoryName: session.sessionData?.currentCategoryName,
-      currentCategorySlug: session.sessionData?.currentCategorySlug,
-      hasPizzaMap: !!hasPizzaMap,
-      pizzaOptionsMapSession: !!session.sessionData?.pizzaOptionsMap,
-      pizzaOptionsMapWorkflow: !!session.workflowData?.pizzaOptionsMap,
-      totalPizzaOptionsSession: session.sessionData?.totalPizzaOptions,
-      totalPizzaOptionsWorkflow: session.workflowData?.totalPizzaOptions,
-      productsLength: products.length,
-      message: message,
-      botState: session.botState
-    });
-
     if (hasPizzaMap) {
       maxValidChoice = session.sessionData?.totalPizzaOptions || session.workflowData?.totalPizzaOptions || products.length;
       console.log(`🍕 [ProductSelection] Mode pizza unifié - Accepte jusqu'à ${maxValidChoice}`);
-    } else {
     }
     
     if (isNaN(productNumber) || productNumber < 1 || productNumber > maxValidChoice) {
@@ -1414,26 +1333,11 @@ export class UniversalBot implements IMessageHandler {
       return;
     }
     
-    // DEBUG: Vérifier les données de session pour pizza unifié
-    console.log(`🔍 [ProductSelection] DEBUG Session:`, {
-      hasPizzaMap: !!session.sessionData?.pizzaOptionsMap,
-      mapLength: session.sessionData?.pizzaOptionsMap?.length || 0,
-      totalOptions: session.sessionData?.totalPizzaOptions,
-      productNumber: productNumber,
-      sessionKeys: Object.keys(session.sessionData || {}),
-      sessionId: session.id
-    });
 
     // Gérer la sélection en mode pizza unifié - Vérifier sessionData ET workflowData
     const pizzaOptionsMap = session.sessionData?.pizzaOptionsMap || session.workflowData?.pizzaOptionsMap;
     const totalPizzaOptions = session.sessionData?.totalPizzaOptions || session.workflowData?.totalPizzaOptions;
 
-      currentCategoryName: session.sessionData?.currentCategoryName,
-      hasPizzaMap: !!pizzaOptionsMap,
-      mapLength: pizzaOptionsMap?.length || 0,
-      isIndividualPizzaCategory: session.sessionData?.currentCategoryName === 'Pizzas',
-      shouldCleanMap: session.sessionData?.currentCategoryName === 'Pizzas' && !!pizzaOptionsMap
-    });
 
     // 🔧 SOLUTION 1 : Détection spéciale Menu Pizza avec discriminant universel
     if (pizzaOptionsMap) {
@@ -1516,14 +1420,6 @@ export class UniversalBot implements IMessageHandler {
     // Vérifier si le produit nécessite des étapes (workflow composite)
     let isComposite = selectedProduct.requires_steps || selectedProduct.workflow_type || selectedProduct.type === 'composite';
     
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      isComposite,
-      requires_steps: selectedProduct.requires_steps,
-      workflow_type: selectedProduct.workflow_type,
-      type: selectedProduct.type,
-      currentCategoryName: session.sessionData?.currentCategoryName
-    });
     
     // NOUVELLE LOGIQUE : Vérifier aussi si le produit a des variantes de taille configurées
     if (!isComposite) {
@@ -1544,14 +1440,6 @@ export class UniversalBot implements IMessageHandler {
         isComposite = true;
         console.log(`✅ [ProductSelection] ${selectedProduct.name} détecté comme ayant des variantes de taille`);
         
-          productId: selectedProduct.id,
-          productName: selectedProduct.name,
-          product_type: selectedProduct.product_type,
-          sizesFound: sizes.length,
-          convertedToComposite: true,
-          currentCategoryName: session.sessionData?.currentCategoryName,
-          reason: 'HAS_SIZES'
-        });
       }
     }
     
@@ -1582,6 +1470,8 @@ export class UniversalBot implements IMessageHandler {
         // Lancer le workflow composite universel
         console.log(`🚀 [ProductSelection] Tentative de démarrage workflow composite pour: ${selectedProduct.name}`);
         
+        // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer le démarrage du workflow composite
+        console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection startCompositeWorkflow:', {
           productId: selectedProduct.id,
           productName: selectedProduct.name,
           currentCategoryName: session.sessionData?.currentCategoryName,
@@ -1609,6 +1499,8 @@ export class UniversalBot implements IMessageHandler {
     // Produit simple - Stocker et traiter avec quantité 1
     console.log('📦 [ProductSelection] Produit simple - Traitement direct avec quantité 1');
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer le workflow simple (non-composite)
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection simple workflow:', {
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       product_type: selectedProduct.product_type,
@@ -1702,6 +1594,8 @@ export class UniversalBot implements IMessageHandler {
         
         // Mettre à jour la session pour gérer la sélection
         
+        // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer quand currentCategoryName est défini (ligne 1608)
+        console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.showProductsInCategory ligne 1608:', {
           categoryId,
           categoryName: category.name,
           phoneNumber,
@@ -1871,6 +1765,8 @@ export class UniversalBot implements IMessageHandler {
       console.log('📝 [ShowProducts] Mise à jour session avec produits');
       
       
+      // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer quand currentCategoryName est défini (ligne 1770)
+      console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.showProductsInCategory ligne 1770:', {
         categoryId,
         categoryName: category.name,
         phoneNumber,
@@ -2440,8 +2336,13 @@ export class UniversalBot implements IMessageHandler {
       );
       
       await this.messageSender.sendMessage(phoneNumber, confirmationMessage);
+
+      // Supprimer l'ancienne session AVANT de créer la nouvelle
       await this.deleteSession(phoneNumber);
-      
+
+      // Créer session pour notes post-commande
+      await this.createPostOrderNotesSession(phoneNumber, order, restaurantId);
+
     } catch (error) {
       console.error('❌ [OrderWithAddress] Erreur:', error);
       await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de la création de commande. Veuillez réessayer.');
@@ -2475,15 +2376,12 @@ export class UniversalBot implements IMessageHandler {
    */
   private async handleWorkflowActions(phoneNumber: string, session: any, message: string): Promise<void> {
     const startTime = Date.now();
-    console.log(`⏱️ [PERF] handleWorkflowActions START - Message: "${message}", Time: ${new Date().toISOString()}`);
     
     const choice = message.trim();
     
     switch (choice) {
       case '1': // Ajouter au panier
-        console.log(`⏱️ [PERF] Calling handleQuantityInput - ${Date.now() - startTime}ms elapsed`);
         await this.handleQuantityInput(phoneNumber, session, '1');
-        console.log(`⏱️ [PERF] handleQuantityInput completed - ${Date.now() - startTime}ms total`);
         break;
         
       case '2': // Recommencer
@@ -2534,12 +2432,13 @@ export class UniversalBot implements IMessageHandler {
    */
   private async handleQuantityInput(phoneNumber: string, session: any, message: string): Promise<void> {
     const startTime = Date.now();
-    console.log(`⏱️ [PERF] handleQuantityInput START - Time: ${new Date().toISOString()}`);
     console.log(`📦 [QuantityInput] Message reçu: "${message}"`);
     
     const quantity = parseInt(message.trim());
     const selectedProduct = session.sessionData?.selectedProduct;
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer handleQuantityInput pour workflow simple
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleQuantityInput:', {
       phoneNumber,
       message,
       productId: selectedProduct?.id,
@@ -2549,7 +2448,6 @@ export class UniversalBot implements IMessageHandler {
       workflowPath: 'QUANTITY_INPUT'
     });
     
-    console.log(`⏱️ [PERF] Product check - ${Date.now() - startTime}ms elapsed`);
     
     if (!selectedProduct) {
       console.error('❌ [QuantityInput] Pas de produit sélectionné');
@@ -2568,7 +2466,15 @@ export class UniversalBot implements IMessageHandler {
     console.log(`✅ [QuantityInput] Quantité valide: ${quantity}`);
     
     // Calculer le prix total
-    const totalPrice = selectedProduct.price * quantity;
+    const basePrice = selectedProduct.price * quantity;
+
+
+    // Les suppléments sont déjà inclus dans selectedProduct.price (calculés dans CompositeWorkflowExecutor)
+    // Pas besoin de recalculer ici pour éviter le double comptage
+    let supplementsPrice = 0;
+
+
+    const totalPrice = basePrice + supplementsPrice;
     
     // Construire la description du produit pour le panier
     let productDescription = selectedProduct.name;
@@ -2583,31 +2489,44 @@ export class UniversalBot implements IMessageHandler {
       productDescription += ` (${configDetails.join(' - ')})`;
     }
     
+
     // Ajouter au panier
-    console.log(`⏱️ [PERF] Building cart - ${Date.now() - startTime}ms elapsed`);
     const rawCart = session.sessionData?.cart || [];
     const cart = Array.isArray(rawCart) ? rawCart : [];
-    cart.push({
+
+    const cartItem = {
       productId: selectedProduct.id,
       productName: selectedProduct.name,
-      categoryName: await this.getCategoryNameFromProduct(selectedProduct.id) 
-                 || session.sessionData?.currentCategoryName 
+      categoryName: await this.getCategoryNameFromProduct(selectedProduct.id)
+                 || session.sessionData?.currentCategoryName
                  || 'ProduitTest',
       productDescription: productDescription,
       quantity: quantity,
       unitPrice: selectedProduct.price,
       totalPrice: totalPrice,
       configuration: selectedProduct.configuration || null
-    });
-    
+    };
+
+    // 🔍 DEBUG PANIER - Vérifier l'ajout au panier
+    console.log(`🔍 [DEBUG_PRIX] Panier - Ajout produit:`);
+    console.log(`🔍 [DEBUG_PRIX] Produit: ${cartItem.productName}`);
+    console.log(`🔍 [DEBUG_PRIX] Quantité: ${cartItem.quantity}`);
+    console.log(`🔍 [DEBUG_PRIX] Prix unitaire: ${cartItem.unitPrice}€`);
+    console.log(`🔍 [DEBUG_PRIX] Prix total (avec suppléments): ${cartItem.totalPrice}€`);
+    console.log(`🔍 [DEBUG_PRIX] Différence suppléments: ${cartItem.totalPrice - cartItem.unitPrice}€`);
+    if (cartItem.configuration) {
+      console.log(`🔍 [DEBUG_PRIX] Configuration: ${JSON.stringify(cartItem.configuration)}`);
+    }
+
+    cart.push(cartItem);
+
     // Calculer le total du panier
     const cartTotal = cart.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
+    console.log(`🔍 [DEBUG_PRIX] Total panier: ${cartTotal}€ (${cart.length} items)`);
     
     // Utiliser le formatter universel pour le message
-    console.log(`⏱️ [PERF] Importing UniversalCartFormatter - ${Date.now() - startTime}ms elapsed`);
     const { UniversalCartFormatter } = await import('../services/UniversalCartFormatter.ts');
     const formatter = new UniversalCartFormatter();
-    console.log(`⏱️ [PERF] UniversalCartFormatter imported - ${Date.now() - startTime}ms elapsed`);
     
     // Formater le message avec le nouveau standard universel
     const confirmMessage = formatter.formatAdditionMessage(
@@ -2615,10 +2534,9 @@ export class UniversalBot implements IMessageHandler {
       cart,
       quantity
     );
-    console.log(`⏱️ [PERF] Message formatted - ${Date.now() - startTime}ms elapsed`);
     
     await this.messageSender.sendMessage(phoneNumber, confirmMessage);
-    console.log(`⏱️ [PERF] WhatsApp message sent - ${Date.now() - startTime}ms elapsed`);
+
     
     // Mettre à jour la session
     const updatedData = {
@@ -2630,15 +2548,12 @@ export class UniversalBot implements IMessageHandler {
       awaitingCartActions: true
     };
     
-    console.log(`⏱️ [PERF] Starting session update - ${Date.now() - startTime}ms elapsed`);
     await this.sessionManager.updateSession(session.id, {
       botState: 'AWAITING_CART_ACTIONS',
       sessionData: updatedData
     });
-    console.log(`⏱️ [PERF] Session updated - ${Date.now() - startTime}ms elapsed`);
     
     console.log(`✅ [QuantityInput] Produit ajouté au panier, état -> CART_OPTIONS`);
-    console.log(`⏱️ [PERF] handleQuantityInput COMPLETE - ${Date.now() - startTime}ms TOTAL`);
   }
   
   /**

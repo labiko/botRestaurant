@@ -18,11 +18,9 @@ export class ModularConfigModalComponent implements OnInit {
   isLoading = false;
   
   // Système d'onglets
-  activeTab: 'sizes' | 'drinks' | 'meats' | 'sauces' | 'options' = 'sizes';
-  
-  // Boissons dynamiques basées sur le produit
-  availableDrinks: string[] = [];
-  drinkSizes: string[] = [];
+  activeTab: 'sizes' | 'options' = 'sizes';
+
+  // Section boissons supprimée - Gérée automatiquement via catégories
 
   constructor(
     private modalController: ModalController,
@@ -33,7 +31,7 @@ export class ModularConfigModalComponent implements OnInit {
 
   ngOnInit() {
     this.initializeForm();
-    this.extractDrinkInformation();
+    // extractDrinkInformation supprimée - Boissons gérées via catégories
   }
 
   private initializeForm() {
@@ -139,47 +137,14 @@ export class ModularConfigModalComponent implements OnInit {
 
   // Navigation onglets
   setActiveTab(tab: string | number | undefined) {
-    if (tab && typeof tab === 'string' && (tab === 'sizes' || tab === 'drinks' || tab === 'meats' || tab === 'sauces' || tab === 'options')) {
-      this.activeTab = tab as 'sizes' | 'drinks' | 'meats' | 'sauces' | 'options';
+    if (tab && typeof tab === 'string' && (tab === 'sizes' || tab === 'options')) {
+      this.activeTab = tab as 'sizes' | 'options';
     }
   }
 
-  // Extraire les informations de boissons depuis les tailles existantes
-  private extractDrinkInformation() {
-    if (!this.details?.sizes) return;
+  // Méthode extractDrinkInformation supprimée - Boissons gérées via catégories
 
-    // Collecter les tailles de boissons depuis les includes_drink des tailles
-    const drinkSizesSet = new Set<string>();
-    
-    this.details.sizes.forEach((size: any) => {
-      if (size.includes_drink) {
-        // Pour TACOS, typiquement c'est 33CL, pour les gros menus peut être 1L5
-        // On peut inférer depuis le nom de la taille ou avoir une logique
-        if (size.size_name?.includes('M') || size.size_name?.includes('MENU M')) {
-          drinkSizesSet.add('33CL');
-        } else if (size.size_name?.includes('L') || size.size_name?.includes('XL')) {
-          drinkSizesSet.add('1L5');
-        } else {
-          drinkSizesSet.add('33CL'); // Par défaut
-        }
-      }
-    });
-
-    this.drinkSizes = Array.from(drinkSizesSet);
-    
-    // Types de boissons standards (pourrait venir de la base de données)
-    this.availableDrinks = [
-      'Coca Cola',
-      'Fanta',
-      'Sprite', 
-      'Eau',
-      'Oasis',
-      'Ice Tea'
-    ];
-
-    console.log('🥤 [DrinkExtraction] Tailles détectées:', this.drinkSizes);
-    console.log('🥤 [DrinkExtraction] Boissons disponibles:', this.availableDrinks);
-  }
+  // Méthodes de redirection supprimées - Plus de gestion centralisée depuis modal
 
   async saveConfiguration() {
     this.isLoading = true;

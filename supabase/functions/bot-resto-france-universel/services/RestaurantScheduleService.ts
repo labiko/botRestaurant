@@ -166,14 +166,7 @@ export class RestaurantScheduleService {
     const now = new Date();
     const dayIndex = now.getDay(); // 0 = dimanche, 1 = lundi, etc.
     
-    // LOGS DÉTAILLÉS FUSEAU HORAIRE
-    console.log(`🕒 [TIMEZONE_DEBUG] Date système brute: ${now.toString()}`);
-    console.log(`🕒 [TIMEZONE_DEBUG] Date ISO: ${now.toISOString()}`);
-    console.log(`🕒 [TIMEZONE_DEBUG] Timezone offset: ${now.getTimezoneOffset()} minutes`);
-    console.log(`🕒 [TIMEZONE_DEBUG] Day index: ${dayIndex} (0=dimanche, 1=lundi, ...)`);
-    
     const dayName = this.DAYS[dayIndex];
-    console.log(`🕒 [TIMEZONE_DEBUG] Jour détecté: ${dayName}`);
     
     return dayName;
   }
@@ -190,11 +183,6 @@ export class RestaurantScheduleService {
       hour12: false
     });
     
-    // LOGS DÉTAILLÉS FUSEAU HORAIRE
-    console.log(`🕒 [TIMEZONE_DEBUG] Heure système brute: ${now.toTimeString()}`);
-    console.log(`🕒 [TIMEZONE_DEBUG] Heure formatée: ${timeString}`);
-    console.log(`🕒 [TIMEZONE_DEBUG] Heure locale: ${now.toLocaleString('fr-FR', { timeZone: timezone })}`);
-    console.log(`🕒 [TIMEZONE_DEBUG] Date locale restaurant: ${now.toLocaleDateString('fr-FR', { timeZone: timezone, weekday: 'long' })}`);
     
     return timeString;
   }
@@ -211,34 +199,20 @@ export class RestaurantScheduleService {
     const openMinutes = openH * 60 + openM;
     let closeMinutes = closeH * 60 + closeM;
     
-    // LOGS DÉTAILLÉS CALCULS HORAIRES
-    console.log(`🕒 [HOURS_DEBUG] === CALCUL HORAIRES ===`);
-    console.log(`🕒 [HOURS_DEBUG] Heure actuelle: ${currentTime} (${currentH}h${currentM}) = ${currentMinutes} minutes`);
-    console.log(`🕒 [HOURS_DEBUG] Ouverture: ${opening} (${openH}h${openM}) = ${openMinutes} minutes`);
-    console.log(`🕒 [HOURS_DEBUG] Fermeture: ${closing} (${closeH}h${closeM}) = ${closeMinutes} minutes`);
-    
     // Gestion fermeture le lendemain (ex: 23h-2h)
     if (closeMinutes <= openMinutes) {
-      console.log(`🕒 [HOURS_DEBUG] Fermeture le lendemain détectée`);
       closeMinutes += 24 * 60; // Ajouter 24h
-      
+
       // Si on est avant minuit, comparer normalement
       // Si on est après minuit, ajouter 24h à l'heure actuelle
-      const adjustedCurrentMinutes = currentMinutes < openMinutes ? 
+      const adjustedCurrentMinutes = currentMinutes < openMinutes ?
         currentMinutes + 24 * 60 : currentMinutes;
-      
-      console.log(`🕒 [HOURS_DEBUG] Fermeture ajustée: ${closeMinutes} minutes`);
-      console.log(`🕒 [HOURS_DEBUG] Heure actuelle ajustée: ${adjustedCurrentMinutes} minutes`);
-      
+
       const result = adjustedCurrentMinutes >= openMinutes && adjustedCurrentMinutes <= closeMinutes;
-      console.log(`🕒 [HOURS_DEBUG] Condition: ${adjustedCurrentMinutes} >= ${openMinutes} && ${adjustedCurrentMinutes} <= ${closeMinutes} = ${result}`);
-      
       return result;
     }
-    
+
     const result = currentMinutes >= openMinutes && currentMinutes <= closeMinutes;
-    console.log(`🕒 [HOURS_DEBUG] Condition simple: ${currentMinutes} >= ${openMinutes} && ${currentMinutes} <= ${closeMinutes} = ${result}`);
-    console.log(`🕒 [HOURS_DEBUG] === RÉSULTAT: ${result ? 'OUVERT' : 'FERMÉ'} ===`);
     
     return result;
   }

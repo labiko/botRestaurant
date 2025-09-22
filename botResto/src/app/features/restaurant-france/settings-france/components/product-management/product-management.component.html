@@ -204,11 +204,11 @@
                   <ion-icon name="eye" slot="start"></ion-icon>
                   Détails
                 </ion-button>
-                <ion-button 
-                  fill="outline" 
-                  size="small" 
+                <ion-button
+                  fill="outline"
+                  size="small"
                   color="tertiary"
-                  [disabled]="true"
+                  [disabled]="!product.requires_steps"
                   (click)="onConfigureWorkflow(product)">
                   <ion-icon name="settings" slot="start"></ion-icon>
                   Workflow

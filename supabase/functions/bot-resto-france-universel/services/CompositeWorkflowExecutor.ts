@@ -70,28 +70,43 @@ export class CompositeWorkflowExecutor {
     product: any,
     session: any
   ): Promise<void> {
+    console.log(`🔍 DEBUG_MENU: Démarrage startMenuPizzaWorkflow pour: ${product.name}`);
+    console.log(`🔍 DEBUG_MENU: Produit reçu:`, product);
+    console.log(`🔍 DEBUG_MENU: Session reçue:`, { sessionId: session.id, currentState: session.currentState });
     
     try {
+        console.log(`🔍 DEBUG_MENU: Vérification steps_config...`);
+        console.log(`🔍 DEBUG_MENU: product.steps_config existe: ${!!product.steps_config}`);
         
         if (product.steps_config) {
+            console.log(`🔍 DEBUG_MENU: steps_config contenu:`, product.steps_config);
         }
         
         const menuConfig = product.steps_config?.menu_config;
+        console.log(`🔍 DEBUG_MENU: menuConfig extrait: ${!!menuConfig}`);
         
         if (!menuConfig) {
+            console.log(`🔍 DEBUG_MENU: ERREUR - menuConfig manquant`);
+            console.log(`🔍 DEBUG_MENU: steps_config disponible:`, product.steps_config);
             throw new Error('Configuration du menu manquante');
         }
 
+        console.log(`🔍 DEBUG_MENU: menuConfig trouvé:`, menuConfig);
+        console.log(`🔍 DEBUG_MENU: Appel initializeMenuWorkflow...`);
 
         // Initialiser le workflow dans la session
         await this.initializeMenuWorkflow(phoneNumber, session, product, menuConfig);
         
+        console.log(`🔍 DEBUG_MENU: initializeMenuWorkflow terminé, appel processNextMenuComponent...`);
         
         // Démarrer avec le premier composant
         await this.processNextMenuComponent(phoneNumber, session, 0);
         
+        console.log(`🔍 DEBUG_MENU: processNextMenuComponent terminé avec succès`);
         
     } catch (error) {
+        console.error('🔍 DEBUG_MENU: ERREUR CAPTURÉE:', error);
+        console.error('🔍 DEBUG_MENU: Stack trace:', error.stack);
         await this.messageSender.sendMessage(phoneNumber, 
             '❌ Erreur lors de la configuration du menu. Tapez "resto" pour recommencer.');
     }
@@ -107,7 +122,9 @@ export class CompositeWorkflowExecutor {
     session: any
   ): Promise<void> {
     console.log(`🔄 [CompositeWorkflow] Démarrage workflow pour: ${product.name}`);
-    
+
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer l'entrée dans CompositeWorkflowExecutor
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - CompositeWorkflowExecutor.startCompositeWorkflow:', {
       productId: product.id,
       productName: product.name,
       currentCategoryName: session.sessionData?.currentCategoryName,
@@ -115,39 +132,61 @@ export class CompositeWorkflowExecutor {
       hasStepsConfig: !!product.steps_config,
       phoneNumber
     });
-    
+
+    // 🔥 DEBUG WORKFLOW UNIVERSAL V2 - Détection et diagnostic
+    console.log('🔥 [DEBUG_WORKFLOW_V2] Analyse produit:', {
+      productName: product.name,
+      workflowType: product.workflow_type,
+      hasStepsConfig: !!product.steps_config,
+      stepsConfigType: typeof product.steps_config
+    });
+
+    // 🔥 Vérifier si c'est un produit Universal Workflow V2
+    if (product.workflow_type === 'universal_workflow_v2') {
+      console.log(`🔥 [DEBUG_WORKFLOW_V2] DÉTECTÉ: Produit ${product.name} utilise universal_workflow_v2`);
+      console.log(`🔥 [DEBUG_WORKFLOW_V2] Appel handleStepsConfigWorkflow...`);
+      await this.handleStepsConfigWorkflow(phoneNumber, session, product);
+      return;
+    }
+
     try {
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);
-      
+
       // APPROCHE UNIVERSELLE : Vérifier si le produit a des variantes de taille configurées
       const hasSizeVariants = await this.checkForSizeVariants(supabase, product.id);
-      
+
       if (hasSizeVariants) {
         await this.showSizeVariantSelection(phoneNumber, session, product, supabase);
         return;
       }
-      
+
       // 1. Charger les options depuis france_product_options
       const { data: productOptions, error } = await supabase
         .from('france_product_options')
         .select('*')
         .eq('product_id', product.id)
+        .eq('is_active', true)
         .order('group_order', { ascending: true })
         .order('display_order', { ascending: true });
-      
+
       if (error || !productOptions || productOptions.length === 0) {
         // PRIORITÉ 3: Vérifier steps_config si pas d'options dans france_product_options
-        
+        console.log(`🔍 [DEBUG-STEPS-CHICKEN-BOX] Produit: ${product.name}`);
+        console.log(`🔍 [DEBUG-STEPS-CHICKEN-BOX] steps_config brut:`, product.steps_config);
+        console.log(`🔍 [DEBUG-STEPS-CHICKEN-BOX] Type steps_config:`, typeof product.steps_config);
+
         // Convertir steps_config en objet si c'est un string JSON
         let stepsConfig = product.steps_config;
         if (typeof stepsConfig === 'string') {
           try {
             stepsConfig = JSON.parse(stepsConfig);
+            console.log(`🔄 [DEBUG-STEPS-CHICKEN-BOX] steps_config parsé:`, stepsConfig);
           } catch (parseError) {
+            console.error(`❌ [DEBUG-STEPS-CHICKEN-BOX] Erreur parsing JSON:`, parseError);
           }
         }
-        
+
         if (stepsConfig && stepsConfig.steps && stepsConfig.steps.length > 0) {
           console.log(`✅ [CompositeWorkflow] Utilisation steps_config pour ${product.name}`);
           // Utiliser l'objet parsé
@@ -155,24 +194,25 @@ export class CompositeWorkflowExecutor {
           await this.handleStepsConfigWorkflow(phoneNumber, session, productWithParsedConfig);
           return;
         } else {
+          console.log(`❌ [DEBUG-STEPS-CHICKEN-BOX] steps_config invalide:`, {
             hasStepsConfig: !!stepsConfig,
             hasSteps: !!(stepsConfig && stepsConfig.steps),
             stepsLength: stepsConfig && stepsConfig.steps ? stepsConfig.steps.length : 0
           });
         }
-        
+
         console.error('❌ [CompositeWorkflow] Pas d\'options trouvées:', error);
-        await this.messageSender.sendMessage(phoneNumber, 
+        await this.messageSender.sendMessage(phoneNumber,
           `❌ Configuration non disponible pour ${product.name}.\nVeuillez choisir un autre produit.`);
         return;
       }
-      
+
       console.log(`✅ [CompositeWorkflow] ${productOptions.length} options trouvées`);
-      
+
       // 2. Grouper les options par group_order
       const optionGroups = this.groupOptionsByStep(productOptions);
       console.log(`📦 [CompositeWorkflow] ${optionGroups.length} groupes d'options`);
-      
+
       // 3. Initialiser le workflow dans la session
       const workflowData = {
         productId: product.id,
@@ -184,13 +224,13 @@ export class CompositeWorkflowExecutor {
         selections: {},
         completed: false
       };
-      
+
       // 4. Démarrer avec la première étape
       await this.showWorkflowStep(phoneNumber, session, workflowData, 0);
-      
+
     } catch (error) {
       console.error('❌ [CompositeWorkflow] Erreur:', error);
-      await this.messageSender.sendMessage(phoneNumber, 
+      await this.messageSender.sendMessage(phoneNumber,
         '❌ Erreur lors de la configuration. Veuillez réessayer.');
     }
   }
@@ -226,6 +266,7 @@ export class CompositeWorkflowExecutor {
       .from('france_product_options')
       .select('option_group')
       .eq('product_id', productId)
+      .eq('is_active', true)
       .ilike('option_group', '%size%')
       .or('option_group.ilike.%taille%,option_group.ilike.%menu%');
     
@@ -303,6 +344,8 @@ export class CompositeWorkflowExecutor {
         sizeList.sort((a, b) => a.price_on_site - b.price_on_site);
         
         // Sélectionner la bonne variante selon le mode
+        console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Mode: ${deliveryMode}`);
+        console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Tailles disponibles:`, sizeList.map(s => ({
           name: s.size_name,
           price_on_site: s.price_on_site,
           price_delivery: s.price_delivery
@@ -312,6 +355,7 @@ export class CompositeWorkflowExecutor {
         if (deliveryMode === 'livraison') {
           // Prendre la variante avec prix livraison (généralement la plus chère)
           selectedSize = sizeList.find(s => s.price_delivery > s.price_on_site) || sizeList[sizeList.length - 1];
+          console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Sélection livraison:`, {
             found: !!sizeList.find(s => s.price_delivery > s.price_on_site),
             selectedSize: selectedSize ? {
               name: selectedSize.size_name,
@@ -322,6 +366,7 @@ export class CompositeWorkflowExecutor {
         } else {
           // Prendre la variante avec prix sur place (généralement la moins chère)
           selectedSize = sizeList[0];
+          console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Sélection sur place:`, {
             name: selectedSize.size_name,
             price_on_site: selectedSize.price_on_site,
             price_delivery: selectedSize.price_delivery
@@ -396,6 +441,7 @@ export class CompositeWorkflowExecutor {
         (variant.price_delivery || variant.price_on_site) :
         (variant.price_on_site || variant.base_price);
 
+      console.log(`🔍 [DEBUG_PRICE] Calcul prix final - ${variant.variant_name}:`, {
         deliveryMode,
         price_delivery: variant.price_delivery,
         price_on_site: variant.price_on_site,
@@ -435,6 +481,7 @@ export class CompositeWorkflowExecutor {
     await this.messageSender.sendMessage(phoneNumber, message);
     
     // Mettre à jour la session avec les variantes configurées
+    console.log('🚨 [SPREAD_DEBUG_007] CompositeWorkflowExecutor ligne 381');
     const updatedData = {
       ...session.sessionData,
       variantSelection: true,
@@ -469,6 +516,7 @@ export class CompositeWorkflowExecutor {
         .from('france_product_options')
         .select('*')
         .eq('product_id', product.id)
+        .eq('is_active', true)
         .order('group_order', { ascending: true })
         .order('display_order', { ascending: true })
     );
@@ -507,6 +555,7 @@ export class CompositeWorkflowExecutor {
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);
 
       // Reset session state vers AWAITING_MENU_CHOICE
+      console.log('🚨 [SPREAD_DEBUG_008] CompositeWorkflowExecutor ligne 451');
       const updatedData = {
         ...session.sessionData,
         selectedProduct: null,
@@ -539,6 +588,7 @@ export class CompositeWorkflowExecutor {
       }
       
       // Chargement dynamique des catégories depuis la BDD
+      console.log(`🔍 [CATBUG_DEBUG] Restaurant ID utilisé: ${restaurant.data.id}`);
       
       const { data: categories, error: catError } = await supabase
         .from('france_menu_categories')
@@ -547,7 +597,10 @@ export class CompositeWorkflowExecutor {
         .eq('is_active', true)
         .order('display_order');
 
+      console.log(`🔍 [CATBUG_DEBUG] Catégories récupérées depuis BDD: ${categories ? categories.length : 'null'}`);
       if (categories) {
+        console.log(`🔍 [CATBUG_DEBUG] Premières catégories: ${categories.slice(0, 5).map(c => c.name).join(', ')}`);
+        console.log(`🔍 [CATBUG_DEBUG] Dernières catégories: ${categories.slice(-3).map(c => c.name).join(', ')}`);
       }
 
       if (catError || !categories || categories.length === 0) {
@@ -574,6 +627,7 @@ export class CompositeWorkflowExecutor {
       await this.messageSender.sendMessage(phoneNumber, menuText);
       
       // Mettre à jour la session vers VIEWING_MENU (comme dans showMenuAfterDeliveryModeChoice)
+      console.log('🚨 [SPREAD_DEBUG_009] CompositeWorkflowExecutor ligne 525');
       const updatedSessionData = {
         ...session.sessionData,
         categories: categories,
@@ -586,7 +640,12 @@ export class CompositeWorkflowExecutor {
         compositeWorkflow: null
       };
       
+      console.log(`🔍 [CATBUG_DEBUG] AVANT sauvegarde session - categories.length: ${categories.length}`);
+      console.log(`🔍 [CATBUG_DEBUG] updatedSessionData.categories.length: ${updatedSessionData.categories.length}`);
+      console.log(`🔍 [CATBUG_DEBUG] Dernières categories dans updatedSessionData: ${updatedSessionData.categories.slice(-3).map(c => c.name).join(', ')}`);
       
+      console.log(`🔄 [STATE_DEBUG] AVANT mise à jour état - Ancien état: ${session.botState}`);
+      console.log(`🔄 [STATE_DEBUG] Transition vers: VIEWING_MENU`);
       
       const { error: updateError } = await supabase
         .from('france_user_sessions')
@@ -597,7 +656,11 @@ export class CompositeWorkflowExecutor {
         .eq('id', session.id);
         
       if (updateError) {
+        console.error(`❌ [CATBUG_DEBUG] Erreur sauvegarde session:`, updateError);
+        console.error(`❌ [STATE_DEBUG] Échec transition état vers VIEWING_MENU`);
       } else {
+        console.log(`✅ [CATBUG_DEBUG] Session sauvegardée avec ${categories.length} catégories`);
+        console.log(`✅ [STATE_DEBUG] État transitionné vers VIEWING_MENU`);
       }
       
       // Vérifier ce qui a été vraiment sauvegardé
@@ -611,10 +674,14 @@ export class CompositeWorkflowExecutor {
         const savedCategories = verifySession.session_data?.categories || [];
         const savedState = verifySession.bot_state;
         
+        console.log(`🔍 [CATBUG_DEBUG] APRÈS sauvegarde - categories sauvegardées: ${savedCategories.length}`);
+        console.log(`🔍 [STATE_DEBUG] APRÈS sauvegarde - état sauvegardé: ${savedState}`);
         
         if (savedCategories.length !== categories.length) {
+          console.error(`❌ [CATBUG_DEBUG] PROBLÈME ! ${categories.length} catégories envoyées mais ${savedCategories.length} sauvegardées`);
         }
         if (savedState !== 'VIEWING_MENU') {
+          console.error(`❌ [STATE_DEBUG] PROBLÈME ! État attendu: VIEWING_MENU, État sauvegardé: ${savedState}`);
         }
       }
       
@@ -690,6 +757,7 @@ export class CompositeWorkflowExecutor {
       .from('france_product_options')
       .select('*')
       .eq('product_id', session.sessionData.selectedProduct.id)
+      .eq('is_active', true)
       .order('group_order', { ascending: true })
       .order('display_order', { ascending: true });
     
@@ -755,8 +823,9 @@ export class CompositeWorkflowExecutor {
     // Lister les options avec numérotation simple compatible mobile
     optionGroup.options.forEach((option: any, index: number) => {
       message += `${index + 1}. ${option.option_name}`;
-      if (option.price_modifier && option.price_modifier > 0) {
-        message += ` (+${option.price_modifier}€)`;
+      if (option.price_modifier && option.price_modifier !== 0) {
+        const sign = option.price_modifier > 0 ? '+' : '';
+        message += ` (${sign}${option.price_modifier}€)`;
       }
       message += '\n';
     });
@@ -811,7 +880,10 @@ export class CompositeWorkflowExecutor {
     // Récapitulatif avec format standard universel
     const productName = workflowData.productName.split(' ')[0]; // Ex: "TACOS" depuis "TACOS MENU M"
     let recap = `✅ *${productName} configuré avec succès !*\n\n`;
-    recap += `🍽 *${workflowData.productName} (${workflowData.productPrice} EUR)*\n`;
+
+    // Calculer le prix total avec price_modifier pour Workflow Universal V2
+    const calculatedPrice = this.calculateUniversalWorkflowPrice(workflowData);
+    recap += `🍽 *${workflowData.productName} (${calculatedPrice.toFixed(2)} EUR)*\n`;
     
     for (const [groupName, selections] of Object.entries(workflowData.selections)) {
       const items = (selections as any[]).map(s => s.option_name).join(', ');
@@ -835,7 +907,7 @@ export class CompositeWorkflowExecutor {
       selectedProduct: {
         id: workflowData.productId,
         name: workflowData.productName,
-        price: workflowData.productPrice,
+        price: this.calculateUniversalWorkflowPrice(workflowData),
         configuration: workflowData.selections
       },
       universalWorkflow: null,
@@ -944,12 +1016,17 @@ export class CompositeWorkflowExecutor {
     workflowData: any,
     stepIndex: number
   ): Promise<void> {
+    console.log(`🚨 [DEBUG-showWorkflowStep] ENTRÉE - stepIndex: ${stepIndex}`);
+    console.log(`🚨 [DEBUG-showWorkflowStep] optionGroups.length: ${workflowData.optionGroups.length}`);
+    console.log(`🔍 [DEBUG-showWorkflowStep] optionGroups:`, workflowData.optionGroups.map(g => g.groupName));
     
     const optionGroup = workflowData.optionGroups[stepIndex];
     
+    console.log(`🚨 [DEBUG-showWorkflowStep] optionGroup:`, optionGroup ? `${optionGroup.groupName}` : 'undefined');
     
     if (!optionGroup) {
       // Workflow terminé - demander la quantité
+      console.log(`🚨 [DEBUG-showWorkflowStep] PAS D'OPTION GROUP - Appel completeWorkflow`);
       await this.completeWorkflow(phoneNumber, session, workflowData);
       return;
     }
@@ -1120,6 +1197,7 @@ export class CompositeWorkflowExecutor {
     // VÉRIFICATION CRITIQUE : Si nextStep dépasse le nombre d'étapes
     if (nextStep >= workflowData.optionGroups.length) {
     } else {
+      console.log(`🚨 [DEBUG-determineNextStep] Prochaine étape: ${workflowData.optionGroups[nextStep]?.groupName}`);
     }
     
     return nextStep;
@@ -1179,6 +1257,8 @@ export class CompositeWorkflowExecutor {
     const rawCart = session.sessionData?.cart || [];
     const cart = Array.isArray(rawCart) ? rawCart : [];
     
+    // 🔍 CATEGORY_WORKFLOW_DEBUG - Analyser pourquoi currentCategoryName est absent
+    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - CompositeWorkflowExecutor.completeWorkflow:', {
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       currentCategoryName: session.sessionData?.currentCategoryName,
@@ -1433,8 +1513,44 @@ export class CompositeWorkflowExecutor {
       'taille': 'Taille',
       'size': 'Taille'
     };
-    
+
     return displayNames[groupName.toLowerCase()] || groupName;
+  }
+
+  /**
+   * Calculer le prix total pour Workflow Universal V2 avec price_modifier
+   */
+  private calculateUniversalWorkflowPrice(workflowData: any): number {
+    let totalPrice = workflowData.productPrice; // Prix de base
+    let totalModifiers = 0;
+
+    console.log(`🔍 [DEBUG_PRIX] Workflow - Produit: ${workflowData.productName}`);
+    console.log(`🔍 [DEBUG_PRIX] Prix de base: ${workflowData.productPrice}€`);
+
+    // Additionner tous les price_modifier des options sélectionnées
+    for (const [groupName, selections] of Object.entries(workflowData.selections)) {
+      console.log(`🔍 [DEBUG_PRIX] Groupe: ${groupName}`);
+
+      (selections as any[]).forEach((option, index) => {
+        const modifier = option.price_modifier ? parseFloat(option.price_modifier) : 0;
+
+        console.log(`🔍 [DEBUG_PRIX] Option ${index + 1}: ${option.option_name}`);
+        console.log(`🔍 [DEBUG_PRIX] price_modifier: ${option.price_modifier || 0}€`);
+
+        if (option.price_modifier) {
+          totalPrice += modifier;
+          totalModifiers += modifier;
+          console.log(`🔍 [DEBUG_PRIX] ✅ AJOUTÉ: +${modifier}€`);
+        } else {
+          console.log(`🔍 [DEBUG_PRIX] ⚪ GRATUIT: +0€`);
+        }
+      });
+    }
+
+    console.log(`🔍 [DEBUG_PRIX] Total suppléments: +${totalModifiers}€`);
+    console.log(`🔍 [DEBUG_PRIX] Prix final: ${totalPrice}€ (${workflowData.productPrice}€ + ${totalModifiers}€)`);
+
+    return totalPrice;
   }
 
   /**
@@ -1445,45 +1561,138 @@ export class CompositeWorkflowExecutor {
     session: any,
     product: any
   ): Promise<void> {
+    console.log('🔥 [DEBUG_WORKFLOW_V2] ENTRÉE handleStepsConfigWorkflow:', {
+      productName: product.name,
+      workflowType: product.workflow_type,
+      hasStepsConfig: !!product.steps_config,
+      stepsConfigType: typeof product.steps_config
+    });
+
     try {
-      const steps = product.steps_config.steps;
+      // 🔥 Vérifier la structure de steps_config
+      if (!product.steps_config) {
+        console.error('🔥 [DEBUG_WORKFLOW_V2] ERREUR: steps_config est undefined/null');
+        throw new Error('Configuration steps_config manquante');
+      }
+
+      console.log('🔥 [DEBUG_WORKFLOW_V2] steps_config brut:', product.steps_config);
+
+      // 🔥 Parser steps_config si c'est une string JSON
+      let stepsConfig = product.steps_config;
+      if (typeof stepsConfig === 'string') {
+        try {
+          stepsConfig = JSON.parse(stepsConfig);
+          console.log('🔥 [DEBUG_WORKFLOW_V2] steps_config parsé:', stepsConfig);
+        } catch (parseError) {
+          console.error('🔥 [DEBUG_WORKFLOW_V2] ERREUR parsing JSON:', parseError);
+          throw new Error('Configuration JSON invalide');
+        }
+      }
+
+      // 🔥 Vérifier la structure steps
+      if (!stepsConfig.steps || !Array.isArray(stepsConfig.steps)) {
+        console.error('🔥 [DEBUG_WORKFLOW_V2] ERREUR: steps manquant ou invalide:', {
+          hasSteps: !!stepsConfig.steps,
+          stepsType: typeof stepsConfig.steps,
+          isArray: Array.isArray(stepsConfig.steps)
+        });
+        throw new Error('Configuration steps invalide');
+      }
+
+      const steps = stepsConfig.steps;
+      console.log('🔥 [DEBUG_WORKFLOW_V2] Steps extraits:', {
+        nbSteps: steps.length,
+        steps: steps.map(s => ({ type: s.type, prompt: s.prompt, option_groups: s.option_groups }))
+      });
       
-      // Transformer steps_config en optionGroups compatible avec le système existant
+      // 🔥 Transformer steps_config en optionGroups compatible avec le système existant
+      console.log('🔥 [DEBUG_WORKFLOW_V2] Début transformation steps -> optionGroups');
+
       const optionGroups = await Promise.all(steps.map(async (step: any, stepIndex: number) => {
-        // Extraire le nom du groupe depuis le titre (ex: "Choisissez votre viande" -> "viande")
-        let groupName = `step_${stepIndex + 1}`;
-        if (step.title.toLowerCase().includes('viande')) {
-          groupName = 'viande';
-        } else if (step.title.toLowerCase().includes('boisson')) {
-          groupName = 'boisson';
-        }
-        
-        // Système hybride : DB si option_group défini, sinon steps_config.options
-        let options;
-        if (step.option_group) {
-          // Requête dynamique depuis france_product_options
-          options = await this.getOptionsByGroup(product.id, step.option_group, step.filter_variant);
-        } else {
-          // Fallback : utiliser step.options sans numérotation (déjà incluse)
-          options = step.options.map((optionName: string, optIndex: number) => ({
-            id: optIndex + 1,
-            name: optionName,
-            option_name: optionName,
-            price_modifier: step.price_modifier || 0,
-            is_available: true
+        console.log(`🔥 [DEBUG_WORKFLOW_V2] Processing step ${stepIndex + 1}:`, {
+          step: step.step,
+          type: step.type,
+          prompt: step.prompt,
+          option_groups: step.option_groups,
+          required: step.required,
+          max_selections: step.max_selections
+        });
+
+        // 🔥 Pour Workflow Universal V2, utiliser prompt au lieu de title
+        const stepTitle = step.prompt || step.title || `Étape ${stepIndex + 1}`;
+
+        // Extraire le nom du groupe depuis les option_groups (format Workflow V2)
+        let groupName = step.option_groups && step.option_groups.length > 0
+          ? step.option_groups[0]
+          : `step_${stepIndex + 1}`;
+
+        console.log(`🔥 [DEBUG_WORKFLOW_V2] Step ${stepIndex + 1} - groupName: ${groupName}, title: ${stepTitle}`);
+
+        // 🔥 Pour Workflow Universal V2, charger les options depuis la base via option_groups
+        let options = [];
+
+        if (step.option_groups && step.option_groups.length > 0) {
+          console.log(`🔥 [DEBUG_WORKFLOW_V2] Chargement options pour groupe: ${step.option_groups[0]}`);
+
+          // Charger les options depuis france_product_options
+          const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+          const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+
+          const { data: productOptions, error } = await supabase
+            .from('france_product_options')
+            .select('*')
+            .eq('product_id', product.id)
+            .eq('option_group', step.option_groups[0])
+            .eq('is_active', true)
+            .order('display_order', { ascending: true });
+
+          if (error) {
+            console.error(`🔥 [DEBUG_WORKFLOW_V2] ERREUR chargement options pour ${step.option_groups[0]}:`, error);
+            throw new Error(`Erreur chargement options: ${error.message}`);
+          }
+
+          if (!productOptions || productOptions.length === 0) {
+            console.error(`🔥 [DEBUG_WORKFLOW_V2] AUCUNE OPTION trouvée pour groupe: ${step.option_groups[0]}`);
+            throw new Error(`Aucune option trouvée pour ${step.option_groups[0]}`);
+          }
+
+          console.log(`🔥 [DEBUG_WORKFLOW_V2] ${productOptions.length} options chargées pour ${step.option_groups[0]}`);
+
+          options = productOptions.map((opt, index) => ({
+            id: opt.id,
+            name: opt.option_name,
+            option_name: opt.option_name,
+            price_modifier: opt.price_modifier || 0,
+            is_available: true,
+            display_order: opt.display_order
           }));
+        } else {
+          console.error(`🔥 [DEBUG_WORKFLOW_V2] ERREUR: Pas d'option_groups défini pour step ${stepIndex + 1}`);
+          throw new Error(`Configuration invalide: option_groups manquant pour étape ${stepIndex + 1}`);
         }
-        
-        return {
+
+        const optionGroup = {
           groupName: groupName,
-          displayName: step.title,
-          type: step.type || 'single_choice',
-          required: true,
+          displayName: stepTitle,
+          type: step.type || 'options_selection',
+          required: step.required !== false,
           minSelections: 1,
-          maxSelections: 1,
+          maxSelections: step.max_selections || 1,
           options: options
         };
+
+        console.log(`🔥 [DEBUG_WORKFLOW_V2] Option group créé:`, {
+          groupName: optionGroup.groupName,
+          displayName: optionGroup.displayName,
+          nbOptions: optionGroup.options.length,
+          required: optionGroup.required,
+          maxSelections: optionGroup.maxSelections
+        });
+
+        return optionGroup;
       }));
+
+      console.log(`🔥 [DEBUG_WORKFLOW_V2] Transformation terminée - ${optionGroups.length} groupes créés`);
       
       // Créer workflowData compatible avec le système existant
       const workflowData = {
@@ -1504,12 +1713,28 @@ export class CompositeWorkflowExecutor {
         groups: optionGroups.map(g => g.groupName)
       });
       
+      console.log(`🔥 [DEBUG_WORKFLOW_V2] workflowData créé:`, {
+        productId: workflowData.productId,
+        productName: workflowData.productName,
+        totalSteps: workflowData.totalSteps,
+        nbOptionGroups: workflowData.optionGroups.length
+      });
+
       // Utiliser showUniversalWorkflowStep pour afficher la première étape
+      console.log(`🔥 [DEBUG_WORKFLOW_V2] Appel showUniversalWorkflowStep...`);
       await this.showUniversalWorkflowStep(phoneNumber, session, workflowData, 0);
-      
+      console.log(`🔥 [DEBUG_WORKFLOW_V2] showUniversalWorkflowStep terminé avec succès`);
+
     } catch (error) {
-      console.error('❌ [StepsConfig] Erreur:', error);
-      await this.messageSender.sendMessage(phoneNumber, 
+      console.error('🔥 [DEBUG_WORKFLOW_V2] ERREUR dans handleStepsConfigWorkflow:', error);
+      console.error('🔥 [DEBUG_WORKFLOW_V2] Stack trace:', error.stack);
+      console.error('🔥 [DEBUG_WORKFLOW_V2] Product qui a causé l\'erreur:', {
+        name: product.name,
+        id: product.id,
+        workflow_type: product.workflow_type
+      });
+
+      await this.messageSender.sendMessage(phoneNumber,
         `❌ Erreur configuration ${product.name}.\nVeuillez réessayer.`);
     }
   }
@@ -1522,10 +1747,13 @@ export class CompositeWorkflowExecutor {
    * Initialiser le workflow menu pizza dans la session
    */
   private async initializeMenuWorkflow(phoneNumber: string, session: any, product: any, menuConfig: any): Promise<void> {
+    console.log(`🔍 DEBUG_MENU: DÉBUT initializeMenuWorkflow`);
+    console.log(`🔍 DEBUG_MENU: menuConfig reçu:`, menuConfig);
     
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(this.supabaseUrl, this.supabaseKey);
     
+    console.log(`🔍 DEBUG_MENU: Supabase client créé`);
 
     // Créer les données du workflow
     const workflowData = {
@@ -1538,6 +1766,8 @@ export class CompositeWorkflowExecutor {
       selectionMode: null
     };
     
+    console.log(`🔍 DEBUG_MENU: workflowData créé:`, workflowData);
+    console.log(`🔍 DEBUG_MENU: Tentative mise à jour session ID: ${session.id}`);
 
     // Mettre à jour la session
     const { data: updateResult, error: updateError } = await supabase
@@ -1552,9 +1782,11 @@ export class CompositeWorkflowExecutor {
       .eq('id', session.id);
 
     if (updateError) {
+      console.error(`🔍 DEBUG_MENU: ERREUR mise à jour session:`, updateError);
       throw updateError;
     }
     
+    console.log(`🔍 DEBUG_MENU: Session mise à jour avec succès:`, updateResult);
     console.log(`✅ [MenuPizza] Workflow initialisé pour ${product.name}`);
   }
 
@@ -1619,9 +1851,11 @@ export class CompositeWorkflowExecutor {
         .single();
     
     if (!pizzaCategory) {
+        console.error('🔍 DEBUG_MENU: ERREUR - Catégorie pizzas introuvable');
         throw new Error('Catégorie pizzas introuvable');
     }
     
+    console.log(`🔍 DEBUG_MENU: Catégorie pizzas trouvée - ID: ${pizzaCategory.id}`);
     
     // Récupérer les pizzas disponibles
     const { data: pizzas } = await supabase
@@ -1643,10 +1877,15 @@ export class CompositeWorkflowExecutor {
         .in('product_id', pizzas?.map(p => p.id) || [])
         .eq('variant_name', normalizedSize);
     
+    console.log(`🔍 DEBUG_MENU: pizzas récupérées: ${pizzas?.length || 0}`);
+    console.log(`🔍 DEBUG_MENU: variants récupérées: ${variants?.length || 0}`);
+    console.log(`🔍 DEBUG_MENU: taille recherchée: ${size} → ${normalizedSize}`);
     
     // Construire le message
     let message = `🍕 ${component.title}\n`;
     
+    console.log(`🔍 DEBUG_MENU: session.session_data existe: ${!!session.session_data}`);
+    console.log(`🔍 DEBUG_MENU: session.session_data:`, session.session_data);
     
     const menuPrice = session.session_data?.menuPizzaWorkflow?.menuConfig?.price || 'N/A';
     message += `Prix du menu: ${menuPrice}€\n\n`;

@@ -38,6 +38,17 @@
         </div>
         <div class="tab-indicator"></div>
       </div>
+
+      <div class="tab-card" [class.active]="currentTab === 'options'" (click)="switchTab('options')">
+        <div class="tab-icon">
+          <ion-icon name="options"></ion-icon>
+        </div>
+        <div class="tab-content">
+          <h3>Gestion Options</h3>
+          <p>Viandes, sauces, suppléments</p>
+        </div>
+        <div class="tab-indicator"></div>
+      </div>
       
       <div class="tab-card disabled" [class.active]="false" style="pointer-events: none; opacity: 0.5;">
         <div class="tab-icon">
@@ -84,6 +95,11 @@
       <!-- Product Management -->
       <div *ngIf="currentTab === 'products'" class="tab-content-wrapper">
         <app-product-management></app-product-management>
+      </div>
+
+      <!-- Options Centralized Management -->
+      <div *ngIf="currentTab === 'options'" class="tab-content-wrapper">
+        <app-options-management></app-options-management>
       </div>
 
       <!-- Workflow Configuration -->

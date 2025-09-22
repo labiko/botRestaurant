@@ -1,0 +1,2 @@
+psql: error: connection to server at "aws-0-eu-west-1.pooler.supabase.com" (108.128.216.176), port 6543 failed: FATAL:  Tenant or user not found
+connection to server at "aws-0-eu-west-1.pooler.supabase.com" (108.128.216.176), port 6543 failed: FATAL:  Tenant or user not found

@@ -256,7 +256,7 @@ export class FuseauHoraireService {
       // Récupérer l'utilisateur connecté pour obtenir le restaurant_id
       const currentUser = this.authFranceService.getCurrentUser();
       const restaurantId = currentUser?.restaurantId;
-      alert(restaurantId)
+
       if (!restaurantId) {
         throw new Error('Aucun restaurant_id trouvé dans la session utilisateur');
       }
