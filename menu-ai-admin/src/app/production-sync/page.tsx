@@ -133,6 +133,27 @@ export default function ProductionSyncPage() {
     }
   };
 
+  const markAsExecuted = async (duplicationId: number) => {
+    try {
+      const response = await fetch(`/api/production-sync/mark-executed/${duplicationId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert(`✅ Synchronisation marquée comme exécutée pour ${data.data.restaurant}`);
+        // Recharger les données pour mettre à jour l'affichage
+        loadProductionData();
+      } else {
+        alert('Erreur marquage synchronisation: ' + data.error);
+      }
+    } catch (error) {
+      alert('Erreur marquage synchronisation');
+      console.error('Erreur:', error);
+    }
+  };
+
   const filteredDuplications = duplications.filter(dup => {
     if (filter === 'all') return true;
     return dup.production_status === filter;
@@ -293,6 +314,13 @@ export default function ProductionSyncPage() {
                                 title="Synchroniser"
                               >
                                 🔄 Sync
+                              </button>
+                              <button
+                                onClick={() => markAsExecuted(dup.id)}
+                                className="text-orange-600 hover:text-orange-900"
+                                title="Marquer comme synchronisé en production"
+                              >
+                                ✅ Exécuté
                               </button>
                             </>
                           )}
