@@ -2,6 +2,8 @@
 
 Automatisation intelligente des modifications de menu avec IA pour le système Bot Restaurant.
 
+<!-- Test webhook déploiement automatique -->
+
 ## 🎯 Objectif
 
 Cette application permet d'automatiser les modifications de menu des restaurants en utilisant l'intelligence artificielle. L'IA analyse les commandes en langage naturel et génère automatiquement le SQL correspondant.
