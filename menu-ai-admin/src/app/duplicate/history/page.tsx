@@ -300,6 +300,17 @@ export default function DuplicationHistoryPage() {
                           >
                             👁️ Voir détail
                           </button>
+
+                          {/* Bouton Synchronisation Production - disponible pour les duplications terminées */}
+                          {dup.status === 'completed' && (
+                            <button
+                              onClick={() => router.push(`/production-sync?id=${dup.id}`)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Gestion synchronisation production"
+                            >
+                              🔄 Production
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

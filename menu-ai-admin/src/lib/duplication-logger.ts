@@ -335,27 +335,39 @@ export class DuplicationLogger {
 
       const supabase = createClient(supabaseUrl!, supabaseKey!);
 
-      const { data, error } = await supabase
+      const { data: duplications, error } = await supabase
         .from('duplication_logs')
         .select(`
           *,
           source_restaurant:source_restaurant_id(name),
-          target_restaurant:target_restaurant_id(name),
-          duplication_type:CASE
-            WHEN EXISTS (
-              SELECT 1 FROM duplication_actions
-              WHERE duplication_log_id = duplication_logs.id
-              AND action_type = 'create_restaurant'
-            ) THEN 'restaurant'
-            ELSE 'category'
-          END
+          target_restaurant:target_restaurant_id(name)
         `)
         .order('created_at', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
 
-      return data || [];
+      if (!duplications || duplications.length === 0) {
+        return [];
+      }
+
+      // Récupérer les actions pour déterminer le type
+      const duplicationIds = duplications.map(d => d.id);
+      const { data: actions } = await supabase
+        .from('duplication_actions')
+        .select('duplication_log_id, action_type')
+        .in('duplication_log_id', duplicationIds)
+        .eq('action_type', 'create_restaurant');
+
+      const restaurantCreations = new Set(actions?.map(a => a.duplication_log_id) || []);
+
+      // Enrichir avec le type de duplication
+      const enrichedData = duplications.map(dup => ({
+        ...dup,
+        duplication_type: restaurantCreations.has(dup.id) ? 'restaurant' : 'category'
+      }));
+
+      return enrichedData;
     } catch (error) {
       console.error('❌ Erreur récupération historique:', error);
       return [];

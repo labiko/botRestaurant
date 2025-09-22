@@ -62,6 +62,15 @@ export default function Sidebar() {
       description: 'Historique des duplications'
     },
     {
+      id: 'production-sync',
+      label: 'Synchronisation Production',
+      icon: '🔄',
+      path: '/production-sync',
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      description: 'Gestion déploiements production'
+    },
+    {
       id: 'workflow-universal',
       label: 'Workflow Universel V2',
       icon: '🚀',
