@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { TimezoneService } from '@/lib/timezone-service';
 
 export async function POST(
   request: NextRequest,
@@ -52,7 +53,7 @@ export async function POST(
       .from('duplication_logs')
       .update({
         production_status: 'synced',
-        last_production_sync: new Date().toISOString(),
+        last_production_sync: TimezoneService.getCurrentTimeForDB(),
         sync_count: (currentData.sync_count || 0) + 1
       })
       .eq('id', duplicationId)

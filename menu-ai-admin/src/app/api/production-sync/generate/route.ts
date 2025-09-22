@@ -322,13 +322,15 @@ ON CONFLICT (id) DO UPDATE SET
   if (productOptions.length > 0) {
     script += `-- 4. Synchronisation options produits (${productOptions.length})
 INSERT INTO france_product_options (
-  id, product_id, option_group, option_name, price_modifier, display_order
+  id, product_id, option_group, option_name, price_modifier,
+  is_required, max_selections, display_order, is_active,
+  group_order, next_group_order, conditional_next_group
 )
 VALUES
 `;
 
     const optionValues = productOptions.map(option =>
-      `  (${option.id}, ${option.product_id}, '${option.option_group?.replace(/'/g, "''") || ''}', '${option.option_name?.replace(/'/g, "''") || ''}', ${option.price_modifier || 0}, ${option.display_order || 0})`
+      `  (${option.id}, ${option.product_id}, '${option.option_group?.replace(/'/g, "''") || ''}', '${option.option_name?.replace(/'/g, "''") || ''}', ${option.price_modifier || 0}, ${option.is_required || false}, ${option.max_selections || 1}, ${option.display_order || 0}, ${option.is_active !== false}, ${option.group_order || 0}, ${option.next_group_order || 'null'}, ${option.conditional_next_group || 'null'})`
     ).join(',\n');
 
     script += optionValues;
@@ -337,7 +339,13 @@ ON CONFLICT (id) DO UPDATE SET
   option_group = EXCLUDED.option_group,
   option_name = EXCLUDED.option_name,
   price_modifier = EXCLUDED.price_modifier,
-  display_order = EXCLUDED.display_order;
+  is_required = EXCLUDED.is_required,
+  max_selections = EXCLUDED.max_selections,
+  display_order = EXCLUDED.display_order,
+  is_active = EXCLUDED.is_active,
+  group_order = EXCLUDED.group_order,
+  next_group_order = EXCLUDED.next_group_order,
+  conditional_next_group = EXCLUDED.conditional_next_group;
 
 `;
   }

@@ -43,12 +43,13 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
   restaurantId: number;
 
   // Système de tabs
-  activeTab: 'meats' | 'sauces' | 'supplements' = 'meats';
+  activeTab: 'meats' | 'sauces' | 'supplements' | 'beverages' = 'meats';
 
   // Options par groupe (format unique)
   meatOptions: UniqueOption[] = [];
   sauceOptions: UniqueOption[] = [];
   supplementOptions: UniqueOption[] = [];
+  beverageOptions: UniqueOption[] = [];
 
   // Options brutes pour référence
   private rawOptions: ProductOption[] = [];
@@ -92,6 +93,7 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
             viandes: this.meatOptions.length,
             sauces: this.sauceOptions.length,
             supplements: this.supplementOptions.length,
+            boissons: this.beverageOptions.length,
             rawOptionsCount: this.rawOptions.length
           });
         },
@@ -104,7 +106,10 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
   }
 
   private categorizeAndDeduplicateOptions(options: ProductOption[]) {
-    // Filtrer les boissons (gérées séparément)
+    // Séparer les boissons et les autres options
+    const beverageOptions = options.filter(option =>
+      option.option_group.toLowerCase().includes('boisson')
+    );
     const nonBeverageOptions = options.filter(option =>
       !option.option_group.toLowerCase().includes('boisson')
     );
@@ -131,11 +136,13 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
     this.meatOptions = this.deduplicateOptions(meatOptionsRaw);
     this.sauceOptions = this.deduplicateOptions(sauceOptionsRaw);
     this.supplementOptions = this.deduplicateOptions(supplementOptionsRaw);
+    this.beverageOptions = this.deduplicateOptions(beverageOptions);
 
     // Trier par nom
     this.meatOptions.sort((a, b) => a.name.localeCompare(b.name));
     this.sauceOptions.sort((a, b) => a.name.localeCompare(b.name));
     this.supplementOptions.sort((a, b) => a.name.localeCompare(b.name));
+    this.beverageOptions.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   private deduplicateOptions(options: ProductOption[]): UniqueOption[] {
@@ -196,8 +203,8 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
    */
   switchTab(tab: string | number | undefined) {
     if (tab && typeof tab === 'string' &&
-        (tab === 'meats' || tab === 'sauces' || tab === 'supplements')) {
-      this.activeTab = tab as 'meats' | 'sauces' | 'supplements';
+        (tab === 'meats' || tab === 'sauces' || tab === 'supplements' || tab === 'beverages')) {
+      this.activeTab = tab as 'meats' | 'sauces' | 'supplements' | 'beverages';
       console.log(`🔄 [OptionsManagement] Switch to tab: ${tab}`);
     }
   }
@@ -275,7 +282,7 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
    */
   startEditing(option: UniqueOption) {
     // Arrêter toute autre édition en cours
-    [...this.meatOptions, ...this.sauceOptions, ...this.supplementOptions]
+    [...this.meatOptions, ...this.sauceOptions, ...this.supplementOptions, ...this.beverageOptions]
       .forEach(opt => {
         opt.isEditing = false;
         delete opt.originalName; // Nettoyer les noms originaux des autres éditions
@@ -475,13 +482,19 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
     index = this.supplementOptions.indexOf(option);
     if (index > -1) {
       this.supplementOptions.splice(index, 1);
+      return;
+    }
+
+    index = this.beverageOptions.indexOf(option);
+    if (index > -1) {
+      this.beverageOptions.splice(index, 1);
     }
   }
 
   /**
    * Ajouter une nouvelle option
    */
-  addNewOption(groupType: 'meats' | 'sauces' | 'supplements') {
+  addNewOption(groupType: 'meats' | 'sauces' | 'supplements' | 'beverages') {
     // TODO: Implémenter modal d'ajout avec dropdown groupe
     console.log('🔄 [OptionsManagement] Ajouter nouvelle option:', groupType);
     this.showSuccessToast('Fonctionnalité d\'ajout en cours de développement');
