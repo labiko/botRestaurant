@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProductionSyncModal from '@/components/ProductionSyncModal';
 
@@ -16,7 +16,7 @@ interface ProductionDuplication {
   is_active: boolean;
 }
 
-export default function ProductionSyncPage() {
+function ProductionSyncPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [duplications, setDuplications] = useState<ProductionDuplication[]>([]);
@@ -527,5 +527,17 @@ export default function ProductionSyncPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ProductionSyncPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-gray-600">Chargement de la synchronisation production...</div>
+      </div>
+    }>
+      <ProductionSyncPageContent />
+    </Suspense>
   );
 }

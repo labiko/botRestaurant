@@ -1,9 +1,9 @@
 'use client';
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 
-export default function Sidebar() {
+function SidebarContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -184,5 +184,19 @@ export default function Sidebar() {
         </div>
       )}
     </aside>
+  );
+}
+
+export default function Sidebar() {
+  return (
+    <Suspense fallback={
+      <aside className="bg-white border-r border-gray-200 w-64 flex-shrink-0">
+        <div className="flex items-center justify-center h-16 border-b border-gray-200">
+          <div className="text-sm text-gray-500">Chargement...</div>
+        </div>
+      </aside>
+    }>
+      <SidebarContent />
+    </Suspense>
   );
 }

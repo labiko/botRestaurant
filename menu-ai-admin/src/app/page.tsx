@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CategoryEditModal from '@/components/CategoryEditModal';
 import ProdConfirmModal from '@/components/ProdConfirmModal';
@@ -28,7 +28,7 @@ interface AIResponse {
   environment?: string;
 }
 
-export default function MenuAIAdmin() {
+function MenuAIAdminContent() {
   const searchParams = useSearchParams();
   const [command, setCommand] = useState('');
   const [loading, setLoading] = useState(false);
@@ -1994,5 +1994,17 @@ OU coller directement le JSON ChatGPT..."
       )}
 
     </div>
+  );
+}
+
+export default function MenuAIAdmin() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-gray-600">Chargement...</div>
+      </div>
+    }>
+      <MenuAIAdminContent />
+    </Suspense>
   );
 }
