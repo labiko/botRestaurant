@@ -13,6 +13,7 @@ interface ProductionDuplication {
   last_production_sync: string | null;
   sync_count: number;
   target_restaurant_id: number;
+  is_active: boolean;
 }
 
 export default function ProductionSyncPage() {
@@ -28,6 +29,24 @@ export default function ProductionSyncPage() {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [generatedScript, setGeneratedScript] = useState('');
   const [showScriptModal, setShowScriptModal] = useState(false);
+
+  // États pour les notifications
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error' | 'info' | 'warning';
+    message: string;
+    details?: string;
+  } | null>(null);
+
+  // Auto-masquage des notifications
+  useEffect(() => {
+    if (notification && notification.type !== 'info') {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000); // 5 secondes
+
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   useEffect(() => {
     loadProductionData();
@@ -125,10 +144,18 @@ export default function ProductionSyncPage() {
         setShowScriptModal(true);
         closeSyncModal();
       } else {
-        alert('Erreur génération script: ' + data.error);
+        setNotification({
+          type: 'error',
+          message: 'Erreur génération script',
+          details: data.error
+        });
       }
     } catch (error) {
-      alert('Erreur génération script');
+      setNotification({
+        type: 'error',
+        message: 'Erreur génération script',
+        details: 'Erreur de connexion'
+      });
       console.error('Erreur:', error);
     }
   };
@@ -142,14 +169,61 @@ export default function ProductionSyncPage() {
 
       const data = await response.json();
       if (data.success) {
-        alert(`✅ Synchronisation marquée comme exécutée pour ${data.data.restaurant}`);
+        setNotification({
+          type: 'success',
+          message: `Synchronisation marquée comme exécutée pour ${data.data.restaurant}`
+        });
         // Recharger les données pour mettre à jour l'affichage
         loadProductionData();
       } else {
-        alert('Erreur marquage synchronisation: ' + data.error);
+        setNotification({
+          type: 'error',
+          message: 'Erreur marquage synchronisation',
+          details: data.error
+        });
       }
     } catch (error) {
-      alert('Erreur marquage synchronisation');
+      setNotification({
+        type: 'error',
+        message: 'Erreur marquage synchronisation',
+        details: 'Erreur de connexion'
+      });
+      console.error('Erreur:', error);
+    }
+  };
+
+  const toggleExceptionalClosure = async (restaurantId: number, newState: boolean) => {
+    try {
+      const response = await fetch('/api/production/restaurant-status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurant_id: restaurantId,
+          is_active: newState
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setNotification({
+          type: 'success',
+          message: data.message
+        });
+        // Recharger les données pour mettre à jour l'affichage
+        loadProductionData();
+      } else {
+        setNotification({
+          type: 'error',
+          message: 'Erreur mise à jour statut',
+          details: data.error
+        });
+      }
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: 'Erreur mise à jour statut',
+        details: 'Erreur de connexion'
+      });
       console.error('Erreur:', error);
     }
   };
@@ -188,6 +262,39 @@ export default function ProductionSyncPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      {/* Composant de notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 max-w-md rounded-lg shadow-lg p-4 transition-all duration-300 ${
+          notification.type === 'success' ? 'bg-green-100 border border-green-400 text-green-800' :
+          notification.type === 'error' ? 'bg-red-100 border border-red-400 text-red-800' :
+          notification.type === 'warning' ? 'bg-yellow-100 border border-yellow-400 text-yellow-800' :
+          'bg-blue-100 border border-blue-400 text-blue-800'
+        }`}>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="font-medium mb-1">
+                {notification.type === 'success' && '✅ '}
+                {notification.type === 'error' && '❌ '}
+                {notification.type === 'warning' && '⚠️ '}
+                {notification.type === 'info' && 'ℹ️ '}
+                {notification.message}
+              </div>
+              {notification.details && (
+                <div className="text-sm opacity-75">
+                  {notification.details}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setNotification(null)}
+              className="ml-3 text-lg leading-none hover:opacity-75"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4">
         {/* En-tête */}
         <div className="mb-8">
@@ -298,52 +405,55 @@ export default function ProductionSyncPage() {
                         {dup.sync_count}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          {dup.production_status === 'dev_only' && (
-                            <>
-                              <button
-                                onClick={() => generateScript(dup.id, 'complete', [])}
-                                className="text-blue-600 hover:text-blue-900"
-                                title="Générer script SQL"
-                              >
-                                📜 Générer
-                              </button>
-                              <button
-                                onClick={() => openSyncModal(dup)}
-                                className="text-green-600 hover:text-green-900"
-                                title="Synchroniser"
-                              >
-                                🔄 Sync
-                              </button>
-                              <button
-                                onClick={() => markAsExecuted(dup.id)}
-                                className="text-orange-600 hover:text-orange-900"
-                                title="Marquer comme synchronisé en production"
-                              >
-                                ✅ Exécuté
-                              </button>
-                            </>
+                        <div className="flex flex-col space-y-2">
+                          {/* Toggle Fermeture Exceptionnelle */}
+                          {dup.production_status === 'synced' && dup.duplication_type === 'restaurant' && (
+                            <div className="flex items-center space-x-2">
+                              <label className="inline-flex items-center">
+                                <input
+                                  type="checkbox"
+                                  checked={dup.is_active}
+                                  onChange={(e) => toggleExceptionalClosure(dup.target_restaurant_id, e.target.checked)}
+                                  className="form-checkbox h-4 w-4 text-green-600 transition duration-150 ease-in-out"
+                                />
+                                <span className={`ml-2 text-xs font-medium ${
+                                  dup.is_active ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {dup.is_active ? '🟢 Actif' : '🔴 Inactif'}
+                                </span>
+                              </label>
+                            </div>
                           )}
 
-                          {dup.production_status === 'synced' && (
-                            <button
-                              onClick={() => alert('Fonctionnalité historique à implémenter')}
-                              className="text-purple-600 hover:text-purple-900"
-                              title="Voir historique"
-                            >
-                              📊 Historique
-                            </button>
-                          )}
+                          {/* Actions existantes */}
+                          <div className="flex space-x-2">
+                            {dup.production_status === 'dev_only' && (
+                              <>
+                                <button
+                                  onClick={() => generateScript(dup.id, 'complete', [])}
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="Générer script SQL"
+                                >
+                                  📜 Générer
+                                </button>
+                                <button
+                                  onClick={() => openSyncModal(dup)}
+                                  className="text-green-600 hover:text-green-900"
+                                  title="Synchroniser"
+                                >
+                                  🔄 Sync
+                                </button>
+                                <button
+                                  onClick={() => markAsExecuted(dup.id)}
+                                  className="text-orange-600 hover:text-orange-900"
+                                  title="Marquer comme synchronisé en production"
+                                >
+                                  ✅ Exécuté
+                                </button>
+                              </>
+                            )}
 
-                          {dup.production_status === 'outdated' && (
-                            <>
-                              <button
-                                onClick={() => generateScript(dup.id, 'update', [])}
-                                className="text-blue-600 hover:text-blue-900"
-                                title="Générer script SQL"
-                              >
-                                📜 Générer
-                              </button>
+                            {dup.production_status === 'synced' && (
                               <button
                                 onClick={() => alert('Fonctionnalité historique à implémenter')}
                                 className="text-purple-600 hover:text-purple-900"
@@ -351,8 +461,27 @@ export default function ProductionSyncPage() {
                               >
                                 📊 Historique
                               </button>
-                            </>
-                          )}
+                            )}
+
+                            {dup.production_status === 'outdated' && (
+                              <>
+                                <button
+                                  onClick={() => generateScript(dup.id, 'update', [])}
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="Générer script SQL"
+                                >
+                                  📜 Générer
+                                </button>
+                                <button
+                                  onClick={() => alert('Fonctionnalité historique à implémenter')}
+                                  className="text-purple-600 hover:text-purple-900"
+                                  title="Voir historique"
+                                >
+                                  📊 Historique
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>

@@ -54,12 +54,29 @@ export async function GET(request: NextRequest) {
 
     const restaurantCreations = new Set(actions?.map(a => a.duplication_log_id) || []);
 
+    // Récupérer le statut is_active depuis la production
+    const prodSupabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL_PROD!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD!
+    );
+
+    const restaurantIds = duplications.map(d => d.target_restaurant_id).filter(Boolean);
+    const { data: restaurantStatuses } = await prodSupabase
+      .from('france_restaurants')
+      .select('id, is_active')
+      .in('id', restaurantIds);
+
+    const statusMap = new Map(
+      restaurantStatuses?.map(r => [r.id, r.is_active]) || []
+    );
+
     // Enrichir avec les données de synchronisation et type
     const enrichedData = duplications.map(dup => ({
       ...dup,
       duplication_type: restaurantCreations.has(dup.id) ? 'restaurant' : 'category',
       production_status: dup.production_status || 'dev_only',
-      sync_count: dup.sync_count || 0
+      sync_count: dup.sync_count || 0,
+      is_active: statusMap.get(dup.target_restaurant_id) || false
     }));
 
     console.log(`✅ ${enrichedData.length} restaurants récupérés pour sync production`);
