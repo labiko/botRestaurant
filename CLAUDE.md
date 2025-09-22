@@ -41,6 +41,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **⚠️ IMPORTANT**: NE JAMAIS essayer de lancer le projet avec `ng serve`, `ionic serve`, ou tout autre commande de serveur de développement. Le projet est toujours déjà lancé du côté utilisateur. Ne pas utiliser les commandes Bash pour démarrer/arrêter/redémarrer des serveurs.
 
+## ⚠️ INTERDICTION ABSOLUE - GESTION NODE_MODULES
+
+**🚨 RÈGLE CRITIQUE** - Ces commandes détruisent l'environnement de travail :
+
+### **❌ STRICTEMENT INTERDIT :**
+- **`rm -rf node_modules`** - JAMAIS supprimer node_modules !
+- **`npm install`** après suppression de node_modules - Casse l'environnement !
+- **`npm install --legacy-peer-deps`** - Corrompt les dépendances existantes !
+- **Toute suppression de package-lock.json** - Détruit la stabilité !
+
+### **✅ POURQUOI C'EST INTERDIT :**
+- **L'environnement fonctionne** avec les node_modules existants
+- **La suppression casse** Angular 20 + Ionic 8 qui marchent parfaitement
+- **npm install** réinstalle des versions incompatibles
+- **Récupération difficile** - Nécessite backup utilisateur
+
+### **✅ CE QU'IL FAUT FAIRE À LA PLACE :**
+- **Utiliser l'environnement existant** qui fonctionne
+- **NE JAMAIS toucher aux node_modules** sauf instruction explicite utilisateur
+- **En cas de problème** : demander à l'utilisateur s'il a un backup
+- **Pour les dépendances** : vérifier d'abord avec `npm list`
+
+**🔒 RAPPEL** : Si ça fonctionne, NE PAS Y TOUCHER !
+
 ## 🌍 BOT UNIVERSEL PAR DÉFAUT
 
 **⚠️ IMPORTANT**: Sauf indication contraire explicite de l'utilisateur, TOUJOURS travailler sur le **bot WhatsApp universel** :

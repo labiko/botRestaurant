@@ -1,8 +1,8 @@
 {
-  "name": "bot-resto",
+  "name": "bot-resto-conakry",
   "version": "1.0.0",
-  "author": "Bot Resto",
-  "homepage": "https://botresto.vercel.app/",
+  "author": "Bot Resto Conakry",
+  "homepage": "https://bot-resto-conakry.vercel.app/",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -68,5 +68,5 @@
     "karma-jasmine-html-reporter": "~2.1.0",
     "typescript": "~5.8.0"
   },
-  "description": "Bot Resto - Système moderne de gestion de commandes et livraisons pour restaurants via WhatsApp Business"
+  "description": "Bot Resto Conakry - Système moderne de gestion de commandes et livraisons pour restaurants via WhatsApp Business"
 }
