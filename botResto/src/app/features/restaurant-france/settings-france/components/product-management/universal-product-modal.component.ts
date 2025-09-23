@@ -8,7 +8,6 @@ interface ModalConfig {
   showPricing: boolean;
   showComposition: boolean;
   showComponents: boolean;
-  showWorkflow: boolean;
   showSteps: boolean;
   showJsonConfig: boolean;
 }
@@ -29,7 +28,6 @@ export class UniversalProductModalComponent implements OnInit {
     showPricing: true,
     showComposition: true,
     showComponents: false,
-    showWorkflow: false,
     showSteps: false,
     showJsonConfig: false
   };
@@ -88,16 +86,14 @@ export class UniversalProductModalComponent implements OnInit {
       showPricing: true,
       showComposition: true,
       showComponents: false,
-      showWorkflow: false,
       showSteps: false,
       showJsonConfig: false
     };
 
     // Adaptation selon le type de produit
     if (this.product.product_type === 'composite') {
-      console.log('✅ [UniversalModal] Produit composite détecté - activation workflow');
+      console.log('✅ [UniversalModal] Produit composite détecté - activation composants');
       this.modalConfig.showComponents = true;
-      this.modalConfig.showWorkflow = true;
     }
 
     // Activation spéciale pour les workflows universels
@@ -193,7 +189,6 @@ export class UniversalProductModalComponent implements OnInit {
   get showInfoTab() { return this.modalConfig.showBasicInfo; }
   get showPricingTab() { return this.modalConfig.showPricing; }
   get showComponentsTab() { return this.modalConfig.showComponents; }
-  get showWorkflowTab() { return this.modalConfig.showWorkflow; }
   get showConfigTab() { return this.modalConfig.showJsonConfig; }
 
   // Méthodes pour gérer les composants

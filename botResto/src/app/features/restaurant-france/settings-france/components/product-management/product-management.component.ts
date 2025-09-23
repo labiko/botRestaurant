@@ -770,57 +770,7 @@ export class ProductManagementComponent implements OnInit, OnDestroy {
     return await modal.present();
   }
 
-  async onConfigureWorkflow(product: FranceProduct) {
-    const alert = await this.alertController.create({
-      header: 'Configuration Workflow',
-      message: `Configuration du workflow pour: ${product.name}`,
-      inputs: [
-        {
-          name: 'workflowType',
-          type: 'text',
-          placeholder: 'Type de workflow',
-          value: product.workflow_type || ''
-        },
-        {
-          name: 'requiresSteps',
-          type: 'checkbox',
-          label: 'Nécessite des étapes',
-          checked: product.requires_steps
-        }
-      ],
-      buttons: [
-        {
-          text: 'Annuler',
-          role: 'cancel'
-        },
-        {
-          text: 'Sauvegarder',
-          handler: (data) => {
-            this.productManagementService.updateProductWorkflow(
-              product.id,
-              data.workflowType,
-              data.requiresSteps || false,
-              null // TODO: Add steps config
-            )
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-              next: () => {
-                product.workflow_type = data.workflowType;
-                product.requires_steps = data.requiresSteps || false;
-                this.presentToast('Workflow mis à jour', 'success');
-              },
-              error: (error) => {
-                console.error('Error updating workflow:', error);
-                this.presentToast('Erreur lors de la mise à jour du workflow', 'danger');
-              }
-            });
-          }
-        }
-      ]
-    });
-
-    await alert.present();
-  }
+  // ❌ Méthode onConfigureWorkflow supprimée - gestion workflow intégrée dans modal produit
 
   checkProductIncludesDrink(product: FranceProduct): void {
     this.productManagementService.checkProductIncludesDrink(product.id)

@@ -195,24 +195,16 @@
                   <ion-icon name="pencil" slot="start"></ion-icon>
                   Modifier
                 </ion-button>
-                <ion-button 
-                  fill="outline" 
-                  size="small" 
+                <ion-button
+                  fill="outline"
+                  size="small"
                   color="tertiary"
                   [disabled]="true"
                   (click)="onViewProductDetails(product)">
                   <ion-icon name="eye" slot="start"></ion-icon>
                   Détails
                 </ion-button>
-                <ion-button
-                  fill="outline"
-                  size="small"
-                  color="tertiary"
-                  [disabled]="!product.requires_steps"
-                  (click)="onConfigureWorkflow(product)">
-                  <ion-icon name="settings" slot="start"></ion-icon>
-                  Workflow
-                </ion-button>
+                <!-- Bouton Workflow supprimé car redondant -->
               </div>
             </div>
             

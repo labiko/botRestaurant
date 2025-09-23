@@ -39,12 +39,6 @@
           <ion-icon name="layers"></ion-icon>
           <ion-label>Composants</ion-label>
         </ion-segment-button>
-        <!-- Onglet Workflow masqué temporairement
-        <ion-segment-button value="workflow" *ngIf="showWorkflowTab">
-          <ion-icon name="git-branch"></ion-icon>
-          <ion-label>Workflow</ion-label>
-        </ion-segment-button>
-        -->
         <!-- Onglet Configuration masqué temporairement
         <ion-segment-button value="config" *ngIf="showConfigTab">
           <ion-icon name="settings"></ion-icon>
@@ -246,41 +240,7 @@
           </ion-card>
         </div>
 
-        <!-- Onglet Workflow (conditionnel) -->
-        <div *ngIf="selectedTab === 'workflow' && showWorkflowTab" class="tab-panel">
-          <ion-card>
-            <ion-card-header>
-              <ion-card-title>
-                <ion-icon name="git-branch" color="warning"></ion-icon>
-                Configuration Workflow
-              </ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-              
-              <ion-item>
-                <ion-label position="stacked">Type de produit</ion-label>
-                <ion-select formControlName="product_type">
-                  <ion-select-option value="simple">Simple</ion-select-option>
-                  <ion-select-option value="composite">Composite</ion-select-option>
-                  <ion-select-option value="variant">Variant</ion-select-option>
-                  <ion-select-option value="modular">Modulaire</ion-select-option>
-                </ion-select>
-              </ion-item>
-              
-              <ion-item>
-                <ion-label position="stacked">Type de workflow</ion-label>
-                <ion-input formControlName="workflow_type" placeholder="Ex: pizza, menu, boisson"></ion-input>
-              </ion-item>
-              
-              <ion-item>
-                <ion-label>Étapes requises</ion-label>
-                <ion-toggle formControlName="requires_steps"></ion-toggle>
-                <ion-note slot="end">{{ productForm.get('requires_steps')?.value ? 'Oui' : 'Non' }}</ion-note>
-              </ion-item>
-              
-            </ion-card-content>
-          </ion-card>
-        </div>
+        <!-- Onglet Workflow supprimé car inutile -->
 
         <!-- Onglet Configuration JSON (conditionnel) -->
         <div *ngIf="selectedTab === 'config' && showConfigTab" class="tab-panel">
