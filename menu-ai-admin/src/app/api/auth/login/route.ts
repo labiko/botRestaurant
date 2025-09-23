@@ -20,7 +20,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log('🔐 [LOGIN] Tentative de connexion:', email);
 
     // Client Supabase avec service role
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -71,9 +70,9 @@ export async function POST(request: NextRequest) {
 
     const token = jwt.sign(tokenPayload, JWT_SECRET);
 
-    console.log('✅ [LOGIN] Connexion réussie:', email);
 
-    return NextResponse.json({
+    // Créer la réponse avec le cookie défini côté serveur
+    const response = NextResponse.json({
       success: true,
       message: 'Connexion réussie',
       token,
@@ -84,8 +83,19 @@ export async function POST(request: NextRequest) {
       expiresAt: tokenPayload.exp
     });
 
+    // Définir le cookie côté serveur
+    response.cookies.set('auth_token', token, {
+      path: '/',
+      maxAge: 2 * 60 * 60, // 2 heures
+      sameSite: 'lax',
+      secure: false, // false en développement
+      httpOnly: false // false pour permettre la lecture côté client
+    });
+
+
+    return response;
+
   } catch (error) {
-    console.error('❌ [LOGIN] Exception:', error);
     return NextResponse.json({
       success: false,
       error: 'Erreur serveur'

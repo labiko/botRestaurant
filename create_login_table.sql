@@ -46,4 +46,3 @@ ON CONFLICT (email) DO NOTHING;
 
 -- Afficher le résultat
 SELECT 'Table login_users créée avec succès!' as message;
-SELECT 'Utilisateur admin créé: admin@menuai.com / admin123' as info;

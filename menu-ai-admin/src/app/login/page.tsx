@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 
@@ -10,8 +10,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { login } = useAuth();
+  const { login, user, isLoading } = useAuth();
   const router = useRouter();
+
+  // Redirection si déjà connecté
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.push('/');
+    }
+  }, [user, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,14 +118,6 @@ export default function LoginPage() {
           </div>
         </form>
 
-        {/* Informations de test */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-800 mb-2">💡 Compte de test</h3>
-          <div className="text-xs text-blue-700 space-y-1">
-            <p><strong>Email :</strong> admin@menuai.com</p>
-            <p><strong>Mot de passe :</strong> admin123</p>
-          </div>
-        </div>
       </div>
     </div>
   );

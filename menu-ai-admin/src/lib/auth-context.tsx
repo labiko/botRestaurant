@@ -25,14 +25,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkSession();
   }, []);
 
-  // Vérifier la session depuis localStorage
+  // Vérifier la session depuis les cookies et localStorage
   const checkSession = () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      const expiresAt = localStorage.getItem('auth_expires_at');
+      // Vérifier d'abord localStorage pour l'état utilisateur
       const userData = localStorage.getItem('auth_user');
+      const expiresAt = localStorage.getItem('auth_expires_at');
 
-      if (!token || !expiresAt || !userData) {
+      if (!userData || !expiresAt) {
         setIsLoading(false);
         return;
       }
@@ -73,9 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Stocker les données de session
-      localStorage.setItem('auth_token', data.token);
       localStorage.setItem('auth_expires_at', data.expiresAt.toString());
       localStorage.setItem('auth_user', JSON.stringify(data.user));
+
+      // Stocker le token dans un cookie pour le middleware
+      document.cookie = `auth_token=${data.token}; path=/; max-age=${2 * 60 * 60}; samesite=lax`;
+
 
       setUser(data.user);
     } catch (error) {
@@ -85,9 +88,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Fonction de déconnexion
   const logout = () => {
-    localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_expires_at');
     localStorage.removeItem('auth_user');
+
+    // Supprimer le cookie
+    document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+
     setUser(null);
   };
 

@@ -6,6 +6,7 @@ import Sidebar from "@/components/Navigation/Sidebar";
 import Breadcrumbs from "@/components/Navigation/Breadcrumbs";
 import { RestaurantProvider } from "@/contexts/RestaurantContext";
 import { AuthProvider } from "@/lib/auth-context";
+import AuthGuard from "@/components/AuthGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,25 +34,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
       >
         <AuthProvider>
-          <RestaurantProvider>
-            {/* Navigation moderne ajoutée */}
-            <TopNavbar />
-
-            <div className="flex min-h-screen">
-              {/* Sidebar moderne - visible sur toutes les tailles */}
-              <Sidebar />
-
-              {/* Contenu principal avec breadcrumbs */}
-              <main className="flex-1 flex flex-col">
-                <Breadcrumbs />
-
-                {/* Zone de contenu existant - AUCUNE MODIFICATION */}
-                <div className="flex-1 p-3 md:p-6">
-                  {children}
-                </div>
-              </main>
-            </div>
-          </RestaurantProvider>
+          <AuthGuard>
+            {children}
+          </AuthGuard>
         </AuthProvider>
       </body>
     </html>
