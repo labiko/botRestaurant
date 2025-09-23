@@ -161,86 +161,67 @@
                 </ion-item>
               </div>
 
-              <!-- Options détaillées avec accordéons -->
-              <div class="detailed-options" *ngIf="getOptionGroupKeys().length > 0">
-                <h4>
-                  <ion-icon name="options" color="primary"></ion-icon>
-                  Options détaillées avec prix
-                </h4>
+              <!-- Interface moderne compacte pour les options -->
+              <div class="modern-components-tab" *ngIf="getOptionGroupKeys().length > 0">
 
-                <!-- Accordéon pour chaque groupe d'options -->
-                <ion-accordion-group multiple="true" *ngFor="let groupKey of getOptionGroupKeys()">
-                  <ion-accordion value="group-{{ groupKey }}">
+                <!-- Groupe d'options moderne -->
+                <div class="group-section" *ngFor="let groupKey of getOptionGroupKeys()">
+                  <div class="group-header">
+                    <div class="group-info">
+                      <span class="group-icon">{{ getGroupIcon(groupKey) }}</span>
+                      <h3>{{ groupKey }}</h3>
+                      <ion-badge [color]="getGroupTypeLabel(groupedOptions[groupKey]) === 'Obligatoire' ? 'danger' : 'success'" class="modern-badge">
+                        {{ getGroupTypeLabel(groupedOptions[groupKey]) }}
+                      </ion-badge>
+                    </div>
+                    <div class="group-actions">
+                      <ion-button
+                        size="small"
+                        fill="solid"
+                        color="primary"
+                        class="btn-add"
+                        (click)="addOptionToGroup(groupKey)">
+                        <ion-icon name="add" slot="icon-only"></ion-icon>
+                      </ion-button>
+                    </div>
+                  </div>
 
-                    <!-- En-tête de l'accordéon -->
-                    <ion-item slot="header" color="light">
-                      <ion-icon [name]="getGroupIcon(groupKey)" slot="start" color="primary"></ion-icon>
-                      <ion-label>
-                        <h2>{{ groupKey }}</h2>
-                        <p>
-                          <ion-badge [color]="getGroupTypeLabel(groupedOptions[groupKey]) === 'Obligatoire' ? 'danger' : 'success'">
-                            {{ getGroupTypeLabel(groupedOptions[groupKey]) }}
-                          </ion-badge>
-                          <span class="group-selection"> - {{ getGroupSelectionLabel(groupedOptions[groupKey]) }}</span>
-                        </p>
-                      </ion-label>
-                      <ion-icon name="chevron-down" slot="end"></ion-icon>
-                    </ion-item>
-
-                    <!-- Contenu de l'accordéon -->
-                    <div class="ion-padding" slot="content">
-                      <div class="options-container">
-                        <ion-card *ngFor="let option of groupedOptions[groupKey]" class="option-card">
-                          <ion-card-content>
-                            <div class="option-header">
-                              <!-- Icône et nom -->
-                              <div class="option-info">
-                                <span class="emoji-icon">{{ getOptionIcon(option.option_name) }}</span>
-                                <h3>{{ option.option_name }}</h3>
-                              </div>
-
-                              <!-- Toggle d'activation -->
-                              <ion-toggle
-                                [checked]="option.is_active"
-                                (ionChange)="toggleOptionStatus(option)"
-                                color="success"
-                                class="option-toggle">
-                              </ion-toggle>
-                            </div>
-
-                            <!-- Édition inline du prix -->
-                            <div class="inline-price-editor">
-                              <ion-item lines="none">
-                                <ion-label position="stacked" color="primary">Prix modificateur (€)</ion-label>
-                                <ion-input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  [value]="option.price_modifier"
-                                  (ionBlur)="updateOptionPrice(option, $event)"
-                                  placeholder="0.00"
-                                  class="price-input">
-                                </ion-input>
-                              </ion-item>
-                            </div>
-
-                            <!-- Informations supplémentaires -->
-                            <div class="option-meta">
-                              <ion-chip [color]="option.is_active ? 'success' : 'medium'" outline>
-                                <ion-icon [name]="option.is_active ? 'checkmark-circle' : 'close-circle'"></ion-icon>
-                                <ion-label>{{ option.is_active ? 'Actif' : 'Inactif' }}</ion-label>
-                              </ion-chip>
-                              <ion-note>
-                                Max: {{ option.max_selections }} | Ordre: {{ option.display_order }}
-                              </ion-note>
-                            </div>
-                          </ion-card-content>
-                        </ion-card>
+                  <div class="options-grid">
+                    <div class="option-card-modern" *ngFor="let option of groupedOptions[groupKey]">
+                      <div class="option-main">
+                        <span class="option-emoji">{{ getOptionIcon(option.option_name) }}</span>
+                        <span class="option-name">{{ option.option_name }}</span>
+                        <div class="option-controls">
+                          <ion-input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            [value]="option.price_modifier"
+                            (ionBlur)="updateOptionPrice(option, $event)"
+                            placeholder="0.00"
+                            class="price-input-modern">
+                          </ion-input>
+                          <span class="currency">€</span>
+                          <ion-toggle
+                            [checked]="option.is_active"
+                            (ionChange)="toggleOptionStatus(option)"
+                            color="success"
+                            class="status-toggle-modern">
+                          </ion-toggle>
+                          <ion-button
+                            fill="clear"
+                            color="danger"
+                            size="small"
+                            class="btn-delete-modern"
+                            (click)="deleteOption(option)">
+                            <ion-icon name="trash" slot="icon-only"></ion-icon>
+                          </ion-button>
+                        </div>
                       </div>
                     </div>
+                  </div>
+                </div>
 
-                  </ion-accordion>
-                </ion-accordion-group>
               </div>
 
               <!-- État vide -->

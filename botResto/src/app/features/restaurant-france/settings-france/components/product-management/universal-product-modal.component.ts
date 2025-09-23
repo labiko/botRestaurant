@@ -176,9 +176,8 @@ export class UniversalProductModalComponent implements OnInit {
     // Ajouter les composants si produit composite
     if (this.product.product_type === 'composite') {
       formData.compositeItems = this.compositeItems;
-      formData.productOptions = this.productOptions;
       console.log('📦 [UniversalModal] Composants inclus:', this.compositeItems);
-      console.log('🎯 [UniversalModal] Options incluses:', this.productOptions);
+      console.log('🎯 [UniversalModal] Options modifiées localement (non sauvées automatiquement):', this.productOptions);
     }
 
     // Retourner les données mises à jour
@@ -308,6 +307,132 @@ export class UniversalProductModalComponent implements OnInit {
     const maxSelections = Math.max(...options.map(opt => opt.max_selections));
     return `${maxSelections} choix`;
   }
+
+  // Ajouter une option à un groupe spécifique
+  async addOptionToGroup(groupKey: string) {
+    const alert = await this.alertController.create({
+      header: `Ajouter une option - ${groupKey}`,
+      inputs: [
+        {
+          name: 'option_name',
+          type: 'text',
+          placeholder: 'Nom de l\'option (ex: Coca, Burger)'
+        },
+        {
+          name: 'price_modifier',
+          type: 'number',
+          placeholder: 'Prix modificateur (€)',
+          min: 0,
+          value: 0
+        }
+      ],
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        },
+        {
+          text: 'Ajouter',
+          handler: (data) => {
+            if (data.option_name && data.option_name.trim()) {
+              this.createNewOption(groupKey, data.option_name.trim(), parseFloat(data.price_modifier) || 0);
+            }
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  // Créer une nouvelle option
+  private async createNewOption(groupKey: string, optionName: string, priceModifier: number) {
+    try {
+      const maxDisplayOrder = Math.max(
+        ...this.groupedOptions[groupKey].map(opt => opt.display_order),
+        0
+      );
+
+      // Déterminer le group_order basé sur l'ordre des groupes existants
+      const existingGroupOrders = new Set(
+        Object.values(this.groupedOptions).flat().map(opt => opt.group_order || 0)
+      );
+      const groupOrder = this.groupedOptions[groupKey].length > 0
+        ? this.groupedOptions[groupKey][0].group_order
+        : Math.max(...existingGroupOrders, 0) + 1;
+
+      const optionData = {
+        product_id: this.product.id,
+        option_group: groupKey,
+        option_name: optionName,
+        price_modifier: priceModifier,
+        is_required: false,
+        max_selections: 1,
+        display_order: maxDisplayOrder + 1,
+        is_active: true,
+        group_order: groupOrder
+      };
+
+      console.log('💾 [UniversalModal] Création option en base:', optionData);
+
+      // Sauvegarder en base de données
+      this.productManagementService.createProductOption(this.product.id, optionData).subscribe({
+        next: (createdOption) => {
+          // Ajouter l'option créée (avec son ID) à l'interface
+          this.groupedOptions[groupKey].push(createdOption);
+          this.productOptions.push(createdOption);
+
+          console.log('✅ [UniversalModal] Option créée avec succès:', createdOption);
+        },
+        error: (error) => {
+          console.error('❌ [UniversalModal] Erreur création option en base:', error);
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ [UniversalModal] Erreur création option:', error);
+    }
+  }
+
+  // Supprimer une option avec confirmation
+  async deleteOption(option: ProductOption) {
+    const alert = await this.alertController.create({
+      header: 'Supprimer l\'option',
+      message: `Êtes-vous sûr de vouloir supprimer "${option.option_name}" ?`,
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        },
+        {
+          text: 'Supprimer',
+          role: 'destructive',
+          handler: () => {
+            this.removeOptionFromGroup(option);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  // Retirer une option du groupe
+  private removeOptionFromGroup(option: ProductOption) {
+    // Retirer de la liste groupée
+    const groupOptions = this.groupedOptions[option.option_group];
+    const groupIndex = groupOptions.findIndex(opt => opt.id === option.id);
+    if (groupIndex > -1) {
+      groupOptions.splice(groupIndex, 1);
+    }
+
+    // Retirer de la liste principale
+    const mainIndex = this.productOptions.findIndex(opt => opt.id === option.id);
+    if (mainIndex > -1) {
+      this.productOptions.splice(mainIndex, 1);
+    }
+
+    console.log('🗑️ [UniversalModal] Option supprimée:', option.option_name);
+  }
+
 
   async addCompositeItem() {
     const alert = await this.alertController.create({
