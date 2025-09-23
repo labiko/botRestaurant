@@ -96,6 +96,15 @@ function SidebarContent() {
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       description: 'Suppression sécurisée'
+    },
+    {
+      id: 'back-office-resto',
+      label: 'Back Office Resto',
+      icon: '🏪',
+      path: '/back-office-restaurant',
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50',
+      description: 'Activer/Désactiver restaurants'
     }
   ];
 

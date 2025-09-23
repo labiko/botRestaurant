@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { ToastController, AlertController } from '@ionic/angular';
+import { Router } from '@angular/router';
 import { FranceOrdersService, FranceOrder, OrderAction } from '../../../core/services/france-orders.service';
 import { AuthFranceService } from '../auth-france/services/auth-france.service';
 import { DeliveryAssignmentService } from '../../../core/services/delivery-assignment.service';
@@ -38,6 +39,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     public authService: AuthFranceService,
     private toastController: ToastController,
     private alertController: AlertController,
+    private router: Router,
     private deliveryAssignmentService: DeliveryAssignmentService,
     private driversFranceService: DriversFranceService,
     private fuseauHoraireService: FuseauHoraireService,
@@ -62,6 +64,15 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
     // Configurer le restaurant pour les notifications audio
     this.audioNotificationService.setCurrentRestaurant(this.restaurantId);
+
+    // ✅ NOUVEAU : Écouter désactivation restaurant
+    this.ordersSubscription?.add(
+      this.franceOrdersService.restaurantDeactivated$.subscribe(deactivated => {
+        if (deactivated) {
+          this.handleRestaurantDeactivated();
+        }
+      })
+    );
 
     // Debug pour analyser les conditions d'affichage livreur - sera appelé après loadOrders
     this.debugDriverDisplay();
@@ -857,11 +868,11 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    */
   async sendRemindersForOrder(order: FranceOrder): Promise<void> {
     try {
-      
+
       // ✅ UTILISER la vraie logique de rappel du tracking
-      
+
       const result = await this.deliveryTrackingService.sendReminderNotifications(order.id);
-      
+
       if (result.success) {
         this.presentToast(result.message, 'success');
         // ✅ OPTIMISATION : loadOrders() inclut maintenant l'état des assignations
@@ -869,10 +880,43 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       } else {
         this.presentToast(result.message, 'danger');
       }
-      
+
     } catch (error) {
       console.error('❌ [OrdersFrance] Erreur envoi rappels:', error);
       this.presentToast('Erreur lors de l\'envoi des rappels', 'danger');
+    }
+  }
+
+  /**
+   * ✅ NOUVEAU : Gérer la désactivation du restaurant
+   */
+  private async handleRestaurantDeactivated(): Promise<void> {
+    try {
+      // 1. Arrêter l'auto-refresh
+      this.franceOrdersService.stopAutoRefresh();
+      if (this.autoRefreshSubscription) {
+        this.autoRefreshSubscription.unsubscribe();
+        this.autoRefreshSubscription = undefined;
+      }
+
+      // 2. Afficher une alerte informative
+      const alert = await this.alertController.create({
+        header: '⚠️ Restaurant désactivé',
+        message: 'Votre restaurant a été désactivé par un administrateur. Vous allez être déconnecté.',
+        buttons: ['Compris'],
+        backdropDismiss: false
+      });
+      await alert.present();
+      await alert.onDidDismiss();
+
+      // 3. Effectuer la déconnexion et redirection
+      await this.authService.logout();
+      this.router.navigate(['/restaurant-france/auth-france/login-france']);
+
+    } catch (error) {
+      console.error('❌ [OrdersFrance] Erreur gestion désactivation restaurant:', error);
+      // En cas d'erreur, forcer quand même la déconnexion
+      this.router.navigate(['/restaurant-france/auth-france/login-france']);
     }
   }
 
