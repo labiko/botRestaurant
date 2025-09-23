@@ -148,7 +148,7 @@ export default function DuplicationDetailModal({
         </div>
 
         {/* Content */}
-        <div className="flex flex-col h-full max-h-[calc(90vh-120px)]">
+        <div className="flex flex-col h-full max-h-[calc(90vh-160px)]">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-gray-500">Chargement des détails...</div>
@@ -186,7 +186,7 @@ export default function DuplicationDetailModal({
               </div>
 
               {/* Tab Content */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-6 max-h-[60vh]">
                 {activeTab === 'categories' ? (
                   <div className="space-y-4">
                     {categories.length === 0 ? (

@@ -26,6 +26,8 @@ interface TargetRestaurant {
   phone: string;
   whatsapp_number: string;
   city: string;
+  latitude: string;
+  longitude: string;
 }
 
 export default function DuplicateRestaurantPage() {
@@ -38,7 +40,9 @@ export default function DuplicateRestaurantPage() {
     address: '',
     phone: '',
     whatsapp_number: '',
-    city: ''
+    city: '',
+    latitude: '',
+    longitude: ''
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -292,6 +296,34 @@ export default function DuplicateRestaurantPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Moissy-Cramayel"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Latitude (optionnel)
+                  </label>
+                  <input
+                    type="text"
+                    value={targetRestaurant.latitude}
+                    onChange={(e) => setTargetRestaurant(prev => ({ ...prev, latitude: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="48.6268"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Longitude (optionnel)
+                  </label>
+                  <input
+                    type="text"
+                    value={targetRestaurant.longitude}
+                    onChange={(e) => setTargetRestaurant(prev => ({ ...prev, longitude: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="2.6065"
+                  />
+                </div>
               </div>
             </div>
           </div>

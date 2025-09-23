@@ -983,7 +983,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     // Utiliser les noms d'options tels qu'ils sont dans la base (ils contiennent déjà ⿡⿢⿣)
     optionGroup.options.forEach((option, index)=>{
       // Ne pas nettoyer les caractères ⿡⿢⿣ - ils sont les vrais numéros !
-      message += `${option.option_name}`;
+      message += `${index + 1}. ${option.option_name}`;
       if (option.price_adjustment && option.price_adjustment > 0) {
         message += ` (+${option.price_adjustment}€)`;
       }
