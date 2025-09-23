@@ -62,6 +62,11 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
   // Options brutes pour référence
   private rawOptions: ProductOption[] = [];
 
+  // 🆕 Système dynamique des groupes
+  dynamicGroups: string[] = [];
+  groupCounts: {[key: string]: number} = {};
+  dynamicGroupsOptions: {[key: string]: UniqueOption[]} = {};
+
   constructor(
     private productManagementService: ProductManagementService,
     private authFranceService: AuthFranceService,
@@ -95,6 +100,11 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
         next: (options) => {
           this.rawOptions = options;
           console.log(`📥 [OptionsManagement] Raw options chargées: ${options.length} options totales`);
+
+          // 🆕 Charger les groupes dynamiques
+          this.loadDynamicGroups(options);
+
+          // Maintenir le comportement existant
           this.categorizeAndDeduplicateOptions(options);
           this.isLoading = false;
           console.log('✅ [OptionsManagement] Options chargées et dédupliquées:', {
@@ -102,7 +112,8 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
             sauces: this.sauceOptions.length,
             supplements: this.supplementOptions.length,
             boissons: this.beverageOptions.length,
-            rawOptionsCount: this.rawOptions.length
+            rawOptionsCount: this.rawOptions.length,
+            dynamicGroups: this.dynamicGroups.length
           });
         },
         error: (error) => {
@@ -232,10 +243,19 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
    * Navigation entre les tabs
    */
   switchTab(tab: string | number | undefined) {
-    if (tab && typeof tab === 'string' &&
-        (tab === 'meats' || tab === 'sauces' || tab === 'supplements' || tab === 'beverages')) {
-      this.activeTab = tab as 'meats' | 'sauces' | 'supplements' | 'beverages';
-      console.log(`🔄 [OptionsManagement] Switch to tab: ${tab}`);
+    if (tab && typeof tab === 'string') {
+      // 🆕 Support des groupes dynamiques
+      if (this.dynamicGroups.includes(tab)) {
+        this.activeTab = tab as any; // Permettre les groupes dynamiques
+        console.log(`🔄 [OptionsManagement] Switch to dynamic tab: ${tab}`);
+        return;
+      }
+
+      // 🔄 Support des tabs statiques existants
+      if (tab === 'meats' || tab === 'sauces' || tab === 'supplements' || tab === 'beverages') {
+        this.activeTab = tab as 'meats' | 'sauces' | 'supplements' | 'beverages';
+        console.log(`🔄 [OptionsManagement] Switch to static tab: ${tab}`);
+      }
     }
   }
 
@@ -521,12 +541,108 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ❌ Méthode addNewOption supprimée pour éviter les options orphelines
+  // Les options doivent être créées depuis l'interface de gestion des produits
+
+  // 🆕 ========== SYSTÈME DYNAMIQUE DES GROUPES ==========
+
   /**
-   * Ajouter une nouvelle option
+   * Charger dynamiquement les groupes d'options depuis les données
    */
-  addNewOption(groupType: 'meats' | 'sauces' | 'supplements' | 'beverages') {
-    // TODO: Implémenter modal d'ajout avec dropdown groupe
-    console.log('🔄 [OptionsManagement] Ajouter nouvelle option:', groupType);
-    this.showSuccessToast('Fonctionnalité d\'ajout en cours de développement');
+  private loadDynamicGroups(options: ProductOption[]) {
+    // Extraire tous les groupes uniques
+    const uniqueGroups = [...new Set(options
+      .map(option => option.option_group)
+      .filter(group => group && group.trim() !== '')
+    )];
+
+    this.dynamicGroups = uniqueGroups.sort();
+
+    // 🆕 Définir l'onglet par défaut avec le premier groupe dynamique
+    if (this.dynamicGroups.length > 0) {
+      this.activeTab = this.dynamicGroups[0] as any;
+    }
+
+    // Organiser les options par groupe dynamique
+    this.organizeDynamicGroups(options);
+
+    // Calculer les compteurs
+    this.calculateGroupCounts();
+
+    console.log('📊 [OptionsManagement] Groupes dynamiques chargés:', {
+      groups: this.dynamicGroups,
+      counts: this.groupCounts,
+      activeTab: this.activeTab
+    });
+  }
+
+  /**
+   * Organiser les options par groupe dynamique
+   */
+  private organizeDynamicGroups(options: ProductOption[]) {
+    this.dynamicGroupsOptions = {};
+
+    this.dynamicGroups.forEach(group => {
+      const groupOptions = options.filter(option => option.option_group === group);
+      this.dynamicGroupsOptions[group] = this.deduplicateOptions(groupOptions);
+    });
+  }
+
+  /**
+   * Calculer le nombre d'options par groupe
+   */
+  private calculateGroupCounts() {
+    this.groupCounts = {};
+    this.dynamicGroups.forEach(group => {
+      this.groupCounts[group] = this.dynamicGroupsOptions[group]?.length || 0;
+    });
+  }
+
+  /**
+   * Obtenir un nom d'affichage pour un groupe
+   */
+  getGroupDisplayName(group: string): string {
+    const displayNames: {[key: string]: string} = {
+      'Boisson 33CL incluse': 'BOISSONS INCLUSES',
+      'Boissons': 'BOISSONS',
+      'Plats': 'PLATS',
+      'garniture': 'GARNITURES',
+      'Entrees': 'ENTRÉES',
+      'Supplement': 'SUPPLÉMENTS'
+    };
+    return displayNames[group] || group.toUpperCase();
+  }
+
+  /**
+   * Obtenir une icône pour un groupe
+   */
+  getGroupIcon(group: string): string {
+    const groupLower = group.toLowerCase();
+
+    if (groupLower.includes('boisson')) return '🥤';
+    if (groupLower.includes('plat')) return '🍽️';
+    if (groupLower.includes('garniture')) return '🍟';
+    if (groupLower.includes('entree')) return '🥗';
+    if (groupLower.includes('supplement')) return '➕';
+    if (groupLower.includes('viande') || groupLower.includes('meat')) return '🥩';
+    if (groupLower.includes('sauce')) return '🌶️';
+    if (groupLower.includes('dessert')) return '🍰';
+
+    return '📋'; // Icône par défaut
+  }
+
+  /**
+   * Obtenir les options d'un groupe dynamique
+   */
+  getDynamicGroupOptions(group: string): UniqueOption[] {
+    return this.dynamicGroupsOptions[group] || [];
+  }
+
+  /**
+   * Obtenir le nombre d'options actives dans un groupe dynamique
+   */
+  getDynamicGroupActiveCount(group: string): number {
+    const options = this.getDynamicGroupOptions(group);
+    return options.filter(option => option.is_active).length;
   }
 }
