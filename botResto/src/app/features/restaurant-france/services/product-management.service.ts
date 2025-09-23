@@ -882,7 +882,11 @@ export class ProductManagementService {
           display_order,
           is_active,
           group_order,
-          france_products!inner(restaurant_id)
+          france_products!inner(
+            restaurant_id,
+            name,
+            france_menu_categories(name)
+          )
         `)
         .eq('france_products.restaurant_id', restaurantId)
         .order('option_group')

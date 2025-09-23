@@ -182,13 +182,26 @@ export class DeliveryNotificationService {
       const now = new Date();
       const diffMinutes = Math.floor((now.getTime() - createdTime.getTime()) / (1000 * 60));
 
-      // Formatter les articles avec le service universel
+      // Formatter les articles avec le service universel (format back-office)
       let orderItems = '';
       if (order.items && Array.isArray(order.items) && order.items.length > 0) {
         const formattedItems = this.universalOrderDisplayService.formatOrderItems(order.items);
-        orderItems = formattedItems.map(item => 
-          `• ${item.quantity}x ${item.productName}${item.inlineConfiguration ? ' ' + item.inlineConfiguration : ''} - ${item.totalPrice.toFixed(2)}€`
-        ).join('\n');
+        orderItems = formattedItems.map(item => {
+          let itemText = `• ${item.quantity}x ${item.productName}`;
+
+          // Ajouter la configuration détaillée (même logique que back-office)
+          if (item.formattedConfiguration && item.formattedConfiguration.length > 0) {
+            const configDetails = item.formattedConfiguration.map(config =>
+              `${config.category}: ${config.value}`
+            ).join(', ');
+            itemText += ` (${configDetails})`;
+          } else if (item.inlineConfiguration) {
+            itemText += ` ${item.inlineConfiguration}`;
+          }
+
+          itemText += ` - ${item.totalPrice.toFixed(2)}€`;
+          return itemText;
+        }).join('\n');
       }
 
       return {

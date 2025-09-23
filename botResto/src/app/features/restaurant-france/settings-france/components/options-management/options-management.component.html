@@ -55,7 +55,13 @@
             </div>
             <p class="option-details">
               {{ option.price_modifier > 0 ? '+' + option.price_modifier + '€' : 'Inclus' }} •
-              Utilisé dans {{ option.affectedProducts }} produit(s)
+              <span *ngIf="option.productDetails && option.productDetails.length > 0; else oldFormat">
+                {{ option.productDetails[0].productName }} ({{ option.productDetails[0].categoryName }})
+                <span *ngIf="option.productDetails.length > 1"> +{{ option.productDetails.length - 1 }}</span>
+              </span>
+              <ng-template #oldFormat>
+                Utilisé dans {{ option.affectedProducts }} produit(s)
+              </ng-template>
             </p>
           </div>
           <div class="option-actions">
@@ -116,7 +122,13 @@
             </div>
             <p class="option-details">
               {{ option.price_modifier > 0 ? '+' + option.price_modifier + '€' : 'Gratuit' }} •
-              Utilisé dans {{ option.affectedProducts }} produit(s)
+              <span *ngIf="option.productDetails && option.productDetails.length > 0; else oldFormat">
+                {{ option.productDetails[0].productName }} ({{ option.productDetails[0].categoryName }})
+                <span *ngIf="option.productDetails.length > 1"> +{{ option.productDetails.length - 1 }}</span>
+              </span>
+              <ng-template #oldFormat>
+                Utilisé dans {{ option.affectedProducts }} produit(s)
+              </ng-template>
             </p>
           </div>
           <div class="option-actions">
@@ -177,7 +189,13 @@
             </div>
             <p class="option-details">
               {{ option.price_modifier > 0 ? '+' + option.price_modifier + '€' : 'Inclus' }} •
-              Utilisé dans {{ option.affectedProducts }} produit(s)
+              <span *ngIf="option.productDetails && option.productDetails.length > 0; else oldFormat">
+                {{ option.productDetails[0].productName }} ({{ option.productDetails[0].categoryName }})
+                <span *ngIf="option.productDetails.length > 1"> +{{ option.productDetails.length - 1 }}</span>
+              </span>
+              <ng-template #oldFormat>
+                Utilisé dans {{ option.affectedProducts }} produit(s)
+              </ng-template>
             </p>
           </div>
           <div class="option-actions">
@@ -238,7 +256,13 @@
             </div>
             <p class="option-details">
               {{ option.price_modifier > 0 ? '+' + option.price_modifier + '€' : 'Inclus' }} •
-              Utilisé dans {{ option.affectedProducts }} produit(s)
+              <span *ngIf="option.productDetails && option.productDetails.length > 0; else oldFormat">
+                {{ option.productDetails[0].productName }} ({{ option.productDetails[0].categoryName }})
+                <span *ngIf="option.productDetails.length > 1"> +{{ option.productDetails.length - 1 }}</span>
+              </span>
+              <ng-template #oldFormat>
+                Utilisé dans {{ option.affectedProducts }} produit(s)
+              </ng-template>
             </p>
           </div>
           <div class="option-actions">

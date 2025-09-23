@@ -1,7 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ModalController, AlertController } from '@ionic/angular';
-import { ProductManagementService, CompositeItem } from '../../../services/product-management.service';
+import { ProductManagementService, CompositeItem, ProductOption } from '../../../services/product-management.service';
 
 interface ModalConfig {
   showBasicInfo: boolean;
@@ -36,6 +36,8 @@ export class UniversalProductModalComponent implements OnInit {
   
   selectedTab = 'info';
   compositeItems: CompositeItem[] = [];
+  productOptions: ProductOption[] = [];
+  groupedOptions: { [key: string]: ProductOption[] } = {};
 
   constructor(
     private fb: FormBuilder,
@@ -52,6 +54,7 @@ export class UniversalProductModalComponent implements OnInit {
     this.analyzeProduct();
     this.populateForm();
     this.loadCompositeItems();
+    this.loadProductOptions();
   }
 
   private initializeForm() {
@@ -95,6 +98,12 @@ export class UniversalProductModalComponent implements OnInit {
       console.log('✅ [UniversalModal] Produit composite détecté - activation workflow');
       this.modalConfig.showComponents = true;
       this.modalConfig.showWorkflow = true;
+    }
+
+    // Activation spéciale pour les workflows universels
+    if (this.product.workflow_type === 'universal_workflow_v2') {
+      console.log('✅ [UniversalModal] Workflow universel v2 détecté - activation onglet composants');
+      this.modalConfig.showComponents = true;
     }
     
     if (this.product.requires_steps) {
@@ -167,7 +176,9 @@ export class UniversalProductModalComponent implements OnInit {
     // Ajouter les composants si produit composite
     if (this.product.product_type === 'composite') {
       formData.compositeItems = this.compositeItems;
+      formData.productOptions = this.productOptions;
       console.log('📦 [UniversalModal] Composants inclus:', this.compositeItems);
+      console.log('🎯 [UniversalModal] Options incluses:', this.productOptions);
     }
 
     // Retourner les données mises à jour
@@ -193,7 +204,7 @@ export class UniversalProductModalComponent implements OnInit {
     }
 
     console.log('📦 [UniversalModal] Chargement des éléments composites pour le produit:', this.product.id);
-    
+
     this.productManagementService.getCompositeItems(this.product.id).subscribe({
       next: (items) => {
         this.compositeItems = items || [];
@@ -204,6 +215,98 @@ export class UniversalProductModalComponent implements OnInit {
         this.compositeItems = [];
       }
     });
+  }
+
+  // Méthodes pour gérer les options détaillées
+  private async loadProductOptions() {
+    if (!this.product || this.product.product_type !== 'composite') {
+      return;
+    }
+
+    console.log('🎯 [UniversalModal] Chargement des options détaillées pour le produit:', this.product.id);
+
+    this.productManagementService.getProductOptions(this.product.id).subscribe({
+      next: (options) => {
+        this.productOptions = options || [];
+        this.groupOptionsByGroup();
+        console.log('✅ [UniversalModal] Options détaillées chargées:', this.productOptions);
+        console.log('📁 [UniversalModal] Options groupées:', this.groupedOptions);
+      },
+      error: (error) => {
+        console.error('❌ [UniversalModal] Erreur chargement options:', error);
+        this.productOptions = [];
+        this.groupedOptions = {};
+      }
+    });
+  }
+
+  // Grouper les options par option_group
+  private groupOptionsByGroup() {
+    this.groupedOptions = {};
+    this.productOptions.forEach(option => {
+      if (!this.groupedOptions[option.option_group]) {
+        this.groupedOptions[option.option_group] = [];
+      }
+      this.groupedOptions[option.option_group].push(option);
+    });
+
+    // Trier chaque groupe par display_order
+    Object.keys(this.groupedOptions).forEach(groupKey => {
+      this.groupedOptions[groupKey].sort((a, b) => a.display_order - b.display_order);
+    });
+  }
+
+  // Obtenir les clés des groupes triées
+  getOptionGroupKeys(): string[] {
+    return Object.keys(this.groupedOptions).sort();
+  }
+
+  // Obtenir l'icône pour un groupe d'options
+  getGroupIcon(groupName: string): string {
+    if (groupName.toLowerCase().includes('plat') || groupName.toLowerCase().includes('viande')) {
+      return 'restaurant';
+    }
+    if (groupName.toLowerCase().includes('boisson') || groupName.toLowerCase().includes('drink')) {
+      return 'wine';
+    }
+    if (groupName.toLowerCase().includes('sauce')) {
+      return 'water';
+    }
+    return 'options';
+  }
+
+  // Obtenir l'icône pour une option spécifique
+  getOptionIcon(optionName: string): string {
+    const name = optionName.toLowerCase();
+    if (name.includes('burger') || name.includes('viande')) {
+      return '🍔';
+    }
+    if (name.includes('pizza')) {
+      return '🍕';
+    }
+    if (name.includes('coca') || name.includes('cola')) {
+      return '🥤';
+    }
+    if (name.includes('eau') || name.includes('water')) {
+      return '💧';
+    }
+    if (name.includes('jus') || name.includes('juice')) {
+      return '🧃';
+    }
+    return '📌';
+  }
+
+  // Obtenir le label de type de groupe (Obligatoire/Optionnel)
+  getGroupTypeLabel(options: ProductOption[]): string {
+    const hasRequired = options.some(opt => opt.is_required);
+    return hasRequired ? 'Obligatoire' : 'Optionnel';
+  }
+
+  // Obtenir le label de sélection pour un groupe
+  getGroupSelectionLabel(options: ProductOption[]): string {
+    if (options.length === 0) return '';
+    const maxSelections = Math.max(...options.map(opt => opt.max_selections));
+    return `${maxSelections} choix`;
   }
 
   async addCompositeItem() {
@@ -308,5 +411,169 @@ export class UniversalProductModalComponent implements OnInit {
   removeCompositeItem(index: number) {
     this.compositeItems.splice(index, 1);
     console.log('🗑️ [UniversalModal] Composant supprimé à l\'index:', index);
+  }
+
+  // Méthodes pour gérer les options détaillées
+  async editProductOption(option: ProductOption) {
+    const alert = await this.alertController.create({
+      header: 'Modifier l\'option',
+      inputs: [
+        {
+          name: 'option_name',
+          type: 'text',
+          value: option.option_name,
+          placeholder: 'Nom de l\'option'
+        },
+        {
+          name: 'price_modifier',
+          type: 'number',
+          value: option.price_modifier,
+          placeholder: 'Prix (+/-)',
+          min: 0
+        },
+        {
+          name: 'max_selections',
+          type: 'number',
+          value: option.max_selections,
+          placeholder: 'Nombre max de sélections',
+          min: 1
+        },
+        {
+          name: 'display_order',
+          type: 'number',
+          value: option.display_order,
+          placeholder: 'Ordre d\'affichage',
+          min: 0
+        }
+      ],
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        },
+        {
+          text: 'Enregistrer',
+          handler: (data) => {
+            if (data.option_name && data.price_modifier !== undefined) {
+              // Mettre à jour l'option dans le tableau local
+              const optionIndex = this.productOptions.findIndex(opt => opt.id === option.id);
+              if (optionIndex !== -1) {
+                this.productOptions[optionIndex] = {
+                  ...option,
+                  option_name: data.option_name,
+                  price_modifier: parseFloat(data.price_modifier),
+                  max_selections: parseInt(data.max_selections),
+                  display_order: parseInt(data.display_order)
+                };
+
+                // Recalculer les groupes
+                this.groupOptionsByGroup();
+                console.log('✅ [UniversalModal] Option modifiée:', this.productOptions[optionIndex]);
+
+                // Mettre à jour en base de données
+                this.productManagementService.updateProductOption(option.id, {
+                  option_name: data.option_name,
+                  price_modifier: parseFloat(data.price_modifier),
+                  max_selections: parseInt(data.max_selections),
+                  display_order: parseInt(data.display_order)
+                }).subscribe({
+                  next: () => console.log('✅ [UniversalModal] Option mise à jour en base'),
+                  error: (error) => console.error('❌ [UniversalModal] Erreur mise à jour option:', error)
+                });
+              }
+            }
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  async deleteProductOption(option: ProductOption) {
+    const alert = await this.alertController.create({
+      header: 'Supprimer l\'option',
+      message: `Êtes-vous sûr de vouloir supprimer l'option "${option.option_name}" ?`,
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel'
+        },
+        {
+          text: 'Supprimer',
+          handler: () => {
+            // Supprimer de la liste locale
+            const optionIndex = this.productOptions.findIndex(opt => opt.id === option.id);
+            if (optionIndex !== -1) {
+              this.productOptions.splice(optionIndex, 1);
+              // Recalculer les groupes
+              this.groupOptionsByGroup();
+              console.log('🗑️ [UniversalModal] Option supprimée localement:', option.option_name);
+
+              // Supprimer en base de données
+              this.productManagementService.deleteProductOption(option.id).subscribe({
+                next: () => console.log('✅ [UniversalModal] Option supprimée en base'),
+                error: (error) => console.error('❌ [UniversalModal] Erreur suppression option:', error)
+              });
+            }
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  // Nouvelles méthodes pour l'édition inline
+  toggleOptionStatus(option: ProductOption) {
+    console.log('🔄 [UniversalModal] Toggle statut option:', option.option_name, 'vers:', !option.is_active);
+
+    // Mettre à jour localement
+    option.is_active = !option.is_active;
+
+    // Sauvegarder en base
+    this.productManagementService.updateProductOption(option.id, { is_active: option.is_active }).subscribe({
+      next: () => {
+        console.log('✅ [UniversalModal] Statut option mis à jour en base');
+      },
+      error: (error) => {
+        console.error('❌ [UniversalModal] Erreur mise à jour statut:', error);
+        // Revenir à l'état précédent en cas d'erreur
+        option.is_active = !option.is_active;
+      }
+    });
+  }
+
+  updateOptionPrice(option: ProductOption, event: any) {
+    const newPrice = parseFloat(event.target.value);
+
+    if (isNaN(newPrice) || newPrice < 0) {
+      console.log('⚠️ [UniversalModal] Prix invalide, annulation');
+      event.target.value = option.price_modifier; // Restaurer l'ancienne valeur
+      return;
+    }
+
+    if (newPrice === option.price_modifier) {
+      console.log('ℹ️ [UniversalModal] Prix inchangé');
+      return;
+    }
+
+    console.log('💰 [UniversalModal] Mise à jour prix option:', option.option_name, 'de', option.price_modifier, 'vers', newPrice);
+
+    const oldPrice = option.price_modifier;
+    option.price_modifier = newPrice;
+
+    // Sauvegarder en base
+    this.productManagementService.updateProductOption(option.id, { price_modifier: newPrice }).subscribe({
+      next: () => {
+        console.log('✅ [UniversalModal] Prix option mis à jour en base');
+      },
+      error: (error) => {
+        console.error('❌ [UniversalModal] Erreur mise à jour prix:', error);
+        // Revenir à l'ancien prix en cas d'erreur
+        option.price_modifier = oldPrice;
+        event.target.value = oldPrice;
+      }
+    });
   }
 }

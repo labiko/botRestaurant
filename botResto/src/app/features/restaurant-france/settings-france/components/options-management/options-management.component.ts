@@ -16,6 +16,13 @@ interface ProductOption {
   display_order: number;
   is_active: boolean;
   group_order: number;
+  france_products?: {
+    restaurant_id: number;
+    name: string;
+    france_menu_categories: {
+      name: string;
+    };
+  };
 }
 
 interface UniqueOption {
@@ -28,6 +35,7 @@ interface UniqueOption {
   affectedProducts: number;
   isEditing?: boolean;
   originalName?: string; // Stocker le nom original avant édition
+  productDetails?: Array<{productName: string, categoryName: string}>; // Détails des produits associés
 }
 
 @Component({
@@ -155,6 +163,15 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
       const mapKey = cleanKey.toLowerCase();
 
       if (!uniqueOptions.has(mapKey)) {
+        // Créer les détails du premier produit
+        const productDetails = [];
+        if (option.france_products) {
+          productDetails.push({
+            productName: option.france_products.name,
+            categoryName: option.france_products.france_menu_categories?.name || 'Sans catégorie'
+          });
+        }
+
         uniqueOptions.set(mapKey, {
           id: `unique_${mapKey.replace(/\s+/g, '_')}`,
           name: cleanKey, // Utiliser le nom nettoyé et normalisé
@@ -163,7 +180,8 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
           is_active: option.is_active,
           productIds: [option.product_id],
           affectedProducts: 1,
-          isEditing: false
+          isEditing: false,
+          productDetails: productDetails
         });
       } else {
         const existing = uniqueOptions.get(mapKey)!;
@@ -171,6 +189,18 @@ export class OptionsManagementComponent implements OnInit, OnDestroy {
         existing.affectedProducts++;
         // Garder is_active = true si au moins un produit l'a actif
         existing.is_active = existing.is_active || option.is_active;
+
+        // Ajouter les détails du produit s'ils n'existent pas déjà
+        if (option.france_products && existing.productDetails) {
+          const productName = option.france_products.name;
+          const categoryName = option.france_products.france_menu_categories?.name || 'Sans catégorie';
+          const alreadyExists = existing.productDetails.some(
+            detail => detail.productName === productName && detail.categoryName === categoryName
+          );
+          if (!alreadyExists) {
+            existing.productDetails.push({ productName, categoryName });
+          }
+        }
       }
     });
 

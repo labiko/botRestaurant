@@ -4,6 +4,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Fonction pour récupérer le mapping des groupes depuis la base
+async function getGroupMapping(supabase: any): Promise<Map<string, { component_name: string, unit: string }>> {
+  try {
+    const { data: groups, error } = await supabase
+      .from('france_option_groups')
+      .select('group_name, component_name, unit')
+      .eq('is_active', true);
+
+    const mapping = new Map();
+
+    if (groups && !error) {
+      groups.forEach((group: any) => {
+        // Ajouter le mapping exact
+        mapping.set(group.group_name.toLowerCase(), {
+          component_name: group.component_name,
+          unit: group.unit
+        });
+
+        // Ajouter des variantes courantes pour compatibilité
+        if (group.group_name.toLowerCase().endsWith('s')) {
+          // Ajouter la version singulier (plats → plat)
+          mapping.set(group.group_name.toLowerCase().slice(0, -1), {
+            component_name: group.component_name,
+            unit: group.unit
+          });
+        }
+      });
+    }
+
+    console.log('✅ [SQL Generator] Mapping groupes chargé:', mapping.size, 'entrées');
+    return mapping;
+  } catch (error) {
+    console.error('❌ [SQL Generator] Erreur chargement mapping:', error);
+    return new Map();
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { duplicationId, syncType, selectedCategories } = await request.json();
@@ -122,7 +159,10 @@ export async function POST(request: NextRequest) {
       filteredProductOptions = productOptions?.filter(opt => selectedProductIds.includes(opt.product_id)) || [];
     }
 
-    // 3. Générer le script SQL
+    // 3. Charger le mapping des groupes depuis la base
+    const groupMapping = await getGroupMapping(supabase);
+
+    // 4. Générer le script SQL
     const script = generateSQLScript({
       restaurant,
       categories: filteredCategories,
@@ -130,6 +170,7 @@ export async function POST(request: NextRequest) {
       productOptions: filteredProductOptions,
       botConfig: botConfig || null,
       displayConfigs: displayConfigs || [],
+      groupMapping,
       workflowTemplates: workflowTemplates || [],
       syncType,
       selectedCategories: selectedCategories || [],
@@ -195,12 +236,13 @@ function generateSQLScript(params: {
   productOptions: any[];
   botConfig: any;
   displayConfigs: any[];
+  groupMapping: Map<string, { component_name: string, unit: string }>;
   workflowTemplates: any[];
   syncType: string;
   selectedCategories: string[];
   duplicationInfo: any;
 }): string {
-  const { restaurant, categories, products, productOptions, botConfig, displayConfigs, workflowTemplates, syncType, duplicationInfo } = params;
+  const { restaurant, categories, products, productOptions, botConfig, displayConfigs, groupMapping, workflowTemplates, syncType, duplicationInfo } = params;
   const timestamp = new Date().toLocaleString('fr-FR');
 
   let script = `-- 🔄 SYNCHRONISATION PRODUCTION
@@ -247,19 +289,8 @@ VALUES (
   '${restaurant.password_hash || '810790'}',
   '${restaurant.timezone || 'Europe/Paris'}'
 )
-ON CONFLICT (id) DO UPDATE SET
-  name = EXCLUDED.name,
-  slug = EXCLUDED.slug,
-  address = EXCLUDED.address,
-  city = EXCLUDED.city,
-  phone = EXCLUDED.phone,
-  whatsapp_number = EXCLUDED.whatsapp_number,
-  delivery_zone_km = EXCLUDED.delivery_zone_km,
-  delivery_fee = EXCLUDED.delivery_fee,
-  is_active = EXCLUDED.is_active,
-  business_hours = EXCLUDED.business_hours,
-  password_hash = EXCLUDED.password_hash,
-  timezone = EXCLUDED.timezone;
+ON CONFLICT (id) DO NOTHING;
+-- Note: Approche hybride - Restaurant existant ignoré pour préserver sa configuration
 
 `;
 
@@ -267,19 +298,18 @@ ON CONFLICT (id) DO UPDATE SET
   if (categories.length > 0) {
     script += `-- 2. Synchronisation catégories (${categories.length})
 INSERT INTO france_menu_categories (
-  id, restaurant_id, name, slug, icon, display_order, is_active
+  restaurant_id, name, slug, icon, display_order, is_active
 )
 VALUES\n`;
 
     const categoryValues = categories.map(cat =>
-      `  (${cat.id}, ${cat.restaurant_id}, '${cat.name.replace(/'/g, "''")}', '${cat.slug.replace(/'/g, "''")}', '${cat.icon?.replace(/'/g, "''") || '📁'}', ${cat.display_order}, ${cat.is_active !== false})`
+      `  (${cat.restaurant_id}, '${cat.name.replace(/'/g, "''")}', '${cat.slug.replace(/'/g, "''")}', '${cat.icon?.replace(/'/g, "''") || '📁'}', ${cat.display_order}, ${cat.is_active !== false})`
     ).join(',\n');
 
     script += categoryValues;
     script += `
-ON CONFLICT (id) DO UPDATE SET
+ON CONFLICT (restaurant_id, slug) DO UPDATE SET
   name = EXCLUDED.name,
-  slug = EXCLUDED.slug,
   icon = EXCLUDED.icon,
   display_order = EXCLUDED.display_order,
   is_active = EXCLUDED.is_active;
@@ -291,29 +321,25 @@ ON CONFLICT (id) DO UPDATE SET
   if (products.length > 0) {
     script += `-- 3. Synchronisation produits (${products.length})
 INSERT INTO france_products (
-  id, restaurant_id, category_id, name, description, product_type,
+  restaurant_id, category_id, name, description, product_type,
   display_order, is_active, price_on_site_base, price_delivery_base,
   workflow_type, requires_steps, steps_config
 )
 VALUES\n`;
 
-    const productValues = products.map(prod =>
-      `  (${prod.id}, ${prod.restaurant_id}, ${prod.category_id}, '${prod.name.replace(/'/g, "''")}', '${prod.description?.replace(/'/g, "''") || ''}', '${prod.product_type || 'simple'}', ${prod.display_order}, ${prod.is_active !== false}, ${prod.price_on_site_base}, ${prod.price_delivery_base}, '${prod.workflow_type?.replace(/'/g, "''") || ''}', ${prod.requires_steps || false}, '${JSON.stringify(prod.steps_config || {}).replace(/'/g, "''")}' )`
-    ).join(',\n');
+    const productValues = products.map(prod => {
+      // Trouver le nom de la catégorie pour mapping
+      const category = categories.find(cat => cat.id === prod.category_id);
+      const categoryName = category ? category.name.replace(/'/g, "''") : '';
+
+      return `  (${prod.restaurant_id}, (SELECT id FROM france_menu_categories WHERE name = '${categoryName}' AND restaurant_id = ${prod.restaurant_id} LIMIT 1), '${prod.name.replace(/'/g, "''")}', '${prod.description?.replace(/'/g, "''") || ''}', '${prod.product_type || 'simple'}', ${prod.display_order}, ${prod.is_active !== false}, ${prod.price_on_site_base || 0}, ${prod.price_delivery_base || 0}, '${prod.workflow_type?.replace(/'/g, "''") || ''}', ${prod.requires_steps || false}, '${JSON.stringify(prod.steps_config || {}).replace(/'/g, "''")}')`;
+    }).join(',\n');
 
     script += productValues;
     script += `
-ON CONFLICT (id) DO UPDATE SET
-  name = EXCLUDED.name,
-  description = EXCLUDED.description,
-  product_type = EXCLUDED.product_type,
-  display_order = EXCLUDED.display_order,
-  is_active = EXCLUDED.is_active,
-  price_on_site_base = EXCLUDED.price_on_site_base,
-  price_delivery_base = EXCLUDED.price_delivery_base,
-  workflow_type = EXCLUDED.workflow_type,
-  requires_steps = EXCLUDED.requires_steps,
-  steps_config = EXCLUDED.steps_config;
+ON CONFLICT (name, restaurant_id) DO NOTHING;
+-- Note: Approche hybride - Insertion nouveaux produits uniquement
+-- Les modifications se font via le back-office PROD
 
 `;
   }
@@ -321,38 +347,158 @@ ON CONFLICT (id) DO UPDATE SET
   // 4. Options des produits
   if (productOptions.length > 0) {
     script += `-- 4. Synchronisation options produits (${productOptions.length})
+-- Stratégie: Insertion directe sans gestion de conflit (nouvelles options pour nouveaux produits)
+`;
+
+    // Grouper les options par produit pour insertion séquentielle
+    const optionsByProduct = productOptions.reduce((acc, option) => {
+      const productId = option.product_id;
+      if (!acc[productId]) acc[productId] = [];
+      acc[productId].push(option);
+      return acc;
+    }, {} as Record<number, any[]>);
+
+    Object.entries(optionsByProduct).forEach(([productId, options]) => {
+      const product = products.find(prod => prod.id === parseInt(productId));
+      const productName = product ? product.name.replace(/'/g, "''") : '';
+
+      script += `
+-- Options pour le produit: ${product?.name || 'Inconnu'}
 INSERT INTO france_product_options (
-  id, product_id, option_group, option_name, price_modifier,
+  product_id, option_group, option_name, price_modifier,
   is_required, max_selections, display_order, is_active,
   group_order, next_group_order, conditional_next_group
 )
-VALUES
+SELECT
+  prod.id,
+  vals.option_group,
+  vals.option_name,
+  vals.price_modifier,
+  vals.is_required,
+  vals.max_selections,
+  vals.display_order,
+  vals.is_active,
+  vals.group_order,
+  vals.next_group_order,
+  vals.conditional_next_group
+FROM france_products prod,
+(VALUES
 `;
 
-    const optionValues = productOptions.map(option =>
-      `  (${option.id}, ${option.product_id}, '${option.option_group?.replace(/'/g, "''") || ''}', '${option.option_name?.replace(/'/g, "''") || ''}', ${option.price_modifier || 0}, ${option.is_required || false}, ${option.max_selections || 1}, ${option.display_order || 0}, ${option.is_active !== false}, ${option.group_order || 0}, ${option.next_group_order || 'null'}, ${option.conditional_next_group || 'null'})`
-    ).join(',\n');
+      const optionValues = options.map(option =>
+        `  ('${option.option_group?.replace(/'/g, "''") || ''}', '${option.option_name?.replace(/'/g, "''") || ''}', ${option.price_modifier || 0}, ${option.is_required || false}, ${option.max_selections || 1}, ${option.display_order || 0}, ${option.is_active !== false}, ${option.group_order || 0}, ${option.next_group_order ? option.next_group_order : 'null::integer'}, ${option.conditional_next_group ? `'${JSON.stringify(option.conditional_next_group).replace(/'/g, "''")}'::jsonb` : 'null::jsonb'})`
+      ).join(',\n');
 
-    script += optionValues;
-    script += `
-ON CONFLICT (id) DO UPDATE SET
-  option_group = EXCLUDED.option_group,
-  option_name = EXCLUDED.option_name,
-  price_modifier = EXCLUDED.price_modifier,
-  is_required = EXCLUDED.is_required,
-  max_selections = EXCLUDED.max_selections,
-  display_order = EXCLUDED.display_order,
-  is_active = EXCLUDED.is_active,
-  group_order = EXCLUDED.group_order,
-  next_group_order = EXCLUDED.next_group_order,
-  conditional_next_group = EXCLUDED.conditional_next_group;
+      script += optionValues;
+      script += `
+) AS vals(option_group, option_name, price_modifier, is_required, max_selections, display_order, is_active, group_order, next_group_order, conditional_next_group)
+WHERE prod.name = '${productName}' AND prod.restaurant_id = ${restaurant.id}
+AND NOT EXISTS (
+  SELECT 1 FROM france_product_options existing
+  WHERE existing.product_id = prod.id
+  AND existing.option_group = vals.option_group
+  AND existing.option_name = vals.option_name
+);
 
 `;
+    });
   }
 
-  // 5. Configuration bot
+  // 5. Génération automatique des composants de base pour l'interface
+  if (products.length > 0) {
+    const compositeProducts = products.filter(p =>
+      p.workflow_type === 'universal_workflow_v2' ||
+      (p.product_type === 'composite' && p.steps_config)
+    );
+
+    if (compositeProducts.length > 0) {
+      script += `-- 5. Synchronisation composants de base (interface PROD)
+-- Génération automatique pour les produits avec workflows
+`;
+
+      compositeProducts.forEach(product => {
+        const productName = product.name.replace(/'/g, "''");
+
+        // Analyser steps_config pour détecter les groupes
+        let componentItems = [];
+
+        if (product.steps_config && typeof product.steps_config === 'object' && product.steps_config.steps) {
+          const steps = product.steps_config.steps;
+
+          steps.forEach((step, index) => {
+            if (step.option_groups && step.option_groups.length > 0) {
+              step.option_groups.forEach(groupName => {
+                let componentName = '';
+                let unit = 'choix';
+
+                // Utiliser le mapping dynamique depuis la base de données
+                const mapping = groupMapping.get(groupName.toLowerCase());
+                if (mapping) {
+                  componentName = mapping.component_name;
+                  unit = mapping.unit;
+                } else {
+                  // Fallback si le groupe n'est pas trouvé dans la base
+                  componentName = groupName + ' au choix';
+                  unit = 'choix';
+                  console.log(`⚠️ [SQL Generator] Groupe non trouvé dans la base: "${groupName}" - utilisation du fallback`);
+                }
+
+                componentItems.push({
+                  name: componentName,
+                  quantity: 1,
+                  unit: unit
+                });
+              });
+            }
+          });
+        }
+
+        // Si pas de steps_config détectable, utiliser des composants par défaut
+        if (componentItems.length === 0) {
+          componentItems = [
+            { name: 'Plat au choix', quantity: 1, unit: 'choix' },
+            { name: 'Boisson', quantity: 1, unit: 'choix' }
+          ];
+        }
+
+        if (componentItems.length > 0) {
+          script += `
+-- Composants pour le produit: ${product.name}
+INSERT INTO france_composite_items (
+  composite_product_id, component_name, quantity, unit
+)
+SELECT
+  prod.id,
+  vals.component_name,
+  vals.quantity,
+  vals.unit
+FROM france_products prod,
+(VALUES
+`;
+
+          const componentValues = componentItems.map(item =>
+            `  ('${item.name.replace(/'/g, "''")}', ${item.quantity}, '${item.unit.replace(/'/g, "''")}')`
+          ).join(',\n');
+
+          script += componentValues;
+          script += `
+) AS vals(component_name, quantity, unit)
+WHERE prod.name = '${productName}' AND prod.restaurant_id = ${restaurant.id}
+AND NOT EXISTS (
+  SELECT 1 FROM france_composite_items existing
+  WHERE existing.composite_product_id = prod.id
+  AND existing.component_name = vals.component_name
+);
+
+`;
+        }
+      });
+    }
+  }
+
+  // 6. Configuration bot
   if (botConfig) {
-    script += `-- 5. Synchronisation configuration bot
+    script += `-- 6. Synchronisation configuration bot
 INSERT INTO restaurant_bot_configs (
   id, restaurant_id, config_name, brand_name, welcome_message,
   available_workflows, features, is_active
@@ -372,9 +518,9 @@ ON CONFLICT (id) DO UPDATE SET
 `;
   }
 
-  // 6. Configurations d'affichage produit
+  // 7. Configurations d'affichage produit
   if (displayConfigs.length > 0) {
-    script += `-- 6. Synchronisation configurations affichage produit (${displayConfigs.length})
+    script += `-- 7. Synchronisation configurations affichage produit (${displayConfigs.length})
 INSERT INTO france_product_display_configs (
   id, restaurant_id, product_id, display_type, template_name,
   show_variants_first, custom_header_text, custom_footer_text, emoji_icon
@@ -399,9 +545,9 @@ ON CONFLICT (id) DO UPDATE SET
 `;
   }
 
-  // 7. Templates workflow
+  // 8. Templates workflow
   if (workflowTemplates.length > 0) {
-    script += `-- 7. Synchronisation templates workflow (${workflowTemplates.length})
+    script += `-- 8. Synchronisation templates workflow (${workflowTemplates.length})
 INSERT INTO france_workflow_templates (
   id, restaurant_id, template_name, description, steps_config
 )

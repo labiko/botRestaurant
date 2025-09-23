@@ -425,62 +425,46 @@ function ProductionSyncPageContent() {
                             </div>
                           )}
 
-                          {/* Actions existantes */}
+                          {/* Actions toujours disponibles */}
                           <div className="flex space-x-2">
-                            {dup.production_status === 'dev_only' && (
-                              <>
-                                <button
-                                  onClick={() => generateScript(dup.id, 'complete', [])}
-                                  className="text-blue-600 hover:text-blue-900"
-                                  title="Générer script SQL"
-                                >
-                                  📜 Générer
-                                </button>
-                                <button
-                                  onClick={() => openSyncModal(dup)}
-                                  className="text-green-600 hover:text-green-900"
-                                  title="Synchroniser"
-                                >
-                                  🔄 Sync
-                                </button>
-                                <button
-                                  onClick={() => markAsExecuted(dup.id)}
-                                  className="text-orange-600 hover:text-orange-900"
-                                  title="Marquer comme synchronisé en production"
-                                >
-                                  ✅ Exécuté
-                                </button>
-                              </>
-                            )}
+                            {/* Bouton Synchroniser - TOUJOURS visible */}
+                            <button
+                              onClick={() => openSyncModal(dup)}
+                              className="text-green-600 hover:text-green-900"
+                              title={dup.production_status === 'synced' ? 'Re-synchroniser' : 'Synchroniser'}
+                            >
+                              🔄 {dup.production_status === 'synced' ? 'Re-sync' : 'Sync'}
+                            </button>
 
-                            {dup.production_status === 'synced' && (
+                            {/* Autres actions selon statut */}
+                            {(dup.production_status === 'dev_only' || dup.production_status === 'outdated') && (
                               <button
-                                onClick={() => alert('Fonctionnalité historique à implémenter')}
-                                className="text-purple-600 hover:text-purple-900"
-                                title="Voir historique"
+                                onClick={() => generateScript(dup.id, dup.production_status === 'dev_only' ? 'complete' : 'update', [])}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Générer script SQL"
                               >
-                                📊 Historique
+                                📜 Générer
                               </button>
                             )}
 
-                            {dup.production_status === 'outdated' && (
-                              <>
-                                <button
-                                  onClick={() => generateScript(dup.id, 'update', [])}
-                                  className="text-blue-600 hover:text-blue-900"
-                                  title="Générer script SQL"
-                                >
-                                  📜 Générer
-                                </button>
-                                <button
-                                  onClick={() => alert('Fonctionnalité historique à implémenter')}
-                                  className="text-purple-600 hover:text-purple-900"
-                                  title="Voir historique"
-                                >
-                                  📊 Historique
-                                </button>
-                              </>
+                            {dup.production_status === 'dev_only' && (
+                              <button
+                                onClick={() => markAsExecuted(dup.id)}
+                                className="text-orange-600 hover:text-orange-900"
+                                title="Marquer comme synchronisé en production"
+                              >
+                                ✅ Exécuté
+                              </button>
                             )}
+
+                            {/* Historique toujours disponible pour les synchronisés */}
+                            <button
+                              onClick={() => router.push(`/duplicate/history?id=${dup.id}`)}
+                              className="text-purple-600 hover:text-purple-900"
+                              title="Voir historique détaillé"
+                            >
+                              📊 Historique
+                            </button>
                           </div>
                         </div>
                       </td>

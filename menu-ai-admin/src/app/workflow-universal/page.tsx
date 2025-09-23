@@ -11,8 +11,8 @@ export default function WorkflowUniversalPage() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [onSitePrice, setOnSitePrice] = useState(10.00);
-  const [deliveryPrice, setDeliveryPrice] = useState(11.00);
+  const [onSitePrice, setOnSitePrice] = useState(0);
+  const [deliveryPrice, setDeliveryPrice] = useState(0);
 
   const [steps, setSteps] = useState<WorkflowStep[]>([
     {
@@ -51,9 +51,14 @@ export default function WorkflowUniversalPage() {
   const [validationResult, setValidationResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  // Charger la liste des restaurants au démarrage
+  // Nouveaux états pour les groupes prédéfinis
+  const [availableGroups, setAvailableGroups] = useState<any[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+
+  // Charger la liste des restaurants et groupes au démarrage
   useEffect(() => {
     loadRestaurants();
+    loadAvailableGroups();
   }, []);
 
   const loadRestaurants = async () => {
@@ -68,6 +73,29 @@ export default function WorkflowUniversalPage() {
       console.error('Erreur chargement restaurants:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Charger les groupes d'options prédéfinis depuis la base
+  const loadAvailableGroups = async () => {
+    try {
+      setLoadingGroups(true);
+      const response = await fetch('/api/option-groups');
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableGroups(data.groups || []);
+      }
+    } catch (error) {
+      console.error('Erreur chargement groupes:', error);
+      // Fallback sur les groupes par défaut en cas d'erreur
+      setAvailableGroups([
+        { group_name: 'Plats', icon: '🍽️' },
+        { group_name: 'Boissons', icon: '🥤' },
+        { group_name: 'Desserts', icon: '🍰' },
+        { group_name: 'Suppléments', icon: '➕' }
+      ]);
+    } finally {
+      setLoadingGroups(false);
     }
   };
 
@@ -190,8 +218,8 @@ export default function WorkflowUniversalPage() {
     if (type === 'simple') {
       setProductName('MENU SIMPLE');
       setNewCategoryName('Menus simples');
-      setOnSitePrice(10.00);
-      setDeliveryPrice(11.00);
+      setOnSitePrice(0);
+      setDeliveryPrice(0);
       setSteps([
         {
           step: 1,
@@ -223,8 +251,8 @@ export default function WorkflowUniversalPage() {
     } else if (type === 'complex') {
       setProductName('MENU COMPLEXE');
       setNewCategoryName('Menus complexes');
-      setOnSitePrice(15.00);
-      setDeliveryPrice(16.00);
+      setOnSitePrice(0);
+      setDeliveryPrice(0);
       setSteps([
         {
           step: 1,
@@ -280,8 +308,8 @@ export default function WorkflowUniversalPage() {
     } else if (type === 'pizza_complete') {
       setProductName('FORMULE PIZZA COMPLÈTE');
       setNewCategoryName('Formules pizza');
-      setOnSitePrice(18.00);
-      setDeliveryPrice(19.00);
+      setOnSitePrice(0);
+      setDeliveryPrice(0);
       setSteps([
         {
           step: 1,
@@ -584,14 +612,28 @@ export default function WorkflowUniversalPage() {
                       className="w-full px-2 py-1 border rounded text-sm"
                     />
 
-                    <input
-                      type="text"
-                      placeholder="Groupe d'options"
-                      value={step.option_groups[0]}
-                      onChange={(e) => handleUpdateStep(index, 'option_groups', [e.target.value])}
-                      onBlur={(e) => handleAddOptionGroup(e.target.value)}
-                      className="w-full px-2 py-1 border rounded text-sm"
-                    />
+                    {/* Dropdown avec groupes prédéfinis */}
+                    <div className="relative">
+                      <select
+                        value={step.option_groups[0]}
+                        onChange={(e) => {
+                          handleUpdateStep(index, 'option_groups', [e.target.value]);
+                          handleAddOptionGroup(e.target.value);
+                        }}
+                        disabled={loadingGroups}
+                        className="w-full px-2 py-1 border rounded text-sm bg-white"
+                      >
+                        <option value="">
+                          {loadingGroups ? 'Chargement...' : 'Sélectionnez un groupe'}
+                        </option>
+                        {availableGroups.map((group) => (
+                          <option key={group.id} value={group.group_name}>
+                            {group.icon} {group.group_name}
+                          </option>
+                        ))}
+                      </select>
+
+                    </div>
 
                     <div className="flex gap-4">
                       <label className="flex items-center">
