@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRestaurant } from '@/contexts/RestaurantContext';
+import { useAuth } from '@/lib/auth-context';
 import { Restaurant } from '@/lib/types';
 
 export default function TopNavbar() {
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const { user, logout } = useAuth();
   const {
     selectedRestaurant,
     setSelectedRestaurant,
@@ -100,13 +102,24 @@ export default function TopNavbar() {
             )}
           </div>
 
-          {/* Profil Utilisateur */}
-          <div className="flex items-center">
-            <button className="bg-white/10 text-white p-2 rounded-lg hover:bg-white/20 transition-colors">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </button>
+          {/* User Actions */}
+          <div className="flex items-center space-x-3">
+            {user && (
+              <>
+                <span className="text-white/80 text-sm">
+                  👤 {user.email}
+                </span>
+                <button
+                  onClick={() => {
+                    logout();
+                    router.push('/login');
+                  }}
+                  className="bg-red-500/80 text-white px-3 py-1.5 rounded-lg hover:bg-red-500 transition-colors text-sm font-medium"
+                >
+                  🚪 Déconnexion
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
