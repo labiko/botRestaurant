@@ -66,6 +66,7 @@ export class RestaurantDiscoveryService {
           .select('id, name, latitude, longitude, delivery_zone_km, is_active, is_exceptionally_closed, business_hours')
           .eq('is_active', true)
           .eq('is_exceptionally_closed', false)
+          .eq('deployment_status', 'production')
           .order('name')
       );
 

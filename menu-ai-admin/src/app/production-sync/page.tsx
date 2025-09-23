@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProductionSyncModal from '@/components/ProductionSyncModal';
+import RestaurantDeploymentSection from '@/components/RestaurantDeploymentSection';
 
 interface ProductionDuplication {
   id: number;
@@ -343,6 +344,9 @@ function ProductionSyncPageContent() {
             ))}
           </div>
         </div>
+
+        {/* 🆕 Section Gestion Déploiement */}
+        <RestaurantDeploymentSection />
 
         {/* Tableau des restaurants */}
         {filteredDuplications.length === 0 ? (

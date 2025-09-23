@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// 🚀 CONNEXION PRODUCTION pour mise à jour statut restaurant
+// 🚀 CONNEXION PRODUCTION pour mise à jour deployment_status
 const SUPABASE_PROD_URL = process.env.NEXT_PUBLIC_SUPABASE_URL_PROD;
 const SUPABASE_PROD_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD;
 
 export async function PUT(request: NextRequest) {
   try {
-    console.log('🔗 [API] Mise à jour statut restaurant PROD');
+    console.log('🔗 [API] Mise à jour deployment_status PROD');
     console.log('🔍 [API] SUPABASE_URL_PROD:', SUPABASE_PROD_URL ? 'Défini' : 'MANQUANT');
     console.log('🔍 [API] SUPABASE_ANON_KEY_PROD:', SUPABASE_PROD_ANON_KEY ? 'Défini' : 'MANQUANT');
 
@@ -20,15 +20,24 @@ export async function PUT(request: NextRequest) {
       }, { status: 500 });
     }
 
-    const { restaurant_id, is_active } = await request.json();
+    const { restaurant_id, deployment_status } = await request.json();
 
-    console.log(`🔗 [API] Mise à jour statut restaurant PROD: restaurant ${restaurant_id} → is_active: ${is_active}`);
+    console.log(`🔗 [API] Mise à jour deployment_status PROD: restaurant ${restaurant_id} → ${deployment_status}`);
 
     // Validation des données
-    if (!restaurant_id || typeof is_active !== 'boolean') {
+    if (!restaurant_id || !deployment_status) {
       return NextResponse.json({
         success: false,
-        error: 'restaurant_id et is_active (boolean) requis'
+        error: 'restaurant_id et deployment_status requis'
+      }, { status: 400 });
+    }
+
+    // Validation du statut
+    const validStatuses = ['development', 'testing', 'production'];
+    if (!validStatuses.includes(deployment_status)) {
+      return NextResponse.json({
+        success: false,
+        error: `deployment_status doit être: ${validStatuses.join(', ')}`
       }, { status: 400 });
     }
 
@@ -53,31 +62,31 @@ export async function PUT(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Mettre à jour le statut is_active en PRODUCTION
+    // Mettre à jour le deployment_status en PRODUCTION
     const { error: updateError } = await supabaseProd
       .from('france_restaurants')
-      .update({ is_active })
+      .update({ deployment_status })
       .eq('id', restaurant_id);
 
     if (updateError) {
-      console.error('❌ [API] Erreur mise à jour statut restaurant PROD:', updateError);
+      console.error('❌ [API] Erreur mise à jour deployment_status PROD:', updateError);
       return NextResponse.json({
         success: false,
         error: `Erreur mise à jour PROD: ${updateError.message}`
       }, { status: 500 });
     }
 
-    console.log(`✅ [API] Statut restaurant mis à jour avec succès en PROD`);
+    console.log(`✅ [API] deployment_status mis à jour avec succès en PROD`);
 
     return NextResponse.json({
       success: true,
-      message: `Restaurant "${restaurant.name}" ${is_active ? 'activé' : 'désactivé'} avec succès`,
+      message: `Statut mis à jour avec succès`,
       restaurant_name: restaurant.name,
-      new_status: is_active
+      new_status: deployment_status
     });
 
   } catch (error) {
-    console.error('❌ [API] Exception mise à jour statut restaurant:', error);
+    console.error('❌ [API] Exception mise à jour deployment_status:', error);
     return NextResponse.json({
       success: false,
       error: 'Erreur serveur'
