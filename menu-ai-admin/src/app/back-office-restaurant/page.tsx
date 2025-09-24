@@ -77,6 +77,7 @@ export default function BackOfficeRestaurantPage() {
   const [activeModalTab, setActiveModalTab] = useState<'category' | 'options'>('category');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
+  const [iconEditMode, setIconEditMode] = useState<'category' | 'product'>('category');
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -313,6 +314,7 @@ export default function BackOfficeRestaurantPage() {
     setEditingCategory(category);
     setShowAdvancedModal(true);
     setActiveModalTab('category');
+    setIconEditMode('category');
 
     console.log('📦 [openAdvancedCategoryModal] Chargement produits pour:', {
       restaurant_id: category.restaurant_id,
@@ -476,6 +478,17 @@ export default function BackOfficeRestaurantPage() {
     } catch (error) {
       console.error('Erreur sauvegarde icône produit:', error);
       showNotification('error', 'Erreur de connexion', 'Impossible de communiquer avec le serveur');
+    }
+  };
+
+  // Fonction unifiée pour sauvegarder les icônes
+  const saveIcon = async (icon: string) => {
+    if (iconEditMode === 'category') {
+      await saveCategoryIcon(editingCategory?.id || 0, icon);
+    } else if (iconEditMode === 'product' && editingProduct) {
+      await saveProductIcon(editingProduct.id, icon);
+      // Mettre à jour l'état local du produit en cours d'édition
+      setEditingProduct(prev => prev ? { ...prev, icon } : prev);
     }
   };
 
@@ -1273,41 +1286,82 @@ export default function BackOfficeRestaurantPage() {
                 <div className="p-6">
                   <div className="max-w-4xl mx-auto">
                     <div className="text-center mb-8">
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        Modifier l'icône de la catégorie
+                      <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                        Modifier les icônes
                       </h3>
-                      <div className="inline-flex items-center bg-gray-100 rounded-lg p-4">
-                        <div className="text-6xl mr-4">{editingCategory.icon || '❓'}</div>
-                        <div className="text-left">
-                          <div className="font-medium text-gray-900">{editingCategory.name}</div>
-                          <div className="text-sm text-gray-500">Icône actuelle</div>
+
+                      {/* Toggle simple entre catégorie et produit */}
+                      {editingProduct && (
+                        <div className="flex justify-center mb-6">
+                          <div className="bg-gray-100 p-1 rounded-lg">
+                            <button
+                              onClick={() => setIconEditMode('category')}
+                              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                iconEditMode === 'category'
+                                  ? 'bg-white text-blue-600 shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              🏷️ Catégorie
+                            </button>
+                            <button
+                              onClick={() => setIconEditMode('product')}
+                              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                iconEditMode === 'product'
+                                  ? 'bg-white text-green-600 shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              📦 Produit
+                            </button>
+                          </div>
                         </div>
+                      )}
+
+                      {/* Affichage unifié de l'icône actuelle */}
+                      <div className="bg-white border-2 border-gray-200 rounded-xl p-8 mb-8 max-w-md mx-auto">
+                        <div className="text-center">
+                          <div className="text-8xl mb-4">
+                            {iconEditMode === 'product' && editingProduct ? editingProduct.icon || '❓' : editingCategory.icon || '❓'}
+                          </div>
+                          <div className="font-medium text-gray-900 mb-1">
+                            {iconEditMode === 'product' && editingProduct ? editingProduct.name : editingCategory.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {iconEditMode === 'product' ? 'Icône du produit' : 'Icône de la catégorie'}
+                          </div>
+                        </div>
+                      </div>
+
+                    {/* Sélection d'icônes unifiée */}
+                    <div className="mb-8">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+                        {iconEditMode === 'product' ? '📦 Choisir l\'icône du produit' : '🏷️ Choisir l\'icône de la catégorie'}
+                      </h4>
+                      <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-3 p-4 bg-gray-50 rounded-xl">
+                        {[
+                          '🍽️', '🍕', '🍔', '🌯', '🥙', '🍗', '🥩', '🐟', '🦐', '🍝', '🍜', '🍛',
+                          '🥗', '🥬', '🥒', '🍅', '🧅', '🥔', '🍟', '🥤', '☕', '🧃', '🍰', '🍨',
+                          '🎂', '🍪', '🍩', '🧁', '🍎', '🍊', '🍌', '🍇', '🍓', '🥝', '🥥', '🍑',
+                          '🌶️', '🌽', '🥕', '🥦', '🥒', '🍆', '🥑', '🍠', '🥜', '🌰', '🍞', '🥐',
+                          '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🍳', '🥓', '🌭', '🥪', '🌮'
+                        ].map((icon, index) => (
+                          <button
+                            key={`unified-icon-${index}`}
+                            onClick={() => saveIcon(icon)}
+                            className={`p-3 text-2xl rounded-lg border-2 transition-all hover:scale-110 ${
+                              (iconEditMode === 'product' && editingProduct ? editingProduct.icon : editingCategory.icon) === icon
+                                ? 'border-blue-500 bg-blue-100'
+                                : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                            }`}
+                            title={`Appliquer ${icon} à la catégorie`}
+                          >
+                            {icon}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
-                    {/* Grille d'icônes pour catégories */}
-                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-3">
-                      {[
-                        '🍽️', '🍕', '🍔', '🌯', '🥙', '🍗', '🥩', '🐟', '🦐', '🍝', '🍜', '🍛',
-                        '🥗', '🥬', '🥒', '🍅', '🧅', '🥔', '🍟', '🥤', '☕', '🧃', '🍰', '🍨',
-                        '🎂', '🍪', '🍩', '🧁', '🍎', '🍊', '🍌', '🍇', '🍓', '🥝', '🥥', '🍑',
-                        '🌶️', '🌽', '🥕', '🥦', '🥒', '🍆', '🥑', '🍠', '🥜', '🌰', '🍞', '🥐',
-                        '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🍳', '🥓', '🌭', '🥪', '🌮'
-                      ].map((icon, index) => (
-                        <button
-                          key={`category-icon-${index}`}
-                          onClick={() => saveCategoryIcon(editingCategory.id, icon)}
-                          className={`p-3 text-2xl rounded-lg border-2 transition-all hover:scale-110 ${
-                            editingCategory.icon === icon
-                              ? 'border-purple-500 bg-purple-50'
-                              : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
-                          }`}
-                          title={`Sélectionner ${icon}`}
-                        >
-                          {icon}
-                        </button>
-                      ))}
-                    </div>
                   </div>
                 </div>
               )}
