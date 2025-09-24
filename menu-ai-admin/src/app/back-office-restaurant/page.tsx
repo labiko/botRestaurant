@@ -17,14 +17,25 @@ interface Restaurant {
   longitude?: number;
 }
 
-interface FranceIcon {
+interface Category {
   id: number;
-  emoji: string;
   name: string;
-  category: string;
-  tags: string[];
-  created_at: string;
-  updated_at: string;
+  icon: string;
+  restaurant_id: number;
+  display_order: number;
+  is_active: boolean;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  icon: string | null;
+  category_id: number;
+  restaurant_id: number;
+  display_order: number;
+  is_active: boolean;
+  price_onsite: number;
+  price_delivery: number;
 }
 
 export default function BackOfficeRestaurantPage() {
@@ -38,29 +49,29 @@ export default function BackOfficeRestaurantPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Restaurant>>({});
 
-  // États pour la gestion des icônes produits
-  const [selectedRestaurantForIcons, setSelectedRestaurantForIcons] = useState('');
-  const [categories, setCategories] = useState<any[]>([]);
-  const [selectedCategoryForIcons, setSelectedCategoryForIcons] = useState('');
-  const [products, setProducts] = useState<any[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  const [availableIcons, setAvailableIcons] = useState<FranceIcon[]>([]);
-  const [showIconModal, setShowIconModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
-
-  // États pour la gestion des icônes (variables manquantes ajoutées)
-  const [icons, setIcons] = useState<FranceIcon[]>([]);
-  const [loadingIcons, setLoadingIcons] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedRestaurant, setSelectedRestaurant] = useState('');
-
   // États pour les notifications modernes
   const [notification, setNotification] = useState<{
     type: 'success' | 'error' | 'info' | 'warning';
     message: string;
     details?: string;
   } | null>(null);
+
+  // États pour la gestion avancée des icônes
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+
+  // États pour la modal avancée
+  const [showAdvancedModal, setShowAdvancedModal] = useState(false);
+  const [activeModalTab, setActiveModalTab] = useState<'category' | 'products' | 'preview'>('category');
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+
+  // États pour le drag & drop
+  const [draggedProduct, setDraggedProduct] = useState<number | null>(null);
 
   // Fonction de formatage de date avec correction du fuseau horaire
   const formatDateTime = (dateString: string): string => {
@@ -113,108 +124,6 @@ export default function BackOfficeRestaurantPage() {
       showNotification('error', 'Erreur de connexion', 'Impossible de charger les restaurants');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Charger les catégories d'un restaurant
-  const loadCategories = async (restaurantId: string) => {
-    if (!restaurantId) return;
-
-    try {
-      const response = await fetch(`/api/categories?restaurant_id=${restaurantId}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setCategories(data.categories);
-        setSelectedCategoryForIcons('');
-        setProducts([]);
-      }
-    } catch (error) {
-      console.error('Erreur chargement catégories:', error);
-      showNotification('error', 'Erreur', 'Impossible de charger les catégories');
-    }
-  };
-
-  // Charger les produits d'une catégorie
-  const loadProducts = async (restaurantId: string, categoryId: string) => {
-    if (!restaurantId || !categoryId) return;
-
-    setLoadingProducts(true);
-    try {
-      const response = await fetch(`/api/products?restaurant_id=${restaurantId}&category_id=${categoryId}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setProducts(data.products);
-        showNotification('success', 'Produits chargés', `${data.products.length} produits trouvés`);
-      }
-    } catch (error) {
-      console.error('Erreur chargement produits:', error);
-      showNotification('error', 'Erreur', 'Impossible de charger les produits');
-    } finally {
-      setLoadingProducts(false);
-    }
-  };
-
-  // Charger les icônes disponibles
-  const loadAvailableIcons = async () => {
-    try {
-      const response = await fetch('/api/icons');
-      const data = await response.json();
-      if (data.success) {
-        setAvailableIcons(data.icons);
-      }
-    } catch (error) {
-      console.error('Erreur chargement icônes:', error);
-    }
-  };
-
-  // Charger toutes les icônes pour la gestion (fonction manquante ajoutée)
-  const loadIcons = async () => {
-    setLoadingIcons(true);
-    try {
-      const params = new URLSearchParams();
-      if (selectedCategory) params.append('category', selectedCategory);
-      if (searchTerm) params.append('search', searchTerm);
-      if (selectedRestaurant) params.append('restaurant', selectedRestaurant);
-
-      const response = await fetch(`/api/icons?${params.toString()}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setIcons(data.icons);
-        showNotification('success', 'Icônes chargées', `${data.icons.length} icônes trouvées`);
-      } else {
-        showNotification('error', 'Erreur', data.error);
-      }
-    } catch (error) {
-      console.error('Erreur chargement icônes:', error);
-      showNotification('error', 'Erreur', 'Impossible de charger les icônes');
-    } finally {
-      setLoadingIcons(false);
-    }
-  };
-
-  // Sauvegarder l'icône d'un produit
-  const saveProductIcon = async (productId: number, iconEmoji: string) => {
-    try {
-      const response = await fetch('/api/products', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: productId, icon: iconEmoji })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        // Recharger les produits
-        await loadProducts(selectedRestaurantForIcons, selectedCategoryForIcons);
-        setShowIconModal(false);
-        setEditingProduct(null);
-        showNotification('success', 'Icône mise à jour', 'L\'icône du produit a été sauvegardée');
-      }
-    } catch (error) {
-      console.error('Erreur sauvegarde icône:', error);
-      showNotification('error', 'Erreur', 'Impossible de sauvegarder l\'icône');
     }
   };
 
@@ -358,17 +267,227 @@ export default function BackOfficeRestaurantPage() {
     }
   };
 
-  // Filtrer les icônes selon les critères
-  const filteredIcons = icons.filter(icon => {
-    const matchesSearch = searchTerm === '' ||
-      icon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      icon.emoji.includes(searchTerm) ||
-      icon.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+  // Fonctions pour la gestion avancée des icônes
+  const loadCategoriesForRestaurant = async (restaurantId: number) => {
+    setLoadingCategories(true);
+    try {
+      const response = await fetch(`/api/categories?restaurant_id=${restaurantId}`);
+      const data = await response.json();
 
-    const matchesCategory = selectedCategory === '' || icon.category === selectedCategory;
+      if (data.success) {
+        setCategories(data.categories || []);
+        console.log(`✅ [loadCategoriesForRestaurant] ${data.categories?.length || 0} catégories trouvées pour restaurant ${restaurantId}`);
+      } else {
+        console.error('❌ [loadCategoriesForRestaurant] Erreur API:', data.error);
+        showNotification('error', 'Erreur de chargement', data.error || 'Impossible de charger les catégories');
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error('❌ [loadCategoriesForRestaurant] Exception:', error);
+      showNotification('error', 'Erreur de connexion', 'Impossible de communiquer avec le serveur');
+      setCategories([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
 
-    return matchesSearch && matchesCategory;
-  });
+  const openAdvancedCategoryModal = async (category: Category) => {
+    console.log('🎯 [openAdvancedCategoryModal] Ouverture modal pour catégorie:', category);
+    setEditingCategory(category);
+    setShowAdvancedModal(true);
+    setActiveModalTab('category');
+
+    console.log('📦 [openAdvancedCategoryModal] Chargement produits pour:', {
+      restaurant_id: category.restaurant_id,
+      category_id: category.id,
+      category_name: category.name
+    });
+
+    await loadCategoryProducts(category.restaurant_id, category.id);
+  };
+
+  const loadCategoryProducts = async (restaurantId: number | string, categoryId: number | string) => {
+    setLoadingProducts(true);
+    try {
+      console.log('🔍 [loadCategoryProducts] Chargement:', { restaurantId, categoryId });
+
+      const url = `/api/products?restaurant_id=${restaurantId}&category_id=${categoryId}`;
+      console.log('🌐 [loadCategoryProducts] URL:', url);
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      console.log('📊 [loadCategoryProducts] Response:', data);
+
+      if (data.success) {
+        setCategoryProducts(data.products || []);
+        console.log(`✅ [loadCategoryProducts] Produits chargés: ${data.products?.length || 0}`);
+      } else {
+        console.error('❌ [loadCategoryProducts] Erreur API:', data.error);
+        showNotification('error', 'Erreur de chargement', data.error || 'Impossible de charger les produits');
+        setCategoryProducts([]);
+      }
+    } catch (error) {
+      console.error('❌ [loadCategoryProducts] Exception:', error);
+      showNotification('error', 'Erreur de connexion', 'Impossible de communiquer avec le serveur');
+      setCategoryProducts([]);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const saveCategoryIcon = async (categoryId: number, icon: string) => {
+    try {
+      const response = await fetch('/api/categories', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: categoryId, icon })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setCategories(prev => prev.map(cat =>
+          cat.id === categoryId ? { ...cat, icon } : cat
+        ));
+        setEditingCategory(prev => prev ? { ...prev, icon } : null);
+        showNotification('success', 'Icône mise à jour', 'L\'icône de la catégorie a été sauvegardée');
+      } else {
+        showNotification('error', 'Erreur de sauvegarde', data.error || 'Impossible de sauvegarder l\'icône');
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde icône catégorie:', error);
+      showNotification('error', 'Erreur de connexion', 'Impossible de communiquer avec le serveur');
+    }
+  };
+
+  const toggleProductSelection = (productId: number) => {
+    setSelectedProducts(prev =>
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const selectAllProducts = () => {
+    if (selectedProducts.length === categoryProducts.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(categoryProducts.map(p => p.id));
+    }
+  };
+
+  const applyBulkIcon = async (icon: string) => {
+    if (selectedProducts.length === 0) return;
+
+    try {
+      const response = await fetch('/api/products/bulk', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_ids: selectedProducts,
+          icon
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setCategoryProducts(prev => prev.map(product =>
+          selectedProducts.includes(product.id) ? { ...product, icon } : product
+        ));
+        setSelectedProducts([]);
+        setShowBulkModal(false);
+        showNotification('success', 'Icônes appliquées', `${selectedProducts.length} produits mis à jour`);
+      } else {
+        showNotification('error', 'Erreur de sauvegarde', data.error || 'Impossible d\'appliquer les icônes');
+      }
+    } catch (error) {
+      console.error('Erreur application bulk icônes:', error);
+      showNotification('error', 'Erreur de connexion', 'Impossible de communiquer avec le serveur');
+    }
+  };
+
+  const saveProductIcon = async (productId: number, icon: string) => {
+    try {
+      const response = await fetch('/api/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: productId, icon })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setCategoryProducts(prev => prev.map(product =>
+          product.id === productId ? { ...product, icon } : product
+        ));
+        showNotification('success', 'Icône mise à jour', 'L\'icône du produit a été sauvegardée');
+      } else {
+        showNotification('error', 'Erreur de sauvegarde', data.error || 'Impossible de sauvegarder l\'icône');
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde icône produit:', error);
+      showNotification('error', 'Erreur de connexion', 'Impossible de communiquer avec le serveur');
+    }
+  };
+
+  const handleDragStart = (productId: number) => {
+    setDraggedProduct(productId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetProductId: number) => {
+    e.preventDefault();
+
+    if (!draggedProduct || draggedProduct === targetProductId) {
+      setDraggedProduct(null);
+      return;
+    }
+
+    const draggedIndex = categoryProducts.findIndex(p => p.id === draggedProduct);
+    const targetIndex = categoryProducts.findIndex(p => p.id === targetProductId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const reorderedProducts = [...categoryProducts];
+    const [draggedItem] = reorderedProducts.splice(draggedIndex, 1);
+    reorderedProducts.splice(targetIndex, 0, draggedItem);
+
+    const updatedProducts = reorderedProducts.map((product, index) => ({
+      ...product,
+      display_order: index + 1
+    }));
+
+    setCategoryProducts(updatedProducts);
+    setDraggedProduct(null);
+
+    try {
+      const response = await fetch('/api/products/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          products: updatedProducts.map(p => ({ id: p.id, display_order: p.display_order }))
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showNotification('success', 'Ordre mis à jour', 'L\'ordre des produits a été sauvegardé');
+      } else {
+        showNotification('error', 'Erreur de sauvegarde', data.error || 'Impossible de sauvegarder l\'ordre');
+        await loadCategoryProducts(editingCategory!.restaurant_id, editingCategory!.id);
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde ordre produits:', error);
+      showNotification('error', 'Erreur de connexion', 'Impossible de communiquer avec le serveur');
+      await loadCategoryProducts(editingCategory!.restaurant_id, editingCategory!.id);
+    }
+  };
 
   useEffect(() => {
     loadRestaurants();
@@ -865,315 +984,526 @@ export default function BackOfficeRestaurantPage() {
         </div>
       )}
 
-      {/* Tab Gestion des Icônes - Nouveau workflow */}
+      {/* Tab Gestion des Icônes */}
       {activeTab === 'icons' && (
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="p-6 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">🎨 Assignation Icônes aux Produits</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Sélectionnez un restaurant et une catégorie pour gérer les icônes des produits
-                </p>
-              </div>
-              <div className="text-sm text-gray-500">
-                🎯 {products.length} produits • {availableIcons.length} icônes disponibles
+        <div className="space-y-6">
+          {/* Sélection du restaurant */}
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">🎨 Gestion des Icônes</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Personnalisation avancée des icônes par restaurant
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Filtres Restaurant et Catégorie */}
-          <div className="p-6 bg-gray-50 border-b border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Sélection Restaurant */}
-              <div>
+            <div className="p-6">
+              <div className="max-w-md">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🏪 Sélectionner un restaurant
+                  🏪 Sélectionner le restaurant
                 </label>
                 <select
-                  value={selectedRestaurantForIcons}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  value={selectedRestaurantId || ''}
                   onChange={(e) => {
-                    setSelectedRestaurantForIcons(e.target.value);
-                    setSelectedCategoryForIcons('');
-                    setProducts([]);
-                    if (e.target.value) {
-                      loadCategories(e.target.value);
+                    const restaurantId = e.target.value ? parseInt(e.target.value) : null;
+                    setSelectedRestaurantId(restaurantId);
+                    if (restaurantId) {
+                      loadCategoriesForRestaurant(restaurantId);
                     } else {
                       setCategories([]);
                     }
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">-- Choisir un restaurant --</option>
-                  {restaurants
-                    .filter(r => r.is_active)
-                    .map(restaurant => (
-                      <option key={restaurant.id} value={restaurant.id}>
-                        {restaurant.name} • {restaurant.city}
-                      </option>
-                    ))}
-                </select>
-                {selectedRestaurantForIcons && (
-                  <p className="text-xs text-green-600 mt-1">
-                    ✅ Restaurant sélectionné - {categories.length} catégories disponibles
-                  </p>
-                )}
-              </div>
-
-              {/* Sélection Catégorie */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🏷️ Sélectionner une catégorie
-                </label>
-                <select
-                  value={selectedCategoryForIcons}
-                  onChange={(e) => {
-                    setSelectedCategoryForIcons(e.target.value);
-                    if (e.target.value && selectedRestaurantForIcons) {
-                      loadProducts(selectedRestaurantForIcons, e.target.value);
-                    } else {
-                      setProducts([]);
-                    }
-                  }}
-                  disabled={!selectedRestaurantForIcons}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  <option value="">-- Choisir une catégorie --</option>
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.icon} {category.name}
+                  <option value="">-- Sélectionnez un restaurant --</option>
+                  {restaurants.filter(r => r.is_active).map(restaurant => (
+                    <option key={restaurant.id} value={restaurant.id}>
+                      {restaurant.name} ({restaurant.city})
                     </option>
                   ))}
                 </select>
-                {selectedCategoryForIcons && (
-                  <p className="text-xs text-green-600 mt-1">
-                    ✅ Catégorie sélectionnée - {products.length} produits trouvés
-                  </p>
-                )}
               </div>
             </div>
-
-            {/* Instructions */}
-            {!selectedRestaurantForIcons && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                <p className="text-sm text-blue-700">
-                  💡 <strong>Instructions :</strong> Sélectionnez d'abord un restaurant pour voir ses catégories, puis choisissez une catégorie pour afficher les produits et gérer leurs icônes.
-                </p>
-              </div>
-            )}
           </div>
 
-          {/* Liste des Produits */}
-          {selectedRestaurantForIcons && selectedCategoryForIcons && (
-            <div className="p-6">
-              {loadingProducts ? (
-                <div className="text-center py-12">
-                  <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-600 bg-blue-100">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Chargement des produits...
+          {/* Grille des catégories */}
+          {selectedRestaurantId && (
+            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+              <div className="p-6 border-b border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">🏷️ Catégories</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {categories.length} catégories trouvées
+                    </p>
                   </div>
+                  <button
+                    onClick={() => selectedRestaurantId && loadCategoriesForRestaurant(selectedRestaurantId)}
+                    disabled={loadingCategories}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  >
+                    {loadingCategories ? '⏳ Chargement...' : '🔄 Actualiser'}
+                  </button>
                 </div>
-              ) : products.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <div className="text-4xl mb-4">📦</div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun produit trouvé</h3>
-                  <p className="text-gray-600">
-                    Cette catégorie ne contient aucun produit actif.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      📦 Produits de la catégorie ({products.length})
-                    </h3>
-                    <button
-                      onClick={loadAvailableIcons}
-                      className="text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      🔄 Recharger icônes ({availableIcons.length})
-                    </button>
-                  </div>
+              </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {products.map((product) => (
+              <div className="p-6">
+                {loadingCategories ? (
+                  <div className="text-center py-12">
+                    <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-purple-600 bg-purple-100">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Chargement des catégories...
+                    </div>
+                  </div>
+                ) : categories.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <div className="text-4xl mb-4">🏷️</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune catégorie trouvée</h3>
+                    <p className="text-gray-600">
+                      Ce restaurant n'a pas encore de catégories actives
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {categories.map((category) => (
                       <div
-                        key={product.id}
-                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                        key={category.id}
+                        className="group relative bg-gray-50 hover:bg-gradient-to-br hover:from-purple-50 hover:to-pink-50 border border-gray-200 hover:border-purple-300 rounded-xl p-4 transition-all duration-200 hover:shadow-lg hover:scale-105"
                       >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <span className="text-2xl">
-                                {product.icon || '❓'}
-                              </span>
-                              <h4 className="font-medium text-gray-900 text-sm">
-                                {product.name}
-                              </h4>
-                            </div>
-                            {product.description && (
-                              <p className="text-xs text-gray-600 line-clamp-2">
-                                {product.description}
-                              </p>
-                            )}
-                            <div className="mt-2 text-xs text-gray-500">
-                              ID: {product.id} • {product.product_type}
-                            </div>
-                          </div>
+                        {/* Icône de la catégorie */}
+                        <div className="text-center mb-3">
+                          <div className="text-4xl mb-2">{category.icon || '❓'}</div>
+                          <h4 className="font-medium text-gray-900 text-sm truncate">
+                            {category.name}
+                          </h4>
                         </div>
 
+                        {/* Bouton modifier */}
                         <button
-                          onClick={() => {
-                            setEditingProduct(product);
-                            loadAvailableIcons();
-                            setShowIconModal(true);
-                          }}
-                          className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+                          onClick={() => openAdvancedCategoryModal(category)}
+                          className="w-full mt-3 px-3 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg"
                         >
-                          <span>🎨</span>
-                          <span>{product.icon ? 'Modifier l\'icône' : 'Assigner une icône'}</span>
+                          🎨 Modifier
                         </button>
+
+                        {/* Badge ordre d'affichage */}
+                        <div className="absolute top-2 right-2 bg-white text-xs text-gray-500 px-2 py-1 rounded-full shadow-sm">
+                          #{category.display_order}
+                        </div>
                       </div>
                     ))}
                   </div>
-                </>
-              )}
+                )}
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Modal de sélection d'icône pour produit */}
-      {showIconModal && editingProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            {/* En-tête du modal */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4 rounded-t-lg">
+      {/* Modal Avancée de Gestion des Icônes */}
+      {showAdvancedModal && editingCategory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+            {/* Header Modal */}
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-pink-600 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-bold text-white">
-                    🎨 Sélectionner une icône
-                  </h3>
-                  <p className="text-blue-100 text-sm">
-                    Produit : <strong>{editingProduct.name}</strong>
+                  <h2 className="text-2xl font-bold flex items-center">
+                    {editingCategory.icon} {editingCategory.name}
+                  </h2>
+                  <p className="text-purple-100 mt-1">
+                    Gestion avancée • Restaurant ID: {editingCategory.restaurant_id}
                   </p>
                 </div>
                 <button
                   onClick={() => {
-                    setShowIconModal(false);
-                    setEditingProduct(null);
+                    setShowAdvancedModal(false);
+                    setEditingCategory(null);
+                    setCategoryProducts([]);
+                    setSelectedProducts([]);
                   }}
-                  className="bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-colors"
+                  className="text-white hover:text-red-200 p-2 hover:bg-white hover:bg-opacity-10 rounded-lg transition-colors"
                 >
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Navigation Tabs */}
+              <div className="mt-6 flex space-x-1">
+                {[
+                  { key: 'category', label: '🏷️ Icône Catégorie', desc: 'Modifier l\'icône' },
+                  { key: 'products', label: '📦 Produits', desc: `${categoryProducts.length} produits`, badge: selectedProducts.length > 0 ? `${selectedProducts.length} sélectionnés` : undefined },
+                  { key: 'preview', label: '📊 Aperçu', desc: 'Prévisualisation' }
+                ].map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveModalTab(tab.key as any)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      activeModalTab === tab.key
+                        ? 'bg-white text-purple-600 shadow-lg'
+                        : 'text-purple-100 hover:text-white hover:bg-white hover:bg-opacity-10'
+                    }`}
+                  >
+                    <div>{tab.label}</div>
+                    <div className="text-xs opacity-80">{tab.desc}</div>
+                    {tab.badge && (
+                      <div className="text-xs bg-orange-500 text-white px-2 py-1 rounded-full mt-1">
+                        {tab.badge}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Contenu Modal */}
+            <div className="flex-1 overflow-auto" style={{ maxHeight: 'calc(90vh - 180px)' }}>
+
+              {/* Tab: Icône Catégorie */}
+              {activeModalTab === 'category' && (
+                <div className="p-6">
+                  <div className="max-w-4xl mx-auto">
+                    <div className="text-center mb-8">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        Modifier l'icône de la catégorie
+                      </h3>
+                      <div className="inline-flex items-center bg-gray-100 rounded-lg p-4">
+                        <div className="text-6xl mr-4">{editingCategory.icon || '❓'}</div>
+                        <div className="text-left">
+                          <div className="font-medium text-gray-900">{editingCategory.name}</div>
+                          <div className="text-sm text-gray-500">Icône actuelle</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Grille d'icônes pour catégories */}
+                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-3">
+                      {[
+                        '🍽️', '🍕', '🍔', '🌯', '🥙', '🍗', '🥩', '🐟', '🦐', '🍝', '🍜', '🍛',
+                        '🥗', '🥬', '🥒', '🍅', '🧅', '🥔', '🍟', '🥤', '☕', '🧃', '🍰', '🍨',
+                        '🎂', '🍪', '🍩', '🧁', '🍎', '🍊', '🍌', '🍇', '🍓', '🥝', '🥥', '🍑',
+                        '🌶️', '🌽', '🥕', '🥦', '🥬', '🍆', '🥒', '🥑', '🍠', '🥜', '🌰', '🍞',
+                        '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🍳', '🥓', '🌭', '🥪', '🌮'
+                      ].map(icon => (
+                        <button
+                          key={icon}
+                          onClick={() => saveCategoryIcon(editingCategory.id, icon)}
+                          className={`p-3 text-2xl rounded-lg border-2 transition-all hover:scale-110 ${
+                            editingCategory.icon === icon
+                              ? 'border-purple-500 bg-purple-50'
+                              : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
+                          }`}
+                          title={`Sélectionner ${icon}`}
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab: Produits */}
+              {activeModalTab === 'products' && (
+                <div className="p-6">
+                  {loadingProducts ? (
+                    <div className="text-center py-12">
+                      <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-600 bg-blue-100">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Chargement des produits...
+                      </div>
+                    </div>
+                  ) : categoryProducts.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <div className="text-4xl mb-4">📦</div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun produit trouvé</h3>
+                      <p className="text-gray-600 mb-4">
+                        Cette catégorie ne contient aucun produit actif
+                      </p>
+
+                      {/* Panel debug */}
+                      <div className="max-w-md mx-auto bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+                        <h4 className="font-medium text-blue-900 mb-2">🔍 Informations de debug</h4>
+                        <div className="space-y-1 text-sm">
+                          <div><strong>Catégorie :</strong> {editingCategory.name}</div>
+                          <div><strong>ID Catégorie :</strong> {editingCategory.id}</div>
+                          <div><strong>Restaurant ID :</strong> {editingCategory.restaurant_id}</div>
+                          <div><strong>Loading :</strong> {loadingProducts ? 'Oui' : 'Non'}</div>
+                          <div><strong>Produits trouvés :</strong> {categoryProducts.length}</div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => loadCategoryProducts(editingCategory.restaurant_id, editingCategory.id)}
+                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        🔄 Recharger les produits
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      {/* Header avec contrôles */}
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            📦 {categoryProducts.length} produits dans {editingCategory.name}
+                          </h3>
+                          {selectedProducts.length > 0 && (
+                            <p className="text-sm text-orange-600 mt-1">
+                              {selectedProducts.length} produit{selectedProducts.length > 1 ? 's' : ''} sélectionné{selectedProducts.length > 1 ? 's' : ''}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                          <button
+                            onClick={selectAllProducts}
+                            className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                          >
+                            {selectedProducts.length === categoryProducts.length ? '🔲 Tout déselectionner' : '☑️ Tout sélectionner'}
+                          </button>
+
+                          {selectedProducts.length > 0 && (
+                            <button
+                              onClick={() => setShowBulkModal(true)}
+                              className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors"
+                            >
+                              🎨 Icônes bulk ({selectedProducts.length})
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Liste des produits avec drag & drop */}
+                      <div className="space-y-3">
+                        {categoryProducts.map((product, index) => (
+                          <div
+                            key={product.id}
+                            draggable
+                            onDragStart={() => handleDragStart(product.id)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, product.id)}
+                            className={`flex items-center p-4 bg-gray-50 rounded-lg border transition-all ${
+                              draggedProduct === product.id ? 'opacity-50' : 'hover:bg-gray-100'
+                            } ${selectedProducts.includes(product.id) ? 'ring-2 ring-orange-500 bg-orange-50' : ''}`}
+                          >
+                            {/* Drag Handle */}
+                            <div className="mr-3 text-gray-400 cursor-grab hover:text-gray-600" title="Déplacer">
+                              ⋮⋮
+                            </div>
+
+                            {/* Numéro */}
+                            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-sm font-medium text-gray-600 mr-3">
+                              {index + 1}
+                            </div>
+
+                            {/* Checkbox */}
+                            <input
+                              type="checkbox"
+                              checked={selectedProducts.includes(product.id)}
+                              onChange={() => toggleProductSelection(product.id)}
+                              className="mr-3 w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                            />
+
+                            {/* Icône du produit */}
+                            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-2xl mr-4 shadow-sm">
+                              {product.icon || '❓'}
+                            </div>
+
+                            {/* Infos du produit */}
+                            <div className="flex-1">
+                              <h4 className="font-medium text-gray-900">{product.name}</h4>
+                              <div className="flex items-center mt-1 text-sm text-gray-500">
+                                <span className="mr-4">💰 {product.price_onsite}€ sur place</span>
+                                <span>🚚 {product.price_delivery}€ livraison</span>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <button
+                              onClick={() => setShowBulkModal(true)} // Pour la demo, on utilise le bulk modal
+                              className="ml-4 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              🎨 Modifier
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tab: Aperçu */}
+              {activeModalTab === 'preview' && (
+                <div className="p-6">
+                  <div className="max-w-4xl mx-auto">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">
+                      📊 Aperçu & Statistiques
+                    </h3>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      {/* Aperçu Mobile */}
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-4">📱 Aperçu Menu Mobile</h4>
+                        <div className="bg-black rounded-2xl p-4 max-w-sm mx-auto">
+                          <div className="bg-gray-900 rounded-xl p-4 text-white">
+                            {/* Header catégorie */}
+                            <div className="flex items-center mb-4">
+                              <div className="text-2xl mr-3">{editingCategory.icon || '❓'}</div>
+                              <h3 className="text-lg font-semibold">{editingCategory.name}</h3>
+                            </div>
+
+                            {/* Liste des produits */}
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                              {categoryProducts.slice(0, 5).map((product, index) => (
+                                <div key={product.id} className="flex items-center p-2 bg-gray-800 rounded-lg">
+                                  <div className="w-6 h-6 bg-gray-700 rounded flex items-center justify-center text-xs mr-2">
+                                    {index + 1}
+                                  </div>
+                                  <div className="text-lg mr-2">{product.icon || '❓'}</div>
+                                  <div className="flex-1 text-sm">
+                                    <div className="font-medium">{product.name}</div>
+                                    <div className="text-gray-400 text-xs">{product.price_onsite}€</div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {categoryProducts.length > 5 && (
+                                <div className="text-center py-2 text-gray-400 text-sm">
+                                  ... et {categoryProducts.length - 5} autres produits
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Statistiques */}
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-4">📈 Statistiques</h4>
+                        <div className="space-y-4">
+                          {/* Produits avec icônes */}
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-sm font-medium text-green-800">Avec icône</div>
+                                <div className="text-2xl font-bold text-green-900">
+                                  {categoryProducts.filter(p => p.icon).length}
+                                </div>
+                              </div>
+                              <div className="text-green-600 text-2xl">✅</div>
+                            </div>
+                          </div>
+
+                          {/* Produits sans icônes */}
+                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-sm font-medium text-orange-800">Sans icône</div>
+                                <div className="text-2xl font-bold text-orange-900">
+                                  {categoryProducts.filter(p => !p.icon).length}
+                                </div>
+                              </div>
+                              <div className="text-orange-600 text-2xl">⚠️</div>
+                            </div>
+                          </div>
+
+                          {/* Barre de progression */}
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <div className="text-sm font-medium text-gray-700 mb-2">Complétion</div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-green-600 h-2 rounded-full transition-all"
+                                style={{
+                                  width: `${categoryProducts.length > 0 ? (categoryProducts.filter(p => p.icon).length / categoryProducts.length) * 100 : 0}%`
+                                }}
+                              ></div>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {categoryProducts.length > 0 ? Math.round((categoryProducts.filter(p => p.icon).length / categoryProducts.length) * 100) : 0}% des produits ont une icône
+                            </div>
+                          </div>
+
+                          {/* Suggestions */}
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="text-sm font-medium text-blue-800 mb-2">💡 Suggestions</div>
+                            <ul className="text-sm text-blue-700 space-y-1">
+                              {categoryProducts.filter(p => !p.icon).length > 0 && (
+                                <li>• Ajouter des icônes aux {categoryProducts.filter(p => !p.icon).length} produits restants</li>
+                              )}
+                              {selectedProducts.length > 1 && (
+                                <li>• Utilisez l'édition bulk pour modifier plusieurs produits à la fois</li>
+                              )}
+                              {categoryProducts.length > 10 && (
+                                <li>• Réorganisez vos produits par drag & drop pour optimiser l'ordre</li>
+                              )}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Bulk Edit Icons */}
+      {showBulkModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-500 to-red-500 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold">🎨 Édition en lot</h2>
+                  <p className="text-orange-100 mt-1">
+                    Appliquer une icône à {selectedProducts.length} produits
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowBulkModal(false)}
+                  className="text-white hover:text-red-200 p-2 hover:bg-white hover:bg-opacity-10 rounded-lg"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
             </div>
 
-            {/* Contenu du modal */}
-            <div className="p-6">
-              {/* Icône actuelle */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <span className="text-3xl">
-                    {editingProduct.icon || '❓'}
-                  </span>
-                  <div>
-                    <p className="font-medium text-gray-900">Icône actuelle</p>
-                    <p className="text-sm text-gray-600">
-                      {editingProduct.icon ? 'Cliquez sur une nouvelle icône pour la remplacer' : 'Aucune icône assignée'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Filtres rapides */}
-              <div className="mb-4 flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className={`px-3 py-1 rounded-full text-sm ${
-                    searchTerm === ''
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Toutes
-                </button>
-                {['plats', 'boissons', 'desserts', 'spécialités'].map(cat => (
+            <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 120px)' }}>
+              <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-3">
+                {[
+                  '🍽️', '🍕', '🍔', '🌯', '🥙', '🍗', '🥩', '🐟', '🦐', '🍝', '🍜', '🍛',
+                  '🥗', '🥬', '🥒', '🍅', '🧅', '🥔', '🍟', '🥤', '☕', '🧃', '🍰', '🍨',
+                  '🎂', '🍪', '🍩', '🧁', '🍎', '🍊', '🍌', '🍇', '🍓', '🥝', '🥥', '🍑',
+                  '🌶️', '🌽', '🥕', '🥦', '🥬', '🍆', '🥒', '🥑', '🍠', '🥜', '🌰', '🍞',
+                  '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🍳', '🥓', '🌭', '🥪', '🌮'
+                ].map(icon => (
                   <button
-                    key={cat}
-                    onClick={() => setSearchTerm(cat)}
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      searchTerm === cat
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                    key={icon}
+                    onClick={() => applyBulkIcon(icon)}
+                    className="p-3 text-2xl rounded-lg border-2 border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition-all hover:scale-110"
+                    title={`Appliquer ${icon} à ${selectedProducts.length} produits`}
                   >
-                    {cat}
+                    {icon}
                   </button>
                 ))}
               </div>
-
-              {/* Grille d'icônes disponibles */}
-              <div className="max-h-96 overflow-y-auto">
-                {availableIcons.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <div className="text-4xl mb-4">🎨</div>
-                    <p>Chargement des icônes...</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-12 lg:grid-cols-15 gap-2">
-                    {availableIcons
-                      .filter(icon =>
-                        searchTerm === '' ||
-                        icon.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        icon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        icon.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-                      )
-                      .map((icon) => (
-                        <div
-                          key={icon.id}
-                          onClick={() => saveProductIcon(editingProduct.id, icon.emoji)}
-                          className="group relative bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg p-2 cursor-pointer transition-all duration-200 hover:shadow-md"
-                          title={`${icon.emoji} ${icon.name}`}
-                        >
-                          <div className="text-2xl text-center">
-                            {icon.emoji}
-                          </div>
-                          <div className="text-xs text-center text-gray-600 group-hover:text-blue-600 mt-1 truncate">
-                            {icon.name}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Pied du modal */}
-            <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 rounded-b-lg flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                {availableIcons.filter(icon =>
-                  searchTerm === '' ||
-                  icon.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  icon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  icon.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-                ).length} icônes disponibles
-              </div>
-              <button
-                onClick={() => {
-                  setShowIconModal(false);
-                  setEditingProduct(null);
-                }}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Fermer
-              </button>
             </div>
           </div>
         </div>
