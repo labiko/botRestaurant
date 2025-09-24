@@ -1332,6 +1332,7 @@ export default function BackOfficeRestaurantPage() {
                           </div>
                         </div>
                       </div>
+                    </div>
 
                     {/* Sélection d'icônes unifiée */}
                     <div className="mb-8">
@@ -1363,7 +1364,6 @@ export default function BackOfficeRestaurantPage() {
                     </div>
 
                   </div>
-                </div>
               )}
 
               {/* Tab: Options */}
