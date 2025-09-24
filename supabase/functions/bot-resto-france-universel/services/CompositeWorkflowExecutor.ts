@@ -49,36 +49,17 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
    * Workflow spécifique pour les menus pizza
    * Gère la sélection multiple de pizzas et les composants additionnels
    */ async startMenuPizzaWorkflow(phoneNumber, product, session) {
-    console.log(`🔍 DEBUG_MENU: Démarrage startMenuPizzaWorkflow pour: ${product.name}`);
-    console.log(`🔍 DEBUG_MENU: Produit reçu:`, product);
-    console.log(`🔍 DEBUG_MENU: Session reçue:`, {
-      sessionId: session.id,
-      currentState: session.currentState
-    });
     try {
-      console.log(`🔍 DEBUG_MENU: Vérification steps_config...`);
-      console.log(`🔍 DEBUG_MENU: product.steps_config existe: ${!!product.steps_config}`);
-      if (product.steps_config) {
-        console.log(`🔍 DEBUG_MENU: steps_config contenu:`, product.steps_config);
-      }
       const menuConfig = product.steps_config?.menu_config;
-      console.log(`🔍 DEBUG_MENU: menuConfig extrait: ${!!menuConfig}`);
       if (!menuConfig) {
-        console.log(`🔍 DEBUG_MENU: ERREUR - menuConfig manquant`);
-        console.log(`🔍 DEBUG_MENU: steps_config disponible:`, product.steps_config);
         throw new Error('Configuration du menu manquante');
       }
-      console.log(`🔍 DEBUG_MENU: menuConfig trouvé:`, menuConfig);
-      console.log(`🔍 DEBUG_MENU: Appel initializeMenuWorkflow...`);
       // Initialiser le workflow dans la session
       await this.initializeMenuWorkflow(phoneNumber, session, product, menuConfig);
-      console.log(`🔍 DEBUG_MENU: initializeMenuWorkflow terminé, appel processNextMenuComponent...`);
       // Démarrer avec le premier composant
       await this.processNextMenuComponent(phoneNumber, session, 0);
-      console.log(`🔍 DEBUG_MENU: processNextMenuComponent terminé avec succès`);
     } catch (error) {
-      console.error('🔍 DEBUG_MENU: ERREUR CAPTURÉE:', error);
-      console.error('🔍 DEBUG_MENU: Stack trace:', error.stack);
+      console.error('❌ [MenuWorkflow] Erreur:', error.message);
       await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de la configuration du menu. Tapez "resto" pour recommencer.');
     }
   }
@@ -86,27 +67,9 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
    * Démarrer un workflow composite
    * SOLID : Open/Closed - Extensible pour nouveaux workflows sans modification
    */ async startCompositeWorkflow(phoneNumber, product, session) {
-    console.log(`🔄 [CompositeWorkflow] Démarrage workflow pour: ${product.name}`);
-    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer l'entrée dans CompositeWorkflowExecutor
-    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - CompositeWorkflowExecutor.startCompositeWorkflow:', {
-      productId: product.id,
-      productName: product.name,
-      currentCategoryName: session.sessionData?.currentCategoryName,
-      workflowType: product.workflow_type || product.type,
-      hasStepsConfig: !!product.steps_config,
-      phoneNumber
-    });
-    // 🔥 DEBUG WORKFLOW UNIVERSAL V2 - Détection et diagnostic
-    console.log('🔥 [DEBUG_WORKFLOW_V2] Analyse produit:', {
-      productName: product.name,
-      workflowType: product.workflow_type,
-      hasStepsConfig: !!product.steps_config,
-      stepsConfigType: typeof product.steps_config
-    });
-    // 🔥 Vérifier si c'est un produit Universal Workflow V2
+    console.log(`✅ [CompositeWorkflow] Démarrage: ${product.name}`);
+    // Vérifier si c'est un produit Universal Workflow V2
     if (product.workflow_type === 'universal_workflow_v2') {
-      console.log(`🔥 [DEBUG_WORKFLOW_V2] DÉTECTÉ: Produit ${product.name} utilise universal_workflow_v2`);
-      console.log(`🔥 [DEBUG_WORKFLOW_V2] Appel handleStepsConfigWorkflow...`);
       await this.handleStepsConfigWorkflow(phoneNumber, session, product);
       return;
     }
@@ -127,21 +90,16 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       });
       if (error || !productOptions || productOptions.length === 0) {
         // PRIORITÉ 3: Vérifier steps_config si pas d'options dans france_product_options
-        console.log(`🔍 [DEBUG-STEPS-CHICKEN-BOX] Produit: ${product.name}`);
-        console.log(`🔍 [DEBUG-STEPS-CHICKEN-BOX] steps_config brut:`, product.steps_config);
-        console.log(`🔍 [DEBUG-STEPS-CHICKEN-BOX] Type steps_config:`, typeof product.steps_config);
         // Convertir steps_config en objet si c'est un string JSON
         let stepsConfig = product.steps_config;
         if (typeof stepsConfig === 'string') {
           try {
             stepsConfig = JSON.parse(stepsConfig);
-            console.log(`🔄 [DEBUG-STEPS-CHICKEN-BOX] steps_config parsé:`, stepsConfig);
           } catch (parseError) {
-            console.error(`❌ [DEBUG-STEPS-CHICKEN-BOX] Erreur parsing JSON:`, parseError);
+            console.error(`❌ Erreur parsing JSON steps_config:`, parseError.message);
           }
         }
         if (stepsConfig && stepsConfig.steps && stepsConfig.steps.length > 0) {
-          console.log(`✅ [CompositeWorkflow] Utilisation steps_config pour ${product.name}`);
           // Utiliser l'objet parsé
           const productWithParsedConfig = {
             ...product,
@@ -150,20 +108,14 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
           await this.handleStepsConfigWorkflow(phoneNumber, session, productWithParsedConfig);
           return;
         } else {
-          console.log(`❌ [DEBUG-STEPS-CHICKEN-BOX] steps_config invalide:`, {
-            hasStepsConfig: !!stepsConfig,
-            hasSteps: !!(stepsConfig && stepsConfig.steps),
-            stepsLength: stepsConfig && stepsConfig.steps ? stepsConfig.steps.length : 0
-          });
+          // steps_config invalide
         }
         console.error('❌ [CompositeWorkflow] Pas d\'options trouvées:', error);
         await this.messageSender.sendMessage(phoneNumber, `❌ Configuration non disponible pour ${product.name}.\nVeuillez choisir un autre produit.`);
         return;
       }
-      console.log(`✅ [CompositeWorkflow] ${productOptions.length} options trouvées`);
       // 2. Grouper les options par group_order
       const optionGroups = this.groupOptionsByStep(productOptions);
-      console.log(`📦 [CompositeWorkflow] ${optionGroups.length} groupes d'options`);
       // 3. Initialiser le workflow dans la session
       const workflowData = {
         productId: product.id,
@@ -217,7 +169,6 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     const variants = variantsResult.data || [];
     // Récupérer le mode de livraison depuis la session
     const deliveryMode = session.sessionData?.deliveryMode || 'sur_place';
-    console.log(`🔍 [SizeVariants] Mode de livraison: ${deliveryMode}`);
     // Utiliser sizes en priorité si disponible (format adapté pour tailles TACOS)
     let allVariants = sizes.length > 0 ? sizes : variants;
     // FILTRER selon le mode de livraison choisi
@@ -237,32 +188,13 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
         // Trier par prix croissant
         sizeList.sort((a, b)=>a.price_on_site - b.price_on_site);
         // Sélectionner la bonne variante selon le mode
-        console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Mode: ${deliveryMode}`);
-        console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Tailles disponibles:`, sizeList.map((s)=>({
-            name: s.size_name,
-            price_on_site: s.price_on_site,
-            price_delivery: s.price_delivery
-          })));
         let selectedSize;
         if (deliveryMode === 'livraison') {
           // Prendre la variante avec prix livraison (généralement la plus chère)
           selectedSize = sizeList.find((s)=>s.price_delivery > s.price_on_site) || sizeList[sizeList.length - 1];
-          console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Sélection livraison:`, {
-            found: !!sizeList.find((s)=>s.price_delivery > s.price_on_site),
-            selectedSize: selectedSize ? {
-              name: selectedSize.size_name,
-              price_on_site: selectedSize.price_on_site,
-              price_delivery: selectedSize.price_delivery
-            } : null
-          });
         } else {
           // Prendre la variante avec prix sur place (généralement la moins chère)
           selectedSize = sizeList[0];
-          console.log(`🔍 [DEBUG_PRICE] ${sizeName} - Sélection sur place:`, {
-            name: selectedSize.size_name,
-            price_on_site: selectedSize.price_on_site,
-            price_delivery: selectedSize.price_delivery
-          });
         }
         finalVariants.push({
           ...selectedSize,
@@ -270,7 +202,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
           has_drink_included: selectedSize.includes_drink,
           variant_type: 'size'
         });
-        console.log(`✅ [SizeFilter] ${sizeName}: ${deliveryMode === 'livraison' ? selectedSize.price_delivery : selectedSize.price_on_site}€`);
+        // Filtré par mode de livraison
       });
       // Trier par display_order
       finalVariants.sort((a, b)=>a.display_order - b.display_order);
@@ -311,13 +243,6 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     finalVariants.forEach((variant, index)=>{
       // Utiliser le prix selon le mode de livraison
       const price = deliveryMode === 'livraison' ? variant.price_delivery || variant.price_on_site : variant.price_on_site || variant.base_price;
-      console.log(`🔍 [DEBUG_PRICE] Calcul prix final - ${variant.variant_name}:`, {
-        deliveryMode,
-        price_delivery: variant.price_delivery,
-        price_on_site: variant.price_on_site,
-        base_price: variant.base_price,
-        finalPrice: price
-      });
       let variantLine = format.replace('{variant_name}', variant.variant_name).replace('{price}', price).replace('{index}', (index + 1).toString());
       message += `   ${variantLine}`;
       if (config.variant_selection?.show_drink_note && variant.has_drink_included) {
@@ -339,7 +264,6 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     });
     await this.messageSender.sendMessage(phoneNumber, message);
     // Mettre à jour la session avec les variantes configurées
-    console.log('🚨 [SPREAD_DEBUG_007] CompositeWorkflowExecutor ligne 381');
     const updatedData = {
       ...session.sessionData,
       variantSelection: true,
@@ -391,7 +315,6 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);
       // Reset session state vers AWAITING_MENU_CHOICE
-      console.log('🚨 [SPREAD_DEBUG_008] CompositeWorkflowExecutor ligne 451');
       const updatedData = {
         ...session.sessionData,
         selectedProduct: null,
@@ -415,12 +338,8 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
         return;
       }
       // Chargement dynamique des catégories depuis la BDD
-      console.log(`🔍 [CATBUG_DEBUG] Restaurant ID utilisé: ${restaurant.data.id}`);
       const { data: categories, error: catError } = await supabase.from('france_menu_categories').select('*').eq('restaurant_id', restaurant.data.id).eq('is_active', true).order('display_order');
-      console.log(`🔍 [CATBUG_DEBUG] Catégories récupérées depuis BDD: ${categories ? categories.length : 'null'}`);
       if (categories) {
-        console.log(`🔍 [CATBUG_DEBUG] Premières catégories: ${categories.slice(0, 5).map((c)=>c.name).join(', ')}`);
-        console.log(`🔍 [CATBUG_DEBUG] Dernières catégories: ${categories.slice(-3).map((c)=>c.name).join(', ')}`);
       }
       if (catError || !categories || categories.length === 0) {
         console.error('❌ Erreur catégories:', catError);
@@ -440,7 +359,6 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       menuText += '\nTapez le numéro de votre choix pour voir les produits.';
       await this.messageSender.sendMessage(phoneNumber, menuText);
       // Mettre à jour la session vers VIEWING_MENU (comme dans showMenuAfterDeliveryModeChoice)
-      console.log('🚨 [SPREAD_DEBUG_009] CompositeWorkflowExecutor ligne 525');
       const updatedSessionData = {
         ...session.sessionData,
         categories: categories,
@@ -452,34 +370,25 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
         availableVariants: null,
         compositeWorkflow: null
       };
-      console.log(`🔍 [CATBUG_DEBUG] AVANT sauvegarde session - categories.length: ${categories.length}`);
-      console.log(`🔍 [CATBUG_DEBUG] updatedSessionData.categories.length: ${updatedSessionData.categories.length}`);
-      console.log(`🔍 [CATBUG_DEBUG] Dernières categories dans updatedSessionData: ${updatedSessionData.categories.slice(-3).map((c)=>c.name).join(', ')}`);
-      console.log(`🔄 [STATE_DEBUG] AVANT mise à jour état - Ancien état: ${session.botState}`);
-      console.log(`🔄 [STATE_DEBUG] Transition vers: VIEWING_MENU`);
       const { error: updateError } = await supabase.from('france_user_sessions').update({
         bot_state: 'VIEWING_MENU',
         session_data: updatedSessionData
       }).eq('id', session.id);
       if (updateError) {
         console.error(`❌ [CATBUG_DEBUG] Erreur sauvegarde session:`, updateError);
-        console.error(`❌ [STATE_DEBUG] Échec transition état vers VIEWING_MENU`);
+        console.error(`❌ Échec transition état vers VIEWING_MENU`);
       } else {
-        console.log(`✅ [CATBUG_DEBUG] Session sauvegardée avec ${categories.length} catégories`);
-        console.log(`✅ [STATE_DEBUG] État transitionné vers VIEWING_MENU`);
       }
       // Vérifier ce qui a été vraiment sauvegardé
       const { data: verifySession } = await supabase.from('france_user_sessions').select('bot_state, session_data').eq('id', session.id).single();
       if (verifySession) {
         const savedCategories = verifySession.session_data?.categories || [];
         const savedState = verifySession.bot_state;
-        console.log(`🔍 [CATBUG_DEBUG] APRÈS sauvegarde - categories sauvegardées: ${savedCategories.length}`);
-        console.log(`🔍 [STATE_DEBUG] APRÈS sauvegarde - état sauvegardé: ${savedState}`);
         if (savedCategories.length !== categories.length) {
           console.error(`❌ [CATBUG_DEBUG] PROBLÈME ! ${categories.length} catégories envoyées mais ${savedCategories.length} sauvegardées`);
         }
         if (savedState !== 'VIEWING_MENU') {
-          console.error(`❌ [STATE_DEBUG] PROBLÈME ! État attendu: VIEWING_MENU, État sauvegardé: ${savedState}`);
+          console.error(`❌ PROBLÈME ! État attendu: VIEWING_MENU, État sauvegardé: ${savedState}`);
         }
       }
       console.log(`✅ [returnToCategories] Menu catégories affiché`);
@@ -582,7 +491,8 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     }
     // Lister les options avec numérotation simple compatible mobile
     optionGroup.options.forEach((option, index)=>{
-      message += `${index + 1}. ${option.option_name}`;
+      const optionIcon = option.icon ? `${option.icon} ` : '';
+      message += `${index + 1}. ${optionIcon}${option.option_name}`;
       if (option.price_modifier && option.price_modifier !== 0) {
         const sign = option.price_modifier > 0 ? '+' : '';
         message += ` (${sign}${option.price_modifier}€)`;
@@ -728,18 +638,23 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
    * Afficher une étape du workflow
    * SOLID : Command Pattern - Chaque étape est une commande
    */ async showWorkflowStep(phoneNumber, session, workflowData, stepIndex) {
-    console.log(`🚨 [DEBUG-showWorkflowStep] ENTRÉE - stepIndex: ${stepIndex}`);
-    console.log(`🚨 [DEBUG-showWorkflowStep] optionGroups.length: ${workflowData.optionGroups.length}`);
-    console.log(`🔍 [DEBUG-showWorkflowStep] optionGroups:`, workflowData.optionGroups.map((g)=>g.groupName));
     const optionGroup = workflowData.optionGroups[stepIndex];
-    console.log(`🚨 [DEBUG-showWorkflowStep] optionGroup:`, optionGroup ? `${optionGroup.groupName}` : 'undefined');
     if (!optionGroup) {
       // Workflow terminé - demander la quantité
-      console.log(`🚨 [DEBUG-showWorkflowStep] PAS D'OPTION GROUP - Appel completeWorkflow`);
       await this.completeWorkflow(phoneNumber, session, workflowData);
       return;
     }
     console.log(`📝 [WorkflowStep] Étape ${stepIndex + 1}/${workflowData.totalSteps}: ${optionGroup.groupName}`);
+
+    // DEBUG ICONS MENU NANA
+    console.log(`🔍 [DEBUG_ICONS] Product: ${workflowData.productName}`);
+    console.log(`🔍 [DEBUG_ICONS] Options count: ${optionGroup.options?.length || 0}`);
+    if (optionGroup.options) {
+      optionGroup.options.forEach((opt, idx) => {
+        console.log(`🔍 [DEBUG_ICONS] Option ${idx}: name="${opt.option_name}", icon="${opt.icon}" (${typeof opt.icon})`);
+      });
+    }
+
     // Construire le message selon le type d'options
     let message = this.buildStepMessage(workflowData, optionGroup);
     await this.messageSender.sendMessage(phoneNumber, message);
@@ -983,7 +898,9 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     // Utiliser les noms d'options tels qu'ils sont dans la base (ils contiennent déjà ⿡⿢⿣)
     optionGroup.options.forEach((option, index)=>{
       // Ne pas nettoyer les caractères ⿡⿢⿣ - ils sont les vrais numéros !
-      message += `${index + 1}. ${option.option_name}`;
+      // PHASE 2: Support icônes pour options (si disponible dans option.icon)
+      const optionIcon = option.icon ? `${option.icon} ` : '';
+      message += `${index + 1}. ${optionIcon}${option.option_name}`;
       if (option.price_adjustment && option.price_adjustment > 0) {
         message += ` (+${option.price_adjustment}€)`;
       }
@@ -1086,7 +1003,8 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
         name: option.option_name,
         option_name: option.option_name,
         price_modifier: option.price_modifier || 0,
-        is_available: true
+        is_available: true,
+        icon: option.icon  // AJOUT: Récupération de l'icône depuis la BDD
       }));
   }
   /**
@@ -1129,26 +1047,17 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
    */ calculateUniversalWorkflowPrice(workflowData) {
     let totalPrice = workflowData.productPrice; // Prix de base
     let totalModifiers = 0;
-    console.log(`🔍 [DEBUG_PRIX] Workflow - Produit: ${workflowData.productName}`);
-    console.log(`🔍 [DEBUG_PRIX] Prix de base: ${workflowData.productPrice}€`);
     // Additionner tous les price_modifier des options sélectionnées
     for (const [groupName, selections] of Object.entries(workflowData.selections)){
-      console.log(`🔍 [DEBUG_PRIX] Groupe: ${groupName}`);
       selections.forEach((option, index)=>{
         const modifier = option.price_modifier ? parseFloat(option.price_modifier) : 0;
-        console.log(`🔍 [DEBUG_PRIX] Option ${index + 1}: ${option.option_name}`);
-        console.log(`🔍 [DEBUG_PRIX] price_modifier: ${option.price_modifier || 0}€`);
         if (option.price_modifier) {
           totalPrice += modifier;
           totalModifiers += modifier;
-          console.log(`🔍 [DEBUG_PRIX] ✅ AJOUTÉ: +${modifier}€`);
         } else {
-          console.log(`🔍 [DEBUG_PRIX] ⚪ GRATUIT: +0€`);
         }
       });
     }
-    console.log(`🔍 [DEBUG_PRIX] Total suppléments: +${totalModifiers}€`);
-    console.log(`🔍 [DEBUG_PRIX] Prix final: ${totalPrice}€ (${workflowData.productPrice}€ + ${totalModifiers}€)`);
     return totalPrice;
   }
   /**
@@ -1231,13 +1140,21 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
             throw new Error(`Aucune option trouvée pour ${step.option_groups[0]}`);
           }
           console.log(`🔥 [DEBUG_WORKFLOW_V2] ${productOptions.length} options chargées pour ${step.option_groups[0]}`);
+
+          // DEBUG ICONS FROM DATABASE
+          console.log(`🎯 [ICON_DB] Options from database for ${step.option_groups[0]}:`);
+          productOptions.forEach((opt) => {
+            console.log(`🎯 [ICON_DB] - ${opt.option_name}: icon="${opt.icon}" (type: ${typeof opt.icon})`);
+          });
+
           options = productOptions.map((opt, index)=>({
               id: opt.id,
               name: opt.option_name,
               option_name: opt.option_name,
               price_modifier: opt.price_modifier || 0,
               is_available: true,
-              display_order: opt.display_order
+              display_order: opt.display_order,
+              icon: opt.icon  // AJOUT: Support icônes pour workflow universal V2
             }));
         } else {
           console.error(`🔥 [DEBUG_WORKFLOW_V2] ERREUR: Pas d'option_groups défini pour step ${stepIndex + 1}`);

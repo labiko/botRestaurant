@@ -1,0 +1,12 @@
+{
+  "delaySendMessagesMilliseconds": 1000,
+  "incomingWebhook": "yes",
+  "outgoingWebhook": "no",
+  "outgoingMessageWebhook": "no",
+  "stateWebhook": "no",
+  "keepOnlineStatus": "yes",
+  "markIncomingMessagesReaded": "no",
+  "proxyInstance": "",
+  "enableChatsEvents": "no",
+  "webhookUrl": "https://vywbhlnzvfqtiurwmrac.supabase.co/functions/v1/bot-resto-france-universel"
+}

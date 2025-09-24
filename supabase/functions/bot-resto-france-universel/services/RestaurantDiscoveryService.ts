@@ -35,16 +35,9 @@ export class RestaurantDiscoveryService {
    * Initialiser le client Supabase
    */
   private async initSupabase() {
-    console.log('🔍 [RESTAURANT_DISCOVERY_DEBUG] ==========================================');
-    console.log('🔍 [RESTAURANT_DISCOVERY_DEBUG] INITIALISATION CLIENT SUPABASE:');
-    console.log('🔍 [RESTAURANT_DISCOVERY_DEBUG] URL:', this.supabaseUrl);
-    console.log('🔍 [RESTAURANT_DISCOVERY_DEBUG] KEY (20 premiers chars):', this.supabaseKey.substring(0, 20) + '...');
     if (this.supabaseUrl.includes('lphvdoyhwaelmwdfkfuh')) {
-      console.log('✅ [RESTAURANT_DISCOVERY_DEBUG] ENVIRONNEMENT: DEV');
     } else if (this.supabaseUrl.includes('vywbhlnzvfqtiurwmrac')) {
-      console.log('⚠️ [RESTAURANT_DISCOVERY_DEBUG] ENVIRONNEMENT: PROD');
     }
-    console.log('🔍 [RESTAURANT_DISCOVERY_DEBUG] ==========================================');
 
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
