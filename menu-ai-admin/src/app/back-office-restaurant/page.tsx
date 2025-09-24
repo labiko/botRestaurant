@@ -18,6 +18,9 @@ interface Restaurant {
 }
 
 export default function BackOfficeRestaurantPage() {
+  // État pour les tabs
+  const [activeTab, setActiveTab] = useState('restaurants');
+
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState<number | null>(null);
@@ -234,7 +237,33 @@ export default function BackOfficeRestaurantPage() {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">🏪 Back Office Restaurant</h1>
-        <p className="text-gray-600">Gérer l'activation et la désactivation des restaurants</p>
+        <p className="text-gray-600">Gérer l'activation, désactivation des restaurants et gestion des icônes</p>
+
+        {/* Navigation par tabs */}
+        <div className="mt-6 border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('restaurants')}
+              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'restaurants'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🏪 Gestion Restaurants
+            </button>
+            <button
+              onClick={() => setActiveTab('icons')}
+              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'icons'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🎨 Gestion Icônes
+            </button>
+          </nav>
+        </div>
       </div>
 
       {/* Système de notifications moderne */}
@@ -291,57 +320,59 @@ export default function BackOfficeRestaurantPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        <div className="p-6 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Gestion des Restaurants</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                {restaurants.length} restaurant{restaurants.length > 1 ? 's' : ''} au total
-              </p>
+      {/* Contenu conditionnel selon l'onglet actif */}
+      {activeTab === 'restaurants' && (
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="p-6 border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Gestion des Restaurants</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {restaurants.length} restaurant{restaurants.length > 1 ? 's' : ''} au total
+                </p>
+              </div>
+              <button
+                onClick={loadRestaurants}
+                disabled={loading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {loading ? 'Actualisation...' : '🔄 Actualiser'}
+              </button>
             </div>
-            <button
-              onClick={loadRestaurants}
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {loading ? 'Actualisation...' : '🔄 Actualiser'}
-            </button>
           </div>
-        </div>
 
-        {loading ? (
-          <div className="p-12 text-center">
-            <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-600 bg-blue-100">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Chargement des restaurants...
+          {loading ? (
+            <div className="p-12 text-center">
+              <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-600 bg-blue-100">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Chargement des restaurants...
+              </div>
             </div>
-          </div>
-        ) : restaurants.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">
-            <div className="text-4xl mb-4">🏪</div>
-            <p>Aucun restaurant trouvé</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Restaurant</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localisation</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dernière MAJ</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {restaurants.map((restaurant) => (
-                  <tr key={restaurant.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
+          ) : restaurants.length === 0 ? (
+            <div className="p-12 text-center text-gray-500">
+              <div className="text-4xl mb-4">🏪</div>
+              <p>Aucun restaurant trouvé</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Restaurant</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localisation</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dernière MAJ</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {restaurants.map((restaurant) => (
+                    <tr key={restaurant.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{restaurant.name}</div>
                         <div className="text-sm text-gray-500">ID: {restaurant.id}</div>
@@ -419,18 +450,19 @@ export default function BackOfficeRestaurantPage() {
             </table>
           </div>
         )}
-      </div>
 
-      {restaurants.length > 0 && (
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h3 className="text-sm font-medium text-blue-900 mb-2">ℹ️ Informations importantes</h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Les restaurants désactivés sont automatiquement déconnectés dans les 30 secondes</li>
-            <li>• La date de mise à jour est automatiquement mise à jour lors des changements</li>
-            <li>• Les modifications sont immédiatement effectives</li>
-          </ul>
-        </div>
-      )}
+        {restaurants.length > 0 && (
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-900 mb-2">ℹ️ Informations importantes</h3>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• Les restaurants désactivés sont automatiquement déconnectés dans les 30 secondes</li>
+              <li>• La date de mise à jour est automatiquement mise à jour lors des changements</li>
+              <li>• Les modifications sont immédiatement effectives</li>
+            </ul>
+          </div>
+        )}
+      </div>
+    )}
 
       {/* Modal d'édition des informations restaurant */}
       {showEditModal && editingRestaurant && (
@@ -553,8 +585,6 @@ export default function BackOfficeRestaurantPage() {
                     placeholder="Numéro WhatsApp"
                   />
                 </div>
-
-                {/* Note: Le champ email n'existe pas dans la structure de base */}
 
                 {/* Statut actif */}
                 <div>
@@ -687,6 +717,186 @@ export default function BackOfficeRestaurantPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
                   <span>Enregistrer</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab Gestion des Icônes */}
+      {activeTab === 'icons' && (
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="p-6 border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">🎨 Gestion des Icônes</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  100+ icônes prédéfinies pour personnaliser vos produits et options
+                </p>
+              </div>
+              <button
+                onClick={() => {/* TODO: loadIcons */}}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                🔄 Actualiser
+              </button>
+            </div>
+          </div>
+
+          {/* Filtres et recherche */}
+          <div className="p-6 bg-gray-50 border-b border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Recherche intelligente */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🔍 Recherche
+                </label>
+                <input
+                  type="text"
+                  placeholder="Rechercher par nom, emoji ou tag..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Filtre par catégorie */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🏷️ Catégorie
+                </label>
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <option value="">Toutes les catégories</option>
+                  <option value="plats">🍽️ Plats</option>
+                  <option value="accompagnements">🥗 Accompagnements</option>
+                  <option value="salades">🥬 Salades</option>
+                  <option value="boissons">🥤 Boissons</option>
+                  <option value="desserts">🍰 Desserts</option>
+                  <option value="spécialités">⭐ Spécialités</option>
+                  <option value="services">🛎️ Services</option>
+                </select>
+              </div>
+
+              {/* Filtre par restaurant */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🏪 Restaurant
+                </label>
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <option value="">Tous les restaurants</option>
+                  {restaurants.map(restaurant => (
+                    <option key={restaurant.id} value={restaurant.id}>
+                      {restaurant.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Statistiques rapides */}
+            <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+              <div className="flex items-center space-x-4">
+                <span>📊 102 icônes disponibles</span>
+                <span>🎯 23 utilisées</span>
+                <span>⚡ 79 non utilisées</span>
+              </div>
+              <button className="text-blue-600 hover:text-blue-800">
+                📈 Voir détails
+              </button>
+            </div>
+          </div>
+
+          {/* Grille d'icônes */}
+          <div className="p-6">
+            <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-15 gap-3">
+              {/* Exemple d'icônes - À remplacer par les vraies données */}
+              {[
+                { emoji: '🍕', name: 'Pizza', category: 'plats' },
+                { emoji: '🍔', name: 'Burger', category: 'plats' },
+                { emoji: '🌯', name: 'Wrap', category: 'plats' },
+                { emoji: '🥙', name: 'Kebab', category: 'plats' },
+                { emoji: '🍗', name: 'Poulet', category: 'plats' },
+                { emoji: '🥩', name: 'Viande', category: 'plats' },
+                { emoji: '🐟', name: 'Poisson', category: 'plats' },
+                { emoji: '🦐', name: 'Crevette', category: 'plats' },
+                { emoji: '🍝', name: 'Pâtes', category: 'plats' },
+                { emoji: '🍜', name: 'Soupe', category: 'plats' },
+                { emoji: '🍛', name: 'Riz', category: 'plats' },
+                { emoji: '🥗', name: 'Salade', category: 'salades' },
+                { emoji: '🥬', name: 'Laitue', category: 'salades' },
+                { emoji: '🥒', name: 'Concombre', category: 'salades' },
+                { emoji: '🍅', name: 'Tomate', category: 'salades' },
+                { emoji: '🧅', name: 'Oignon', category: 'accompagnements' },
+                { emoji: '🥔', name: 'Pomme de terre', category: 'accompagnements' },
+                { emoji: '🍟', name: 'Frites', category: 'accompagnements' },
+                { emoji: '🥤', name: 'Boisson', category: 'boissons' },
+                { emoji: '☕', name: 'Café', category: 'boissons' },
+                { emoji: '🧃', name: 'Jus', category: 'boissons' },
+                { emoji: '🍰', name: 'Gâteau', category: 'desserts' },
+                { emoji: '🍨', name: 'Glace', category: 'desserts' },
+                { emoji: '🎂', name: 'Anniversaire', category: 'desserts' }
+              ].map((icon, index) => (
+                <div
+                  key={index}
+                  className="group relative bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg p-3 cursor-pointer transition-all duration-200 hover:shadow-md"
+                  title={`${icon.emoji} ${icon.name} (${icon.category})`}
+                >
+                  <div className="text-2xl text-center mb-1">{icon.emoji}</div>
+                  <div className="text-xs text-center text-gray-600 group-hover:text-blue-600 font-medium truncate">
+                    {icon.name}
+                  </div>
+
+                  {/* Badge catégorie */}
+                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-center">
+                      {icon.category}
+                    </span>
+                  </div>
+
+                  {/* Actions au hover */}
+                  <div className="absolute inset-0 bg-blue-600 bg-opacity-0 hover:bg-opacity-10 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                    <div className="flex space-x-1">
+                      <button
+                        className="bg-white text-blue-600 hover:bg-blue-50 p-1 rounded shadow-sm"
+                        title="Assigner à un produit"
+                      >
+                        ⚡
+                      </button>
+                      <button
+                        className="bg-white text-gray-600 hover:bg-gray-50 p-1 rounded shadow-sm"
+                        title="Voir utilisation"
+                      >
+                        📊
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* État vide si pas d'icônes */}
+            <div className="hidden text-center py-12 text-gray-500">
+              <div className="text-4xl mb-4">🔍</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune icône trouvée</h3>
+              <p className="text-gray-600">
+                Essayez de modifier vos filtres ou votre recherche
+              </p>
+            </div>
+
+            {/* Pagination */}
+            <div className="mt-8 flex items-center justify-between">
+              <div className="text-sm text-gray-700">
+                Affichage de <span className="font-medium">1</span> à <span className="font-medium">24</span>
+                sur <span className="font-medium">102</span> icônes
+              </div>
+              <div className="flex items-center space-x-2">
+                <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
+                  ← Précédent
+                </button>
+                <span className="px-3 py-1 bg-blue-600 text-white rounded text-sm">1</span>
+                <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">2</button>
+                <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">3</button>
+                <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
+                  Suivant →
                 </button>
               </div>
             </div>
