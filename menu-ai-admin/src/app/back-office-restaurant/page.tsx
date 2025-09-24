@@ -368,6 +368,7 @@ export default function BackOfficeRestaurantPage() {
   };
 
   const saveCategoryIcon = async (categoryId: number, icon: string) => {
+    console.log('🎯 [saveCategoryIcon] Début sauvegarde:', { categoryId, icon });
     try {
       const response = await fetch('/api/categories', {
         method: 'PUT',
@@ -375,19 +376,34 @@ export default function BackOfficeRestaurantPage() {
         body: JSON.stringify({ id: categoryId, icon })
       });
 
+      console.log('🌐 [saveCategoryIcon] Status HTTP:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('📊 [saveCategoryIcon] Réponse API:', data);
 
       if (data.success) {
+        console.log('✅ [saveCategoryIcon] Succès - Mise à jour des états');
+
+        // Mise à jour de la liste des catégories
         setCategories(prev => prev.map(cat =>
           cat.id === categoryId ? { ...cat, icon } : cat
         ));
-        setEditingCategory(prev => prev ? { ...prev, icon } : null);
+
+        // Mise à jour de la catégorie en cours d'édition
+        setEditingCategory(prev => prev ? { ...prev, icon } : prev);
+
+        console.log('🔄 [saveCategoryIcon] États mis à jour avec icône:', icon);
         showNotification('success', 'Icône mise à jour', 'L\'icône de la catégorie a été sauvegardée');
       } else {
+        console.error('❌ [saveCategoryIcon] Erreur API:', data.error);
         showNotification('error', 'Erreur de sauvegarde', data.error || 'Impossible de sauvegarder l\'icône');
       }
     } catch (error) {
-      console.error('Erreur sauvegarde icône catégorie:', error);
+      console.error('❌ [saveCategoryIcon] Exception:', error);
       showNotification('error', 'Erreur de connexion', 'Impossible de communiquer avec le serveur');
     }
   };
