@@ -142,7 +142,7 @@ export class UniversalOrderDisplayService {
    */
   private formatAdditionalItems(item: any): string[] {
     const additionalItems: string[] = [];
-    
+
     // Gérer les boissons incluses
     if (item.selected_drink) {
       const drinkName = `${item.selected_drink.name} ${item.selected_drink.variant || ''}`.trim();
@@ -150,7 +150,7 @@ export class UniversalOrderDisplayService {
     } else if (item.includes_drink) {
       additionalItems.push('🧊 + Boisson incluse');
     }
-    
+
     // Gérer les accompagnements supplémentaires
     if (item.extras && Array.isArray(item.extras)) {
       item.extras.forEach((extra: any) => {
@@ -158,7 +158,7 @@ export class UniversalOrderDisplayService {
         additionalItems.push(`➕ ${extraName}`);
       });
     }
-    
+
     return additionalItems;
   }
 

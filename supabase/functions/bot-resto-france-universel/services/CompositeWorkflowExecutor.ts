@@ -575,7 +575,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     }
     message += '\n\n';
     // Ajouter option "x" pour les étapes facultatives
-    if (!optionGroup.required) {
+    if (!optionGroup.isRequired) {
       // Extraire le nom simple du groupe (garniture, boisson, etc.)
       const groupName = optionGroup.groupName || 'option';
       message += `x. Aucun(e) ${groupName}\n`;
@@ -683,7 +683,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     const currentStep = workflowData.currentStep;
     const optionGroup = workflowData.optionGroups[currentStep];
     // Gérer "x" pour les étapes facultatives
-    if (choice.toLowerCase() === 'x' && !optionGroup.required) {
+    if (choice.toLowerCase() === 'x' && !optionGroup.isRequired) {
       // Passer à l'étape suivante sans sélection
       const nextStep = await this.determineNextStep(workflowData, [], optionGroup);
       workflowData.currentStep = nextStep;
@@ -975,7 +975,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     }
     message += '\n\n';
     // Ajouter option "x" pour les étapes facultatives
-    if (!optionGroup.required) {
+    if (!optionGroup.isRequired) {
       // Extraire le nom simple du groupe (garniture, boisson, etc.)
       const groupName = optionGroup.groupName || 'option';
       message += `x. Aucun(e) ${groupName}\n`;
