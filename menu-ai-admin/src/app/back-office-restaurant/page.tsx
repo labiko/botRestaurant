@@ -1364,6 +1364,7 @@ export default function BackOfficeRestaurantPage() {
                     </div>
 
                   </div>
+                </div>
               )}
 
               {/* Tab: Options */}
