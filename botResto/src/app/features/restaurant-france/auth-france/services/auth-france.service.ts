@@ -116,8 +116,32 @@ export class AuthFranceService {
         return { success: false, message: 'Compte restaurant désactivé' };
       }
 
-      // Vérifier le mot de passe
-      const passwordValid = restaurant.password_hash === password || 
+      // CAS SPÉCIAL : Premier mot de passe (password_hash vide ou null)
+      if (!restaurant.password_hash || restaurant.password_hash.trim() === '') {
+        // Si aucun mot de passe saisi : demander création
+        if (!password || password.trim() === '') {
+          return {
+            success: false,
+            message: 'Première connexion : créez votre mot de passe'
+          };
+        }
+
+        // Créer et enregistrer le nouveau mot de passe
+        const created = await this.createFirstPassword(restaurant.id, password.trim());
+        if (!created) {
+          return {
+            success: false,
+            message: 'Erreur lors de la création du mot de passe'
+          };
+        }
+
+        // Mettre à jour l'objet restaurant pour la suite
+        restaurant.password_hash = password.trim();
+        console.log('🔐 [AuthFrance] Premier mot de passe créé pour restaurant:', restaurant.id);
+      }
+
+      // Vérifier le mot de passe (LOGIQUE NORMALE EXISTANTE - AUCUN CHANGEMENT)
+      const passwordValid = restaurant.password_hash === password ||
                            await this.verifyPassword(password, restaurant.password_hash);
 
 
@@ -440,6 +464,26 @@ export class AuthFranceService {
     } catch (error) {
       console.error('❌ [AuthFrance] Erreur récupération utilisateur:', error);
       return null;
+    }
+  }
+
+  /**
+   * Créer le premier mot de passe d'un restaurant
+   */
+  private async createFirstPassword(restaurantId: number, password: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabaseFranceService.client
+        .from('france_restaurants')
+        .update({
+          password_hash: password,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', restaurantId);
+
+      return !error;
+    } catch (error) {
+      console.error('❌ [AuthFrance] Erreur création premier mot de passe:', error);
+      return false;
     }
   }
 

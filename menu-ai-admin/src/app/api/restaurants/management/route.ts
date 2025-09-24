@@ -11,7 +11,7 @@ export async function GET() {
 
     const { data: restaurants, error } = await supabase
       .from('france_restaurants')
-      .select('id, name, is_active, updated_at, city, phone, whatsapp_number')
+      .select('id, name, is_active, created_at, updated_at, city, phone, whatsapp_number, address, password_hash, latitude, longitude')
       .order('name');
 
     if (error) {

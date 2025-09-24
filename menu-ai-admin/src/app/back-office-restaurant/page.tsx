@@ -6,16 +6,24 @@ interface Restaurant {
   id: number;
   name: string;
   is_active: boolean;
+  created_at: string;
   updated_at: string;
   city: string;
   phone: string;
   whatsapp_number?: string;
+  address?: string;
+  password_hash?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export default function BackOfficeRestaurantPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState<number | null>(null);
+  const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Restaurant>>({});
 
   // États pour les notifications modernes
   const [notification, setNotification] = useState<{
@@ -79,6 +87,99 @@ export default function BackOfficeRestaurantPage() {
   };
 
   // Toggle statut restaurant
+  const openEditModal = (restaurant: Restaurant) => {
+    setEditingRestaurant(restaurant);
+    setEditForm({
+      name: restaurant.name,
+      phone: restaurant.phone,
+      whatsapp_number: restaurant.whatsapp_number,
+      city: restaurant.city,
+      address: restaurant.address,
+      is_active: restaurant.is_active,
+      latitude: restaurant.latitude,
+      longitude: restaurant.longitude
+    });
+    setShowEditModal(true);
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setEditingRestaurant(null);
+    setEditForm({});
+  };
+
+  const resetPassword = async (restaurantId: number) => {
+    console.log('🔍 [Reset Password] Fonction appelée, restaurant ID:', restaurantId);
+    try {
+      const response = await fetch(`/api/restaurants/${restaurantId}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        showNotification(
+          'success',
+          'Mot de passe reset',
+          'Le restaurant pourra créer un nouveau mot de passe à la prochaine connexion'
+        );
+
+        // Mettre à jour l'état local pour masquer le bouton immédiatement
+        if (editingRestaurant) {
+          setEditingRestaurant({
+            ...editingRestaurant,
+            password_hash: ''
+          });
+        }
+
+        await loadRestaurants(); // Recharger les données
+      } else {
+        showNotification('error', 'Erreur', result.error);
+      }
+    } catch (error) {
+      showNotification('error', 'Erreur de connexion', 'Impossible de reset le mot de passe');
+    }
+  };
+
+  const saveRestaurantChanges = async () => {
+    if (!editingRestaurant) return;
+
+    try {
+      const response = await fetch(`/api/restaurants/${editingRestaurant.id}/update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editForm,
+          latitude: editForm.latitude,
+          longitude: editForm.longitude
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        showNotification(
+          'success',
+          'Modifications enregistrées',
+          `Les informations de ${editingRestaurant.name} ont été mises à jour`
+        );
+        await loadRestaurants();
+        closeEditModal();
+      } else {
+        showNotification(
+          'error',
+          'Échec de la mise à jour',
+          result.error || 'Impossible de sauvegarder les modifications'
+        );
+      }
+    } catch (error) {
+      showNotification(
+        'error',
+        'Erreur de connexion',
+        'Impossible de communiquer avec le serveur'
+      );
+    }
+  };
+
   const toggleRestaurantStatus = async (restaurantId: number, newStatus: boolean) => {
     setUpdating(restaurantId);
 
@@ -274,25 +375,43 @@ export default function BackOfficeRestaurantPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => toggleRestaurantStatus(restaurant.id, !restaurant.is_active)}
-                        disabled={updating === restaurant.id}
-                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                          restaurant.is_active
-                            ? 'bg-red-600 text-white hover:bg-red-700'
-                            : 'bg-green-600 text-white hover:bg-green-700'
-                        }`}
-                      >
-                        {updating === restaurant.id ? (
-                          <div className="flex items-center">
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <div className="flex items-center space-x-2">
+                        {/* Bouton voir/éditer */}
+                        <button
+                          onClick={() => openEditModal(restaurant)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                          title="Voir/Éditer les informations"
+                        >
+                          👁️
+                        </button>
+
+                        {/* Bouton toggle actif/inactif avec icône */}
+                        <button
+                          onClick={() => toggleRestaurantStatus(restaurant.id, !restaurant.is_active)}
+                          disabled={updating === restaurant.id}
+                          className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                            restaurant.is_active
+                              ? 'text-red-600 hover:bg-red-50'
+                              : 'text-green-600 hover:bg-green-50'
+                          }`}
+                          title={restaurant.is_active ? 'Désactiver le restaurant' : 'Activer le restaurant'}
+                        >
+                          {updating === restaurant.id ? (
+                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            MAJ...
-                          </div>
-                        ) : restaurant.is_active ? 'Désactiver' : 'Activer'}
-                      </button>
+                          ) : restaurant.is_active ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -310,6 +429,268 @@ export default function BackOfficeRestaurantPage() {
             <li>• La date de mise à jour est automatiquement mise à jour lors des changements</li>
             <li>• Les modifications sont immédiatement effectives</li>
           </ul>
+        </div>
+      )}
+
+      {/* Modal d'édition des informations restaurant */}
+      {showEditModal && editingRestaurant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            {/* En-tête du modal moderne */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-5 rounded-t-lg">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="bg-white/20 p-2 rounded-lg">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">
+                        Édition Restaurant
+                      </h3>
+                      <p className="text-blue-100 text-sm">
+                        <strong>{editingRestaurant.name}</strong> • ID: {editingRestaurant.id}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Dates de création et modification */}
+                  <div className="grid grid-cols-2 gap-4 mt-3">
+                    <div className="bg-white/10 rounded-lg p-3">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <svg className="w-4 h-4 text-blue-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span className="text-xs font-medium text-blue-100 uppercase tracking-wide">Création</span>
+                      </div>
+                      <p className="text-white text-sm font-medium">
+                        {formatDateTime(editingRestaurant.created_at)}
+                      </p>
+                    </div>
+
+                    <div className="bg-white/10 rounded-lg p-3">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <svg className="w-4 h-4 text-blue-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span className="text-xs font-medium text-blue-100 uppercase tracking-wide">Modification</span>
+                      </div>
+                      <p className="text-white text-sm font-medium">
+                        {formatDateTime(editingRestaurant.updated_at)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={closeEditModal}
+                  className="bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-colors ml-4"
+                >
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Contenu du formulaire */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Nom du restaurant */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    🏪 Nom du restaurant
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.name || ''}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Nom du restaurant"
+                  />
+                </div>
+
+                {/* Ville */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    📍 Ville
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.city || ''}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, city: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ville du restaurant"
+                  />
+                </div>
+
+                {/* Téléphone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    📞 Téléphone
+                  </label>
+                  <input
+                    type="tel"
+                    value={editForm.phone || ''}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Numéro de téléphone"
+                  />
+                </div>
+
+                {/* WhatsApp */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    💬 WhatsApp
+                  </label>
+                  <input
+                    type="tel"
+                    value={editForm.whatsapp_number || ''}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, whatsapp_number: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Numéro WhatsApp"
+                  />
+                </div>
+
+                {/* Note: Le champ email n'existe pas dans la structure de base */}
+
+                {/* Statut actif */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ⚡ Statut
+                  </label>
+                  <select
+                    value={editForm.is_active ? 'true' : 'false'}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, is_active: e.target.value === 'true' }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="true">✅ Actif</option>
+                    <option value="false">❌ Inactif</option>
+                  </select>
+                </div>
+
+                {/* Latitude */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    🌍 Latitude
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editForm.latitude || ''}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, latitude: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ex: 9.5092"
+                  />
+                </div>
+
+                {/* Longitude */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    🌐 Longitude
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editForm.longitude || ''}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, longitude: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ex: -13.7122"
+                  />
+                </div>
+              </div>
+
+              {/* Adresse complète */}
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🗺️ Adresse complète
+                </label>
+                <textarea
+                  value={editForm.address || ''}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, address: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  placeholder="Adresse complète du restaurant"
+                />
+              </div>
+
+              {/* Gestion mot de passe simplifiée */}
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  🔐 Gestion mot de passe
+                </label>
+
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-sm font-medium text-blue-900">
+                          État actuel :
+                        </span>
+                        <span className={`text-sm px-2 py-1 rounded ${
+                          editingRestaurant?.password_hash
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {editingRestaurant?.password_hash ? '✅ Configuré' : '❌ Vide'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-blue-700">
+                        {editingRestaurant?.password_hash
+                          ? 'Le restaurant peut se connecter avec son mot de passe actuel'
+                          : '✅ Reset effectué - Le restaurant pourra créer son mot de passe à la première connexion'
+                        }
+                      </p>
+                    </div>
+
+                    {editingRestaurant?.password_hash && (
+                      <button
+                        onClick={() => {
+                          console.log('🔍 [Button Click] Reset button clicked, restaurant:', editingRestaurant);
+                          resetPassword(editingRestaurant.id);
+                        }}
+                        className="ml-4 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center space-x-1 text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Reset</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Boutons d'action modernes */}
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 rounded-b-lg flex items-center justify-between">
+              <div className="text-xs text-gray-500">
+                💡 Les modifications seront appliquées immédiatement
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={closeEditModal}
+                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span>Annuler</span>
+                </button>
+                <button
+                  onClick={saveRestaurantChanges}
+                  className="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center space-x-2 shadow-lg"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Enregistrer</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
