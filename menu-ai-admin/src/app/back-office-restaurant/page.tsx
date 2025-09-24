@@ -17,6 +17,16 @@ interface Restaurant {
   longitude?: number;
 }
 
+interface FranceIcon {
+  id: number;
+  emoji: string;
+  name: string;
+  category: string;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export default function BackOfficeRestaurantPage() {
   // État pour les tabs
   const [activeTab, setActiveTab] = useState('restaurants');
@@ -27,6 +37,23 @@ export default function BackOfficeRestaurantPage() {
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Restaurant>>({});
+
+  // États pour la gestion des icônes produits
+  const [selectedRestaurantForIcons, setSelectedRestaurantForIcons] = useState('');
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategoryForIcons, setSelectedCategoryForIcons] = useState('');
+  const [products, setProducts] = useState<any[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [availableIcons, setAvailableIcons] = useState<FranceIcon[]>([]);
+  const [showIconModal, setShowIconModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+
+  // États pour la gestion des icônes (variables manquantes ajoutées)
+  const [icons, setIcons] = useState<FranceIcon[]>([]);
+  const [loadingIcons, setLoadingIcons] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedRestaurant, setSelectedRestaurant] = useState('');
 
   // États pour les notifications modernes
   const [notification, setNotification] = useState<{
@@ -86,6 +113,108 @@ export default function BackOfficeRestaurantPage() {
       showNotification('error', 'Erreur de connexion', 'Impossible de charger les restaurants');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Charger les catégories d'un restaurant
+  const loadCategories = async (restaurantId: string) => {
+    if (!restaurantId) return;
+
+    try {
+      const response = await fetch(`/api/categories?restaurant_id=${restaurantId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setCategories(data.categories);
+        setSelectedCategoryForIcons('');
+        setProducts([]);
+      }
+    } catch (error) {
+      console.error('Erreur chargement catégories:', error);
+      showNotification('error', 'Erreur', 'Impossible de charger les catégories');
+    }
+  };
+
+  // Charger les produits d'une catégorie
+  const loadProducts = async (restaurantId: string, categoryId: string) => {
+    if (!restaurantId || !categoryId) return;
+
+    setLoadingProducts(true);
+    try {
+      const response = await fetch(`/api/products?restaurant_id=${restaurantId}&category_id=${categoryId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setProducts(data.products);
+        showNotification('success', 'Produits chargés', `${data.products.length} produits trouvés`);
+      }
+    } catch (error) {
+      console.error('Erreur chargement produits:', error);
+      showNotification('error', 'Erreur', 'Impossible de charger les produits');
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  // Charger les icônes disponibles
+  const loadAvailableIcons = async () => {
+    try {
+      const response = await fetch('/api/icons');
+      const data = await response.json();
+      if (data.success) {
+        setAvailableIcons(data.icons);
+      }
+    } catch (error) {
+      console.error('Erreur chargement icônes:', error);
+    }
+  };
+
+  // Charger toutes les icônes pour la gestion (fonction manquante ajoutée)
+  const loadIcons = async () => {
+    setLoadingIcons(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedCategory) params.append('category', selectedCategory);
+      if (searchTerm) params.append('search', searchTerm);
+      if (selectedRestaurant) params.append('restaurant', selectedRestaurant);
+
+      const response = await fetch(`/api/icons?${params.toString()}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setIcons(data.icons);
+        showNotification('success', 'Icônes chargées', `${data.icons.length} icônes trouvées`);
+      } else {
+        showNotification('error', 'Erreur', data.error);
+      }
+    } catch (error) {
+      console.error('Erreur chargement icônes:', error);
+      showNotification('error', 'Erreur', 'Impossible de charger les icônes');
+    } finally {
+      setLoadingIcons(false);
+    }
+  };
+
+  // Sauvegarder l'icône d'un produit
+  const saveProductIcon = async (productId: number, iconEmoji: string) => {
+    try {
+      const response = await fetch('/api/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: productId, icon: iconEmoji })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Recharger les produits
+        await loadProducts(selectedRestaurantForIcons, selectedCategoryForIcons);
+        setShowIconModal(false);
+        setEditingProduct(null);
+        showNotification('success', 'Icône mise à jour', 'L\'icône du produit a été sauvegardée');
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde icône:', error);
+      showNotification('error', 'Erreur', 'Impossible de sauvegarder l\'icône');
     }
   };
 
@@ -228,6 +357,18 @@ export default function BackOfficeRestaurantPage() {
       setUpdating(null);
     }
   };
+
+  // Filtrer les icônes selon les critères
+  const filteredIcons = icons.filter(icon => {
+    const matchesSearch = searchTerm === '' ||
+      icon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      icon.emoji.includes(searchTerm) ||
+      icon.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const matchesCategory = selectedCategory === '' || icon.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
 
   useEffect(() => {
     loadRestaurants();
@@ -724,181 +865,315 @@ export default function BackOfficeRestaurantPage() {
         </div>
       )}
 
-      {/* Tab Gestion des Icônes */}
+      {/* Tab Gestion des Icônes - Nouveau workflow */}
       {activeTab === 'icons' && (
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="p-6 border-b border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">🎨 Gestion des Icônes</h2>
+                <h2 className="text-lg font-semibold text-gray-900">🎨 Assignation Icônes aux Produits</h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  100+ icônes prédéfinies pour personnaliser vos produits et options
+                  Sélectionnez un restaurant et une catégorie pour gérer les icônes des produits
                 </p>
               </div>
-              <button
-                onClick={() => {/* TODO: loadIcons */}}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                🔄 Actualiser
-              </button>
+              <div className="text-sm text-gray-500">
+                🎯 {products.length} produits • {availableIcons.length} icônes disponibles
+              </div>
             </div>
           </div>
 
-          {/* Filtres et recherche */}
+          {/* Filtres Restaurant et Catégorie */}
           <div className="p-6 bg-gray-50 border-b border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Recherche intelligente */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Sélection Restaurant */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🔍 Recherche
+                  🏪 Sélectionner un restaurant
                 </label>
-                <input
-                  type="text"
-                  placeholder="Rechercher par nom, emoji ou tag..."
+                <select
+                  value={selectedRestaurantForIcons}
+                  onChange={(e) => {
+                    setSelectedRestaurantForIcons(e.target.value);
+                    setSelectedCategoryForIcons('');
+                    setProducts([]);
+                    if (e.target.value) {
+                      loadCategories(e.target.value);
+                    } else {
+                      setCategories([]);
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              {/* Filtre par catégorie */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🏷️ Catégorie
-                </label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  <option value="">Toutes les catégories</option>
-                  <option value="plats">🍽️ Plats</option>
-                  <option value="accompagnements">🥗 Accompagnements</option>
-                  <option value="salades">🥬 Salades</option>
-                  <option value="boissons">🥤 Boissons</option>
-                  <option value="desserts">🍰 Desserts</option>
-                  <option value="spécialités">⭐ Spécialités</option>
-                  <option value="services">🛎️ Services</option>
+                >
+                  <option value="">-- Choisir un restaurant --</option>
+                  {restaurants
+                    .filter(r => r.is_active)
+                    .map(restaurant => (
+                      <option key={restaurant.id} value={restaurant.id}>
+                        {restaurant.name} • {restaurant.city}
+                      </option>
+                    ))}
                 </select>
+                {selectedRestaurantForIcons && (
+                  <p className="text-xs text-green-600 mt-1">
+                    ✅ Restaurant sélectionné - {categories.length} catégories disponibles
+                  </p>
+                )}
               </div>
 
-              {/* Filtre par restaurant */}
+              {/* Sélection Catégorie */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🏪 Restaurant
+                  🏷️ Sélectionner une catégorie
                 </label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  <option value="">Tous les restaurants</option>
-                  {restaurants.map(restaurant => (
-                    <option key={restaurant.id} value={restaurant.id}>
-                      {restaurant.name}
+                <select
+                  value={selectedCategoryForIcons}
+                  onChange={(e) => {
+                    setSelectedCategoryForIcons(e.target.value);
+                    if (e.target.value && selectedRestaurantForIcons) {
+                      loadProducts(selectedRestaurantForIcons, e.target.value);
+                    } else {
+                      setProducts([]);
+                    }
+                  }}
+                  disabled={!selectedRestaurantForIcons}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">-- Choisir une catégorie --</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.icon} {category.name}
                     </option>
                   ))}
                 </select>
+                {selectedCategoryForIcons && (
+                  <p className="text-xs text-green-600 mt-1">
+                    ✅ Catégorie sélectionnée - {products.length} produits trouvés
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Statistiques rapides */}
-            <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-              <div className="flex items-center space-x-4">
-                <span>📊 102 icônes disponibles</span>
-                <span>🎯 23 utilisées</span>
-                <span>⚡ 79 non utilisées</span>
+            {/* Instructions */}
+            {!selectedRestaurantForIcons && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                <p className="text-sm text-blue-700">
+                  💡 <strong>Instructions :</strong> Sélectionnez d'abord un restaurant pour voir ses catégories, puis choisissez une catégorie pour afficher les produits et gérer leurs icônes.
+                </p>
               </div>
-              <button className="text-blue-600 hover:text-blue-800">
-                📈 Voir détails
-              </button>
-            </div>
+            )}
           </div>
 
-          {/* Grille d'icônes */}
-          <div className="p-6">
-            <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-15 gap-3">
-              {/* Exemple d'icônes - À remplacer par les vraies données */}
-              {[
-                { emoji: '🍕', name: 'Pizza', category: 'plats' },
-                { emoji: '🍔', name: 'Burger', category: 'plats' },
-                { emoji: '🌯', name: 'Wrap', category: 'plats' },
-                { emoji: '🥙', name: 'Kebab', category: 'plats' },
-                { emoji: '🍗', name: 'Poulet', category: 'plats' },
-                { emoji: '🥩', name: 'Viande', category: 'plats' },
-                { emoji: '🐟', name: 'Poisson', category: 'plats' },
-                { emoji: '🦐', name: 'Crevette', category: 'plats' },
-                { emoji: '🍝', name: 'Pâtes', category: 'plats' },
-                { emoji: '🍜', name: 'Soupe', category: 'plats' },
-                { emoji: '🍛', name: 'Riz', category: 'plats' },
-                { emoji: '🥗', name: 'Salade', category: 'salades' },
-                { emoji: '🥬', name: 'Laitue', category: 'salades' },
-                { emoji: '🥒', name: 'Concombre', category: 'salades' },
-                { emoji: '🍅', name: 'Tomate', category: 'salades' },
-                { emoji: '🧅', name: 'Oignon', category: 'accompagnements' },
-                { emoji: '🥔', name: 'Pomme de terre', category: 'accompagnements' },
-                { emoji: '🍟', name: 'Frites', category: 'accompagnements' },
-                { emoji: '🥤', name: 'Boisson', category: 'boissons' },
-                { emoji: '☕', name: 'Café', category: 'boissons' },
-                { emoji: '🧃', name: 'Jus', category: 'boissons' },
-                { emoji: '🍰', name: 'Gâteau', category: 'desserts' },
-                { emoji: '🍨', name: 'Glace', category: 'desserts' },
-                { emoji: '🎂', name: 'Anniversaire', category: 'desserts' }
-              ].map((icon, index) => (
-                <div
-                  key={index}
-                  className="group relative bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg p-3 cursor-pointer transition-all duration-200 hover:shadow-md"
-                  title={`${icon.emoji} ${icon.name} (${icon.category})`}
-                >
-                  <div className="text-2xl text-center mb-1">{icon.emoji}</div>
-                  <div className="text-xs text-center text-gray-600 group-hover:text-blue-600 font-medium truncate">
-                    {icon.name}
-                  </div>
-
-                  {/* Badge catégorie */}
-                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-center">
-                      {icon.category}
-                    </span>
-                  </div>
-
-                  {/* Actions au hover */}
-                  <div className="absolute inset-0 bg-blue-600 bg-opacity-0 hover:bg-opacity-10 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                    <div className="flex space-x-1">
-                      <button
-                        className="bg-white text-blue-600 hover:bg-blue-50 p-1 rounded shadow-sm"
-                        title="Assigner à un produit"
-                      >
-                        ⚡
-                      </button>
-                      <button
-                        className="bg-white text-gray-600 hover:bg-gray-50 p-1 rounded shadow-sm"
-                        title="Voir utilisation"
-                      >
-                        📊
-                      </button>
-                    </div>
+          {/* Liste des Produits */}
+          {selectedRestaurantForIcons && selectedCategoryForIcons && (
+            <div className="p-6">
+              {loadingProducts ? (
+                <div className="text-center py-12">
+                  <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-600 bg-blue-100">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Chargement des produits...
                   </div>
                 </div>
-              ))}
+              ) : products.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-4xl mb-4">📦</div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun produit trouvé</h3>
+                  <p className="text-gray-600">
+                    Cette catégorie ne contient aucun produit actif.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      📦 Produits de la catégorie ({products.length})
+                    </h3>
+                    <button
+                      onClick={loadAvailableIcons}
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      🔄 Recharger icônes ({availableIcons.length})
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {products.map((product) => (
+                      <div
+                        key={product.id}
+                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <span className="text-2xl">
+                                {product.icon || '❓'}
+                              </span>
+                              <h4 className="font-medium text-gray-900 text-sm">
+                                {product.name}
+                              </h4>
+                            </div>
+                            {product.description && (
+                              <p className="text-xs text-gray-600 line-clamp-2">
+                                {product.description}
+                              </p>
+                            )}
+                            <div className="mt-2 text-xs text-gray-500">
+                              ID: {product.id} • {product.product_type}
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setEditingProduct(product);
+                            loadAvailableIcons();
+                            setShowIconModal(true);
+                          }}
+                          className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+                        >
+                          <span>🎨</span>
+                          <span>{product.icon ? 'Modifier l\'icône' : 'Assigner une icône'}</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modal de sélection d'icône pour produit */}
+      {showIconModal && editingProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            {/* En-tête du modal */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4 rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    🎨 Sélectionner une icône
+                  </h3>
+                  <p className="text-blue-100 text-sm">
+                    Produit : <strong>{editingProduct.name}</strong>
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowIconModal(false);
+                    setEditingProduct(null);
+                  }}
+                  className="bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
-            {/* État vide si pas d'icônes */}
-            <div className="hidden text-center py-12 text-gray-500">
-              <div className="text-4xl mb-4">🔍</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune icône trouvée</h3>
-              <p className="text-gray-600">
-                Essayez de modifier vos filtres ou votre recherche
-              </p>
+            {/* Contenu du modal */}
+            <div className="p-6">
+              {/* Icône actuelle */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <span className="text-3xl">
+                    {editingProduct.icon || '❓'}
+                  </span>
+                  <div>
+                    <p className="font-medium text-gray-900">Icône actuelle</p>
+                    <p className="text-sm text-gray-600">
+                      {editingProduct.icon ? 'Cliquez sur une nouvelle icône pour la remplacer' : 'Aucune icône assignée'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filtres rapides */}
+              <div className="mb-4 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className={`px-3 py-1 rounded-full text-sm ${
+                    searchTerm === ''
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Toutes
+                </button>
+                {['plats', 'boissons', 'desserts', 'spécialités'].map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSearchTerm(cat)}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      searchTerm === cat
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {/* Grille d'icônes disponibles */}
+              <div className="max-h-96 overflow-y-auto">
+                {availableIcons.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <div className="text-4xl mb-4">🎨</div>
+                    <p>Chargement des icônes...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-12 lg:grid-cols-15 gap-2">
+                    {availableIcons
+                      .filter(icon =>
+                        searchTerm === '' ||
+                        icon.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        icon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        icon.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+                      )
+                      .map((icon) => (
+                        <div
+                          key={icon.id}
+                          onClick={() => saveProductIcon(editingProduct.id, icon.emoji)}
+                          className="group relative bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg p-2 cursor-pointer transition-all duration-200 hover:shadow-md"
+                          title={`${icon.emoji} ${icon.name}`}
+                        >
+                          <div className="text-2xl text-center">
+                            {icon.emoji}
+                          </div>
+                          <div className="text-xs text-center text-gray-600 group-hover:text-blue-600 mt-1 truncate">
+                            {icon.name}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Pagination */}
-            <div className="mt-8 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Affichage de <span className="font-medium">1</span> à <span className="font-medium">24</span>
-                sur <span className="font-medium">102</span> icônes
+            {/* Pied du modal */}
+            <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 rounded-b-lg flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                {availableIcons.filter(icon =>
+                  searchTerm === '' ||
+                  icon.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  icon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  icon.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+                ).length} icônes disponibles
               </div>
-              <div className="flex items-center space-x-2">
-                <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
-                  ← Précédent
-                </button>
-                <span className="px-3 py-1 bg-blue-600 text-white rounded text-sm">1</span>
-                <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">2</button>
-                <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">3</button>
-                <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
-                  Suivant →
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  setShowIconModal(false);
+                  setEditingProduct(null);
+                }}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Fermer
+              </button>
             </div>
           </div>
         </div>

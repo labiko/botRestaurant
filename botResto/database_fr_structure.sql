@@ -84,11 +84,14 @@ CREATE TABLE public.duplication_logs (
   summary jsonb,
   details jsonb,
   error_message text,
-  started_at timestamp without time zone DEFAULT now(),
-  completed_at timestamp without time zone,
+  started_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
   duration_seconds integer,
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
+  production_status character varying DEFAULT 'dev_only'::character varying,
+  last_production_sync timestamp without time zone,
+  sync_count integer DEFAULT 0,
   CONSTRAINT duplication_logs_pkey PRIMARY KEY (id),
   CONSTRAINT duplication_logs_source_restaurant_id_fkey FOREIGN KEY (source_restaurant_id) REFERENCES public.france_restaurants(id),
   CONSTRAINT duplication_logs_target_restaurant_id_fkey FOREIGN KEY (target_restaurant_id) REFERENCES public.france_restaurants(id)
@@ -183,6 +186,16 @@ CREATE TABLE public.france_driver_locations (
   CONSTRAINT france_driver_locations_pkey PRIMARY KEY (id),
   CONSTRAINT france_driver_locations_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id)
 );
+CREATE TABLE public.france_icons (
+  id integer NOT NULL DEFAULT nextval('france_icons_id_seq'::regclass),
+  emoji character varying NOT NULL UNIQUE,
+  name character varying NOT NULL,
+  category character varying NOT NULL,
+  tags ARRAY,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT france_icons_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.france_menu_categories (
   id integer NOT NULL DEFAULT nextval('france_menu_categories_id_seq'::regclass),
   restaurant_id integer,
@@ -194,6 +207,18 @@ CREATE TABLE public.france_menu_categories (
   created_at timestamp without time zone DEFAULT now(),
   CONSTRAINT france_menu_categories_pkey PRIMARY KEY (id),
   CONSTRAINT france_menu_categories_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
+);
+CREATE TABLE public.france_option_groups (
+  id integer NOT NULL DEFAULT nextval('france_option_groups_id_seq'::regclass),
+  group_name character varying NOT NULL UNIQUE,
+  component_name character varying NOT NULL,
+  unit character varying DEFAULT 'choix'::character varying,
+  icon character varying DEFAULT '📋'::character varying,
+  display_order integer DEFAULT 0,
+  is_active boolean DEFAULT true,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT france_option_groups_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.france_orders (
   id integer NOT NULL DEFAULT nextval('france_orders_id_seq'::regclass),
@@ -264,6 +289,7 @@ CREATE TABLE public.france_product_options (
   group_order integer DEFAULT 0,
   next_group_order integer,
   conditional_next_group jsonb,
+  icon character varying DEFAULT NULL::character varying,
   CONSTRAINT france_product_options_pkey PRIMARY KEY (id),
   CONSTRAINT france_product_options_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.france_products(id)
 );
@@ -313,6 +339,7 @@ CREATE TABLE public.france_products (
   workflow_type character varying,
   requires_steps boolean DEFAULT false,
   steps_config json,
+  icon character varying DEFAULT NULL::character varying,
   CONSTRAINT france_products_pkey PRIMARY KEY (id),
   CONSTRAINT france_products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.france_menu_categories(id),
   CONSTRAINT france_products_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
@@ -366,6 +393,7 @@ CREATE TABLE public.france_restaurants (
   audio_notifications_enabled boolean DEFAULT true,
   audio_volume integer DEFAULT 50 CHECK (audio_volume >= 0 AND audio_volume <= 100),
   audio_enabled_since timestamp without time zone,
+  deployment_status character varying DEFAULT 'production'::character varying CHECK (deployment_status::text = ANY (ARRAY['development'::character varying, 'testing'::character varying, 'production'::character varying]::text[])),
   CONSTRAINT france_restaurants_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.france_sessions (
@@ -420,6 +448,15 @@ CREATE TABLE public.france_workflow_templates (
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT france_workflow_templates_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.login_users (
+  id integer NOT NULL DEFAULT nextval('login_users_id_seq'::regclass),
+  email character varying NOT NULL UNIQUE,
+  password_hash character varying NOT NULL,
+  last_login timestamp without time zone,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT login_users_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.menu_ai_scripts (
   id integer NOT NULL DEFAULT nextval('menu_ai_scripts_id_seq'::regclass),
   script_sql text NOT NULL,
@@ -449,6 +486,21 @@ CREATE TABLE public.message_templates (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT message_templates_pkey PRIMARY KEY (id),
   CONSTRAINT message_templates_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
+);
+CREATE TABLE public.production_sync_history (
+  id integer NOT NULL DEFAULT nextval('production_sync_history_id_seq'::regclass),
+  duplication_log_id integer,
+  restaurant_id integer,
+  sync_date timestamp without time zone DEFAULT now(),
+  sync_type character varying NOT NULL,
+  items_synced jsonb,
+  sql_script text,
+  executed_by character varying,
+  execution_status character varying DEFAULT 'pending'::character varying,
+  execution_notes text,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT production_sync_history_pkey PRIMARY KEY (id),
+  CONSTRAINT production_sync_history_duplication_log_id_fkey FOREIGN KEY (duplication_log_id) REFERENCES public.duplication_logs(id)
 );
 CREATE TABLE public.restaurant_bot_configs (
   id integer NOT NULL DEFAULT nextval('restaurant_bot_configs_id_seq'::regclass),
@@ -506,6 +558,20 @@ CREATE TABLE public.workflow_definitions (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT workflow_definitions_pkey PRIMARY KEY (id),
   CONSTRAINT workflow_definitions_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
+);
+CREATE TABLE public.workflow_sql_scripts (
+  id integer NOT NULL DEFAULT nextval('workflow_sql_scripts_id_seq'::regclass),
+  product_id integer NOT NULL,
+  product_name character varying NOT NULL,
+  sql_script text NOT NULL,
+  created_at timestamp without time zone DEFAULT now(),
+  executed_dev boolean DEFAULT false,
+  executed_prod boolean DEFAULT false,
+  dev_executed_at timestamp without time zone,
+  prod_executed_at timestamp without time zone,
+  modifications_summary jsonb DEFAULT '{"deletes": 0, "inserts": 0, "updates": 0, "total_options": 0}'::jsonb,
+  CONSTRAINT workflow_sql_scripts_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_workflow_scripts_product FOREIGN KEY (product_id) REFERENCES public.france_products(id)
 );
 CREATE TABLE public.workflow_steps (
   id integer NOT NULL DEFAULT nextval('workflow_steps_id_seq'::regclass),
