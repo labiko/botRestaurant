@@ -38,6 +38,17 @@ interface Product {
   price_delivery: number;
 }
 
+interface ProductOption {
+  id: number;
+  product_id: number;
+  option_group: string;
+  option_name: string;
+  price_modifier: number;
+  icon: string | null;
+  display_order: number;
+  is_active: boolean;
+}
+
 export default function BackOfficeRestaurantPage() {
   // État pour les tabs
   const [activeTab, setActiveTab] = useState('restaurants');
@@ -63,7 +74,7 @@ export default function BackOfficeRestaurantPage() {
 
   // États pour la modal avancée
   const [showAdvancedModal, setShowAdvancedModal] = useState(false);
-  const [activeModalTab, setActiveModalTab] = useState<'category' | 'products' | 'preview'>('category');
+  const [activeModalTab, setActiveModalTab] = useState<'category' | 'options'>('category');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -72,6 +83,12 @@ export default function BackOfficeRestaurantPage() {
 
   // États pour le drag & drop
   const [draggedProduct, setDraggedProduct] = useState<number | null>(null);
+
+  // États pour les options des produits composites
+  const [productOptions, setProductOptions] = useState<ProductOption[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Fonction de formatage de date avec correction du fuseau horaire
   const formatDateTime = (dateString: string): string => {
@@ -303,7 +320,18 @@ export default function BackOfficeRestaurantPage() {
       category_name: category.name
     });
 
-    await loadCategoryProducts(category.restaurant_id, category.id);
+    // Charger les produits de la catégorie
+    const products = await loadCategoryProducts(category.restaurant_id, category.id);
+
+    // Si il y a des produits composites, charger leurs options
+    if (products && products.length > 0) {
+      const compositeProduct = products.find(p => p.product_type === 'composite');
+      if (compositeProduct) {
+        console.log('⚙️ [openAdvancedCategoryModal] Produit composite trouvé, chargement options:', compositeProduct);
+        setEditingProduct(compositeProduct);
+        await loadProductOptions(compositeProduct.id);
+      }
+    }
   };
 
   const loadCategoryProducts = async (restaurantId: number | string, categoryId: number | string) => {
@@ -322,15 +350,18 @@ export default function BackOfficeRestaurantPage() {
       if (data.success) {
         setCategoryProducts(data.products || []);
         console.log(`✅ [loadCategoryProducts] Produits chargés: ${data.products?.length || 0}`);
+        return data.products || [];
       } else {
         console.error('❌ [loadCategoryProducts] Erreur API:', data.error);
         showNotification('error', 'Erreur de chargement', data.error || 'Impossible de charger les produits');
         setCategoryProducts([]);
+        return [];
       }
     } catch (error) {
       console.error('❌ [loadCategoryProducts] Exception:', error);
       showNotification('error', 'Erreur de connexion', 'Impossible de communiquer avec le serveur');
       setCategoryProducts([]);
+      return [];
     } finally {
       setLoadingProducts(false);
     }
@@ -486,6 +517,61 @@ export default function BackOfficeRestaurantPage() {
       console.error('Erreur sauvegarde ordre produits:', error);
       showNotification('error', 'Erreur de connexion', 'Impossible de communiquer avec le serveur');
       await loadCategoryProducts(editingCategory!.restaurant_id, editingCategory!.id);
+    }
+  };
+
+  // Fonctions pour la gestion des options de produits composites
+  const loadProductOptions = async (productId: number) => {
+    setLoadingOptions(true);
+    try {
+      const response = await fetch(`/api/product-options?product_id=${productId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setProductOptions(data.options || []);
+        console.log(`✅ [loadProductOptions] ${data.options?.length || 0} options trouvées pour produit ${productId}`);
+      } else {
+        console.error('❌ [loadProductOptions] Erreur API:', data.error);
+        showNotification('error', 'Erreur de chargement', data.error || 'Impossible de charger les options');
+        setProductOptions([]);
+      }
+    } catch (error) {
+      console.error('❌ [loadProductOptions] Exception:', error);
+      showNotification('error', 'Erreur de connexion', 'Impossible de communiquer avec le serveur');
+      setProductOptions([]);
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
+
+  const openProductOptionsModal = async (product: Product) => {
+    console.log('🎯 [openProductOptionsModal] Ouverture modal options pour produit:', product);
+    setEditingProduct(product);
+    setShowOptionsModal(true);
+    await loadProductOptions(product.id);
+  };
+
+  const saveOptionIcon = async (optionId: number, icon: string) => {
+    try {
+      const response = await fetch('/api/product-options', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: optionId, icon })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setProductOptions(prev => prev.map(opt =>
+          opt.id === optionId ? { ...opt, icon } : opt
+        ));
+        showNotification('success', 'Icône mise à jour', 'L\'icône de l\'option a été sauvegardée');
+      } else {
+        showNotification('error', 'Erreur de sauvegarde', data.error || 'Impossible de sauvegarder l\'icône');
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde icône option:', error);
+      showNotification('error', 'Erreur de connexion', 'Impossible de communiquer avec le serveur');
     }
   };
 
@@ -1140,8 +1226,7 @@ export default function BackOfficeRestaurantPage() {
               <div className="mt-6 flex space-x-1">
                 {[
                   { key: 'category', label: '🏷️ Icône Catégorie', desc: 'Modifier l\'icône' },
-                  { key: 'products', label: '📦 Produits', desc: `${categoryProducts.length} produits`, badge: selectedProducts.length > 0 ? `${selectedProducts.length} sélectionnés` : undefined },
-                  { key: 'preview', label: '📊 Aperçu', desc: 'Prévisualisation' }
+                  { key: 'options', label: '⚙️ Options', desc: `${productOptions.length} options`, badge: loadingOptions ? 'Chargement...' : undefined }
                 ].map(tab => (
                   <button
                     key={tab.key}
@@ -1190,11 +1275,11 @@ export default function BackOfficeRestaurantPage() {
                         '🍽️', '🍕', '🍔', '🌯', '🥙', '🍗', '🥩', '🐟', '🦐', '🍝', '🍜', '🍛',
                         '🥗', '🥬', '🥒', '🍅', '🧅', '🥔', '🍟', '🥤', '☕', '🧃', '🍰', '🍨',
                         '🎂', '🍪', '🍩', '🧁', '🍎', '🍊', '🍌', '🍇', '🍓', '🥝', '🥥', '🍑',
-                        '🌶️', '🌽', '🥕', '🥦', '🥬', '🍆', '🥒', '🥑', '🍠', '🥜', '🌰', '🍞',
-                        '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🍳', '🥓', '🌭', '🥪', '🌮'
-                      ].map(icon => (
+                        '🌶️', '🌽', '🥕', '🥦', '🥒', '🍆', '🥑', '🍠', '🥜', '🌰', '🍞', '🥐',
+                        '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🍳', '🥓', '🌭', '🥪', '🌮'
+                      ].map((icon, index) => (
                         <button
-                          key={icon}
+                          key={`category-icon-${index}`}
                           onClick={() => saveCategoryIcon(editingCategory.id, icon)}
                           className={`p-3 text-2xl rounded-lg border-2 transition-all hover:scale-110 ${
                             editingCategory.icon === icon
@@ -1211,250 +1296,134 @@ export default function BackOfficeRestaurantPage() {
                 </div>
               )}
 
-              {/* Tab: Produits */}
-              {activeModalTab === 'products' && (
+              {/* Tab: Options */}
+              {activeModalTab === 'options' && (
                 <div className="p-6">
-                  {loadingProducts ? (
+                  {loadingOptions ? (
                     <div className="text-center py-12">
-                      <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-600 bg-blue-100">
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-green-600 bg-green-100">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Chargement des produits...
+                        Chargement des options...
                       </div>
                     </div>
-                  ) : categoryProducts.length === 0 ? (
+                  ) : productOptions.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
-                      <div className="text-4xl mb-4">📦</div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun produit trouvé</h3>
+                      <div className="text-4xl mb-4">⚙️</div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune option trouvée</h3>
                       <p className="text-gray-600 mb-4">
-                        Cette catégorie ne contient aucun produit actif
+                        Cette catégorie ne contient pas de produit composite avec options
                       </p>
 
                       {/* Panel debug */}
-                      <div className="max-w-md mx-auto bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                        <h4 className="font-medium text-blue-900 mb-2">🔍 Informations de debug</h4>
+                      <div className="max-w-md mx-auto bg-green-50 border border-green-200 rounded-lg p-4 text-left">
+                        <h4 className="font-medium text-green-900 mb-2">🔍 Informations de debug</h4>
                         <div className="space-y-1 text-sm">
                           <div><strong>Catégorie :</strong> {editingCategory.name}</div>
                           <div><strong>ID Catégorie :</strong> {editingCategory.id}</div>
                           <div><strong>Restaurant ID :</strong> {editingCategory.restaurant_id}</div>
-                          <div><strong>Loading :</strong> {loadingProducts ? 'Oui' : 'Non'}</div>
-                          <div><strong>Produits trouvés :</strong> {categoryProducts.length}</div>
+                          <div><strong>Produit composite :</strong> {editingProduct?.name || 'Non trouvé'}</div>
+                          <div><strong>Loading options :</strong> {loadingOptions ? 'Oui' : 'Non'}</div>
+                          <div><strong>Options trouvées :</strong> {productOptions.length}</div>
                         </div>
                       </div>
 
                       <button
-                        onClick={() => loadCategoryProducts(editingCategory.restaurant_id, editingCategory.id)}
-                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        onClick={() => editingProduct && loadProductOptions(editingProduct.id)}
+                        className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                       >
-                        🔄 Recharger les produits
+                        🔄 Recharger les options
                       </button>
                     </div>
                   ) : (
                     <div>
-                      {/* Header avec contrôles */}
-                      <div className="flex items-center justify-between mb-6">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            📦 {categoryProducts.length} produits dans {editingCategory.name}
-                          </h3>
-                          {selectedProducts.length > 0 && (
-                            <p className="text-sm text-orange-600 mt-1">
-                              {selectedProducts.length} produit{selectedProducts.length > 1 ? 's' : ''} sélectionné{selectedProducts.length > 1 ? 's' : ''}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center space-x-3">
-                          <button
-                            onClick={selectAllProducts}
-                            className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
-                          >
-                            {selectedProducts.length === categoryProducts.length ? '🔲 Tout déselectionner' : '☑️ Tout sélectionner'}
-                          </button>
-
-                          {selectedProducts.length > 0 && (
-                            <button
-                              onClick={() => setShowBulkModal(true)}
-                              className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors"
-                            >
-                              🎨 Icônes bulk ({selectedProducts.length})
-                            </button>
-                          )}
-                        </div>
+                      {/* Header avec informations */}
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          ⚙️ Options du {editingProduct?.name || 'produit composite'}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {productOptions.length} options disponibles • Cliquez sur une icône pour la modifier
+                        </p>
                       </div>
 
-                      {/* Liste des produits avec drag & drop */}
-                      <div className="space-y-3">
-                        {categoryProducts.map((product, index) => (
-                          <div
-                            key={product.id}
-                            draggable
-                            onDragStart={() => handleDragStart(product.id)}
-                            onDragOver={handleDragOver}
-                            onDrop={(e) => handleDrop(e, product.id)}
-                            className={`flex items-center p-4 bg-gray-50 rounded-lg border transition-all ${
-                              draggedProduct === product.id ? 'opacity-50' : 'hover:bg-gray-100'
-                            } ${selectedProducts.includes(product.id) ? 'ring-2 ring-orange-500 bg-orange-50' : ''}`}
-                          >
-                            {/* Drag Handle */}
-                            <div className="mr-3 text-gray-400 cursor-grab hover:text-gray-600" title="Déplacer">
-                              ⋮⋮
+                      {/* Liste des options par groupe */}
+                      <div className="space-y-6">
+                        {productOptions.reduce((groups: any[], option) => {
+                          const existingGroup = groups.find(g => g.name === option.option_group);
+                          if (existingGroup) {
+                            existingGroup.options.push(option);
+                          } else {
+                            groups.push({
+                              name: option.option_group,
+                              options: [option]
+                            });
+                          }
+                          return groups;
+                        }, []).map((group) => (
+                          <div key={group.name} className="bg-gray-50 rounded-xl p-6">
+                            {/* Header du groupe */}
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-lg font-semibold text-gray-900">
+                                📋 {group.name}
+                              </h4>
+                              <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full">
+                                {group.options.length} option{group.options.length > 1 ? 's' : ''}
+                              </span>
                             </div>
 
-                            {/* Numéro */}
-                            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-sm font-medium text-gray-600 mr-3">
-                              {index + 1}
+                            {/* Options du groupe */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {group.options.map((option: ProductOption) => (
+                                <div
+                                  key={option.id}
+                                  className="bg-white rounded-lg p-4 border border-gray-200 hover:border-green-300 hover:shadow-md transition-all"
+                                >
+                                  {/* Icône actuelle */}
+                                  <div className="text-center mb-4">
+                                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center text-3xl mx-auto mb-2">
+                                      {option.icon || '❓'}
+                                    </div>
+                                    <h5 className="font-medium text-gray-900">{option.option_name}</h5>
+                                    {option.price_modifier !== 0 && (
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        {option.price_modifier > 0 ? '+' : ''}{option.price_modifier}€
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {/* Sélecteur d'icône */}
+                                  <div className="grid grid-cols-6 gap-2">
+                                    {[
+                                      '🍗', '🥩', '🐟', '🦐', '🍖', '🥓',
+                                      '🍛', '🍝', '🍜', '🥗', '🍞', '🥞',
+                                      '🥤', '☕', '🧃', '🍺', '🥛', '💧',
+                                      '🍕', '🍔', '🌯', '🥙', '🌮', '🥪'
+                                    ].map((iconOption, index) => (
+                                      <button
+                                        key={index}
+                                        onClick={() => saveOptionIcon(option.id, iconOption)}
+                                        className={`p-2 text-lg rounded-md border transition-all hover:scale-110 ${
+                                          option.icon === iconOption
+                                            ? 'border-green-500 bg-green-50'
+                                            : 'border-gray-200 hover:border-green-300 hover:bg-gray-50'
+                                        }`}
+                                        title={`Appliquer ${iconOption} à ${option.option_name}`}
+                                      >
+                                        {iconOption}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-
-                            {/* Checkbox */}
-                            <input
-                              type="checkbox"
-                              checked={selectedProducts.includes(product.id)}
-                              onChange={() => toggleProductSelection(product.id)}
-                              className="mr-3 w-4 h-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                            />
-
-                            {/* Icône du produit */}
-                            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-2xl mr-4 shadow-sm">
-                              {product.icon || '❓'}
-                            </div>
-
-                            {/* Infos du produit */}
-                            <div className="flex-1">
-                              <h4 className="font-medium text-gray-900">{product.name}</h4>
-                              <div className="flex items-center mt-1 text-sm text-gray-500">
-                                <span className="mr-4">💰 {product.price_onsite}€ sur place</span>
-                                <span>🚚 {product.price_delivery}€ livraison</span>
-                              </div>
-                            </div>
-
-                            {/* Actions */}
-                            <button
-                              onClick={() => setShowBulkModal(true)} // Pour la demo, on utilise le bulk modal
-                              className="ml-4 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                              🎨 Modifier
-                            </button>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* Tab: Aperçu */}
-              {activeModalTab === 'preview' && (
-                <div className="p-6">
-                  <div className="max-w-4xl mx-auto">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">
-                      📊 Aperçu & Statistiques
-                    </h3>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                      {/* Aperçu Mobile */}
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-4">📱 Aperçu Menu Mobile</h4>
-                        <div className="bg-black rounded-2xl p-4 max-w-sm mx-auto">
-                          <div className="bg-gray-900 rounded-xl p-4 text-white">
-                            {/* Header catégorie */}
-                            <div className="flex items-center mb-4">
-                              <div className="text-2xl mr-3">{editingCategory.icon || '❓'}</div>
-                              <h3 className="text-lg font-semibold">{editingCategory.name}</h3>
-                            </div>
-
-                            {/* Liste des produits */}
-                            <div className="space-y-2 max-h-64 overflow-y-auto">
-                              {categoryProducts.slice(0, 5).map((product, index) => (
-                                <div key={product.id} className="flex items-center p-2 bg-gray-800 rounded-lg">
-                                  <div className="w-6 h-6 bg-gray-700 rounded flex items-center justify-center text-xs mr-2">
-                                    {index + 1}
-                                  </div>
-                                  <div className="text-lg mr-2">{product.icon || '❓'}</div>
-                                  <div className="flex-1 text-sm">
-                                    <div className="font-medium">{product.name}</div>
-                                    <div className="text-gray-400 text-xs">{product.price_onsite}€</div>
-                                  </div>
-                                </div>
-                              ))}
-
-                              {categoryProducts.length > 5 && (
-                                <div className="text-center py-2 text-gray-400 text-sm">
-                                  ... et {categoryProducts.length - 5} autres produits
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Statistiques */}
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-4">📈 Statistiques</h4>
-                        <div className="space-y-4">
-                          {/* Produits avec icônes */}
-                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="text-sm font-medium text-green-800">Avec icône</div>
-                                <div className="text-2xl font-bold text-green-900">
-                                  {categoryProducts.filter(p => p.icon).length}
-                                </div>
-                              </div>
-                              <div className="text-green-600 text-2xl">✅</div>
-                            </div>
-                          </div>
-
-                          {/* Produits sans icônes */}
-                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="text-sm font-medium text-orange-800">Sans icône</div>
-                                <div className="text-2xl font-bold text-orange-900">
-                                  {categoryProducts.filter(p => !p.icon).length}
-                                </div>
-                              </div>
-                              <div className="text-orange-600 text-2xl">⚠️</div>
-                            </div>
-                          </div>
-
-                          {/* Barre de progression */}
-                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                            <div className="text-sm font-medium text-gray-700 mb-2">Complétion</div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div
-                                className="bg-green-600 h-2 rounded-full transition-all"
-                                style={{
-                                  width: `${categoryProducts.length > 0 ? (categoryProducts.filter(p => p.icon).length / categoryProducts.length) * 100 : 0}%`
-                                }}
-                              ></div>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {categoryProducts.length > 0 ? Math.round((categoryProducts.filter(p => p.icon).length / categoryProducts.length) * 100) : 0}% des produits ont une icône
-                            </div>
-                          </div>
-
-                          {/* Suggestions */}
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <div className="text-sm font-medium text-blue-800 mb-2">💡 Suggestions</div>
-                            <ul className="text-sm text-blue-700 space-y-1">
-                              {categoryProducts.filter(p => !p.icon).length > 0 && (
-                                <li>• Ajouter des icônes aux {categoryProducts.filter(p => !p.icon).length} produits restants</li>
-                              )}
-                              {selectedProducts.length > 1 && (
-                                <li>• Utilisez l'édition bulk pour modifier plusieurs produits à la fois</li>
-                              )}
-                              {categoryProducts.length > 10 && (
-                                <li>• Réorganisez vos produits par drag & drop pour optimiser l'ordre</li>
-                              )}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
@@ -1491,11 +1460,11 @@ export default function BackOfficeRestaurantPage() {
                   '🍽️', '🍕', '🍔', '🌯', '🥙', '🍗', '🥩', '🐟', '🦐', '🍝', '🍜', '🍛',
                   '🥗', '🥬', '🥒', '🍅', '🧅', '🥔', '🍟', '🥤', '☕', '🧃', '🍰', '🍨',
                   '🎂', '🍪', '🍩', '🧁', '🍎', '🍊', '🍌', '🍇', '🍓', '🥝', '🥥', '🍑',
-                  '🌶️', '🌽', '🥕', '🥦', '🥬', '🍆', '🥒', '🥑', '🍠', '🥜', '🌰', '🍞',
-                  '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🍳', '🥓', '🌭', '🥪', '🌮'
-                ].map(icon => (
+                  '🌶️', '🌽', '🥕', '🥦', '🥒', '🍆', '🥑', '🍠', '🥜', '🌰', '🍞', '🥐',
+                  '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🍳', '🥓', '🌭', '🥪', '🌮'
+                ].map((icon, index) => (
                   <button
-                    key={icon}
+                    key={`bulk-icon-${index}`}
                     onClick={() => applyBulkIcon(icon)}
                     className="p-3 text-2xl rounded-lg border-2 border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition-all hover:scale-110"
                     title={`Appliquer ${icon} à ${selectedProducts.length} produits`}
