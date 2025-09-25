@@ -30,6 +30,7 @@ export default function OCRConfigurePage() {
   // États pour la validation
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [categoryConfigurations, setCategoryConfigurations] = useState<Record<string, any>>({});
+  const [categoryName, setCategoryName] = useState<string>('');
 
   useEffect(() => {
     loadOCRResults();
@@ -152,21 +153,28 @@ export default function OCRConfigurePage() {
     setProcessing(true);
 
     try {
-      // 1. Analyse IA de tous les produits SCANNÉS
+      // 1. Analyse IA de tous les produits SCANNÉS (SANS CLASSIFICATION AUTOMATIQUE)
       const products: ExtractedProduct[] = ocrResults.products;
 
       console.log('🔍 Produits à analyser:', products.map(p => p.name));
 
+      // Analyse simplifiée : tous les produits restent dans une seule catégorie
       const analysisResults = products.map(product => {
         console.log('📊 Analyse du produit:', product.name);
-        return ProductAnalysisAIService.analyzeProduct(product);
+        const analysis = ProductAnalysisAIService.analyzeProduct(product);
+        // Forcer tous les produits à rester sans catégorie prédéfinie
+        analysis.categoryMapping = {
+          suggestedCategoryName: '', // Pas de catégorie auto
+          icon: '🍽️',
+          confidence: 1.0
+        };
+        return analysis;
       });
 
       setAnalysisResults(analysisResults);
 
       console.log('✅ Analyse terminée:', analysisResults.map(r => ({
         nom: r.product.name,
-        categorie: r.categoryMapping.suggestedCategoryName,
         type: r.detectedType
       })));
 
@@ -199,11 +207,16 @@ export default function OCRConfigurePage() {
     }
   };
 
-  const handleConfigureCategory = (categoryName: string, categoryProducts: ProductAnalysisResult[]) => {
-    // Sauvegarder le contexte de configuration de catégorie
+  const handleConfigureWorkflow = () => {
+    if (!categoryName.trim()) {
+      alert('Veuillez saisir un nom de catégorie');
+      return;
+    }
+
+    // Sauvegarder le contexte de configuration de catégorie avec TOUS les produits
     localStorage.setItem('categoryConfigContext', JSON.stringify({
-      categoryName,
-      categoryProducts,
+      categoryName: categoryName.trim(),
+      categoryProducts: analysisResults, // TOUS les produits scannés
       returnTo: '/ocr-onboarding/configure'
     }));
 
@@ -334,116 +347,76 @@ export default function OCRConfigurePage() {
           <p className="text-gray-600">
             • Détection automatique des types de produits<br/>
             • Génération de workflows intelligents<br/>
-            • Mapping des catégories avec Pizza Yolo 77<br/>
             • Calcul automatique des prix (+1€ livraison)
           </p>
         </div>
       ) : (
         <>
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">🍽️ Configuration par Catégorie/Menu</h2>
+            <h2 className="text-xl font-semibold mb-4">🍽️ Configuration de Catégorie</h2>
             <p className="text-gray-600 mb-6">
-              Configurez le workflow pour chaque catégorie. Tous les produits de la même catégorie utiliseront le même workflow.
+              Tous les produits scannés appartiennent à une seule catégorie. Saisissez le nom de la catégorie et configurez le workflow qui s'appliquera à tous ces produits.
             </p>
 
-            <div className="space-y-4">
-              {Object.entries(
-                analysisResults.reduce((acc, result) => {
-                  const categoryName = result.categoryMapping.suggestedCategoryName;
-                  if (!acc[categoryName]) {
-                    acc[categoryName] = {
-                      icon: result.categoryMapping.icon,
-                      products: [],
-                      detectedTypes: new Set()
-                    };
-                  }
-                  acc[categoryName].products.push(result);
-                  acc[categoryName].detectedTypes.add(result.detectedType);
-                  return acc;
-                }, {} as Record<string, { icon: string; products: ProductAnalysisResult[]; detectedTypes: Set<string> }>)
-              ).map(([categoryName, categoryData]) => {
-                const dominantType = [...categoryData.detectedTypes].reduce((a, b) =>
-                  categoryData.products.filter(p => p.detectedType === a).length >=
-                  categoryData.products.filter(p => p.detectedType === b).length ? a : b
-                );
-
-                return (
-                  <div key={categoryName} className="border rounded-lg p-4 bg-gray-50">
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{categoryData.icon}</span>
-                        <div>
-                          <h3 className="font-semibold text-lg">{categoryName}</h3>
-                          <p className="text-sm text-gray-600">
-                            {categoryData.products.length} produits • Type dominant: {dominantType.toUpperCase()}
-                          </p>
-                        </div>
-                      </div>
-                      {categoryConfigurations[categoryName] ? (
-                        <div className="flex gap-2">
-                          <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">
-                            ✅ Configuré
-                          </span>
-                          <button
-                            onClick={() => handleConfigureCategory(categoryName, categoryData.products)}
-                            className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700"
-                          >
-                            ✏️ Modifier
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleConfigureCategory(categoryName, categoryData.products)}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                        >
-                          🔧 Configurer le workflow
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Liste des produits dans cette catégorie */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
-                      {categoryData.products.map((result, index) => (
-                        <div key={index} className="bg-white p-2 rounded border">
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium text-sm" title={`Produit scanné: ${result.product.name}`}>
-                              {result.product.name}
-                            </span>
-                            <div className="flex gap-2 text-xs">
-                              <span className="text-green-600">{result.pricingSuggestion.onSitePrice}€</span>
-                              <span className="text-blue-600">{result.pricingSuggestion.deliveryPrice}€</span>
-                            </div>
-                          </div>
-                          {result.product.description && (
-                            <div className="text-xs text-gray-500 mt-1">{result.product.description}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+            {/* Champ de saisie nom de catégorie */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nom de la catégorie *
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: Burgers, Pizzas, Salades..."
+                value={categoryName}
+                onChange={(e) => setCategoryName(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
+
+            {/* Liste des produits scannés */}
+            <div className="mb-6">
+              <h3 className="font-semibold mb-3">📋 Produits scannés ({analysisResults.length})</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                {analysisResults.map((result, index) => (
+                  <div key={index} className="bg-gray-50 p-3 rounded-lg border">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-sm" title={`Produit scanné: ${result.product.name}`}>
+                        {result.product.name}
+                      </span>
+                      <div className="flex gap-2 text-xs">
+                        <span className="text-green-600">{result.pricingSuggestion.onSitePrice}€</span>
+                        <span className="text-blue-600">{result.pricingSuggestion.deliveryPrice}€</span>
+                      </div>
+                    </div>
+                    {result.product.description && (
+                      <div className="text-xs text-gray-500 mt-1">{result.product.description}</div>
+                    )}
+                    <div className="text-xs text-purple-600 mt-1">Type: {result.detectedType.toUpperCase()}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bouton de configuration */}
+            <button
+              onClick={handleConfigureWorkflow}
+              disabled={!categoryName.trim()}
+              className={`w-full py-3 px-6 rounded-lg font-medium ${
+                !categoryName.trim()
+                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              🔧 Configurer le Workflow pour "{categoryName || 'cette catégorie'}"
+            </button>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">📊 Résumé de Configuration</h2>
+            <h2 className="text-xl font-semibold mb-4">📊 Résumé</h2>
 
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
-                  {Object.keys(
-                    analysisResults.reduce((acc, result) => {
-                      acc[result.categoryMapping.suggestedCategoryName] = true;
-                      return acc;
-                    }, {} as Record<string, boolean>)
-                  ).length}
-                </div>
-                <div className="text-sm text-blue-800">Catégories détectées</div>
-              </div>
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="text-center p-3 bg-green-50 rounded-lg">
                 <div className="text-2xl font-bold text-green-600">{analysisResults.length}</div>
-                <div className="text-sm text-green-800">Produits total</div>
+                <div className="text-sm text-green-800">Produits scannés</div>
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">{Object.keys(categoryConfigurations).length}</div>
@@ -454,13 +427,13 @@ export default function OCRConfigurePage() {
             {Object.keys(categoryConfigurations).length === 0 ? (
               <div className="bg-yellow-50 p-3 rounded-lg">
                 <p className="text-sm text-yellow-800">
-                  ⚠️ <strong>Configuration requise</strong> : Configurez le workflow pour chaque catégorie avant de continuer
+                  ⚠️ <strong>Configuration requise</strong> : Configurez le workflow pour continuer
                 </p>
               </div>
             ) : (
               <div className="bg-green-50 p-3 rounded-lg">
                 <p className="text-sm text-green-800">
-                  ✅ <strong>{Object.keys(categoryConfigurations).length} catégories configurées</strong> : Vous pouvez continuer vers l'intégration
+                  ✅ <strong>Workflow configuré</strong> : Vous pouvez continuer vers l'intégration
                 </p>
               </div>
             )}
