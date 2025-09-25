@@ -210,7 +210,10 @@ export default function OCRConfigurePage() {
 
       console.log('✅ Analyse terminée:', analysisResults.map(r => ({
         nom: r.product.name,
-        type: r.detectedType
+        description: r.product.description,
+        type: r.detectedType,
+        prixSurPlace: r.pricingSuggestion.onSitePrice,
+        prixLivraison: r.pricingSuggestion.deliveryPrice
       })));
 
     } catch (error) {
@@ -403,22 +406,31 @@ export default function OCRConfigurePage() {
             {/* Liste des produits scannés */}
             <div className="mb-6">
               <h3 className="font-semibold mb-3">📋 Produits scannés ({analysisResults.length})</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+              <div className="grid grid-cols-1 gap-3 max-h-80 overflow-y-auto">
                 {analysisResults.map((result, index) => (
-                  <div key={index} className="bg-gray-50 p-3 rounded-lg border">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-sm" title={`Produit scanné: ${result.product.name}`}>
-                        {result.product.name}
-                      </span>
-                      <div className="flex gap-2 text-xs">
-                        <span className="text-green-600">{result.pricingSuggestion.onSitePrice}€</span>
-                        <span className="text-blue-600">{result.pricingSuggestion.deliveryPrice}€</span>
+                  <div key={index} className="bg-white p-4 rounded-lg border shadow-sm">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm text-gray-900" title={`Produit scanné: ${result.product.name}`}>
+                          {result.product.name}
+                        </h4>
+                        {result.product.description && (
+                          <p className="text-xs text-gray-600 mt-1 italic">"{result.product.description}"</p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end text-xs ml-3">
+                        <span className="text-green-600 font-medium">Sur place: {result.pricingSuggestion.onSitePrice}€</span>
+                        <span className="text-blue-600 font-medium">Livraison: {result.pricingSuggestion.deliveryPrice}€</span>
                       </div>
                     </div>
-                    {result.product.description && (
-                      <div className="text-xs text-gray-500 mt-1">{result.product.description}</div>
-                    )}
-                    <div className="text-xs text-purple-600 mt-1">Type: {result.detectedType.toUpperCase()}</div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded">
+                        Type: {result.detectedType.toUpperCase()}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        Confiance: {Math.round(result.product.confidence * 100)}%
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>

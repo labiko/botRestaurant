@@ -5,6 +5,28 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProductAnalysisResult } from '@/lib/ocr/interfaces/ocr-smart-configure.interface';
 
+interface EditableProduct {
+  name: string;
+  description: string;
+  priceSurPlace: number;
+  priceLivraison: number;
+  type: string;
+}
+
+interface WorkflowStep {
+  step: number;
+  prompt: string;
+  required: boolean;
+  max_selections: number;
+  option_groups: string[];
+}
+
+interface OptionItem {
+  name: string;
+  price_modifier: number;
+  emoji: string;
+}
+
 export default function CategoryConfigPage() {
   const router = useRouter();
   const [categoryContext, setCategoryContext] = useState<{
@@ -13,10 +35,9 @@ export default function CategoryConfigPage() {
     returnTo: string;
   } | null>(null);
 
-  const [workflowConfig, setWorkflowConfig] = useState({
-    steps: [] as any[],
-    optionGroups: {} as Record<string, any[]>
-  });
+  const [editableProducts, setEditableProducts] = useState<EditableProduct[]>([]);
+  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
+  const [optionGroups, setOptionGroups] = useState<Record<string, OptionItem[]>>({});
 
   useEffect(() => {
     loadCategoryContext();
@@ -33,6 +54,16 @@ export default function CategoryConfigPage() {
 
       const context = JSON.parse(stored);
       setCategoryContext(context);
+
+      // Convertir les produits en format éditable
+      const products = context.categoryProducts.map((result: ProductAnalysisResult) => ({
+        name: result.product.name,
+        description: result.product.description || '',
+        priceSurPlace: result.pricingSuggestion.onSitePrice,
+        priceLivraison: result.pricingSuggestion.deliveryPrice,
+        type: result.detectedType
+      }));
+      setEditableProducts(products);
 
       // Analyser le type dominant pour pré-configurer le workflow
       const dominantType = getDominantType(context.categoryProducts);
@@ -56,8 +87,8 @@ export default function CategoryConfigPage() {
   };
 
   const initializeWorkflowByType = (dominantType: string, categoryName: string) => {
-    let defaultSteps: any[] = [];
-    let defaultOptions: Record<string, any[]> = {};
+    let defaultSteps: WorkflowStep[] = [];
+    let defaultOptions: Record<string, OptionItem[]> = {};
 
     switch (dominantType) {
       case 'modular':
@@ -99,10 +130,8 @@ export default function CategoryConfigPage() {
         break;
     }
 
-    setWorkflowConfig({
-      steps: defaultSteps,
-      optionGroups: defaultOptions
-    });
+    setWorkflowSteps(defaultSteps);
+    setOptionGroups(defaultOptions);
   };
 
   const handleSaveConfiguration = () => {
@@ -111,8 +140,9 @@ export default function CategoryConfigPage() {
     // Sauvegarder la configuration de cette catégorie
     const categoryConfigs = JSON.parse(localStorage.getItem('categoryConfigurations') || '{}');
     categoryConfigs[categoryContext.categoryName] = {
-      ...workflowConfig,
-      products: categoryContext.categoryProducts,
+      steps: workflowSteps,
+      optionGroups: optionGroups,
+      products: editableProducts,
       configuredAt: new Date().toISOString()
     };
     localStorage.setItem('categoryConfigurations', JSON.stringify(categoryConfigs));
@@ -124,54 +154,6 @@ export default function CategoryConfigPage() {
     router.push(categoryContext.returnTo);
   };
 
-  const handleAddStep = () => {
-    const newStep = {
-      step: workflowConfig.steps.length + 1,
-      prompt: "Nouvelle étape",
-      required: true,
-      max_selections: 1,
-      option_groups: []
-    };
-
-    setWorkflowConfig(prev => ({
-      ...prev,
-      steps: [...prev.steps, newStep]
-    }));
-  };
-
-  const handleAddOptionGroup = () => {
-    const groupName = prompt('Nom du groupe d\'options :');
-    if (!groupName) return;
-
-    setWorkflowConfig(prev => ({
-      ...prev,
-      optionGroups: {
-        ...prev.optionGroups,
-        [groupName]: []
-      }
-    }));
-  };
-
-  const handleAddOption = (groupName: string) => {
-    const optionName = prompt('Nom de l\'option :');
-    const priceModifier = parseFloat(prompt('Modificateur de prix (€) :') || '0');
-
-    if (!optionName) return;
-
-    const newOption = {
-      name: optionName,
-      emoji: "⭐",
-      price_modifier: priceModifier
-    };
-
-    setWorkflowConfig(prev => ({
-      ...prev,
-      optionGroups: {
-        ...prev.optionGroups,
-        [groupName]: [...(prev.optionGroups[groupName] || []), newOption]
-      }
-    }));
-  };
 
   if (!categoryContext) {
     return (
@@ -183,112 +165,125 @@ export default function CategoryConfigPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">🔧 Configuration Workflow - {categoryContext.categoryName}</h1>
-          <div className="text-sm text-gray-600">{categoryContext.categoryProducts.length} produits</div>
-        </div>
+    <div className="p-6 max-w-6xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">🔧 Configuration - {categoryContext.categoryName}</h1>
+        <p className="text-gray-600">{editableProducts.length} produits scannés</p>
       </div>
 
       <div className="space-y-6">
-        {/* Produits dans cette catégorie */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Produits concernés :</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {categoryContext.categoryProducts.map((result, index) => (
-              <div key={index} className="bg-gray-50 p-2 rounded border text-sm">
-                <div className="font-medium">{result.product.name}</div>
-                <div className="text-xs text-gray-500">
-                  {result.pricingSuggestion.onSitePrice}€ - {result.pricingSuggestion.deliveryPrice}€
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Configuration du workflow */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Workflow Steps</h2>
+        {/* Produits Scannés - Éditable */}
+        <div className="bg-white rounded-lg border p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-lg">📋</span>
+            <h2 className="text-lg font-semibold">Produits Scannés</h2>
             <button
-              onClick={handleAddStep}
-              className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+              className="ml-auto bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+              onClick={() => {
+                const newProduct: EditableProduct = {
+                  name: 'Nouveau produit',
+                  description: '',
+                  priceSurPlace: 0,
+                  priceLivraison: 1,
+                  type: 'simple'
+                };
+                setEditableProducts([...editableProducts, newProduct]);
+              }}
             >
-              + Ajouter étape
+              + Ajouter produit
             </button>
           </div>
 
-          {workflowConfig.steps.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>Aucune étape configurée (Produits simples)</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {workflowConfig.steps.map((step, index) => (
-                <div key={index} className="border rounded p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-medium">Étape {step.step}</h3>
-                  </div>
-                  <input
-                    type="text"
-                    value={step.prompt}
-                    onChange={(e) => {
-                      const newSteps = [...workflowConfig.steps];
-                      newSteps[index].prompt = e.target.value;
-                      setWorkflowConfig(prev => ({ ...prev, steps: newSteps }));
-                    }}
-                    className="w-full p-2 border rounded mb-2"
-                  />
-                  <div className="text-sm text-gray-600">
-                    Groupes d'options : {step.option_groups.join(', ') || 'Aucun'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Groupes d'options */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Groupes d'Options</h2>
-            <button
-              onClick={handleAddOptionGroup}
-              className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-            >
-              + Ajouter groupe
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {Object.entries(workflowConfig.optionGroups).map(([groupName, options]) => (
-              <div key={groupName} className="border rounded p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-medium">{groupName}</h3>
-                  <button
-                    onClick={() => handleAddOption(groupName)}
-                    className="bg-gray-500 text-white px-2 py-1 rounded text-xs hover:bg-gray-600"
-                  >
-                    + Option
-                  </button>
-                </div>
-                <div className="space-y-1">
-                  {options.map((option, index) => (
-                    <div key={index} className="flex justify-between text-sm">
-                      <span>{option.emoji} {option.name}</span>
-                      <span className={option.price_modifier >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        {option.price_modifier > 0 ? '+' : ''}{option.price_modifier}€
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="border p-2 text-left">Nom</th>
+                  <th className="border p-2 text-left">Description</th>
+                  <th className="border p-2 text-center">Prix Sur Place</th>
+                  <th className="border p-2 text-center">Prix Livraison</th>
+                  <th className="border p-2 text-center">Type</th>
+                  <th className="border p-2 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {editableProducts.map((product, index) => (
+                  <tr key={index}>
+                    <td className="border p-2">
+                      <input
+                        type="text"
+                        value={product.name}
+                        onChange={(e) => {
+                          const newProducts = [...editableProducts];
+                          newProducts[index].name = e.target.value;
+                          setEditableProducts(newProducts);
+                        }}
+                        className="w-full p-1 border rounded"
+                      />
+                    </td>
+                    <td className="border p-2">
+                      <input
+                        type="text"
+                        value={product.description}
+                        onChange={(e) => {
+                          const newProducts = [...editableProducts];
+                          newProducts[index].description = e.target.value;
+                          setEditableProducts(newProducts);
+                        }}
+                        className="w-full p-1 border rounded"
+                        placeholder="Description du produit..."
+                      />
+                    </td>
+                    <td className="border p-2 text-center">
+                      <input
+                        type="number"
+                        value={product.priceSurPlace}
+                        onChange={(e) => {
+                          const newProducts = [...editableProducts];
+                          newProducts[index].priceSurPlace = parseFloat(e.target.value) || 0;
+                          setEditableProducts(newProducts);
+                        }}
+                        className="w-20 p-1 border rounded text-center"
+                        step="0.1"
+                      />€
+                    </td>
+                    <td className="border p-2 text-center">
+                      <input
+                        type="number"
+                        value={product.priceLivraison}
+                        onChange={(e) => {
+                          const newProducts = [...editableProducts];
+                          newProducts[index].priceLivraison = parseFloat(e.target.value) || 0;
+                          setEditableProducts(newProducts);
+                        }}
+                        className="w-20 p-1 border rounded text-center"
+                        step="0.1"
+                      />€
+                    </td>
+                    <td className="border p-2 text-center">
+                      <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                        {product.type.toUpperCase()}
                       </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+                    </td>
+                    <td className="border p-2 text-center">
+                      <button
+                        onClick={() => {
+                          const newProducts = editableProducts.filter((_, i) => i !== index);
+                          setEditableProducts(newProducts);
+                        }}
+                        className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
+                      >
+                        🗑️
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions de sauvegarde */}
         <div className="flex gap-4">
           <button
             onClick={() => router.push(categoryContext.returnTo)}

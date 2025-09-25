@@ -399,9 +399,9 @@ export class ProductAnalysisAIService {
     const workflowSuggestion = this.suggestWorkflow(product, detectedType);
     const categoryMapping = this.suggestCategory(product);
 
-    // Calcul automatique prix livraison (+1€)
-    const onSitePrice = product.price || 0;
-    const deliveryPrice = onSitePrice + 1;
+    // Calcul automatique prix livraison (+1€) - utiliser les champs OCR corrects
+    const onSitePrice = product.price_onsite || product.price || 0;
+    const deliveryPrice = product.price_delivery || (onSitePrice + 1);
 
     return {
       product,
@@ -411,7 +411,7 @@ export class ProductAnalysisAIService {
       pricingSuggestion: {
         onSitePrice,
         deliveryPrice,
-        confidence: product.price ? 0.9 : 0.5
+        confidence: (product.price_onsite || product.price_delivery) ? 0.9 : 0.5
       }
     };
   }
