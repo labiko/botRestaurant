@@ -7,8 +7,9 @@ export class ProductAnalysisAIService {
 
   /**
    * Détecte automatiquement le type de produit basé sur sa description/composition
+   * POUR OCR: Toujours retourner 'universal_workflow_v2' pour la compatibilité
    */
-  static detectProductType(product: ExtractedProduct): 'simple' | 'modular' | 'variant' | 'composite' {
+  static detectProductType(product: ExtractedProduct): 'simple' | 'modular' | 'variant' | 'composite' | 'universal_workflow_v2' {
     const description = (product.description || '').toLowerCase();
     const name = product.name.toLowerCase();
 
@@ -28,50 +29,29 @@ export class ProductAnalysisAIService {
       /\d+\s*(pièces?|pc)/i, /portion/i, /\d+\s*x/i, /lot/i
     ];
 
-    if (compositePatterns.some(pattern => pattern.test(name) || pattern.test(description))) {
-      return 'composite';
-    }
-
-    if (modularPatterns.some(pattern => pattern.test(name) || pattern.test(description))) {
-      return 'modular';
-    }
-
-    if (variantPatterns.some(pattern => pattern.test(name) || pattern.test(description))) {
-      return 'variant';
-    }
-
-    return 'simple';
+    // POUR OCR: Toujours retourner universal_workflow_v2
+    // Cela permet une gestion uniforme dans le bot
+    return 'universal_workflow_v2';
   }
 
   /**
    * Suggère un workflow basé sur le type de produit détecté
+   * POUR OCR: Génère toujours des workflows universal_workflow_v2 compatibles
    */
-  static suggestWorkflow(product: ExtractedProduct, productType: 'simple' | 'modular' | 'variant' | 'composite'): WorkflowSuggestion {
+  static suggestWorkflow(product: ExtractedProduct, productType: 'simple' | 'modular' | 'variant' | 'composite' | 'universal_workflow_v2'): WorkflowSuggestion {
+    // POUR OCR: Générer un workflow universal_workflow_v2 basé sur le contenu
     const name = product.name.toLowerCase();
+    const description = (product.description || '').toLowerCase();
 
-    switch (productType) {
-      case 'simple':
-        return this.generateSimpleWorkflow(product);
-
-      case 'modular':
-        if (name.includes('pizza')) {
-          return this.generatePizzaWorkflow(product);
-        } else if (name.includes('burger') || name.includes('sandwich')) {
-          return this.generateBurgerWorkflow(product);
-        } else if (name.includes('tacos')) {
-          return this.generateTacosWorkflow(product);
-        }
-        return this.generateGenericModularWorkflow(product);
-
-      case 'composite':
-        return this.generateCompositeWorkflow(product);
-
-      case 'variant':
-        return this.generateVariantWorkflow(product);
-
-      default:
-        return this.generateSimpleWorkflow(product);
-    }
+    // POUR OCR: Workflow universal simple par défaut
+    // L'utilisateur configurera manuellement les étapes après
+    return {
+      productType: 'universal_workflow_v2',
+      confidence: 1.0,
+      steps: [],
+      optionGroups: {},
+      reasoning: `Produit "${product.name}" configuré pour universal_workflow_v2 - configuration manuelle des étapes`
+    };
   }
 
   private static generateSimpleWorkflow(product: ExtractedProduct): WorkflowSuggestion {
@@ -395,7 +375,8 @@ export class ProductAnalysisAIService {
    * Analyse complète d'un produit
    */
   static analyzeProduct(product: ExtractedProduct): ProductAnalysisResult {
-    const detectedType = this.detectProductType(product);
+    // POUR OCR: Toujours utiliser universal_workflow_v2
+    const detectedType = 'universal_workflow_v2';
     const workflowSuggestion = this.suggestWorkflow(product, detectedType);
     const categoryMapping = this.suggestCategory(product);
 
