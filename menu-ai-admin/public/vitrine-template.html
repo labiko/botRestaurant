@@ -481,7 +481,7 @@
             border: none;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             cursor: pointer;
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -489,7 +489,183 @@
         }
 
         .orientation-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        }
+
+        .orientation-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Bouton toggle - styles de base */
+        .orientation-btn:hover {
             transform: scale(1.1) rotate(15deg);
+        }
+
+        .orientation-btn.rotated {
+            animation: rotateIcon 0.5s ease;
+        }
+
+        @keyframes rotateIcon {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(90deg); }
+        }
+
+        /* Mode Landscape forcé */
+        .container.landscape-mode {
+            max-width: 90vw !important;
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 40px;
+            align-items: start;
+            animation: landscapeTransition 0.5s ease;
+        }
+
+        @keyframes landscapeTransition {
+            from {
+                opacity: 0.8;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .container.landscape-mode .qr-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: sticky;
+            top: 20px;
+        }
+
+        .container.landscape-mode .content-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container.landscape-mode .card-header .logo {
+            width: 120px;
+            height: 120px;
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+
+        .container.landscape-mode .card-header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .container.landscape-mode .card-header .subtitle {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .container.landscape-mode .qr-container {
+            margin: 20px 0;
+        }
+
+        .container.landscape-mode .features {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+
+        .container.landscape-mode .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .container.landscape-mode .instructions {
+            margin: 15px 0;
+        }
+
+        /* Tooltip pour le bouton */
+        .orientation-btn::after {
+            content: 'Basculer vue';
+            position: absolute;
+            bottom: -35px;
+            right: 0;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .orientation-btn:hover::after {
+            opacity: 1;
+        }
+
+        /* Mode auto-landscape pour tablettes */
+        .container.auto-landscape {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 40px;
+            align-items: start;
+            max-width: 90vw;
+        }
+
+        .container.auto-landscape .qr-section {
+            position: sticky;
+            top: 20px;
+        }
+
+        .container.auto-landscape .content-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container.auto-landscape .features {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+
+        .container.auto-landscape .stats-grid {
+            display: flex;
+            flex-direction: row;
+        }
+
+        /* Masquer le bouton sur mobile */
+        @media (max-width: 767px) {
+            .orientation-btn {
+                display: none;
+            }
+        }
+
+        /* Landscape Tablette natif */
+        @media (min-width: 768px) and (orientation: landscape) {
+            body {
+                padding: 10px 20px;
+            }
+
+            .container {
+                max-width: 90vw;
+                padding: 30px 40px;
+            }
+        }
+
+        /* Animation pulse pour feedback */
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            }
         }
 
         /* Mobile optimization */
@@ -759,10 +935,85 @@
             this.style.animationPlayState = 'running';
         });
 
-        // Simplified orientation toggle
+        // ===== CODE POUR TOGGLE ORIENTATION (copié de la page fonctionnelle) =====
+
+        // Fonction pour basculer entre les modes
         function toggleOrientation() {
-            console.log('Orientation toggle clicked');
+            const container = document.getElementById('main-container');
+            const button = document.getElementById('orientation-toggle');
+
+            // Toggle la classe landscape-mode
+            container.classList.toggle('landscape-mode');
+
+            // Ajouter animation au bouton
+            button.classList.add('rotated');
+            setTimeout(() => {
+                button.classList.remove('rotated');
+            }, 500);
+
+            // Changer l'icône du bouton
+            if (container.classList.contains('landscape-mode')) {
+                button.innerHTML = '🖥️';
+                button.title = 'Mode Portrait';
+            } else {
+                button.innerHTML = '📱';
+                button.title = 'Mode Paysage';
+            }
+
+            // Sauvegarder la préférence dans localStorage
+            const isLandscape = container.classList.contains('landscape-mode');
+            localStorage.setItem('orientation-preference', isLandscape ? 'landscape' : 'portrait');
+
+            // Log pour debug
+            console.log('Orientation toggled to:', isLandscape ? 'landscape' : 'portrait');
         }
+
+        // Restaurer la préférence sauvegardée au chargement
+        window.addEventListener('DOMContentLoaded', function() {
+            const savedOrientation = localStorage.getItem('orientation-preference');
+            const container = document.getElementById('main-container');
+            const button = document.getElementById('orientation-toggle');
+
+            if (savedOrientation === 'landscape') {
+                container.classList.add('landscape-mode');
+                button.innerHTML = '🖥️';
+                button.title = 'Mode Portrait';
+            }
+
+            // Vérifier si on est sur tablette
+            const isTablet = window.matchMedia('(min-width: 768px) and (max-width: 1366px)').matches;
+            if (isTablet) {
+                console.log('Tablette détectée - bouton orientation activé');
+            }
+        });
+
+        // Gérer automatiquement le mode landscape sur orientation physique
+        window.addEventListener('orientationchange', function() {
+            const container = document.getElementById('main-container');
+            const button = document.getElementById('orientation-toggle');
+            const isLandscapeOrientation = window.matchMedia('(orientation: landscape)').matches;
+            const isTablet = window.matchMedia('(min-width: 768px)').matches;
+
+            // Auto-activer le mode landscape sur tablettes en orientation paysage
+            if (isTablet && isLandscapeOrientation && !container.classList.contains('landscape-mode')) {
+                // Seulement suggérer, ne pas forcer
+                if (!localStorage.getItem('orientation-manual')) {
+                    container.classList.add('auto-landscape');
+                    console.log('Mode paysage automatique activé');
+                }
+            } else {
+                container.classList.remove('auto-landscape');
+            }
+        });
+
+        // Marquer comme contrôle manuel si l'utilisateur clique sur le bouton
+        document.getElementById('orientation-toggle').addEventListener('click', function() {
+            localStorage.setItem('orientation-manual', 'true');
+            // Reset après 1 heure
+            setTimeout(() => {
+                localStorage.removeItem('orientation-manual');
+            }, 3600000);
+        });
 
         document.getElementById('orientation-toggle').addEventListener('click', toggleOrientation);
     </script>
