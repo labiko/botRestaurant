@@ -60,7 +60,14 @@ export default function OCRUploadPage() {
       const result = await response.json();
 
       if (result.success) {
-        // Stocker les résultats et afficher la prévisualisation
+        // Nettoyer les anciennes données d'analyse avant de stocker les nouveaux résultats
+        localStorage.removeItem('analysisResults');
+        localStorage.removeItem('smartConfig');
+        localStorage.removeItem('categoryConfigurations');
+        localStorage.removeItem('integrationResult');
+        localStorage.removeItem('finalWorkflows');
+
+        // Stocker les nouveaux résultats et afficher la prévisualisation
         localStorage.setItem('ocrResults', JSON.stringify(result));
         setExtractionResult(result);
       } else {

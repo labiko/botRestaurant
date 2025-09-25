@@ -64,17 +64,25 @@ export default function OCRConfigurePage() {
       const result = await response.json();
 
       if (result.success && result.data) {
-        setNewRestaurantData(result.data);
+        // Pré-remplir avec des données par défaut mais permettre la modification
+        setNewRestaurantData({
+          ...result.data,
+          name: 'Mon Nouveau Restaurant', // Nom par défaut générique
+          whatsapp_number: result.data.whatsapp_number,
+          address: 'Adresse du restaurant',
+          city: 'Ville',
+          phone: result.data.phone
+        });
       }
     } catch (error) {
       console.error('Erreur chargement template Pizza Yolo:', error);
       // Fallback avec données par défaut
       setNewRestaurantData({
-        name: 'Pizza Yolo 77',
-        whatsapp_number: '0164880605',
-        address: '251 Av. Philippe Bur, 77550 Moissy-Cramayel',
-        city: 'Paris',
-        phone: '0164880605'
+        name: 'Mon Nouveau Restaurant',
+        whatsapp_number: '0123456789',
+        address: 'Adresse du restaurant',
+        city: 'Ville',
+        phone: '0123456789'
       });
     }
   };
@@ -91,23 +99,30 @@ export default function OCRConfigurePage() {
       const results = JSON.parse(stored);
       setOcrResults(results);
 
-      // Vérifier s'il y a déjà une analyse IA existante
+      // Vérifier s'il y a déjà une analyse IA existante pour CES PRODUITS SPÉCIFIQUES
       const existingAnalysis = localStorage.getItem('analysisResults');
       const existingConfig = localStorage.getItem('smartConfig');
 
-      if (existingAnalysis && existingConfig) {
-        // Il y a déjà une analyse, aller directement à l'étape ready
+      if (existingAnalysis && existingConfig && results.products && results.products.length > 0) {
         const analysis = JSON.parse(existingAnalysis);
         const config = JSON.parse(existingConfig);
 
-        setAnalysisResults(analysis);
-        setSmartConfig(config);
-        setNewRestaurantData(config.newRestaurantData);
-        setCurrentStep('ready');
-      } else {
-        // Pas d'analyse existante, commencer par les infos restaurant
-        setCurrentStep('restaurant_info');
+        // Vérifier que l'analyse correspond aux produits actuels
+        const currentProductNames = results.products.map((p: any) => p.name).sort();
+        const analysisProductNames = analysis.map((a: any) => a.product.name).sort();
+
+        if (JSON.stringify(currentProductNames) === JSON.stringify(analysisProductNames)) {
+          // Les produits correspondent, utiliser l'analyse existante
+          setAnalysisResults(analysis);
+          setSmartConfig(config);
+          setNewRestaurantData(config.newRestaurantData);
+          setCurrentStep('ready');
+          return;
+        }
       }
+
+      // Pas d'analyse correspondante, commencer par les infos restaurant
+      setCurrentStep('restaurant_info');
     } catch (error) {
       console.error('Erreur chargement résultats OCR:', error);
       alert('Erreur lors du chargement des résultats OCR');
@@ -137,13 +152,23 @@ export default function OCRConfigurePage() {
     setProcessing(true);
 
     try {
-      // 1. Analyse IA de tous les produits
+      // 1. Analyse IA de tous les produits SCANNÉS
       const products: ExtractedProduct[] = ocrResults.products;
-      const analysisResults = products.map(product =>
-        ProductAnalysisAIService.analyzeProduct(product)
-      );
+
+      console.log('🔍 Produits à analyser:', products.map(p => p.name));
+
+      const analysisResults = products.map(product => {
+        console.log('📊 Analyse du produit:', product.name);
+        return ProductAnalysisAIService.analyzeProduct(product);
+      });
 
       setAnalysisResults(analysisResults);
+
+      console.log('✅ Analyse terminée:', analysisResults.map(r => ({
+        nom: r.product.name,
+        categorie: r.categoryMapping.suggestedCategoryName,
+        type: r.detectedType
+      })));
 
       // 2. Clonage du template Pizza Yolo 77
       const restaurantTemplate = await RestaurantTemplateClonerService.cloneRestaurantTemplate('pizza-yolo-77');
@@ -381,12 +406,17 @@ export default function OCRConfigurePage() {
                       {categoryData.products.map((result, index) => (
                         <div key={index} className="bg-white p-2 rounded border">
                           <div className="flex justify-between items-center">
-                            <span className="font-medium text-sm">{result.product.name}</span>
+                            <span className="font-medium text-sm" title={`Produit scanné: ${result.product.name}`}>
+                              {result.product.name}
+                            </span>
                             <div className="flex gap-2 text-xs">
                               <span className="text-green-600">{result.pricingSuggestion.onSitePrice}€</span>
                               <span className="text-blue-600">{result.pricingSuggestion.deliveryPrice}€</span>
                             </div>
                           </div>
+                          {result.product.description && (
+                            <div className="text-xs text-gray-500 mt-1">{result.product.description}</div>
+                          )}
                         </div>
                       ))}
                     </div>
