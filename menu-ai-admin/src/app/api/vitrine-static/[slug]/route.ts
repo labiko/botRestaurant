@@ -38,15 +38,15 @@ export async function GET(
       .select(`
         name,
         price_on_site_base,
-        product_type,
-        category:france_menu_categories(name, icon, display_order)
+        category:france_menu_categories(name, icon)
       `)
       .eq('restaurant_id', vitrine.restaurant_id)
       .eq('is_active', true)
-      .lt('price_on_site_base', 15) // Prix attractifs < 15€
-      .in('product_type', ['simple', 'composite']) // Produits simples ou composites
+      .not('price_on_site_base', 'is', null) // Exclure les prix null
       .order('display_order')
       .limit(15); // Récupérer plus pour faire une sélection
+
+    console.log('Products query result:', { popularProducts, productsError });
 
     // Produits par défaut en cas d'absence de données
     const defaultProducts = [
@@ -61,22 +61,32 @@ export async function GET(
     let productsToShow = defaultProducts;
 
     if (popularProducts && popularProducts.length > 0) {
-      // Grouper par catégorie
-      const productsByCategory = popularProducts.reduce((acc, product) => {
-        const categoryName = product.category?.name || 'Autre';
-        if (!acc[categoryName]) acc[categoryName] = [];
-        acc[categoryName].push(product);
-        return acc;
-      }, {} as Record<string, typeof popularProducts>);
+      try {
+        // Grouper par catégorie de façon sécurisée
+        const productsByCategory = popularProducts.reduce((acc, product) => {
+          if (!product || typeof product !== 'object') return acc;
 
-      // Sélectionner max 2 produits par catégorie pour diversifier
-      const selectedProducts = [];
-      for (const [categoryName, products] of Object.entries(productsByCategory)) {
-        selectedProducts.push(...products.slice(0, 2));
-        if (selectedProducts.length >= 10) break;
+          const categoryName = product.category?.name || 'Autre';
+          if (!acc[categoryName]) acc[categoryName] = [];
+          acc[categoryName].push(product);
+          return acc;
+        }, {} as Record<string, any[]>);
+
+        // Sélectionner max 2 produits par catégorie pour diversifier
+        const selectedProducts = [];
+        for (const [categoryName, products] of Object.entries(productsByCategory)) {
+          if (Array.isArray(products)) {
+            selectedProducts.push(...products.slice(0, 2));
+            if (selectedProducts.length >= 10) break;
+          }
+        }
+
+        productsToShow = selectedProducts.length > 0 ? selectedProducts.slice(0, 10) : defaultProducts;
+        console.log('Final products to show:', productsToShow);
+      } catch (selectionError) {
+        console.error('Error in product selection:', selectionError);
+        productsToShow = defaultProducts;
       }
-
-      productsToShow = selectedProducts.slice(0, 10);
     }
 
     // Lire le template HTML
@@ -106,6 +116,40 @@ export async function GET(
       return 'Ouvert 7j/7 de 11h00 à 00h00';
     };
 
+    // Générer le HTML du carousel avec les vrais produits
+    let carouselHTML = '';
+    try {
+      carouselHTML = productsToShow.map(product => {
+        const productName = product.name || 'Produit';
+        const productPrice = product.price_on_site_base || 0;
+        const productIcon = product.category?.icon || '🍽️';
+
+        return `
+                <div class="menu-item">
+                    <div class="menu-item-emoji">${productIcon}</div>
+                    <div class="menu-item-name">${productName}</div>
+                    <div class="menu-item-price">${productPrice}€</div>
+                </div>`;
+      }).join('');
+    } catch (htmlError) {
+      console.error('Error generating carousel HTML:', htmlError);
+      // Fallback HTML
+      carouselHTML = `
+                <div class="menu-item">
+                    <div class="menu-item-emoji">🍕</div>
+                    <div class="menu-item-name">Pizza Reine</div>
+                    <div class="menu-item-price">14€</div>
+                </div>
+                <div class="menu-item">
+                    <div class="menu-item-emoji">🍔</div>
+                    <div class="menu-item-name">Big Chef</div>
+                    <div class="menu-item-price">12€</div>
+                </div>`;
+    }
+
+    // Dupliquer les éléments pour un carousel continu
+    const duplicatedCarouselHTML = carouselHTML + carouselHTML;
+
     // Remplacer les placeholders
     const replacements = {
       '{{RESTAURANT_NAME}}': vitrine.restaurant.name.toUpperCase(),
@@ -130,17 +174,6 @@ export async function GET(
       '{{BUSINESS_HOURS}}': formatBusinessHours(vitrine.restaurant.business_hours),
       '{{MENU_CAROUSEL}}': duplicatedCarouselHTML,
     };
-
-    // Générer le HTML du carousel avec les vrais produits
-    const carouselHTML = productsToShow.map(product => `
-                <div class="menu-item">
-                    <div class="menu-item-emoji">${product.category?.icon || '🍽️'}</div>
-                    <div class="menu-item-name">${product.name}</div>
-                    <div class="menu-item-price">${product.price_on_site_base}€</div>
-                </div>`).join('');
-
-    // Dupliquer les éléments pour un carousel continu
-    const duplicatedCarouselHTML = carouselHTML + carouselHTML;
 
     // Appliquer les remplacements
     for (const [placeholder, value] of Object.entries(replacements)) {
