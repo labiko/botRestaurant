@@ -16,7 +16,7 @@ export default function OCRConfigurePage() {
   const [analysisResults, setAnalysisResults] = useState<ProductAnalysisResult[]>([]);
   const [smartConfig, setSmartConfig] = useState<OCRSmartConfigure | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [currentStep, setCurrentStep] = useState<'loading' | 'restaurant_info' | 'review_analysis' | 'ready'>('loading');
+  const [currentStep, setCurrentStep] = useState<'loading' | 'category_config' | 'restaurant_info' | 'ready'>('loading');
 
   // États pour les informations du restaurant (pré-remplis dynamiquement)
   const [newRestaurantData, setNewRestaurantData] = useState({
@@ -33,9 +33,12 @@ export default function OCRConfigurePage() {
   const [categoryName, setCategoryName] = useState<string>('');
 
   useEffect(() => {
-    loadOCRResults();
-    loadPizzaYoloTemplate();
-    loadCategoryConfigurations();
+    const initializeData = async () => {
+      await loadPizzaYoloTemplate();
+      await loadOCRResults();
+      loadCategoryConfigurations();
+    };
+    initializeData();
   }, []);
 
   // Effet pour recharger les configurations quand on revient de la config catégorie
@@ -122,8 +125,9 @@ export default function OCRConfigurePage() {
         }
       }
 
-      // Pas d'analyse correspondante, commencer par les infos restaurant
-      setCurrentStep('restaurant_info');
+      // Pas d'analyse correspondante, lancer l'analyse puis passer à la configuration
+      await processSmartAnalysisWithResults(results);
+      setCurrentStep('category_config');
     } catch (error) {
       console.error('Erreur chargement résultats OCR:', error);
       alert('Erreur lors du chargement des résultats OCR');
@@ -140,21 +144,52 @@ export default function OCRConfigurePage() {
     }
 
     setValidationErrors([]);
-    setCurrentStep('review_analysis');
-    processSmartAnalysis();
+    setCurrentStep('ready');
+    finalizeConfiguration();
   };
 
-  const processSmartAnalysis = async () => {
-    if (!ocrResults?.products) {
+  const finalizeConfiguration = async () => {
+    if (!analysisResults.length) return;
+
+    try {
+      // 2. Clonage du template Pizza Yolo 77
+      const restaurantTemplate = await RestaurantTemplateClonerService.cloneRestaurantTemplate('pizza-yolo-77');
+
+      // 3. Génération slug unique
+      const slug = RestaurantTemplateClonerService.generateUniqueSlug(newRestaurantData.name);
+
+      // 4. Création de la configuration Smart
+      const smartConfiguration: OCRSmartConfigure = {
+        extractedProducts: ocrResults.products,
+        workflowSuggestions: analysisResults.map(r => r.workflowSuggestion),
+        categoryMappings: analysisResults.map(r => r.categoryMapping),
+        restaurantTemplate,
+        newRestaurantData: {
+          ...newRestaurantData,
+          slug
+        }
+      };
+
+      setSmartConfig(smartConfiguration);
+    } catch (error) {
+      console.error('Erreur finalisation configuration:', error);
+      alert('Erreur lors de la finalisation de la configuration');
+    }
+  };
+
+  const processSmartAnalysisWithResults = async (results: any) => {
+    if (!results?.products || results.products.length === 0) {
+      console.error('Pas de produits OCR disponibles:', results);
       alert('Aucun produit extrait trouvé');
       return;
     }
 
+    console.log('🚀 Début analyse des produits:', results.products.map((p: any) => p.name));
     setProcessing(true);
 
     try {
       // 1. Analyse IA de tous les produits SCANNÉS (SANS CLASSIFICATION AUTOMATIQUE)
-      const products: ExtractedProduct[] = ocrResults.products;
+      const products: ExtractedProduct[] = results.products;
 
       console.log('🔍 Produits à analyser:', products.map(p => p.name));
 
@@ -178,33 +213,16 @@ export default function OCRConfigurePage() {
         type: r.detectedType
       })));
 
-      // 2. Clonage du template Pizza Yolo 77
-      const restaurantTemplate = await RestaurantTemplateClonerService.cloneRestaurantTemplate('pizza-yolo-77');
-
-      // 3. Génération slug unique
-      const slug = RestaurantTemplateClonerService.generateUniqueSlug(newRestaurantData.name);
-
-      // 4. Création de la configuration Smart
-      const smartConfiguration: OCRSmartConfigure = {
-        extractedProducts: products,
-        workflowSuggestions: analysisResults.map(r => r.workflowSuggestion),
-        categoryMappings: analysisResults.map(r => r.categoryMapping),
-        restaurantTemplate,
-        newRestaurantData: {
-          ...newRestaurantData,
-          slug
-        }
-      };
-
-      setSmartConfig(smartConfiguration);
-      setCurrentStep('ready');
-
     } catch (error) {
       console.error('Erreur analyse smart:', error);
       alert('Erreur lors de l\'analyse intelligente des produits');
     } finally {
       setProcessing(false);
     }
+  };
+
+  const processSmartAnalysis = async () => {
+    await processSmartAnalysisWithResults(ocrResults);
   };
 
   const handleConfigureWorkflow = () => {
@@ -222,6 +240,16 @@ export default function OCRConfigurePage() {
 
     // Rediriger vers la page de configuration de catégorie
     router.push('/ocr-onboarding/category-config');
+  };
+
+  const handleContinueToRestaurantInfo = () => {
+    if (Object.keys(categoryConfigurations).length === 0) {
+      alert('Veuillez configurer au moins une catégorie');
+      return;
+    }
+
+    // Passer à l'étape des informations restaurant
+    setCurrentStep('restaurant_info');
   };
 
   const handleContinueToDatabase = () => {
@@ -440,15 +468,15 @@ export default function OCRConfigurePage() {
           </div>
 
           <button
-            onClick={handleContinueToDatabase}
+            onClick={handleContinueToRestaurantInfo}
             disabled={Object.keys(categoryConfigurations).length === 0}
             className={`w-full py-3 px-6 rounded-lg font-medium ${
               Object.keys(categoryConfigurations).length === 0
                 ? 'bg-gray-400 text-white cursor-not-allowed'
-                : 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >
-            Continuer vers l'Intégration Base de Données
+            Continuer vers Informations Restaurant
           </button>
         </>
       )}
@@ -475,24 +503,37 @@ export default function OCRConfigurePage() {
         </div>
       )}
 
+      {currentStep === 'category_config' && renderAnalysisStep()}
       {currentStep === 'restaurant_info' && renderRestaurantInfoStep()}
-      {(currentStep === 'review_analysis' || currentStep === 'ready') && renderAnalysisStep()}
+      {currentStep === 'ready' && (
+        <div className="bg-white rounded-lg shadow p-6 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">✅</span>
+          </div>
+          <h2 className="text-2xl font-semibold text-green-900 mb-2">Configuration Terminée !</h2>
+          <p className="text-green-700 mb-6">
+            Toutes les catégories sont configurées et les informations restaurant sont complètes.
+          </p>
+          <button
+            onClick={handleContinueToDatabase}
+            className="bg-green-600 text-white py-3 px-8 rounded-lg font-medium hover:bg-green-700"
+          >
+            Continuer vers l'Intégration Base de Données
+          </button>
+        </div>
+      )}
 
       {/* Boutons de navigation */}
       <div className="flex justify-between mt-8">
-        {currentStep !== 'restaurant_info' && (
+        {currentStep === 'restaurant_info' && (
           <button
-            onClick={() => {
-              if (currentStep === 'review_analysis' || currentStep === 'ready') {
-                setCurrentStep('restaurant_info');
-              }
-            }}
+            onClick={() => setCurrentStep('category_config')}
             className="bg-gray-500 text-white py-2 px-6 rounded-lg hover:bg-gray-600"
           >
-            ← Précédent
+            ← Retour Configuration Catégories
           </button>
         )}
-        {currentStep === 'restaurant_info' && (
+        {currentStep === 'category_config' && (
           <button
             onClick={() => router.push('/ocr-onboarding/upload')}
             className="bg-gray-500 text-white py-2 px-6 rounded-lg hover:bg-gray-600"
