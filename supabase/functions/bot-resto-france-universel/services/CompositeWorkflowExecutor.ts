@@ -235,11 +235,20 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     if (config.show_separator !== false) {
       message += '\n━━━━━━━━━━━━━━━━━━━━━\n';
     }
-    message += `🎯 *${product.name.toUpperCase()}*\n\n`;
+    // DEBUG: Tracer l'icône pour TACOS
+    if (product.name.includes('TACOS')) {
+      console.log(`🔍 [DEBUG_COMPOSITE_TACOS] product.icon: "${product.icon}" (${typeof product.icon})`);
+    }
+
+    // Utiliser l'icône du produit ou fallback sur 🎯
+    const productIcon = product.icon || '🎯';
+    message += `${productIcon} *${product.name.toUpperCase()}*\n\n`;
     const variantTitle = config.variant_selection?.title || displayConfig?.custom_header_text || '💰 Choisissez votre taille:';
     message += `${variantTitle}\n`;
     // 4. Lister les variantes selon la configuration
-    const format = config.variant_selection?.format || '🔸 {variant_name} ({price} EUR) - Tapez {index}';
+    // Utiliser l'icône du produit pour les variantes au lieu de 🔸
+    const variantIcon = product.icon || '🔸';
+    const format = config.variant_selection?.format || `${variantIcon} {variant_name} ({price} EUR) - Tapez {index}`;
     finalVariants.forEach((variant, index)=>{
       // Utiliser le prix selon le mode de livraison
       const price = deliveryMode === 'livraison' ? variant.price_delivery || variant.price_on_site : variant.price_on_site || variant.base_price;

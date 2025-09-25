@@ -1552,6 +1552,17 @@ export class UniversalBot implements IMessageHandler {
       }
       
       console.log(`✅ [ShowProducts] ${products.length} produits trouvés`);
+
+      // DEBUG: Vérifier les icônes récupérées de la base
+      products.forEach(product => {
+        if (product.name.includes('TACOS')) {
+          console.log(`🔍 [DEBUG_SQL_TACOS] Produit récupéré de la base:`);
+          console.log(`🔍 [DEBUG_SQL_TACOS] - ID: ${product.id}`);
+          console.log(`🔍 [DEBUG_SQL_TACOS] - Name: ${product.name}`);
+          console.log(`🔍 [DEBUG_SQL_TACOS] - Icon: "${product.icon}" (${typeof product.icon})`);
+          console.log(`🔍 [DEBUG_SQL_TACOS] - All keys:`, Object.keys(product));
+        }
+      });
       
       // 3. NOUVEAU : Vérifier si cette catégorie doit utiliser l'affichage unifié
       // Charger la config du restaurant si nécessaire
@@ -1616,7 +1627,14 @@ export class UniversalBot implements IMessageHandler {
       console.log(`📍 [ShowProducts] Mode de livraison: ${deliveryMode}`);
       console.log(`📍 [ShowProducts] Session complète:`, JSON.stringify(session.sessionData, null, 2));
       
-      let menuText = `${category.icon || '🍽️'} *${category.name.toUpperCase()}*\n`;
+      // Si un seul produit et que le produit a une icône, utiliser l'icône du produit
+      let categoryDisplayIcon = category.icon || '🍽️';
+      if (products.length === 1 && products[0].icon) {
+        categoryDisplayIcon = products[0].icon;
+        console.log(`🔍 [DEBUG_CATEGORY_ICON] Single product with icon detected: ${products[0].name} -> ${products[0].icon}`);
+      }
+
+      let menuText = `${categoryDisplayIcon} *${category.name.toUpperCase()}*\n`;
       menuText += `${deliveryMode === 'livraison' ? '🚚 Prix livraison' : '📍 Prix sur place'}\n\n`;
       
       const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
@@ -2838,6 +2856,16 @@ export class UniversalBot implements IMessageHandler {
 
     // NOUVEAU: Logique hiérarchique - produit prioritaire, sinon catégorie (préserve comportement existant)
     const displayIcon = product.icon || categoryIcon; // Fallback automatique sur catégorie
+
+    // DEBUG: Tracer les icônes pour TACOS (console uniquement)
+    if (product.name.includes('TACOS')) {
+      console.log(`🔍 [DEBUG_TACOS_ICON] Product: ${product.name}`);
+      console.log(`🔍 [DEBUG_TACOS_ICON] product.icon: "${product.icon}" (${typeof product.icon})`);
+      console.log(`🔍 [DEBUG_TACOS_ICON] categoryIcon: "${categoryIcon}" (${typeof categoryIcon})`);
+      console.log(`🔍 [DEBUG_TACOS_ICON] displayIcon final: "${displayIcon}" (${typeof displayIcon})`);
+      console.log(`🔍 [DEBUG_TACOS_ICON] Final display will be: 🎯 ${displayIcon} ${displayIcon} ${product.name.toUpperCase()}`);
+    }
+
     productBlock += `🎯 ${displayIcon} ${displayIcon} ${product.name.toUpperCase()}\n`;
     
     // Composition si disponible
