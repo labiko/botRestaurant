@@ -18,8 +18,8 @@ CREATE TABLE public.delivery_driver_actions (
   action_timestamp timestamp without time zone DEFAULT now(),
   details jsonb,
   CONSTRAINT delivery_driver_actions_pkey PRIMARY KEY (id),
-  CONSTRAINT delivery_driver_actions_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
   CONSTRAINT delivery_driver_actions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id),
+  CONSTRAINT delivery_driver_actions_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
   CONSTRAINT delivery_driver_actions_token_id_fkey FOREIGN KEY (token_id) REFERENCES public.delivery_tokens(id)
 );
 CREATE TABLE public.delivery_order_logs (
@@ -40,8 +40,8 @@ CREATE TABLE public.delivery_refusals (
   custom_reason text,
   refused_at timestamp without time zone DEFAULT now(),
   CONSTRAINT delivery_refusals_pkey PRIMARY KEY (id),
-  CONSTRAINT delivery_refusals_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
   CONSTRAINT delivery_refusals_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id),
+  CONSTRAINT delivery_refusals_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
   CONSTRAINT delivery_refusals_token_id_fkey FOREIGN KEY (token_id) REFERENCES public.delivery_tokens(id)
 );
 CREATE TABLE public.delivery_tokens (
@@ -57,49 +57,13 @@ CREATE TABLE public.delivery_tokens (
   reactivated boolean DEFAULT false,
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT delivery_tokens_pkey PRIMARY KEY (id),
-  CONSTRAINT delivery_tokens_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
-  CONSTRAINT delivery_tokens_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id)
-);
-CREATE TABLE public.duplication_actions (
-  id integer NOT NULL DEFAULT nextval('duplication_actions_id_seq'::regclass),
-  duplication_log_id integer,
-  action_type character varying NOT NULL,
-  entity_type character varying NOT NULL,
-  source_id integer,
-  target_id integer,
-  entity_name character varying,
-  action_data jsonb,
-  timestamp timestamp without time zone DEFAULT now(),
-  success boolean DEFAULT true,
-  error_message text,
-  CONSTRAINT duplication_actions_pkey PRIMARY KEY (id),
-  CONSTRAINT duplication_actions_duplication_log_id_fkey FOREIGN KEY (duplication_log_id) REFERENCES public.duplication_logs(id)
-);
-CREATE TABLE public.duplication_logs (
-  id integer NOT NULL DEFAULT nextval('duplication_logs_id_seq'::regclass),
-  source_restaurant_id integer,
-  target_restaurant_id integer,
-  user_session character varying,
-  status character varying CHECK (status::text = ANY (ARRAY['started'::character varying, 'in_progress'::character varying, 'completed'::character varying, 'failed'::character varying]::text[])),
-  summary jsonb,
-  details jsonb,
-  error_message text,
-  started_at timestamp with time zone DEFAULT now(),
-  completed_at timestamp with time zone,
-  duration_seconds integer,
-  created_at timestamp without time zone DEFAULT now(),
-  updated_at timestamp without time zone DEFAULT now(),
-  production_status character varying DEFAULT 'dev_only'::character varying,
-  last_production_sync timestamp without time zone,
-  sync_count integer DEFAULT 0,
-  CONSTRAINT duplication_logs_pkey PRIMARY KEY (id),
-  CONSTRAINT duplication_logs_source_restaurant_id_fkey FOREIGN KEY (source_restaurant_id) REFERENCES public.france_restaurants(id),
-  CONSTRAINT duplication_logs_target_restaurant_id_fkey FOREIGN KEY (target_restaurant_id) REFERENCES public.france_restaurants(id)
+  CONSTRAINT delivery_tokens_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.france_orders(id),
+  CONSTRAINT delivery_tokens_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id)
 );
 CREATE TABLE public.france_auth_sessions (
   id bigint NOT NULL DEFAULT nextval('france_auth_sessions_id_seq'::regclass),
   user_id integer NOT NULL,
-  user_type character varying NOT NULL CHECK (user_type::text = ANY (ARRAY['restaurant'::character varying::text, 'driver'::character varying::text])),
+  user_type character varying NOT NULL CHECK (user_type::text = ANY (ARRAY['restaurant'::character varying, 'driver'::character varying]::text[])),
   session_token character varying NOT NULL UNIQUE,
   expires_at timestamp with time zone NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
@@ -136,7 +100,7 @@ CREATE TABLE public.france_delivery_assignments (
   id integer NOT NULL DEFAULT nextval('france_delivery_assignments_id_seq'::regclass),
   order_id integer NOT NULL,
   driver_id integer NOT NULL,
-  assignment_status character varying NOT NULL DEFAULT 'pending'::character varying CHECK (assignment_status::text = ANY (ARRAY['pending'::character varying::text, 'accepted'::character varying::text, 'rejected'::character varying::text, 'expired'::character varying::text])),
+  assignment_status character varying NOT NULL DEFAULT 'pending'::character varying CHECK (assignment_status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'rejected'::character varying, 'expired'::character varying]::text[])),
   created_at timestamp with time zone DEFAULT now(),
   responded_at timestamp with time zone,
   expires_at timestamp with time zone,
@@ -166,12 +130,12 @@ CREATE TABLE public.france_delivery_drivers (
 CREATE TABLE public.france_delivery_notifications (
   id integer NOT NULL DEFAULT nextval('france_delivery_notifications_id_seq'::regclass),
   assignment_id integer NOT NULL,
-  notification_type character varying NOT NULL CHECK (notification_type::text = ANY (ARRAY['assignment_offer'::character varying::text, 'assignment_accepted'::character varying::text, 'assignment_rejected'::character varying::text, 'delivery_started'::character varying::text, 'delivery_completed'::character varying::text])),
-  recipient_type character varying NOT NULL CHECK (recipient_type::text = ANY (ARRAY['driver'::character varying::text, 'restaurant'::character varying::text, 'customer'::character varying::text])),
+  notification_type character varying NOT NULL CHECK (notification_type::text = ANY (ARRAY['assignment_offer'::character varying, 'assignment_accepted'::character varying, 'assignment_rejected'::character varying, 'delivery_started'::character varying, 'delivery_completed'::character varying]::text[])),
+  recipient_type character varying NOT NULL CHECK (recipient_type::text = ANY (ARRAY['driver'::character varying, 'restaurant'::character varying, 'customer'::character varying]::text[])),
   recipient_id character varying NOT NULL,
   notification_data jsonb DEFAULT '{}'::jsonb,
   sent_at timestamp with time zone DEFAULT now(),
-  delivery_status character varying DEFAULT 'pending'::character varying CHECK (delivery_status::text = ANY (ARRAY['pending'::character varying::text, 'sent'::character varying::text, 'delivered'::character varying::text, 'failed'::character varying::text])),
+  delivery_status character varying DEFAULT 'pending'::character varying CHECK (delivery_status::text = ANY (ARRAY['pending'::character varying, 'sent'::character varying, 'delivered'::character varying, 'failed'::character varying]::text[])),
   error_message text,
   CONSTRAINT france_delivery_notifications_pkey PRIMARY KEY (id),
   CONSTRAINT france_delivery_notifications_assignment_id_fkey FOREIGN KEY (assignment_id) REFERENCES public.france_delivery_assignments(id)
@@ -208,18 +172,6 @@ CREATE TABLE public.france_menu_categories (
   CONSTRAINT france_menu_categories_pkey PRIMARY KEY (id),
   CONSTRAINT france_menu_categories_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
 );
-CREATE TABLE public.france_option_groups (
-  id integer NOT NULL DEFAULT nextval('france_option_groups_id_seq'::regclass),
-  group_name character varying NOT NULL UNIQUE,
-  component_name character varying NOT NULL,
-  unit character varying DEFAULT 'choix'::character varying,
-  icon character varying DEFAULT '📋'::character varying,
-  display_order integer DEFAULT 0,
-  is_active boolean DEFAULT true,
-  created_at timestamp without time zone DEFAULT now(),
-  updated_at timestamp without time zone DEFAULT now(),
-  CONSTRAINT france_option_groups_pkey PRIMARY KEY (id)
-);
 CREATE TABLE public.france_orders (
   id integer NOT NULL DEFAULT nextval('france_orders_id_seq'::regclass),
   restaurant_id integer,
@@ -231,7 +183,7 @@ CREATE TABLE public.france_orders (
   delivery_address text,
   payment_mode character varying,
   payment_method character varying,
-  status character varying DEFAULT 'en_attente'::character varying CHECK (status::text = ANY (ARRAY['pending'::character varying::text, 'confirmee'::character varying::text, 'preparation'::character varying::text, 'prete'::character varying::text, 'assignee'::character varying::text, 'en_livraison'::character varying::text, 'livree'::character varying::text, 'servie'::character varying::text, 'recuperee'::character varying::text, 'annulee'::character varying::text])),
+  status character varying DEFAULT 'en_attente'::character varying CHECK (status::text = ANY (ARRAY['pending'::character varying, 'confirmee'::character varying, 'preparation'::character varying, 'prete'::character varying, 'assignee'::character varying, 'en_livraison'::character varying, 'livree'::character varying, 'servie'::character varying, 'recuperee'::character varying, 'annulee'::character varying]::text[])),
   notes text,
   order_number character varying,
   created_at timestamp without time zone DEFAULT now(),
@@ -241,16 +193,16 @@ CREATE TABLE public.france_orders (
   date_validation_code timestamp with time zone,
   driver_id integer,
   estimated_delivery_time timestamp with time zone,
-  driver_assignment_status character varying DEFAULT 'none'::character varying CHECK (driver_assignment_status::text = ANY (ARRAY['none'::character varying::text, 'searching'::character varying::text, 'assigned'::character varying::text, 'delivered'::character varying::text])),
+  driver_assignment_status character varying DEFAULT 'none'::character varying CHECK (driver_assignment_status::text = ANY (ARRAY['none'::character varying, 'searching'::character varying, 'assigned'::character varying, 'delivered'::character varying]::text[])),
   delivery_started_at timestamp with time zone,
   assignment_timeout_at timestamp with time zone,
   assignment_started_at timestamp with time zone,
   audio_played boolean DEFAULT false,
   additional_notes text,
   CONSTRAINT france_orders_pkey PRIMARY KEY (id),
+  CONSTRAINT france_orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id),
   CONSTRAINT france_orders_delivery_address_id_fkey FOREIGN KEY (delivery_address_id) REFERENCES public.france_customer_addresses(id),
-  CONSTRAINT france_orders_driver_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
-  CONSTRAINT france_orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
+  CONSTRAINT france_orders_driver_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id)
 );
 CREATE TABLE public.france_pizza_display_settings (
   id integer NOT NULL DEFAULT nextval('france_pizza_display_settings_id_seq'::regclass),
@@ -341,8 +293,8 @@ CREATE TABLE public.france_products (
   steps_config json,
   icon character varying DEFAULT NULL::character varying,
   CONSTRAINT france_products_pkey PRIMARY KEY (id),
-  CONSTRAINT france_products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.france_menu_categories(id),
-  CONSTRAINT france_products_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
+  CONSTRAINT france_products_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id),
+  CONSTRAINT france_products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.france_menu_categories(id)
 );
 CREATE TABLE public.france_restaurant_features (
   id integer NOT NULL DEFAULT nextval('france_restaurant_features_id_seq'::regclass),
@@ -356,7 +308,7 @@ CREATE TABLE public.france_restaurant_features (
 CREATE TABLE public.france_restaurant_service_modes (
   id integer NOT NULL DEFAULT nextval('france_restaurant_service_modes_id_seq'::regclass),
   restaurant_id integer NOT NULL,
-  service_mode character varying NOT NULL CHECK (service_mode::text = ANY (ARRAY['sur_place'::character varying::text, 'a_emporter'::character varying::text, 'livraison'::character varying::text])),
+  service_mode character varying NOT NULL CHECK (service_mode::text = ANY (ARRAY['sur_place'::character varying, 'a_emporter'::character varying, 'livraison'::character varying]::text[])),
   is_enabled boolean DEFAULT true,
   display_name character varying NOT NULL,
   description text,
@@ -448,15 +400,6 @@ CREATE TABLE public.france_workflow_templates (
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT france_workflow_templates_pkey PRIMARY KEY (id)
 );
-CREATE TABLE public.login_users (
-  id integer NOT NULL DEFAULT nextval('login_users_id_seq'::regclass),
-  email character varying NOT NULL UNIQUE,
-  password_hash character varying NOT NULL,
-  last_login timestamp without time zone,
-  created_at timestamp without time zone DEFAULT now(),
-  updated_at timestamp without time zone DEFAULT now(),
-  CONSTRAINT login_users_pkey PRIMARY KEY (id)
-);
 CREATE TABLE public.menu_ai_scripts (
   id integer NOT NULL DEFAULT nextval('menu_ai_scripts_id_seq'::regclass),
   script_sql text NOT NULL,
@@ -487,21 +430,6 @@ CREATE TABLE public.message_templates (
   CONSTRAINT message_templates_pkey PRIMARY KEY (id),
   CONSTRAINT message_templates_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
 );
-CREATE TABLE public.production_sync_history (
-  id integer NOT NULL DEFAULT nextval('production_sync_history_id_seq'::regclass),
-  duplication_log_id integer,
-  restaurant_id integer,
-  sync_date timestamp without time zone DEFAULT now(),
-  sync_type character varying NOT NULL,
-  items_synced jsonb,
-  sql_script text,
-  executed_by character varying,
-  execution_status character varying DEFAULT 'pending'::character varying,
-  execution_notes text,
-  created_at timestamp without time zone DEFAULT now(),
-  CONSTRAINT production_sync_history_pkey PRIMARY KEY (id),
-  CONSTRAINT production_sync_history_duplication_log_id_fkey FOREIGN KEY (duplication_log_id) REFERENCES public.duplication_logs(id)
-);
 CREATE TABLE public.restaurant_bot_configs (
   id integer NOT NULL DEFAULT nextval('restaurant_bot_configs_id_seq'::regclass),
   restaurant_id integer NOT NULL,
@@ -516,15 +444,27 @@ CREATE TABLE public.restaurant_bot_configs (
   CONSTRAINT restaurant_bot_configs_pkey PRIMARY KEY (id),
   CONSTRAINT restaurant_bot_configs_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
 );
-CREATE TABLE public.sql_execution_log (
-  id bigint NOT NULL DEFAULT nextval('sql_execution_log_id_seq'::regclass),
-  sql_query text NOT NULL,
-  executed_at timestamp with time zone NOT NULL,
-  executed_by uuid,
-  error_message text,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT sql_execution_log_pkey PRIMARY KEY (id),
-  CONSTRAINT sql_execution_log_executed_by_fkey FOREIGN KEY (executed_by) REFERENCES auth.users(id)
+CREATE TABLE public.restaurant_vitrine_settings (
+  id integer NOT NULL DEFAULT nextval('restaurant_vitrine_settings_id_seq'::regclass),
+  restaurant_id integer NOT NULL UNIQUE,
+  slug character varying NOT NULL UNIQUE,
+  primary_color character varying NOT NULL DEFAULT '#ff0000'::character varying,
+  secondary_color character varying NOT NULL DEFAULT '#cc0000'::character varying,
+  accent_color character varying NOT NULL DEFAULT '#ffc107'::character varying,
+  logo_emoji character varying NOT NULL DEFAULT '🍕'::character varying,
+  subtitle character varying NOT NULL DEFAULT 'Commandez en 30 secondes sur WhatsApp!'::character varying,
+  promo_text character varying DEFAULT '🎉 LIVRAISON GRATUITE DÈS 25€ 🎉'::character varying,
+  feature_1 text DEFAULT '{"emoji": "🚀", "text": "Livraison rapide"}'::text,
+  feature_2 text DEFAULT '{"emoji": "💯", "text": "Produits frais"}'::text,
+  feature_3 text DEFAULT '{"emoji": "⭐", "text": "4.8 étoiles"}'::text,
+  show_live_stats boolean NOT NULL DEFAULT true,
+  average_rating numeric NOT NULL DEFAULT 4.8 CHECK (average_rating >= 0::numeric AND average_rating <= 5::numeric),
+  delivery_time_min integer NOT NULL DEFAULT 25 CHECK (delivery_time_min > 0),
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT restaurant_vitrine_settings_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_vitrine_settings_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
 );
 CREATE TABLE public.state_transitions (
   id integer NOT NULL DEFAULT nextval('state_transitions_id_seq'::regclass),
@@ -558,20 +498,6 @@ CREATE TABLE public.workflow_definitions (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT workflow_definitions_pkey PRIMARY KEY (id),
   CONSTRAINT workflow_definitions_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
-);
-CREATE TABLE public.workflow_sql_scripts (
-  id integer NOT NULL DEFAULT nextval('workflow_sql_scripts_id_seq'::regclass),
-  product_id integer NOT NULL,
-  product_name character varying NOT NULL,
-  sql_script text NOT NULL,
-  created_at timestamp without time zone DEFAULT now(),
-  executed_dev boolean DEFAULT false,
-  executed_prod boolean DEFAULT false,
-  dev_executed_at timestamp without time zone,
-  prod_executed_at timestamp without time zone,
-  modifications_summary jsonb DEFAULT '{"deletes": 0, "inserts": 0, "updates": 0, "total_options": 0}'::jsonb,
-  CONSTRAINT workflow_sql_scripts_pkey PRIMARY KEY (id),
-  CONSTRAINT fk_workflow_scripts_product FOREIGN KEY (product_id) REFERENCES public.france_products(id)
 );
 CREATE TABLE public.workflow_steps (
   id integer NOT NULL DEFAULT nextval('workflow_steps_id_seq'::regclass),

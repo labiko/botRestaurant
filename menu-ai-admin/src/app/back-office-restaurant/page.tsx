@@ -91,6 +91,15 @@ export default function BackOfficeRestaurantPage() {
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
+  // États pour la gestion vitrine
+  const [selectedVitrineRestaurant, setSelectedVitrineRestaurant] = useState<number | null>(null);
+  const [vitrineSettings, setVitrineSettings] = useState<any>(null);
+  const [vitrineLoading, setVitrineLoading] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'mobile' | 'tablet' | 'desktop'>('mobile');
+  const [vitrineExists, setVitrineExists] = useState<boolean>(false);
+  const [showCreateVitrineSection, setShowCreateVitrineSection] = useState(false);
+
   // Fonction de formatage de date avec correction du fuseau horaire
   const formatDateTime = (dateString: string): string => {
     const date = new Date(dateString);
@@ -604,6 +613,212 @@ export default function BackOfficeRestaurantPage() {
     }
   };
 
+  // ===== FONCTIONS VITRINE =====
+
+  // Vérifier si une vitrine existe et charger les paramètres
+  const checkAndLoadVitrineSettings = async (restaurantId: number) => {
+    setVitrineLoading(true);
+    setVitrineExists(false);
+    setShowCreateVitrineSection(false);
+    setVitrineSettings(null);
+
+    try {
+      const response = await fetch(`/api/restaurants/${restaurantId}/vitrine`);
+      const data = await response.json();
+
+      if (data.success && data.vitrine) {
+        // Cas 2: Vitrine existe - Charger pour édition
+        setVitrineExists(true);
+        setVitrineSettings(data.vitrine);
+        showNotification('info', 'Vitrine trouvée', 'Vous pouvez maintenant éditer cette vitrine existante');
+      } else {
+        // Cas 1: Pas de vitrine - Afficher section création
+        setVitrineExists(false);
+        setShowCreateVitrineSection(true);
+
+        // Préparer les données depuis Pizza Yolo (restaurant source)
+        const pizzaYolo = restaurants.find(r => r.name.toLowerCase().includes('pizza') && r.name.toLowerCase().includes('yolo'));
+        if (pizzaYolo) {
+          await loadPizzaYoloTemplate(restaurantId, pizzaYolo.id);
+        } else {
+          showNotification('warning', 'Restaurant source non trouvé', 'Impossible de trouver Pizza Yolo comme modèle');
+        }
+      }
+    } catch (error) {
+      console.error('Erreur vérification vitrine:', error);
+      showNotification('error', 'Erreur', 'Impossible de vérifier l\'existence de la vitrine');
+    } finally {
+      setVitrineLoading(false);
+    }
+  };
+
+  // Charger le template Pizza Yolo pour duplication
+  const loadPizzaYoloTemplate = async (targetRestaurantId: number, pizzaYoloId: number) => {
+    try {
+      // Récupérer les paramètres vitrine de Pizza Yolo
+      const response = await fetch(`/api/restaurants/${pizzaYoloId}/vitrine`);
+      const data = await response.json();
+
+      const targetRestaurant = restaurants.find(r => r.id === targetRestaurantId);
+      if (!targetRestaurant) return;
+
+      let templateSettings;
+
+      if (data.success && data.vitrine) {
+        // Utiliser la vitrine existante de Pizza Yolo comme template
+        templateSettings = { ...data.vitrine };
+        delete templateSettings.id; // Supprimer l'ID pour créer une nouvelle entrée
+      } else {
+        // Valeurs par défaut si Pizza Yolo n'a pas de vitrine
+        templateSettings = {
+          primary_color: '#ff0000',
+          secondary_color: '#cc0000',
+          accent_color: '#ffc107',
+          logo_emoji: '🍕',
+          subtitle: 'Commandez en 30 secondes sur WhatsApp!',
+          promo_text: '🎉 LIVRAISON GRATUITE DÈS 25€ 🎉',
+          feature_1: JSON.stringify({ emoji: '🚀', text: 'Livraison rapide' }),
+          feature_2: JSON.stringify({ emoji: '💯', text: 'Produits frais' }),
+          feature_3: JSON.stringify({ emoji: '⭐', text: '4.8 étoiles' }),
+          show_live_stats: true,
+          average_rating: 4.8,
+          delivery_time_min: 25,
+          is_active: true
+        };
+      }
+
+      // Adapter au restaurant cible
+      const slug = targetRestaurant.name.toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      templateSettings.restaurant_id = targetRestaurantId;
+      templateSettings.slug = `${slug}-${targetRestaurantId}`;
+
+      // Définir comme template prêt à créer
+      setVitrineSettings(templateSettings);
+      setHasUnsavedChanges(true);
+
+      showNotification('info', 'Template prêt', 'Les paramètres de Pizza Yolo ont été dupliqués. Modifiez si nécessaire puis cliquez sur "Créer Vitrine"');
+
+    } catch (error) {
+      console.error('Erreur chargement template Pizza Yolo:', error);
+      showNotification('error', 'Erreur', 'Impossible de charger le template Pizza Yolo');
+    }
+  };
+
+
+  // Sauvegarder les modifications ou créer une nouvelle vitrine
+  const saveVitrineSettings = async () => {
+    if (!vitrineSettings) return;
+
+    try {
+      let response;
+
+      if (vitrineExists && vitrineSettings.id) {
+        // Cas 2: Mise à jour d'une vitrine existante
+        response = await fetch(`/api/vitrine/${vitrineSettings.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(vitrineSettings)
+        });
+      } else {
+        // Cas 1: Création d'une nouvelle vitrine
+        response = await fetch('/api/vitrine', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(vitrineSettings)
+        });
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        if (!vitrineExists) {
+          // Première création - mise à jour des états
+          setVitrineSettings(data.vitrine);
+          setVitrineExists(true);
+          setShowCreateVitrineSection(false);
+          showNotification('success', 'Vitrine créée', 'La nouvelle vitrine a été créée avec succès!');
+        } else {
+          // Mise à jour existante
+          showNotification('success', 'Vitrine sauvegardée', 'Les modifications ont été enregistrées');
+        }
+        setHasUnsavedChanges(false);
+      } else {
+        showNotification('error', 'Erreur', data.error || 'Impossible de sauvegarder');
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde vitrine:', error);
+      showNotification('error', 'Erreur', 'Impossible de sauvegarder les modifications');
+    }
+  };
+
+  // Mettre à jour un champ vitrine
+  const updateVitrineField = (field: string, value: any) => {
+    setVitrineSettings((prev: any) => ({ ...prev, [field]: value }));
+    setHasUnsavedChanges(true);
+  };
+
+  // Mettre à jour une feature
+  const updateFeature = (index: number, type: 'emoji' | 'text', value: string) => {
+    const featureKey = `feature_${index}`;
+    const currentFeature = vitrineSettings[featureKey] ? JSON.parse(vitrineSettings[featureKey]) : {};
+    const updatedFeature = { ...currentFeature, [type]: value };
+
+    setVitrineSettings((prev: any) => ({
+      ...prev,
+      [featureKey]: JSON.stringify(updatedFeature)
+    }));
+    setHasUnsavedChanges(true);
+  };
+
+  // Appliquer un preset de couleurs
+  const applyColorPreset = (preset: string) => {
+    const presets: any = {
+      pizza: { primary: '#ff0000', secondary: '#cc0000', emoji: '🍕' },
+      burger: { primary: '#ff6b35', secondary: '#f4501e', emoji: '🍔' },
+      sushi: { primary: '#1a1a1a', secondary: '#333333', emoji: '🍣' },
+      tacos: { primary: '#4caf50', secondary: '#388e3c', emoji: '🌮' }
+    };
+
+    const selected = presets[preset];
+    if (selected) {
+      setVitrineSettings((prev: any) => ({
+        ...prev,
+        primary_color: selected.primary,
+        secondary_color: selected.secondary,
+        logo_emoji: selected.emoji
+      }));
+      setHasUnsavedChanges(true);
+    }
+  };
+
+  // Gérer la sélection d'un restaurant
+  const handleVitrineRestaurantSelect = async (restaurantId: number) => {
+    setSelectedVitrineRestaurant(restaurantId);
+    setVitrineSettings(null);
+    setHasUnsavedChanges(false);
+
+    if (restaurantId) {
+      await checkAndLoadVitrineSettings(restaurantId);
+    }
+  };
+
+  // Copier le lien dans le presse-papiers
+  const copyVitrineLink = async () => {
+    if (!vitrineSettings?.slug) return;
+
+    const url = `${window.location.origin}/vitrine/${vitrineSettings.slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      showNotification('success', 'Lien copié', 'Le lien de la vitrine a été copié dans le presse-papiers');
+    } catch (error) {
+      showNotification('error', 'Erreur', 'Impossible de copier le lien');
+    }
+  };
+
   useEffect(() => {
     loadRestaurants();
   }, []);
@@ -636,6 +851,16 @@ export default function BackOfficeRestaurantPage() {
               }`}
             >
               🎨 Gestion Icônes
+            </button>
+            <button
+              onClick={() => setActiveTab('vitrine')}
+              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'vitrine'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🌐 Gestion Vitrine
             </button>
           </nav>
         </div>
@@ -721,7 +946,7 @@ export default function BackOfficeRestaurantPage() {
               <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-600 bg-blue-100">
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Chargement des restaurants...
               </div>
@@ -1171,7 +1396,7 @@ export default function BackOfficeRestaurantPage() {
                     <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-purple-600 bg-purple-100">
                       <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
                       Chargement des catégories...
                     </div>
@@ -1375,7 +1600,7 @@ export default function BackOfficeRestaurantPage() {
                       <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-green-600 bg-green-100">
                         <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         Chargement des options...
                       </div>
@@ -1546,6 +1771,402 @@ export default function BackOfficeRestaurantPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Tab Gestion Vitrine */}
+      {activeTab === 'vitrine' && (
+        <div className="space-y-6">
+          {/* Header avec sélection restaurant */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold mb-4">🌐 Gestion Page Vitrine</h2>
+
+            {/* Dropdown sélection restaurant */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Sélectionner un restaurant
+              </label>
+              <select
+                value={selectedVitrineRestaurant || ''}
+                onChange={(e) => handleVitrineRestaurantSelect(parseInt(e.target.value))}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Choisir un restaurant --</option>
+                {restaurants.map(restaurant => (
+                  <option key={restaurant.id} value={restaurant.id}>
+                    {restaurant.name} - {restaurant.city}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Lien public si vitrine existe */}
+            {vitrineExists && vitrineSettings && (
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-blue-900">Lien public :</p>
+                    <a
+                      href={`/vitrine/${vitrineSettings.slug}`}
+                      target="_blank"
+                      className="text-blue-600 hover:text-blue-800 underline"
+                    >
+                      {typeof window !== 'undefined' ? window.location.origin : ''}/vitrine/{vitrineSettings.slug}
+                    </a>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={copyVitrineLink}
+                      className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      📋 Copier
+                    </button>
+                    <button
+                      onClick={() => window.open(`/vitrine/${vitrineSettings.slug}`, '_blank')}
+                      className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                    >
+                      👁️ Voir
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Section création de vitrine - Cas 1: Pas de vitrine */}
+          {selectedVitrineRestaurant && showCreateVitrineSection && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="text-center">
+                <div className="mb-4">
+                  <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 mb-4">
+                    <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.314 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Aucune vitrine trouvée pour ce restaurant
+                  </h3>
+                  <p className="text-gray-500 mb-6">
+                    Cette restaurant n'a pas encore de page vitrine. Vous pouvez en créer une en utilisant le modèle de Pizza Yolo.
+                  </p>
+                </div>
+
+                {vitrineLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <svg className="animate-spin h-5 w-5 text-blue-600 mr-2" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Préparation du template...
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {vitrineSettings && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                        <h4 className="font-medium text-blue-900 mb-2">Aperçu des paramètres (basés sur Pizza Yolo) :</h4>
+                        <div className="text-sm text-blue-700 space-y-1">
+                          <p><strong>Couleur principale :</strong> {vitrineSettings.primary_color}</p>
+                          <p><strong>Logo :</strong> {vitrineSettings.logo_emoji}</p>
+                          <p><strong>Sous-titre :</strong> {vitrineSettings.subtitle}</p>
+                          <p><strong>URL :</strong> /vitrine/{vitrineSettings.slug}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={saveVitrineSettings}
+                      disabled={!vitrineSettings}
+                      className="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      ✨ Créer la vitrine pour ce restaurant
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Contenu principal - Cas 2: Vitrine existe */}
+          {selectedVitrineRestaurant && vitrineExists && vitrineSettings && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Panneau gauche - Éditeur */}
+              <div className="space-y-4">
+                {/* Section Couleurs */}
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center">
+                    🎨 Personnalisation Couleurs
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Couleur Principale
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="color"
+                          value={vitrineSettings?.primary_color || '#ff0000'}
+                          onChange={(e) => updateVitrineField('primary_color', e.target.value)}
+                          className="h-10 w-20 rounded border border-gray-300"
+                        />
+                        <input
+                          type="text"
+                          value={vitrineSettings?.primary_color || '#ff0000'}
+                          onChange={(e) => updateVitrineField('primary_color', e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded"
+                          placeholder="#ff0000"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Couleur Secondaire
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="color"
+                          value={vitrineSettings?.secondary_color || '#cc0000'}
+                          onChange={(e) => updateVitrineField('secondary_color', e.target.value)}
+                          className="h-10 w-20 rounded border border-gray-300"
+                        />
+                        <input
+                          type="text"
+                          value={vitrineSettings?.secondary_color || '#cc0000'}
+                          onChange={(e) => updateVitrineField('secondary_color', e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded"
+                          placeholder="#cc0000"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Presets de couleurs */}
+                    <div className="pt-2">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Thèmes rapides :</p>
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => applyColorPreset('pizza')}
+                          className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
+                        >
+                          🍕 Pizza
+                        </button>
+                        <button
+                          onClick={() => applyColorPreset('burger')}
+                          className="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 transition-colors"
+                        >
+                          🍔 Burger
+                        </button>
+                        <button
+                          onClick={() => applyColorPreset('sushi')}
+                          className="px-3 py-1 bg-gray-800 text-white rounded text-sm hover:bg-gray-900 transition-colors"
+                        >
+                          🍣 Sushi
+                        </button>
+                        <button
+                          onClick={() => applyColorPreset('tacos')}
+                          className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
+                        >
+                          🌮 Tacos
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section Contenu */}
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold mb-4">📝 Contenu</h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Logo Emoji
+                      </label>
+                      <div className="flex gap-2 flex-wrap">
+                        {['🍕', '🍔', '🌮', '🍣', '🥙', '🍗', '🍝', '🥗', '🍟', '🥤', '☕', '🧃'].map(emoji => (
+                          <button
+                            key={emoji}
+                            onClick={() => updateVitrineField('logo_emoji', emoji)}
+                            className={`text-3xl p-2 rounded border-2 transition-all ${
+                              vitrineSettings?.logo_emoji === emoji
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Sous-titre
+                      </label>
+                      <input
+                        type="text"
+                        value={vitrineSettings?.subtitle || ''}
+                        onChange={(e) => updateVitrineField('subtitle', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Commandez en 30 secondes sur WhatsApp!"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Texte Promo
+                      </label>
+                      <input
+                        type="text"
+                        value={vitrineSettings?.promo_text || ''}
+                        onChange={(e) => updateVitrineField('promo_text', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="🎉 LIVRAISON GRATUITE DÈS 25€ 🎉"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section Features */}
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold mb-4">✨ Points Forts</h3>
+
+                  {[1, 2, 3].map(index => {
+                    const feature = vitrineSettings?.[`feature_${index}`]
+                      ? JSON.parse(vitrineSettings[`feature_${index}`])
+                      : { emoji: '', text: '' };
+
+                    return (
+                      <div key={index} className="mb-4 p-3 bg-gray-50 rounded">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Feature {index}</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={feature.emoji || ''}
+                            onChange={(e) => updateFeature(index, 'emoji', e.target.value)}
+                            className="w-16 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500"
+                            placeholder="🚀"
+                          />
+                          <input
+                            type="text"
+                            value={feature.text || ''}
+                            onChange={(e) => updateFeature(index, 'text', e.target.value)}
+                            className="flex-1 px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            placeholder="Livraison rapide"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Boutons d'action */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={saveVitrineSettings}
+                    disabled={!hasUnsavedChanges}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                      hasUnsavedChanges
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    💾 {vitrineExists ? 'Sauvegarder' : 'Créer Vitrine'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setVitrineSettings(null);
+                      setHasUnsavedChanges(false);
+                      loadVitrineSettings(selectedVitrineRestaurant);
+                    }}
+                    disabled={!hasUnsavedChanges}
+                    className={`px-4 py-2 border rounded-lg transition-colors ${
+                      hasUnsavedChanges
+                        ? 'border-gray-300 hover:bg-gray-50'
+                        : 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    ↩️ Annuler
+                  </button>
+                </div>
+              </div>
+
+              {/* Panneau droite - Preview */}
+              <div className="sticky top-4">
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">👁️ Aperçu</h3>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setPreviewMode('mobile')}
+                        className={`px-3 py-1 rounded transition-colors ${
+                          previewMode === 'mobile' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        📱
+                      </button>
+                      <button
+                        onClick={() => setPreviewMode('tablet')}
+                        className={`px-3 py-1 rounded transition-colors ${
+                          previewMode === 'tablet' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        📱
+                      </button>
+                      <button
+                        onClick={() => setPreviewMode('desktop')}
+                        className={`px-3 py-1 rounded transition-colors ${
+                          previewMode === 'desktop' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        💻
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Preview iframe placeholder */}
+                  <div className={`
+                    border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50
+                    ${previewMode === 'mobile' ? 'w-[375px] h-[667px] mx-auto' : ''}
+                    ${previewMode === 'tablet' ? 'w-full h-[600px]' : ''}
+                    ${previewMode === 'desktop' ? 'w-full h-[700px]' : ''}
+                  `}>
+                    <div className="w-full h-full flex items-center justify-center text-gray-500">
+                      <div className="text-center">
+                        <div className="text-4xl mb-2">🔄</div>
+                        <p>Preview en cours de développement</p>
+                        <p className="text-sm mt-2">
+                          Utilisez le bouton "👁️ Voir" pour ouvrir la vitrine
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Indicateur modifications */}
+                  {hasUnsavedChanges && (
+                    <div className="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                      <p className="text-sm text-yellow-800">
+                        ⚠️ Modifications non sauvegardées
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* État de chargement */}
+          {vitrineLoading && selectedVitrineRestaurant && (
+            <div className="text-center py-12">
+              <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-600 bg-blue-100">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Chargement des paramètres vitrine...
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -472,316 +472,41 @@
             .container {
                 padding: 30px 20px;
             }
-
+            
             h1 {
                 font-size: 28px;
             }
-
+            
             .qr-code {
                 width: 200px;
                 height: 200px;
             }
-
+            
             .features {
                 gap: 10px;
-            }
-        }
-
-        /* ===== NOUVELLES MEDIA QUERIES TABLETTES ===== */
-
-        /* Portrait Tablette */
-        @media (min-width: 768px) and (max-width: 1024px) {
-            .container {
-                max-width: 700px;
-                padding: 50px;
-            }
-
-            .qr-code {
-                width: 350px;
-                height: 350px;
-            }
-
-            .logo {
-                width: 180px;
-                height: 180px;
-                font-size: 72px;
-            }
-
-            h1 {
-                font-size: 36px;
-            }
-
-            .subtitle {
-                font-size: 20px;
-            }
-
-            .features {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 30px;
-            }
-
-            .stat {
-                padding: 20px;
-            }
-
-            .stat-number {
-                font-size: 28px;
-            }
-
-            .whatsapp-button {
-                padding: 18px 50px;
-                font-size: 20px;
-            }
-        }
-
-        /* Landscape Tablette */
-        @media (min-width: 768px) and (orientation: landscape) {
-            body {
-                padding: 10px 20px;
-            }
-
-            .container {
-                max-width: 90vw;
-                padding: 30px 40px;
-            }
-
-            .container.auto-landscape {
-                display: grid;
-                grid-template-columns: 400px 1fr;
-                gap: 40px;
-                align-items: start;
-                max-width: 90vw;
-            }
-
-            .container.auto-landscape .left-section {
-                position: sticky;
-                top: 20px;
-            }
-
-            .container.auto-landscape .right-section {
-                display: flex;
-                flex-direction: column;
-            }
-
-            .container.auto-landscape .features {
-                display: flex;
-                flex-direction: row;
-                justify-content: space-between;
-            }
-
-            .container.auto-landscape .live-stats {
-                display: flex;
-                flex-direction: row;
-            }
-        }
-
-        /* Grande Tablette / Petit Desktop */
-        @media (min-width: 1024px) and (max-width: 1366px) {
-            .container {
-                max-width: 900px;
-            }
-        }
-
-        /* ===== CLASSES POUR MODE LANDSCAPE FORCÉ ===== */
-
-        /* Bouton toggle orientation */
-        .orientation-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #ff0000, #cc0000);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            cursor: pointer;
-            transition: transform 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-        }
-
-        .orientation-btn:hover {
-            transform: scale(1.1) rotate(15deg);
-        }
-
-        .orientation-btn.rotated {
-            animation: rotateIcon 0.5s ease;
-        }
-
-        @keyframes rotateIcon {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(90deg); }
-        }
-
-        /* Mode Landscape forcé */
-        .container.landscape-mode {
-            max-width: 90vw !important;
-            display: grid;
-            grid-template-columns: 1fr 1.5fr;
-            gap: 40px;
-            align-items: start;
-            animation: landscapeTransition 0.5s ease;
-        }
-
-        @keyframes landscapeTransition {
-            from {
-                opacity: 0.8;
-                transform: scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .container.landscape-mode .qr-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: sticky;
-            top: 20px;
-        }
-
-        .container.landscape-mode .content-section {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .container.landscape-mode .logo {
-            width: 120px;
-            height: 120px;
-            font-size: 50px;
-            margin-bottom: 15px;
-        }
-
-        .container.landscape-mode h1 {
-            font-size: 28px;
-            margin-bottom: 5px;
-        }
-
-        .container.landscape-mode .subtitle {
-            font-size: 16px;
-            margin-bottom: 20px;
-        }
-
-        .container.landscape-mode .qr-container {
-            margin: 20px 0;
-        }
-
-        .container.landscape-mode .features {
-            display: flex;
-            justify-content: space-between;
-            margin: 20px 0;
-        }
-
-        .container.landscape-mode .live-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-        }
-
-        .container.landscape-mode .instructions {
-            margin: 15px 0;
-        }
-
-        /* Tooltip pour le bouton */
-        .orientation-btn::after {
-            content: 'Basculer vue';
-            position: absolute;
-            bottom: -35px;
-            right: 0;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-        }
-
-        .orientation-btn:hover::after {
-            opacity: 1;
-        }
-
-        /* Masquer le bouton sur mobile */
-        @media (max-width: 767px) {
-            .orientation-btn {
-                display: none;
-            }
-        }
-
-        /* Optimisation touch pour tablettes */
-        @media (pointer: coarse) {
-            .whatsapp-button,
-            .orientation-btn,
-            .qr-container {
-                -webkit-tap-highlight-color: transparent;
-            }
-
-            .step,
-            .feature,
-            .stat {
-                min-height: 44px;
-            }
-
-            /* Désactiver les hover sur touch devices */
-            .qr-container:hover {
-                transform: none;
-            }
-        }
-
-        /* Performance optimisée pour tablettes */
-        @media (min-width: 768px) {
-            .floating-emoji,
-            body::before {
-                will-change: transform;
-                transform: translateZ(0);
-            }
-
-            .menu-carousel {
-                -webkit-overflow-scrolling: touch;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Bouton Toggle Orientation -->
-    <button id="orientation-toggle" class="orientation-btn" title="Basculer vue">
-        📱
-    </button>
-
-    <div class="container" id="main-container">
-        <!-- Section QR (gauche en mode landscape) -->
-        <div class="qr-section">
-            <div class="logo">🍕</div>
-
-            <h1>PIZZA YOLO 77</h1>
-            <div class="subtitle">Commandez en 30 secondes sur WhatsApp!</div>
-
-            <div class="promo">
-                🎉 LIVRAISON GRATUITE DÈS 25€ 🎉
-            </div>
-
-            <div class="qr-container">
-                <div class="qr-code">
-                    <canvas id="qrcode"></canvas>
-                </div>
-                <div style="text-align: center; margin-top: 15px; color: #000000; font-weight: bold; font-size: 18px;">
-                    📞 0164880606
-                </div>
-            </div>
+    <div class="container">
+        <div class="logo">🍕</div>
+        
+        <h1>PIZZA YOLO 77</h1>
+        <div class="subtitle">Commandez en 30 secondes sur WhatsApp!</div>
+        
+        <div class="promo">
+            🎉 LIVRAISON GRATUITE DÈS 25€ 🎉
         </div>
 
-        <!-- Section Contenu (droite en mode landscape) -->
-        <div class="content-section">
+        <div class="qr-container">
+            <div class="qr-code">
+                <canvas id="qrcode"></canvas>
+            </div>
+            <div style="text-align: center; margin-top: 15px; color: #000000; font-weight: bold; font-size: 18px;">
+                📞 0164880606
+            </div>
+        </div>
 
         <div class="live-stats">
             <div class="stat">
@@ -911,8 +636,7 @@
         <div class="footer">
             Powered by Bot Restaurant WhatsApp
         </div>
-        </div> <!-- Fin content-section -->
-    </div> <!-- Fin container -->
+    </div>
 
     <!-- Floating elements -->
     <div class="floating-elements">
@@ -989,134 +713,10 @@
         document.querySelector('.menu-carousel').addEventListener('mouseenter', function() {
             this.style.animationPlayState = 'paused';
         });
-
+        
         document.querySelector('.menu-carousel').addEventListener('mouseleave', function() {
             this.style.animationPlayState = 'running';
         });
-
-        // ===== NOUVEAU CODE POUR TOGGLE ORIENTATION =====
-
-        // Fonction pour basculer entre les modes
-        function toggleOrientation() {
-            const container = document.getElementById('main-container');
-            const button = document.getElementById('orientation-toggle');
-
-            // Toggle la classe landscape-mode
-            container.classList.toggle('landscape-mode');
-
-            // Ajouter animation au bouton
-            button.classList.add('rotated');
-            setTimeout(() => {
-                button.classList.remove('rotated');
-            }, 500);
-
-            // Changer l'icône du bouton
-            if (container.classList.contains('landscape-mode')) {
-                button.innerHTML = '🖥️';
-                button.title = 'Mode Portrait';
-            } else {
-                button.innerHTML = '📱';
-                button.title = 'Mode Paysage';
-            }
-
-            // Sauvegarder la préférence dans localStorage
-            const isLandscape = container.classList.contains('landscape-mode');
-            localStorage.setItem('orientation-preference', isLandscape ? 'landscape' : 'portrait');
-
-            // Log pour debug
-            console.log('Orientation toggled to:', isLandscape ? 'landscape' : 'portrait');
-        }
-
-        // Ajouter l'event listener au bouton
-        document.getElementById('orientation-toggle').addEventListener('click', toggleOrientation);
-
-        // Restaurer la préférence sauvegardée au chargement
-        window.addEventListener('DOMContentLoaded', function() {
-            const savedOrientation = localStorage.getItem('orientation-preference');
-            const container = document.getElementById('main-container');
-            const button = document.getElementById('orientation-toggle');
-
-            if (savedOrientation === 'landscape') {
-                container.classList.add('landscape-mode');
-                button.innerHTML = '🖥️';
-                button.title = 'Mode Portrait';
-            }
-
-            // Vérifier si on est sur tablette
-            const isTablet = window.matchMedia('(min-width: 768px) and (max-width: 1366px)').matches;
-            if (isTablet) {
-                console.log('Tablette détectée - bouton orientation activé');
-            }
-        });
-
-        // Gérer automatiquement le mode landscape sur orientation physique
-        window.addEventListener('orientationchange', function() {
-            const container = document.getElementById('main-container');
-            const button = document.getElementById('orientation-toggle');
-            const isLandscapeOrientation = window.matchMedia('(orientation: landscape)').matches;
-            const isTablet = window.matchMedia('(min-width: 768px)').matches;
-
-            // Auto-activer le mode landscape sur tablettes en orientation paysage
-            if (isTablet && isLandscapeOrientation && !container.classList.contains('landscape-mode')) {
-                // Seulement suggérer, ne pas forcer
-                if (!localStorage.getItem('orientation-manual')) {
-                    container.classList.add('auto-landscape');
-                    console.log('Mode paysage automatique activé');
-                }
-            } else {
-                container.classList.remove('auto-landscape');
-            }
-        });
-
-        // Marquer comme contrôle manuel si l'utilisateur clique sur le bouton
-        document.getElementById('orientation-toggle').addEventListener('click', function() {
-            localStorage.setItem('orientation-manual', 'true');
-            // Reset après 1 heure
-            setTimeout(() => {
-                localStorage.removeItem('orientation-manual');
-            }, 3600000);
-        });
-
-        // Fonction pour détecter le swipe (optionnel pour tablettes tactiles)
-        let touchStartX = null;
-        let touchStartY = null;
-
-        document.addEventListener('touchstart', function(e) {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }, { passive: true });
-
-        document.addEventListener('touchend', function(e) {
-            if (!touchStartX || !touchStartY) return;
-
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-
-            const diffX = touchStartX - touchEndX;
-            const diffY = touchStartY - touchEndY;
-
-            // Swipe horizontal de plus de 100px et pas trop vertical
-            if (Math.abs(diffX) > 100 && Math.abs(diffY) < 50) {
-                const container = document.getElementById('main-container');
-                const isTablet = window.matchMedia('(min-width: 768px)').matches;
-
-                // Swipe uniquement sur tablettes
-                if (isTablet) {
-                    if (diffX > 0 && !container.classList.contains('landscape-mode')) {
-                        // Swipe gauche -> activer landscape
-                        toggleOrientation();
-                        console.log('Swipe détecté - activation mode paysage');
-                    } else if (diffX < 0 && container.classList.contains('landscape-mode')) {
-                        // Swipe droite -> désactiver landscape
-                        toggleOrientation();
-                        console.log('Swipe détecté - activation mode portrait');
-                    }
-                }
-            }
-
-            touchStartX = null;
-            touchStartY = null;
-        }, { passive: true });
     </script>
 </body>
 </html>

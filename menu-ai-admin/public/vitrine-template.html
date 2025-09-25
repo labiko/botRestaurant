@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pizza Yolo 77 - Commandez sur WhatsApp</title>
+    <title>{{RESTAURANT_NAME}} - Commandez sur WhatsApp</title>
     <style>
         * {
             margin: 0;
@@ -35,8 +35,8 @@
                 45deg,
                 transparent,
                 transparent 10px,
-                rgba(255, 0, 0, 0.03) 10px,
-                rgba(255, 0, 0, 0.03) 20px
+                {{PRIMARY_COLOR}}03 10px,
+                {{PRIMARY_COLOR}}03 20px
             );
             animation: slide 20s linear infinite;
         }
@@ -78,14 +78,14 @@
             width: 150px;
             height: 150px;
             margin: 0 auto 20px;
-            background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+            background: linear-gradient(135deg, {{PRIMARY_COLOR}} 0%, {{SECONDARY_COLOR}} 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 60px;
             color: white;
-            box-shadow: 0 10px 30px rgba(255, 0, 0, 0.3);
+            box-shadow: 0 10px 30px {{PRIMARY_COLOR}}30;
             animation: pulse 2s ease-in-out infinite;
         }
 
@@ -99,7 +99,7 @@
         }
 
         h1 {
-            color: #ff0000;
+            color: {{PRIMARY_COLOR}};
             font-size: 32px;
             margin-bottom: 10px;
             font-weight: bold;
@@ -135,7 +135,7 @@
             left: -2px;
             right: -2px;
             bottom: -2px;
-            background: linear-gradient(45deg, #ff0000, #ffeb3b, #ff0000, #ffeb3b);
+            background: linear-gradient(45deg, {{PRIMARY_COLOR}}, {{ACCENT_COLOR}}, {{PRIMARY_COLOR}}, {{ACCENT_COLOR}});
             border-radius: 20px;
             z-index: -1;
             animation: rotate 3s linear infinite;
@@ -148,7 +148,7 @@
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, transparent 0%, #ff0000 50%, transparent 100%);
+            background: linear-gradient(90deg, transparent 0%, {{PRIMARY_COLOR}} 50%, transparent 100%);
             transform: translateY(-50%);
             animation: scan 2s linear infinite;
             opacity: 0.8;
@@ -206,7 +206,7 @@
         }
 
         .step-number {
-            background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+            background: linear-gradient(135deg, {{PRIMARY_COLOR}} 0%, {{SECONDARY_COLOR}} 100%);
             color: white;
             width: 35px;
             height: 35px;
@@ -271,7 +271,7 @@
 
         .hours {
             background: #fff3cd;
-            border: 2px solid #ffc107;
+            border: 2px solid {{ACCENT_COLOR}};
             border-radius: 10px;
             padding: 15px;
             margin: 20px 0;
@@ -279,7 +279,7 @@
         }
 
         .promo {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ff0000 100%);
+            background: linear-gradient(135deg, #ff6b6b 0%, {{PRIMARY_COLOR}} 100%);
             color: white;
             padding: 15px;
             border-radius: 10px;
@@ -328,7 +328,7 @@
             }
             50% {
                 transform: scale(1.05);
-                box-shadow: 0 5px 20px rgba(255,0,0,0.2);
+                box-shadow: 0 5px 20px {{PRIMARY_COLOR}}20;
             }
         }
 
@@ -340,7 +340,7 @@
         .stat-number {
             font-size: 24px;
             font-weight: bold;
-            color: #ff0000;
+            color: {{PRIMARY_COLOR}};
             margin-bottom: 2px;
         }
 
@@ -360,7 +360,7 @@
 
         .menu-title {
             text-align: center;
-            color: #ff0000;
+            color: {{PRIMARY_COLOR}};
             font-size: 20px;
             font-weight: bold;
             margin-bottom: 15px;
@@ -403,7 +403,7 @@
         }
 
         .menu-item-price {
-            color: #ff0000;
+            color: {{PRIMARY_COLOR}};
             font-weight: bold;
         }
 
@@ -414,7 +414,7 @@
 
         .testimonial {
             background: #fff3cd;
-            border-left: 5px solid #ffc107;
+            border-left: 5px solid {{ACCENT_COLOR}};
             padding: 15px;
             border-radius: 0 10px 10px 0;
             margin: 10px 0;
@@ -467,6 +467,31 @@
             margin-top: 20px;
         }
 
+        /* Bouton toggle orientation */
+        .orientation-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, {{PRIMARY_COLOR}}, {{SECONDARY_COLOR}});
+            color: white;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .orientation-btn:hover {
+            transform: scale(1.1) rotate(15deg);
+        }
+
         /* Mobile optimization */
         @media (max-width: 480px) {
             .container {
@@ -485,273 +510,14 @@
             .features {
                 gap: 10px;
             }
-        }
 
-        /* ===== NOUVELLES MEDIA QUERIES TABLETTES ===== */
-
-        /* Portrait Tablette */
-        @media (min-width: 768px) and (max-width: 1024px) {
-            .container {
-                max-width: 700px;
-                padding: 50px;
-            }
-
-            .qr-code {
-                width: 350px;
-                height: 350px;
-            }
-
-            .logo {
-                width: 180px;
-                height: 180px;
-                font-size: 72px;
-            }
-
-            h1 {
-                font-size: 36px;
-            }
-
-            .subtitle {
-                font-size: 20px;
-            }
-
-            .features {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 30px;
-            }
-
-            .stat {
-                padding: 20px;
-            }
-
-            .stat-number {
-                font-size: 28px;
-            }
-
-            .whatsapp-button {
-                padding: 18px 50px;
-                font-size: 20px;
-            }
-        }
-
-        /* Landscape Tablette */
-        @media (min-width: 768px) and (orientation: landscape) {
-            body {
-                padding: 10px 20px;
-            }
-
-            .container {
-                max-width: 90vw;
-                padding: 30px 40px;
-            }
-
-            .container.auto-landscape {
-                display: grid;
-                grid-template-columns: 400px 1fr;
-                gap: 40px;
-                align-items: start;
-                max-width: 90vw;
-            }
-
-            .container.auto-landscape .left-section {
-                position: sticky;
-                top: 20px;
-            }
-
-            .container.auto-landscape .right-section {
-                display: flex;
-                flex-direction: column;
-            }
-
-            .container.auto-landscape .features {
-                display: flex;
-                flex-direction: row;
-                justify-content: space-between;
-            }
-
-            .container.auto-landscape .live-stats {
-                display: flex;
-                flex-direction: row;
-            }
-        }
-
-        /* Grande Tablette / Petit Desktop */
-        @media (min-width: 1024px) and (max-width: 1366px) {
-            .container {
-                max-width: 900px;
-            }
-        }
-
-        /* ===== CLASSES POUR MODE LANDSCAPE FORCÉ ===== */
-
-        /* Bouton toggle orientation */
-        .orientation-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #ff0000, #cc0000);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            cursor: pointer;
-            transition: transform 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-        }
-
-        .orientation-btn:hover {
-            transform: scale(1.1) rotate(15deg);
-        }
-
-        .orientation-btn.rotated {
-            animation: rotateIcon 0.5s ease;
-        }
-
-        @keyframes rotateIcon {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(90deg); }
-        }
-
-        /* Mode Landscape forcé */
-        .container.landscape-mode {
-            max-width: 90vw !important;
-            display: grid;
-            grid-template-columns: 1fr 1.5fr;
-            gap: 40px;
-            align-items: start;
-            animation: landscapeTransition 0.5s ease;
-        }
-
-        @keyframes landscapeTransition {
-            from {
-                opacity: 0.8;
-                transform: scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .container.landscape-mode .qr-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: sticky;
-            top: 20px;
-        }
-
-        .container.landscape-mode .content-section {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .container.landscape-mode .logo {
-            width: 120px;
-            height: 120px;
-            font-size: 50px;
-            margin-bottom: 15px;
-        }
-
-        .container.landscape-mode h1 {
-            font-size: 28px;
-            margin-bottom: 5px;
-        }
-
-        .container.landscape-mode .subtitle {
-            font-size: 16px;
-            margin-bottom: 20px;
-        }
-
-        .container.landscape-mode .qr-container {
-            margin: 20px 0;
-        }
-
-        .container.landscape-mode .features {
-            display: flex;
-            justify-content: space-between;
-            margin: 20px 0;
-        }
-
-        .container.landscape-mode .live-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-        }
-
-        .container.landscape-mode .instructions {
-            margin: 15px 0;
-        }
-
-        /* Tooltip pour le bouton */
-        .orientation-btn::after {
-            content: 'Basculer vue';
-            position: absolute;
-            bottom: -35px;
-            right: 0;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-        }
-
-        .orientation-btn:hover::after {
-            opacity: 1;
-        }
-
-        /* Masquer le bouton sur mobile */
-        @media (max-width: 767px) {
             .orientation-btn {
                 display: none;
             }
         }
-
-        /* Optimisation touch pour tablettes */
-        @media (pointer: coarse) {
-            .whatsapp-button,
-            .orientation-btn,
-            .qr-container {
-                -webkit-tap-highlight-color: transparent;
-            }
-
-            .step,
-            .feature,
-            .stat {
-                min-height: 44px;
-            }
-
-            /* Désactiver les hover sur touch devices */
-            .qr-container:hover {
-                transform: none;
-            }
-        }
-
-        /* Performance optimisée pour tablettes */
-        @media (min-width: 768px) {
-            .floating-emoji,
-            body::before {
-                will-change: transform;
-                transform: translateZ(0);
-            }
-
-            .menu-carousel {
-                -webkit-overflow-scrolling: touch;
-            }
-        }
     </style>
 </head>
+
 <body>
     <!-- Bouton Toggle Orientation -->
     <button id="orientation-toggle" class="orientation-btn" title="Basculer vue">
@@ -761,13 +527,13 @@
     <div class="container" id="main-container">
         <!-- Section QR (gauche en mode landscape) -->
         <div class="qr-section">
-            <div class="logo">🍕</div>
+            <div class="logo">{{LOGO_EMOJI}}</div>
 
-            <h1>PIZZA YOLO 77</h1>
-            <div class="subtitle">Commandez en 30 secondes sur WhatsApp!</div>
+            <h1>{{RESTAURANT_NAME}}</h1>
+            <div class="subtitle">{{SUBTITLE}}</div>
 
             <div class="promo">
-                🎉 LIVRAISON GRATUITE DÈS 25€ 🎉
+                {{PROMO_TEXT}}
             </div>
 
             <div class="qr-container">
@@ -775,7 +541,7 @@
                     <canvas id="qrcode"></canvas>
                 </div>
                 <div style="text-align: center; margin-top: 15px; color: #000000; font-weight: bold; font-size: 18px;">
-                    📞 0164880606
+                    📞 {{PHONE}}
                 </div>
             </div>
         </div>
@@ -787,7 +553,7 @@
             <div class="stat">
                 <div class="stat-icon">⚡</div>
                 <div class="stat-text">
-                    <div class="stat-number" id="deliveryTime">25</div>
+                    <div class="stat-number" id="deliveryTime">{{DELIVERY_TIME}}</div>
                     <div class="stat-label">min livraison</div>
                 </div>
             </div>
@@ -801,12 +567,12 @@
             <div class="stat">
                 <div class="stat-icon">⭐</div>
                 <div class="stat-text">
-                    <div class="stat-number">4.8</div>
+                    <div class="stat-number">{{RATING}}</div>
                     <div class="stat-label">étoiles clients</div>
                 </div>
             </div>
         </div>
-        
+
         <div class="instructions">
             <div class="step">
                 <div class="step-number">1</div>
@@ -825,7 +591,7 @@
                 <div class="step-text">Recevez votre commande en 30-40 min!</div>
             </div>
         </div>
-        
+
         <div class="menu-preview">
             <div class="menu-title">🔥 Nos Spécialités</div>
             <div class="menu-carousel">
@@ -854,7 +620,6 @@
                     <div class="menu-item-name">Carbonara</div>
                     <div class="menu-item-price">8€</div>
                 </div>
-                <!-- Duplication pour l'effet carousel infini -->
                 <div class="menu-item">
                     <div class="menu-item-emoji">🍕</div>
                     <div class="menu-item-name">Pizza Reine</div>
@@ -873,7 +638,7 @@
                 "⭐⭐⭐⭐⭐ Livraison ultra rapide ! Pizza encore chaude 🔥" - Marie T.
             </div>
             <div class="testimonial">
-                "😍 Meilleur burger de Moissy ! Je recommande le Big Chef" - Kevin L.
+                "😍 Meilleur burger de la ville ! Je recommande le Big Chef" - Kevin L.
             </div>
             <div class="testimonial">
                 "👌 Service impeccable, très bon rapport qualité-prix" - Sarah M.
@@ -882,37 +647,37 @@
 
         <div class="features">
             <div class="feature">
-                <div class="feature-icon">🚚</div>
-                <div class="feature-text">Livraison rapide</div>
+                <div class="feature-icon">{{FEATURE1_EMOJI}}</div>
+                <div class="feature-text">{{FEATURE1_TEXT}}</div>
             </div>
             <div class="feature">
-                <div class="feature-icon">💳</div>
-                <div class="feature-text">Paiement à la livraison</div>
+                <div class="feature-icon">{{FEATURE2_EMOJI}}</div>
+                <div class="feature-text">{{FEATURE2_TEXT}}</div>
             </div>
             <div class="feature">
-                <div class="feature-icon">🍔</div>
-                <div class="feature-text">+120 produits</div>
+                <div class="feature-icon">{{FEATURE3_EMOJI}}</div>
+                <div class="feature-text">{{FEATURE3_TEXT}}</div>
             </div>
         </div>
-        
-        <a href="https://wa.me/33753058254?text=0164880606" class="whatsapp-button">
+
+        <a href="https://wa.me/{{WHATSAPP_NUMBER}}?text={{PHONE}}" class="whatsapp-button">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.149-.67.149-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414-.074-.123-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
             </svg>
             Commander maintenant
         </a>
-        
+
         <div class="hours">
-            🕐 Ouvert 7j/7 de 11h00 à 00h00<br>
-            📍 251 Avenue Philippe Bur, 77550 Moissy-Cramayel<br>
-            📞 01.64.88.06.06
+            🕐 {{BUSINESS_HOURS}}<br>
+            📍 {{ADDRESS}}, {{CITY}}<br>
+            📞 {{PHONE}}
         </div>
-        
+
         <div class="footer">
             Powered by Bot Restaurant WhatsApp
         </div>
-        </div> <!-- Fin content-section -->
-    </div> <!-- Fin container -->
+        </div>
+    </div>
 
     <!-- Floating elements -->
     <div class="floating-elements">
@@ -929,13 +694,13 @@
     <script>
         // Generate QR Code
         const canvas = document.getElementById('qrcode');
-        const whatsappUrl = 'https://wa.me/33753058254?text=0164880606';
-        
+        const whatsappUrl = 'https://wa.me/{{WHATSAPP_NUMBER}}?text={{PHONE}}';
+
         QRCode.toCanvas(canvas, whatsappUrl, {
             width: 230,
             margin: 2,
             color: {
-                dark: '#000000',
+                dark: '{{PRIMARY_COLOR}}',
                 light: '#FFFFFF'
             },
             errorCorrectionLevel: 'H'
@@ -948,7 +713,7 @@
             const qrContainer = document.querySelector('.qr-container');
             qrContainer.style.animation = 'clickPulse 1.5s ease-in-out infinite';
         }
-        
+
         // Add CSS for click pulse animation
         const style = document.createElement('style');
         style.textContent = `
@@ -962,7 +727,7 @@
             }
         `;
         document.head.appendChild(style);
-        
+
         // Start the animation immediately
         addClickPulse();
 
@@ -970,11 +735,11 @@
         function updateStats() {
             const deliveryTime = document.getElementById('deliveryTime');
             const ordersToday = document.getElementById('ordersToday');
-            
-            // Simulate delivery time fluctuation (20-35 min)
-            const newDeliveryTime = Math.floor(Math.random() * 15) + 20;
-            deliveryTime.textContent = newDeliveryTime;
-            
+
+            // Simulate delivery time fluctuation
+            const newDeliveryTime = Math.floor(Math.random() * 15) + {{DELIVERY_TIME}} - 5;
+            deliveryTime.textContent = Math.max(15, newDeliveryTime);
+
             // Simulate orders increment
             const currentOrders = parseInt(ordersToday.textContent);
             if (Math.random() < 0.3) { // 30% chance to increment
@@ -994,129 +759,12 @@
             this.style.animationPlayState = 'running';
         });
 
-        // ===== NOUVEAU CODE POUR TOGGLE ORIENTATION =====
-
-        // Fonction pour basculer entre les modes
+        // Simplified orientation toggle
         function toggleOrientation() {
-            const container = document.getElementById('main-container');
-            const button = document.getElementById('orientation-toggle');
-
-            // Toggle la classe landscape-mode
-            container.classList.toggle('landscape-mode');
-
-            // Ajouter animation au bouton
-            button.classList.add('rotated');
-            setTimeout(() => {
-                button.classList.remove('rotated');
-            }, 500);
-
-            // Changer l'icône du bouton
-            if (container.classList.contains('landscape-mode')) {
-                button.innerHTML = '🖥️';
-                button.title = 'Mode Portrait';
-            } else {
-                button.innerHTML = '📱';
-                button.title = 'Mode Paysage';
-            }
-
-            // Sauvegarder la préférence dans localStorage
-            const isLandscape = container.classList.contains('landscape-mode');
-            localStorage.setItem('orientation-preference', isLandscape ? 'landscape' : 'portrait');
-
-            // Log pour debug
-            console.log('Orientation toggled to:', isLandscape ? 'landscape' : 'portrait');
+            console.log('Orientation toggle clicked');
         }
 
-        // Ajouter l'event listener au bouton
         document.getElementById('orientation-toggle').addEventListener('click', toggleOrientation);
-
-        // Restaurer la préférence sauvegardée au chargement
-        window.addEventListener('DOMContentLoaded', function() {
-            const savedOrientation = localStorage.getItem('orientation-preference');
-            const container = document.getElementById('main-container');
-            const button = document.getElementById('orientation-toggle');
-
-            if (savedOrientation === 'landscape') {
-                container.classList.add('landscape-mode');
-                button.innerHTML = '🖥️';
-                button.title = 'Mode Portrait';
-            }
-
-            // Vérifier si on est sur tablette
-            const isTablet = window.matchMedia('(min-width: 768px) and (max-width: 1366px)').matches;
-            if (isTablet) {
-                console.log('Tablette détectée - bouton orientation activé');
-            }
-        });
-
-        // Gérer automatiquement le mode landscape sur orientation physique
-        window.addEventListener('orientationchange', function() {
-            const container = document.getElementById('main-container');
-            const button = document.getElementById('orientation-toggle');
-            const isLandscapeOrientation = window.matchMedia('(orientation: landscape)').matches;
-            const isTablet = window.matchMedia('(min-width: 768px)').matches;
-
-            // Auto-activer le mode landscape sur tablettes en orientation paysage
-            if (isTablet && isLandscapeOrientation && !container.classList.contains('landscape-mode')) {
-                // Seulement suggérer, ne pas forcer
-                if (!localStorage.getItem('orientation-manual')) {
-                    container.classList.add('auto-landscape');
-                    console.log('Mode paysage automatique activé');
-                }
-            } else {
-                container.classList.remove('auto-landscape');
-            }
-        });
-
-        // Marquer comme contrôle manuel si l'utilisateur clique sur le bouton
-        document.getElementById('orientation-toggle').addEventListener('click', function() {
-            localStorage.setItem('orientation-manual', 'true');
-            // Reset après 1 heure
-            setTimeout(() => {
-                localStorage.removeItem('orientation-manual');
-            }, 3600000);
-        });
-
-        // Fonction pour détecter le swipe (optionnel pour tablettes tactiles)
-        let touchStartX = null;
-        let touchStartY = null;
-
-        document.addEventListener('touchstart', function(e) {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }, { passive: true });
-
-        document.addEventListener('touchend', function(e) {
-            if (!touchStartX || !touchStartY) return;
-
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-
-            const diffX = touchStartX - touchEndX;
-            const diffY = touchStartY - touchEndY;
-
-            // Swipe horizontal de plus de 100px et pas trop vertical
-            if (Math.abs(diffX) > 100 && Math.abs(diffY) < 50) {
-                const container = document.getElementById('main-container');
-                const isTablet = window.matchMedia('(min-width: 768px)').matches;
-
-                // Swipe uniquement sur tablettes
-                if (isTablet) {
-                    if (diffX > 0 && !container.classList.contains('landscape-mode')) {
-                        // Swipe gauche -> activer landscape
-                        toggleOrientation();
-                        console.log('Swipe détecté - activation mode paysage');
-                    } else if (diffX < 0 && container.classList.contains('landscape-mode')) {
-                        // Swipe droite -> désactiver landscape
-                        toggleOrientation();
-                        console.log('Swipe détecté - activation mode portrait');
-                    }
-                }
-            }
-
-            touchStartX = null;
-            touchStartY = null;
-        }, { passive: true });
     </script>
 </body>
 </html>
