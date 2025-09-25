@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
+import { BOT_WHATSAPP_NUMBER } from '@/constants/bot';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL_PROD || process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD || process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -48,7 +49,8 @@ export async function GET(
     const feature2 = parseFeature(vitrine.feature_2);
     const feature3 = parseFeature(vitrine.feature_3);
 
-    const whatsappNumber = vitrine.restaurant.whatsapp_number || vitrine.restaurant.phone;
+    // Utiliser la constante globale pour le numéro du bot
+    const restaurantPhone = vitrine.restaurant.phone;
 
     const formatBusinessHours = (businessHours: string | object) => {
       if (typeof businessHours === 'string') {
@@ -66,8 +68,8 @@ export async function GET(
       '{{LOGO_EMOJI}}': vitrine.logo_emoji,
       '{{SUBTITLE}}': vitrine.subtitle,
       '{{PROMO_TEXT}}': vitrine.promo_text || '',
-      '{{PHONE}}': vitrine.restaurant.phone,
-      '{{WHATSAPP_NUMBER}}': whatsappNumber,
+      '{{PHONE}}': restaurantPhone,
+      '{{WHATSAPP_NUMBER}}': BOT_WHATSAPP_NUMBER,
       '{{DELIVERY_TIME}}': vitrine.delivery_time_min.toString(),
       '{{RATING}}': vitrine.average_rating.toString(),
       '{{FEATURE1_EMOJI}}': feature1.emoji || '',
