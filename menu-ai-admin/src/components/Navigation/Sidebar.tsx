@@ -80,6 +80,15 @@ function SidebarContent() {
       description: 'Générateur universel 100% compatible bot'
     },
     {
+      id: 'ocr-onboarding',
+      label: 'OCR Smart Onboarding',
+      icon: '🤖',
+      path: '/ocr-onboarding/upload',
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50',
+      description: 'Création restaurant via OCR - 5 étapes automatisées'
+    },
+    {
       id: 'creer-ia',
       label: 'Créer avec IA',
       icon: '🤖',
