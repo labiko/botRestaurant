@@ -426,26 +426,382 @@
             font-weight: bold;
         }
 
+        /* Container principal des témoignages */
+        .testimonials-container {
+            margin: 15px 0;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Indicateur de typing */
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background: #e9ecef;
+            border-radius: 20px;
+            width: fit-content;
+            animation: slideInFromBottom 0.5s ease;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+        }
+
+        .typing-text {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #999;
+            border-radius: 50%;
+            animation: typingDot 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typingDot {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* Statistiques Live */
+        .testimonials-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: #28a745;
+            border-radius: 50%;
+            position: relative;
+            animation: pulse-live 2s infinite;
+        }
+
+        @keyframes pulse-live {
+            0% {
+                box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+            }
+        }
+
+        .rating-summary {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stars-container {
+            display: flex;
+            gap: 2px;
+        }
+
+        .star {
+            font-size: 16px;
+            opacity: 0.3;
+        }
+
+        .star.filled {
+            opacity: 1;
+            animation: starPop 0.3s ease;
+        }
+
+        .star.half {
+            opacity: 0.6;
+        }
+
+        @keyframes starPop {
+            0% {
+                transform: scale(0);
+            }
+            80% {
+                transform: scale(1.2);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .rating-text {
+            color: #666;
+            font-size: 13px;
+        }
+
+        /* Carousel de témoignages */
         .testimonials {
-            margin: 25px 0;
-            text-align: left;
-            padding: 0 10px;
-            width: 100%;
+            position: relative;
+            min-height: 180px;
+            margin: 15px 0;
         }
 
         .testimonial {
-            background: linear-gradient(135deg, #fffbf0 0%, #fff3cd 100%);
-            border-left: 5px solid {{PRIMARY_COLOR}};
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin: 15px 0;
-            font-style: italic;
+            position: absolute;
+            width: 100%;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.5s ease;
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .testimonial.active {
             opacity: 1;
+            transform: translateX(0);
+            position: relative;
+        }
+
+        .testimonial-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, {{PRIMARY_COLOR}} 0%, {{SECONDARY_COLOR}} 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .verified {
+            color: #1da1f2;
+            font-size: 14px;
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 12px;
+        }
+
+        .rating {
+            font-size: 14px;
+        }
+
+        /* Message bubble */
+        .testimonial-content {
+            margin: 15px 0;
+        }
+
+        .message-bubble {
+            position: relative;
+            background: #f1f3f4;
+            padding: 15px;
+            border-radius: 15px;
             color: #333;
             font-size: 14px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: relative;
-            display: block;
+            line-height: 1.6;
+            animation: messageAppear 0.3s ease;
+        }
+
+        @keyframes messageAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .message-tail {
+            position: absolute;
+            bottom: 0;
+            left: 20px;
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid #f1f3f4;
+            transform: translateY(10px);
+        }
+
+        /* Footer du témoignage */
+        .testimonial-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        .helpful {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .new-badge {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
+            color: white;
+            animation: badgePulse 2s infinite;
+        }
+
+        @keyframes badgePulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .regular {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .order-info {
+            color: #28a745;
+            font-size: 12px;
+        }
+
+        /* Dots de navigation */
+        .testimonial-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: #ddd;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            width: 24px;
+            background: {{PRIMARY_COLOR}};
+            border-radius: 4px;
+        }
+
+        /* Barre de recommandations */
+        .recommendation-bar {
+            margin-top: 10px;
+            padding: 10px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+        }
+
+        .recommendation-text {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .percentage {
+            font-weight: bold;
+            color: {{PRIMARY_COLOR}};
+            font-size: 18px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, {{PRIMARY_COLOR}} 0%, {{ACCENT_COLOR}} 100%);
+            animation: progressFill 2s ease forwards;
+        }
+
+        @keyframes progressFill {
+            to {
+                width: 98%;
+            }
+        }
+
+        @keyframes slideInFromBottom {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .floating-elements {
@@ -888,15 +1244,117 @@
             </div>
         </div>
 
-        <div class="testimonials">
-            <div class="testimonial">
-                "⭐⭐⭐⭐⭐ Livraison ultra rapide ! Pizza encore chaude 🔥" - Marie T.
+        <!-- Section Témoignages Animés -->
+        <div class="testimonials-container">
+            <!-- Indicateur de typing -->
+            <div class="typing-indicator" id="typingIndicator">
+                <span class="typing-text">Un client est en train d'écrire...</span>
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
             </div>
-            <div class="testimonial">
-                "😍 Meilleur burger de la ville ! Je recommande le Big Chef" - Kevin L.
+
+            <!-- Statistiques Live -->
+            <div class="testimonials-stats">
+                <div class="live-indicator">
+                    <span class="pulse-dot"></span>
+                    <span id="viewers-count">8</span> personnes lisent ceci
+                </div>
+                <div class="rating-summary">
+                    <div class="stars-container">
+                        <span class="star filled">⭐</span>
+                        <span class="star filled">⭐</span>
+                        <span class="star filled">⭐</span>
+                        <span class="star filled">⭐</span>
+                        <span class="star half">⭐</span>
+                    </div>
+                    <span class="rating-text">4.8/5 (<span id="review-count">127</span> avis)</span>
+                </div>
             </div>
-            <div class="testimonial">
-                "👌 Service impeccable, très bon rapport qualité-prix" - Sarah M.
+
+            <!-- Carousel de témoignages -->
+            <div class="testimonials">
+                <div class="testimonial active" data-index="0">
+                    <div class="testimonial-header">
+                        <div class="avatar">MT</div>
+                        <div class="user-info">
+                            <div class="user-name">Marie T. <span class="verified">✓</span></div>
+                            <div class="timestamp">Il y a <span class="time-value">2</span> min</div>
+                        </div>
+                        <div class="rating">⭐⭐⭐⭐⭐</div>
+                    </div>
+                    <div class="testimonial-content">
+                        <div class="message-bubble">
+                            Livraison ultra rapide ! Pizza encore chaude 🔥
+                            <div class="message-tail"></div>
+                        </div>
+                    </div>
+                    <div class="testimonial-footer">
+                        <div class="helpful">👍 <span class="helpful-count">23</span> personnes</div>
+                        <div class="badge new-badge">Nouveau</div>
+                    </div>
+                </div>
+
+                <div class="testimonial" data-index="1">
+                    <div class="testimonial-header">
+                        <div class="avatar">KL</div>
+                        <div class="user-info">
+                            <div class="user-name">Kevin L. <span class="verified">✓</span></div>
+                            <div class="timestamp">Il y a <span class="time-value">15</span> min</div>
+                        </div>
+                        <div class="rating">⭐⭐⭐⭐⭐</div>
+                    </div>
+                    <div class="testimonial-content">
+                        <div class="message-bubble">
+                            😍 Meilleur burger de la ville ! Je recommande le Big Chef
+                            <div class="message-tail"></div>
+                        </div>
+                    </div>
+                    <div class="testimonial-footer">
+                        <div class="helpful">👍 <span class="helpful-count">18</span> personnes</div>
+                        <div class="order-info">A commandé 3 fois</div>
+                    </div>
+                </div>
+
+                <div class="testimonial" data-index="2">
+                    <div class="testimonial-header">
+                        <div class="avatar">SM</div>
+                        <div class="user-info">
+                            <div class="user-name">Sarah M. <span class="verified">✓</span></div>
+                            <div class="timestamp">Il y a <span class="time-value">32</span> min</div>
+                        </div>
+                        <div class="rating">⭐⭐⭐⭐⭐</div>
+                    </div>
+                    <div class="testimonial-content">
+                        <div class="message-bubble">
+                            👌 Service impeccable, très bon rapport qualité-prix
+                            <div class="message-tail"></div>
+                        </div>
+                    </div>
+                    <div class="testimonial-footer">
+                        <div class="helpful">👍 <span class="helpful-count">31</span> personnes</div>
+                        <div class="badge regular">Client régulier</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Indicateurs de navigation -->
+            <div class="testimonial-dots">
+                <span class="dot active" data-index="0"></span>
+                <span class="dot" data-index="1"></span>
+                <span class="dot" data-index="2"></span>
+            </div>
+
+            <!-- Barre de progression recommandations -->
+            <div class="recommendation-bar">
+                <div class="recommendation-text">
+                    <span class="percentage">98%</span> recommandent ce restaurant
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
             </div>
         </div>
 
@@ -978,6 +1436,202 @@
 
         // Update stats every 10 seconds
         setInterval(updateStats, 10000);
+
+        // ===== ANIMATIONS DES TÉMOIGNAGES =====
+
+        // Rotation automatique des témoignages
+        let currentTestimonial = 0;
+        const testimonials = document.querySelectorAll('.testimonial');
+        const dots = document.querySelectorAll('.dot');
+        let autoRotateInterval;
+
+        function showTestimonial(index) {
+            testimonials.forEach((testimonial, i) => {
+                testimonial.classList.remove('active');
+                dots[i].classList.remove('active');
+            });
+
+            if (testimonials[index]) {
+                testimonials[index].classList.add('active');
+                dots[index].classList.add('active');
+            }
+        }
+
+        function nextTestimonial() {
+            currentTestimonial = (currentTestimonial + 1) % testimonials.length;
+
+            // Afficher l'indicateur de typing avant le prochain témoignage
+            const typingIndicator = document.getElementById('typingIndicator');
+            typingIndicator.classList.add('active');
+
+            setTimeout(() => {
+                typingIndicator.classList.remove('active');
+                showTestimonial(currentTestimonial);
+
+                // Animer le nouveau badge
+                const newBadge = testimonials[currentTestimonial].querySelector('.new-badge');
+                if (newBadge) {
+                    newBadge.style.animation = 'none';
+                    setTimeout(() => {
+                        newBadge.style.animation = 'badgePulse 2s infinite';
+                    }, 10);
+                }
+            }, 1500);
+        }
+
+        // Démarrer la rotation automatique
+        function startAutoRotate() {
+            autoRotateInterval = setInterval(nextTestimonial, 5000);
+        }
+
+        function stopAutoRotate() {
+            clearInterval(autoRotateInterval);
+        }
+
+        // Gestion des clics sur les dots
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                currentTestimonial = index;
+                showTestimonial(index);
+                stopAutoRotate();
+                startAutoRotate();
+            });
+        });
+
+        // Pause au survol
+        const testimonialsContainer = document.querySelector('.testimonials-container');
+        testimonialsContainer.addEventListener('mouseenter', stopAutoRotate);
+        testimonialsContainer.addEventListener('mouseleave', startAutoRotate);
+
+        // Démarrer la rotation
+        startAutoRotate();
+
+        // ===== ANIMATIONS DES COMPTEURS LIVE =====
+
+        // Compteur de personnes qui lisent
+        function updateViewers() {
+            const viewersCount = document.getElementById('viewers-count');
+            const currentCount = parseInt(viewersCount.textContent);
+            const variation = Math.random() < 0.5 ? -1 : 1;
+            const newCount = Math.max(3, Math.min(15, currentCount + variation));
+            viewersCount.textContent = newCount;
+        }
+
+        setInterval(updateViewers, 8000);
+
+        // Mise à jour des timestamps
+        function updateTimestamps() {
+            const timestamps = document.querySelectorAll('.time-value');
+            timestamps.forEach(timestamp => {
+                const currentValue = parseInt(timestamp.textContent);
+                timestamp.textContent = currentValue + 1;
+            });
+        }
+
+        setInterval(updateTimestamps, 60000); // Toutes les minutes
+
+        // Compteur de reviews
+        function incrementReviews() {
+            const reviewCount = document.getElementById('review-count');
+            const currentCount = parseInt(reviewCount.textContent);
+
+            // Animation du compteur
+            reviewCount.style.transform = 'scale(1.2)';
+            reviewCount.style.color = '{{PRIMARY_COLOR}}';
+
+            setTimeout(() => {
+                reviewCount.textContent = currentCount + 1;
+                reviewCount.style.transform = 'scale(1)';
+                reviewCount.style.color = '#666';
+            }, 300);
+        }
+
+        // Nouveau review toutes les 30-60 secondes
+        function randomNewReview() {
+            const delay = Math.random() * 30000 + 30000; // Entre 30s et 60s
+            setTimeout(() => {
+                incrementReviews();
+                randomNewReview();
+            }, delay);
+        }
+
+        randomNewReview();
+
+        // ===== ANIMATIONS DES LIKES =====
+
+        // Increment likes progressif
+        document.querySelectorAll('.helpful-count').forEach(counter => {
+            const originalCount = parseInt(counter.textContent);
+
+            setInterval(() => {
+                if (Math.random() < 0.1) { // 10% de chance
+                    const currentCount = parseInt(counter.textContent);
+                    counter.textContent = currentCount + 1;
+
+                    // Animation du pouce
+                    const thumb = counter.previousElementSibling;
+                    thumb.style.transform = 'scale(1.3) rotate(10deg)';
+                    setTimeout(() => {
+                        thumb.style.transform = 'scale(1) rotate(0deg)';
+                    }, 300);
+                }
+            }, 15000);
+        });
+
+        // ===== EFFETS VISUELS SUPPLÉMENTAIRES =====
+
+        // Animation des étoiles au chargement
+        document.querySelectorAll('.star.filled').forEach((star, index) => {
+            star.style.animation = `starPop 0.3s ease ${index * 0.1}s`;
+        });
+
+        // Effet de particules sur les 5 étoiles
+        function createStarParticle(element) {
+            const particle = document.createElement('span');
+            particle.innerHTML = '✨';
+            particle.style.cssText = `
+                position: absolute;
+                font-size: 20px;
+                pointer-events: none;
+                animation: floatUp 2s ease-out forwards;
+                left: ${element.offsetLeft}px;
+                top: ${element.offsetTop}px;
+            `;
+
+            element.parentElement.appendChild(particle);
+
+            setTimeout(() => particle.remove(), 2000);
+        }
+
+        // Ajouter l'animation de particules au CSS
+        const particleStyle = document.createElement('style');
+        particleStyle.textContent = `
+            @keyframes floatUp {
+                0% {
+                    opacity: 1;
+                    transform: translateY(0) scale(0);
+                }
+                50% {
+                    opacity: 1;
+                    transform: translateY(-20px) scale(1);
+                }
+                100% {
+                    opacity: 0;
+                    transform: translateY(-40px) scale(0.5);
+                }
+            }
+        `;
+        document.head.appendChild(particleStyle);
+
+        // Déclencher les particules occasionnellement
+        setInterval(() => {
+            const fiveStarRatings = document.querySelectorAll('.rating');
+            fiveStarRatings.forEach(rating => {
+                if (rating.textContent.includes('⭐⭐⭐⭐⭐') && Math.random() < 0.3) {
+                    createStarParticle(rating);
+                }
+            });
+        }, 5000);
 
         // Pause carousel on hover
         document.querySelector('.menu-carousel').addEventListener('mouseenter', function() {
