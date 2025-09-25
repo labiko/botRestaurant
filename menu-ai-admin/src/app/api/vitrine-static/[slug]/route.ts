@@ -32,6 +32,53 @@ export async function GET(
       return new NextResponse('Vitrine non trouvée', { status: 404 });
     }
 
+    // Récupérer les produits populaires avec sélection intelligente
+    const { data: popularProducts, error: productsError } = await supabase
+      .from('france_products')
+      .select(`
+        name,
+        price_on_site_base,
+        product_type,
+        category:france_menu_categories(name, icon, display_order)
+      `)
+      .eq('restaurant_id', vitrine.restaurant_id)
+      .eq('is_active', true)
+      .lt('price_on_site_base', 15) // Prix attractifs < 15€
+      .in('product_type', ['simple', 'composite']) // Produits simples ou composites
+      .order('display_order')
+      .limit(15); // Récupérer plus pour faire une sélection
+
+    // Produits par défaut en cas d'absence de données
+    const defaultProducts = [
+      {name: "Pizza Reine", price_on_site_base: 14, category: {icon: "🍕"}},
+      {name: "Big Chef", price_on_site_base: 12, category: {icon: "🍔"}},
+      {name: "Tacos Viandes", price_on_site_base: 11, category: {icon: "🌮"}},
+      {name: "Buffalo", price_on_site_base: 9, category: {icon: "🥪"}},
+      {name: "Carbonara", price_on_site_base: 8, category: {icon: "🍝"}}
+    ];
+
+    // Sélection intelligente des produits avec mix de catégories
+    let productsToShow = defaultProducts;
+
+    if (popularProducts && popularProducts.length > 0) {
+      // Grouper par catégorie
+      const productsByCategory = popularProducts.reduce((acc, product) => {
+        const categoryName = product.category?.name || 'Autre';
+        if (!acc[categoryName]) acc[categoryName] = [];
+        acc[categoryName].push(product);
+        return acc;
+      }, {} as Record<string, typeof popularProducts>);
+
+      // Sélectionner max 2 produits par catégorie pour diversifier
+      const selectedProducts = [];
+      for (const [categoryName, products] of Object.entries(productsByCategory)) {
+        selectedProducts.push(...products.slice(0, 2));
+        if (selectedProducts.length >= 10) break;
+      }
+
+      productsToShow = selectedProducts.slice(0, 10);
+    }
+
     // Lire le template HTML
     const templatePath = path.join(process.cwd(), 'public', 'vitrine-template.html');
     let template = fs.readFileSync(templatePath, 'utf-8');
@@ -81,7 +128,19 @@ export async function GET(
       '{{ADDRESS}}': vitrine.restaurant.address,
       '{{CITY}}': vitrine.restaurant.city,
       '{{BUSINESS_HOURS}}': formatBusinessHours(vitrine.restaurant.business_hours),
+      '{{MENU_CAROUSEL}}': duplicatedCarouselHTML,
     };
+
+    // Générer le HTML du carousel avec les vrais produits
+    const carouselHTML = productsToShow.map(product => `
+                <div class="menu-item">
+                    <div class="menu-item-emoji">${product.category?.icon || '🍽️'}</div>
+                    <div class="menu-item-name">${product.name}</div>
+                    <div class="menu-item-price">${product.price_on_site_base}€</div>
+                </div>`).join('');
+
+    // Dupliquer les éléments pour un carousel continu
+    const duplicatedCarouselHTML = carouselHTML + carouselHTML;
 
     // Appliquer les remplacements
     for (const [placeholder, value] of Object.entries(replacements)) {
