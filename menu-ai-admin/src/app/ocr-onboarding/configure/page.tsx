@@ -29,11 +29,34 @@ export default function OCRConfigurePage() {
 
   // États pour la validation
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [categoryConfigurations, setCategoryConfigurations] = useState<Record<string, any>>({});
 
   useEffect(() => {
     loadOCRResults();
     loadPizzaYoloTemplate();
+    loadCategoryConfigurations();
   }, []);
+
+  // Effet pour recharger les configurations quand on revient de la config catégorie
+  useEffect(() => {
+    const handleFocus = () => {
+      loadCategoryConfigurations();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  const loadCategoryConfigurations = () => {
+    try {
+      const stored = localStorage.getItem('categoryConfigurations');
+      if (stored) {
+        setCategoryConfigurations(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Erreur chargement configurations catégories:', error);
+    }
+  };
 
   const loadPizzaYoloTemplate = async () => {
     try {
@@ -149,6 +172,18 @@ export default function OCRConfigurePage() {
     } finally {
       setProcessing(false);
     }
+  };
+
+  const handleConfigureCategory = (categoryName: string, categoryProducts: ProductAnalysisResult[]) => {
+    // Sauvegarder le contexte de configuration de catégorie
+    localStorage.setItem('categoryConfigContext', JSON.stringify({
+      categoryName,
+      categoryProducts,
+      returnTo: '/ocr-onboarding/configure'
+    }));
+
+    // Rediriger vers la page de configuration de catégorie
+    router.push('/ocr-onboarding/category-config');
   };
 
   const handleContinueToDatabase = () => {
@@ -281,95 +316,134 @@ export default function OCRConfigurePage() {
       ) : (
         <>
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">🧠 Résultats de l'Analyse IA</h2>
+            <h2 className="text-xl font-semibold mb-4">🍽️ Configuration par Catégorie/Menu</h2>
+            <p className="text-gray-600 mb-6">
+              Configurez le workflow pour chaque catégorie. Tous les produits de la même catégorie utiliseront le même workflow.
+            </p>
 
-            <div className="grid gap-4">
-              {analysisResults.map((result, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="font-semibold text-lg">{result.product.name}</h3>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      result.detectedType === 'simple' ? 'bg-green-100 text-green-800' :
-                      result.detectedType === 'modular' ? 'bg-blue-100 text-blue-800' :
-                      result.detectedType === 'composite' ? 'bg-purple-100 text-purple-800' :
-                      'bg-orange-100 text-orange-800'
-                    }`}>
-                      {result.detectedType.toUpperCase()}
-                    </span>
-                  </div>
+            <div className="space-y-4">
+              {Object.entries(
+                analysisResults.reduce((acc, result) => {
+                  const categoryName = result.categoryMapping.suggestedCategoryName;
+                  if (!acc[categoryName]) {
+                    acc[categoryName] = {
+                      icon: result.categoryMapping.icon,
+                      products: [],
+                      detectedTypes: new Set()
+                    };
+                  }
+                  acc[categoryName].products.push(result);
+                  acc[categoryName].detectedTypes.add(result.detectedType);
+                  return acc;
+                }, {} as Record<string, { icon: string; products: ProductAnalysisResult[]; detectedTypes: Set<string> }>)
+              ).map(([categoryName, categoryData]) => {
+                const dominantType = [...categoryData.detectedTypes].reduce((a, b) =>
+                  categoryData.products.filter(p => p.detectedType === a).length >=
+                  categoryData.products.filter(p => p.detectedType === b).length ? a : b
+                );
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="font-medium text-gray-700">Catégorie suggérée :</p>
-                      <p className="text-gray-900">
-                        {result.categoryMapping.icon} {result.categoryMapping.suggestedCategoryName}
-                        <span className="text-gray-500 ml-1">({Math.round(result.categoryMapping.confidence * 100)}%)</span>
-                      </p>
+                return (
+                  <div key={categoryName} className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{categoryData.icon}</span>
+                        <div>
+                          <h3 className="font-semibold text-lg">{categoryName}</h3>
+                          <p className="text-sm text-gray-600">
+                            {categoryData.products.length} produits • Type dominant: {dominantType.toUpperCase()}
+                          </p>
+                        </div>
+                      </div>
+                      {categoryConfigurations[categoryName] ? (
+                        <div className="flex gap-2">
+                          <span className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium">
+                            ✅ Configuré
+                          </span>
+                          <button
+                            onClick={() => handleConfigureCategory(categoryName, categoryData.products)}
+                            className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700"
+                          >
+                            ✏️ Modifier
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleConfigureCategory(categoryName, categoryData.products)}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                        >
+                          🔧 Configurer le workflow
+                        </button>
+                      )}
                     </div>
 
-                    <div>
-                      <p className="font-medium text-gray-700">Prix :</p>
-                      <p className="text-gray-900">
-                        Sur site: {result.pricingSuggestion.onSitePrice}€<br/>
-                        Livraison: {result.pricingSuggestion.deliveryPrice}€
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="font-medium text-gray-700">Workflow :</p>
-                      <p className="text-gray-900">
-                        {result.workflowSuggestion.steps.length} étapes
-                        <span className="text-gray-500 ml-1">({Math.round(result.workflowSuggestion.confidence * 100)}%)</span>
-                      </p>
+                    {/* Liste des produits dans cette catégorie */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
+                      {categoryData.products.map((result, index) => (
+                        <div key={index} className="bg-white p-2 rounded border">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium text-sm">{result.product.name}</span>
+                            <div className="flex gap-2 text-xs">
+                              <span className="text-green-600">{result.pricingSuggestion.onSitePrice}€</span>
+                              <span className="text-blue-600">{result.pricingSuggestion.deliveryPrice}€</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-
-                  <div className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-600">
-                    <strong>Raisonnement IA :</strong> {result.workflowSuggestion.reasoning}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold mb-4">📊 Résumé de Configuration</h2>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{analysisResults.length}</div>
-                <div className="text-sm text-blue-800">Produits analysés</div>
-              </div>
-              <div className="text-center p-3 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
-                  {analysisResults.filter(r => r.detectedType === 'simple').length}
-                </div>
-                <div className="text-sm text-green-800">Simple</div>
-              </div>
+            <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="text-center p-3 bg-blue-50 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">
-                  {analysisResults.filter(r => r.detectedType === 'modular').length}
+                  {Object.keys(
+                    analysisResults.reduce((acc, result) => {
+                      acc[result.categoryMapping.suggestedCategoryName] = true;
+                      return acc;
+                    }, {} as Record<string, boolean>)
+                  ).length}
                 </div>
-                <div className="text-sm text-blue-800">Modulaire</div>
+                <div className="text-sm text-blue-800">Catégories détectées</div>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{analysisResults.length}</div>
+                <div className="text-sm text-green-800">Produits total</div>
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
-                  {analysisResults.filter(r => r.detectedType === 'composite').length}
-                </div>
-                <div className="text-sm text-purple-800">Composite</div>
+                <div className="text-2xl font-bold text-purple-600">{Object.keys(categoryConfigurations).length}</div>
+                <div className="text-sm text-purple-800">Workflows configurés</div>
               </div>
             </div>
 
-            <div className="bg-green-50 p-3 rounded-lg">
-              <p className="text-sm text-green-800">
-                ✅ <strong>Configuration prête</strong> : Restaurant template Pizza Yolo 77 chargé avec 22 catégories
-              </p>
-            </div>
+            {Object.keys(categoryConfigurations).length === 0 ? (
+              <div className="bg-yellow-50 p-3 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ <strong>Configuration requise</strong> : Configurez le workflow pour chaque catégorie avant de continuer
+                </p>
+              </div>
+            ) : (
+              <div className="bg-green-50 p-3 rounded-lg">
+                <p className="text-sm text-green-800">
+                  ✅ <strong>{Object.keys(categoryConfigurations).length} catégories configurées</strong> : Vous pouvez continuer vers l'intégration
+                </p>
+              </div>
+            )}
           </div>
 
           <button
             onClick={handleContinueToDatabase}
-            className="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700"
+            disabled={Object.keys(categoryConfigurations).length === 0}
+            className={`w-full py-3 px-6 rounded-lg font-medium ${
+              Object.keys(categoryConfigurations).length === 0
+                ? 'bg-gray-400 text-white cursor-not-allowed'
+                : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
           >
             Continuer vers l'Intégration Base de Données
           </button>
