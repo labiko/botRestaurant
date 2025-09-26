@@ -26,15 +26,6 @@ function SidebarContent() {
 
   const navigationItems = [
     {
-      id: 'commands-ia',
-      label: 'Commandes IA',
-      icon: '⚡',
-      path: '/',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      description: 'Interface de commandes intelligentes'
-    },
-    {
       id: 'edition-moderne',
       label: 'Édition Moderne',
       icon: '✨',
@@ -89,15 +80,6 @@ function SidebarContent() {
       description: 'Création restaurant via OCR - 5 étapes automatisées'
     },
     {
-      id: 'creer-ia',
-      label: 'Créer avec IA',
-      icon: '🤖',
-      path: '/?section=creer-ia',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      description: 'Création automatisée par IA'
-    },
-    {
       id: 'suppression',
       label: 'Suppression Restaurant',
       icon: '🗑️',
@@ -118,9 +100,6 @@ function SidebarContent() {
   ];
 
   const isActive = (path: string) => {
-    if (path === '/') {
-      return pathname === '/' && !searchParams.get('mode') && !searchParams.get('section');
-    }
     if (path === '/?mode=modal') {
       return pathname === '/' && searchParams.get('mode') === 'modal';
     }
