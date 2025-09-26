@@ -150,9 +150,18 @@ export class GoogleVisionProvider implements OCRProvider {
   }
 
   private isBurgerName(line: string): boolean {
-    // Patterns identifiés dans le test Google Vision
-    return /^(CHEESEBURGER|BIG CHEESE|LE FISH|LE CHICKEN|LE BACON|LE TOWER|GÉANT|POTATOES)$/.test(line) ||
-           /^[A-Z][A-Z\s]+$/.test(line) && line.length > 2 && line.length < 30;
+    // Mots à ignorer (sections/titres)
+    const ignoredWords = /^(NOS BURGERS|SUR PLACE|LIVRAISON|POTATOES|AVEC FRITES|BOISSON)$/;
+    if (ignoredWords.test(line.trim())) {
+      return false;
+    }
+
+    // Vrais noms de produits burger identifiés
+    const realProducts = /^(CHEESEBURGER|DOUBLE CHEESEBURGER|BIG CHEESE|LE FISH|LE CHICKEN|LE BACON|LE TOWER|GÉANT|180|270)$/;
+
+    return realProducts.test(line.trim()) ||
+           (/^[A-Z][A-Z\s]+$/.test(line) && line.length > 3 && line.length < 20 &&
+            !line.includes('€') && !line.match(/^\d+$/));
   }
 
   private isDescriptionLine(line: string): boolean {
