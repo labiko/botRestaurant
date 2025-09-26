@@ -25,13 +25,6 @@ interface Product {
   workflow_type?: string;
 }
 
-interface BotMessage {
-  productName: string;
-  description: string;
-  price: number;
-  commandNumber: number;
-  missingDeliveryPrice?: boolean;
-}
 
 interface FlyerProduct {
   name: string;
@@ -48,10 +41,9 @@ interface Discrepancy {
   message: string;
 }
 
-interface TripleComparison {
+interface ComparisonResult {
   productId: string;
   database: Product;
-  botMessage?: BotMessage;
   flyerData?: FlyerProduct;
   discrepancies: Discrepancy[];
   suggestedFixes: string[];
@@ -76,16 +68,14 @@ export default function AuditBotFlyer() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [products, setProducts] = useState<Product[]>([]);
 
-  // Zone messages bot
-  const [botMessages, setBotMessages] = useState<string>('');
-  const [parsedBotProducts, setParsedBotProducts] = useState<BotMessage[]>([]);
+  // Messages bot supprimés - Focus sur Base ↔ Flyer uniquement
 
   // Zone flyer upload
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [flyerProducts, setFlyerProducts] = useState<FlyerProduct[]>([]);
 
   // Résultats de comparaison
-  const [comparisonResults, setComparisonResults] = useState<TripleComparison[]>([]);
+  const [comparisonResults, setComparisonResults] = useState<ComparisonResult[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Scripts SQL intégrés
@@ -115,15 +105,6 @@ export default function AuditBotFlyer() {
     }
   }, [selectedRestaurant, selectedCategory]);
 
-  // Parser messages bot quand texte change
-  useEffect(() => {
-    if (botMessages.trim()) {
-      const parsed = parseBotMessages(botMessages);
-      setParsedBotProducts(parsed);
-    } else {
-      setParsedBotProducts([]);
-    }
-  }, [botMessages]);
 
   const loadRestaurants = async () => {
     try {
@@ -173,41 +154,6 @@ export default function AuditBotFlyer() {
     }
   };
 
-  const parseBotMessages = (messages: string): BotMessage[] => {
-    const lines = messages.split('\n').map(line => line.trim()).filter(line => line);
-    const products: BotMessage[] = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.includes('EUR - Tapez')) {
-        const priceMatch = line.match(/(\d+(?:\.\d+)?)\s*EUR/);
-        const commandMatch = line.match(/Tapez (\d+)/);
-
-        if (priceMatch && commandMatch) {
-          const price = parseFloat(priceMatch[1]);
-          const commandNumber = parseInt(commandMatch[1]);
-
-          let productName = '';
-          let description = '';
-
-          if (i >= 2 && lines[i-2] && lines[i-1]) {
-            productName = lines[i-2].replace(/^[🍔🍕🥤🌮🍗🥪🍟]*\s*/, '').trim();
-            description = lines[i-1].trim();
-          }
-
-          products.push({
-            productName,
-            description,
-            price,
-            commandNumber,
-            missingDeliveryPrice: !line.toLowerCase().includes('livraison')
-          });
-        }
-      }
-    }
-
-    return products;
-  };
 
   const similarityScore = (str1: string, str2: string): number => {
     const s1 = str1.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -223,56 +169,8 @@ export default function AuditBotFlyer() {
     return commonWords.length / Math.max(words1.length, words2.length);
   };
 
-  const detectDiscrepancies = (dbProduct: Product, botMessage?: BotMessage, flyerData?: FlyerProduct): Discrepancy[] => {
+  const detectDiscrepancies = (dbProduct: Product, flyerData?: FlyerProduct): Discrepancy[] => {
     const discrepancies: Discrepancy[] = [];
-
-    // Comparaison avec bot (seulement si messages bot fournis)
-    if (parsedBotProducts.length > 0) {
-      if (botMessage) {
-        if (Math.abs(botMessage.price - dbProduct.price_on_site_base) > 0.01) {
-          discrepancies.push({
-            type: 'price_mismatch',
-            field: 'price_on_site',
-            dbValue: dbProduct.price_on_site_base,
-            comparedValue: botMessage.price,
-            message: `Prix différent dans le bot: ${botMessage.price}€ vs ${dbProduct.price_on_site_base}€ en base`
-          });
-        }
-
-        if (botMessage.missingDeliveryPrice) {
-          discrepancies.push({
-            type: 'missing_in_bot',
-            field: 'price_delivery',
-            dbValue: dbProduct.price_delivery_base,
-            comparedValue: null,
-            message: 'Prix livraison manquant dans les messages du bot'
-          });
-        }
-
-        // Comparaison des descriptions/compositions avec le bot
-        if (botMessage.description && dbProduct.composition) {
-          const similarity = similarityScore(botMessage.description.toLowerCase(), dbProduct.composition.toLowerCase());
-          if (similarity < 0.6) {
-            discrepancies.push({
-              type: 'description_mismatch',
-              field: 'composition_bot',
-              dbValue: dbProduct.composition,
-              comparedValue: botMessage.description,
-              message: `Composition différente Bot - BDD: "${dbProduct.composition}" vs Bot: "${botMessage.description}"`
-            });
-          }
-        }
-      } else {
-        // Seulement noter les produits manquants si on a des messages bot à comparer
-        discrepancies.push({
-          type: 'missing_in_bot',
-          field: 'product',
-          dbValue: dbProduct.name,
-          comparedValue: null,
-          message: 'Produit absent des messages du bot'
-        });
-      }
-    }
 
     // Comparaison avec flyer (focus principal)
     if (flyerData) {
@@ -305,8 +203,8 @@ export default function AuditBotFlyer() {
         const similarity = similarityScore(flyerData.description.toLowerCase(), dbProduct.composition.toLowerCase());
         console.log(`   Similarité calculée: ${similarity}`);
 
-        if (similarity < 0.6) { // Seuil de similarité ajustable
-          console.log(`   ❌ Différence détectée ! (seuil: 0.6)`);
+        if (similarity < 0.95) { // Seuil strict pour détecter même les différences subtiles
+          console.log(`   ❌ Différence détectée ! (seuil: 0.95)`);
           discrepancies.push({
             type: 'description_mismatch',
             field: 'composition',
@@ -371,26 +269,22 @@ export default function AuditBotFlyer() {
     return fixes;
   };
 
-  const performTripleComparison = (): TripleComparison[] => {
-    console.log('🔄 Démarrage triple comparaison...');
-    console.log(`📊 Données disponibles: ${products.length} BDD, ${parsedBotProducts.length} Bot, ${flyerProducts.length} Flyer`);
+  const performSimpleComparison = (flyerData: FlyerProduct[] = flyerProducts): ComparisonResult[] => {
+    console.log('🔄 Démarrage comparaison simplifiée Base ↔ Flyer...');
+    console.log(`📊 Données disponibles: ${products.length} BDD, ${flyerData.length} Flyer`);
 
     return products.map(dbProduct => {
       console.log(`\n🔍 === ANALYSE ${dbProduct.name} ===`);
 
-      const botMatch = parsedBotProducts.find(bot =>
-        similarityScore(bot.productName, dbProduct.name) > 0.6
-      );
-
-      const flyerMatch = flyerProducts.find(flyer => {
+      const flyerMatch = flyerData.find(flyer => {
         const score = similarityScore(flyer.name, dbProduct.name);
         console.log(`   Flyer "${flyer.name}" vs BDD "${dbProduct.name}" = ${score}`);
         return score > 0.6;
       });
 
-      console.log(`   🎯 Match trouvé - Bot: ${botMatch ? 'OUI' : 'NON'}, Flyer: ${flyerMatch ? 'OUI (' + flyerMatch.name + ')' : 'NON'}`);
+      console.log(`   🎯 Match trouvé - Flyer: ${flyerMatch ? 'OUI (' + flyerMatch.name + ')' : 'NON'}`);
 
-      const discrepancies = detectDiscrepancies(dbProduct, botMatch, flyerMatch);
+      const discrepancies = detectDiscrepancies(dbProduct, flyerMatch);
       const suggestedFixes = generateSQLFixes(dbProduct, discrepancies);
 
       console.log(`   📋 Résultat: ${discrepancies.length} incohérence(s) détectée(s)`);
@@ -398,7 +292,7 @@ export default function AuditBotFlyer() {
       return {
         productId: dbProduct.id,
         database: dbProduct,
-        botMessage: botMatch,
+        botMessage: undefined, // Plus de logique bot
         flyerData: flyerMatch,
         discrepancies,
         suggestedFixes,
@@ -489,12 +383,11 @@ export default function AuditBotFlyer() {
       return;
     }
 
-    // Vérification : au moins une source de comparaison doit être fournie
-    const hasBotMessages = botMessages.trim().length > 0;
+    // Vérification : au moins une image de flyer doit être fournie
     const hasFlyerImages = uploadedImages.length > 0;
 
-    if (!hasBotMessages && !hasFlyerImages) {
-      alert('⚠️ Veuillez fournir au moins une source de comparaison :\n• Messages du bot (copier-coller)\n• Images de flyers (upload)');
+    if (!hasFlyerImages) {
+      alert('⚠️ Veuillez uploader au moins une image de flyer pour la comparaison');
       return;
     }
 
@@ -549,18 +442,17 @@ export default function AuditBotFlyer() {
       }
 
       // Vérifier qu'on a au moins des données à comparer
-      const botProductsCount = parsedBotProducts.length;
       const flyerProductsCount = extractedProducts.length;
 
-      console.log(`📊 Comparaison: ${products.length} produits BDD vs ${botProductsCount} bot vs ${flyerProductsCount} flyer`);
+      console.log(`📊 Comparaison: ${products.length} produits BDD vs ${flyerProductsCount} flyer`);
 
-      if (botProductsCount === 0 && flyerProductsCount === 0) {
-        alert('❌ Aucun produit détecté dans vos sources de comparaison.\n\n• Vérifiez le format des messages bot\n• Vérifiez que les images de flyers contiennent du texte lisible');
+      if (flyerProductsCount === 0) {
+        alert('❌ Aucun produit détecté dans les flyers.\n\n• Vérifiez que les images contiennent du texte lisible');
         return;
       }
 
       // Effectuer la comparaison avec les données disponibles
-      const results = performTripleComparison();
+      const results = performSimpleComparison(extractedProducts);
       setComparisonResults(results);
 
       // Générer et sauvegarder le script SQL si des corrections sont nécessaires
@@ -580,7 +472,7 @@ export default function AuditBotFlyer() {
     }
   };
 
-  const generateAndSaveScript = async (results: TripleComparison[]) => {
+  const generateAndSaveScript = async (results: ComparisonResult[]) => {
     const allFixes = results
       .filter(result => result.suggestedFixes.length > 0)
       .flatMap(result => result.suggestedFixes);
@@ -694,7 +586,7 @@ COMMIT;`;
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">🔍 Audit Bot vs Flyer</h1>
-          <p className="text-gray-600">Vérification intelligente catégorie par catégorie avec triple comparaison automatique</p>
+          <p className="text-gray-600">Vérification intelligente catégorie par catégorie avec comparaison Base ↔ Flyer</p>
         </div>
       </div>
 
@@ -739,9 +631,9 @@ COMMIT;`;
         </div>
       </div>
 
-      {/* Section 2: Zone Triple Comparaison */}
+      {/* Section 2: Zone Comparaison */}
       {selectedCategory && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Colonne 1: Base de Données */}
           <div className="bg-white rounded-lg shadow">
             <div className="px-6 py-4 border-b border-gray-200">
@@ -770,46 +662,7 @@ COMMIT;`;
             </div>
           </div>
 
-          {/* Colonne 2: Messages Bot */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium flex items-center gap-2">
-                📱 Messages Bot ({parsedBotProducts.length})
-              </h3>
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                <textarea
-                  placeholder="Collez ici les messages du bot...
-
-Exemple:
-🍔 CHEESEBURGER
-STEAK 45G, FROMAGE, CORNICHONS
-5 EUR - Tapez 1"
-                  value={botMessages}
-                  onChange={(e) => setBotMessages(e.target.value)}
-                  className="w-full h-32 p-3 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {parsedBotProducts.map((botProduct, index) => (
-                    <div key={index} className="p-2 bg-blue-50 border border-blue-200 rounded">
-                      <div className="text-sm font-medium">{botProduct.productName}</div>
-                      <div className="text-xs text-gray-600">{botProduct.description}</div>
-                      <div className="text-xs">
-                        {botProduct.price}€ - Cmd #{botProduct.commandNumber}
-                        {botProduct.missingDeliveryPrice && (
-                          <span className="text-red-500 ml-2">⚠️ Prix livraison manquant</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Colonne 3: Flyer OCR */}
+          {/* Colonne 2: Flyer OCR */}
           <div className="bg-white rounded-lg shadow">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium flex items-center gap-2">
@@ -880,11 +733,7 @@ STEAK 45G, FROMAGE, CORNICHONS
           <div className="text-center">
             <div className="mb-4">
               <p className="text-sm text-gray-600">
-                {botMessages.trim() ? (
-                  `✅ Triple comparaison : Base de données ↔ Messages Bot ↔ Flyer (${parsedBotProducts.length} produits bot détectés)`
-                ) : (
-                  `📊 Comparaison focus : Base de données ↔ Flyer analysé (Messages bot facultatifs)`
-                )}
+`📊 Comparaison : Base de données ↔ Flyer analysé`
               </p>
               {uploadedImages.length > 0 && (
                 <p className="text-xs text-blue-600 mt-1">
@@ -895,7 +744,7 @@ STEAK 45G, FROMAGE, CORNICHONS
 
             <button
               onClick={analyzeComparison}
-              disabled={isAnalyzing || !products.length || (!botMessages.trim() && !uploadedImages.length)}
+              disabled={isAnalyzing || !products.length || !uploadedImages.length}
               className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
               {isAnalyzing ? (
@@ -909,12 +758,8 @@ STEAK 45G, FROMAGE, CORNICHONS
             </button>
 
             <p className="text-xs text-gray-500 mt-3">
-              {!botMessages.trim() && !uploadedImages.length
-                ? "⚠️ Veuillez fournir au moins une source de comparaison : messages bot OU images de flyers"
-                : botMessages.trim() && uploadedImages.length > 0
-                ? `✅ Prêt pour triple comparaison : Base ↔ Bot (${parsedBotProducts.length}) ↔ Flyer (${uploadedImages.length} images)`
-                : botMessages.trim()
-                ? `✅ Prêt pour comparaison : Base ↔ Bot (${parsedBotProducts.length} produits détectés)`
+              {!uploadedImages.length
+                ? "⚠️ Veuillez uploader au moins une image de flyer pour la comparaison"
                 : `✅ Prêt pour comparaison : Base ↔ Flyer (${uploadedImages.length} images à analyser)`
               }
             </p>
@@ -929,11 +774,8 @@ STEAK 45G, FROMAGE, CORNICHONS
             <h3 className="text-lg font-medium flex items-center gap-2">
               🔍 Résultats de Comparaison
               <div className="flex gap-2 ml-4">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                  ✅ Base ↔ Bot: {comparisonResults.filter(r => !r.discrepancies.some(d => d.message.includes('bot'))).length}/{comparisonResults.length}
-                </span>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                  ✅ Base ↔ Flyer: {comparisonResults.filter(r => !r.discrepancies.some(d => d.message.includes('flyer'))).length}/{comparisonResults.length}
+                  ✅ Base ↔ Flyer: {comparisonResults.filter(r => r.discrepancies.length === 0).length}/{comparisonResults.length}
                 </span>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
                   🚨 {comparisonResults.filter(r => r.discrepancies.length > 0).length} corrections nécessaires
