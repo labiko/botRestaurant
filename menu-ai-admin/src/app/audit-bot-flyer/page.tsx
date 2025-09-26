@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Upload, FileImage, CheckCircle, AlertTriangle, Copy, Play, TestTube } from 'lucide-react';
+// import WorkflowSqlHistory from '@/components/WorkflowSqlHistory'; // Commented out for now
 
 interface Restaurant {
   id: string;
@@ -50,16 +51,6 @@ interface ComparisonResult {
   status: 'match' | 'mismatch' | 'missing';
 }
 
-interface Script {
-  id: number;
-  script_sql: string;
-  command_source: string;
-  ai_explanation: string;
-  category_name: string;
-  dev_status: string;
-  prod_status: string;
-  created_at: string;
-}
 
 export default function AuditBotFlyer() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -78,13 +69,24 @@ export default function AuditBotFlyer() {
   const [comparisonResults, setComparisonResults] = useState<ComparisonResult[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Scripts SQL intégrés
-  const [scripts, setScripts] = useState<Script[]>([]);
+
+  // Callback pour refresh des scripts depuis WorkflowSqlHistory
+  const handleScriptsRefresh = () => {
+    loadScriptsHistory();
+  };
+
+  // États pour l'édition in-line
+  const [editingProduct, setEditingProduct] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<{
+    name: string;
+    composition: string;
+    price_onsite: number;
+    price_delivery: number;
+  }>({ name: '', composition: '', price_onsite: 0, price_delivery: 0 });
 
   // Charger restaurants
   useEffect(() => {
     loadRestaurants();
-    loadScriptsHistory();
   }, []);
 
   // Charger catégories quand restaurant sélectionné
@@ -143,15 +145,7 @@ export default function AuditBotFlyer() {
   };
 
   const loadScriptsHistory = async () => {
-    try {
-      const response = await fetch('/api/scripts-history');
-      const data = await response.json();
-      if (data.success) {
-        setScripts(data.scripts || []);
-      }
-    } catch (error) {
-      console.error('Erreur chargement historique:', error);
-    }
+    // Fonction conservée pour compatibilité mais utilisation via WorkflowSqlHistory
   };
 
 
@@ -521,35 +515,7 @@ COMMIT;`;
     }
   };
 
-  const executeScript = async (scriptId: number, environment: 'DEV' | 'PROD') => {
-    try {
-      const response = await fetch('/api/execute-script', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scriptId, environment })
-      });
 
-      const result = await response.json();
-      if (result.success) {
-        loadScriptsHistory();
-      }
-    } catch (error) {
-      console.error('Erreur exécution script:', error);
-    }
-  };
-
-  const copyScript = async (script: string) => {
-    try {
-      await navigator.clipboard.writeText(script);
-    } catch (error) {
-      const textArea = document.createElement('textarea');
-      textArea.value = script;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-    }
-  };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -570,6 +536,119 @@ COMMIT;`;
     }
   };
 
+  // Fonctions d'édition in-line
+  const startEditing = (product: any) => {
+    setEditingProduct(product.id);
+    setEditValues({
+      name: product.name,
+      composition: product.composition || product.description || '',
+      price_onsite: product.price_on_site_base,
+      price_delivery: product.price_delivery_base
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingProduct(null);
+    setEditValues({ name: '', composition: '', price_onsite: 0, price_delivery: 0 });
+  };
+
+  const saveEdit = async (productId: string) => {
+    try {
+      console.log('🔄 Sauvegarde édition produit:', productId, editValues);
+
+      // Appel API pour sauvegarder les modifications
+      const response = await fetch('/api/products/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId,
+          updates: editValues
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Mettre à jour la liste locale
+        setProducts(prev => prev.map(p =>
+          p.id === productId
+            ? { ...p, ...editValues, composition: editValues.composition }
+            : p
+        ));
+
+        // Générer et sauvegarder le script SQL automatiquement
+        const updateSQL = generateUpdateSQL(productId, editValues);
+        if (updateSQL) {
+          await saveGeneratedScript(updateSQL, editValues.name, `Mise à jour manuelle via audit`);
+        }
+
+        alert('✅ Produit mis à jour avec succès');
+        cancelEditing();
+
+        // Relancer la comparaison pour mettre à jour les incohérences
+        if (flyerProducts.length > 0) {
+          const results = performSimpleComparison(flyerProducts);
+          setComparisonResults(results);
+        }
+      } else {
+        alert('❌ Erreur lors de la sauvegarde: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde édition:', error);
+      alert('❌ Erreur de communication lors de la sauvegarde');
+    }
+  };
+
+  const generateUpdateSQL = (productId: string, updates: any) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return '';
+
+    const updateFields = [];
+    const changes = [];
+
+    if (updates.name !== product.name) {
+      updateFields.push(`name = '${updates.name.replace(/'/g, "''")}'`);
+      changes.push(`name: "${product.name}" → "${updates.name}"`);
+    }
+
+    if (updates.composition !== (product.composition || product.description)) {
+      updateFields.push(`composition = '${updates.composition.replace(/'/g, "''")}'`);
+      changes.push(`composition: "${product.composition || product.description}" → "${updates.composition}"`);
+    }
+
+    if (updates.price_onsite !== product.price_on_site_base) {
+      updateFields.push(`price_on_site_base = ${updates.price_onsite}`);
+      changes.push(`prix sur place: ${product.price_on_site_base}€ → ${updates.price_onsite}€`);
+    }
+
+    if (updates.price_delivery !== product.price_delivery_base) {
+      updateFields.push(`price_delivery_base = ${updates.price_delivery}`);
+      changes.push(`prix livraison: ${product.price_delivery_base}€ → ${updates.price_delivery}€`);
+    }
+
+    if (updateFields.length === 0) return '';
+
+    return `-- Mise à jour produit "${updates.name}" (ID: ${productId})
+-- Modifications: ${changes.join(', ')}
+-- Généré automatiquement depuis Audit Bot vs Flyer
+
+BEGIN;
+
+UPDATE france_products
+SET ${updateFields.join(',\n    ')},
+    updated_at = NOW()
+WHERE id = ${productId}
+  AND restaurant_id = (SELECT id FROM france_restaurants WHERE slug = '${selectedRestaurant?.slug}');
+
+-- Vérification
+SELECT
+    id, name, composition, price_on_site_base, price_delivery_base, updated_at
+FROM france_products
+WHERE id = ${productId};
+
+COMMIT;`;
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'match': return <CheckCircle className="w-4 h-4" />;
@@ -579,7 +658,34 @@ COMMIT;`;
     }
   };
 
-  const auditScripts = scripts.filter(s => s.command_source?.includes('audit-bot-flyer'));
+
+  // Fonction pour ajouter un script à l'historique depuis l'édition inline
+  const saveGeneratedScript = async (scriptSQL: string, productName: string, explanation: string) => {
+    const restaurant = restaurants.find(r => r.id === selectedRestaurant);
+    const category = categories.find(c => c.id === selectedCategory);
+
+    if (!restaurant || !category) return;
+
+    try {
+      const response = await fetch('/api/scripts-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          script_sql: scriptSQL,
+          command_source: `audit-bot-flyer: ${restaurant.name} - ${productName}`,
+          ai_explanation: explanation,
+          category_name: category.name
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        loadScriptsHistory();
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde script:', error);
+    }
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -643,21 +749,105 @@ COMMIT;`;
             </div>
             <div className="p-6">
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {products.map(product => (
-                  <div key={product.id} className="p-3 border rounded-lg">
-                    <h4 className="font-medium">🍔 {product.name}</h4>
-                    <p className="text-sm text-gray-600 mb-2">{product.description}</p>
-                    {product.composition && (
-                      <p className="text-xs text-blue-600 mb-2">
-                        <span className="font-medium">Composition:</span> {product.composition}
-                      </p>
-                    )}
-                    <div className="text-xs space-y-1">
-                      <div>Prix sur place: <span className="font-medium">{product.price_on_site_base}€</span></div>
-                      <div>Prix livraison: <span className="font-medium">{product.price_delivery_base}€</span></div>
+                {products.map(product => {
+                  const isEditing = editingProduct === product.id;
+                  const hasInconsistencies = comparisonResults.find(r => r.productId === product.id && r.discrepancies.length > 0);
+
+                  return (
+                    <div key={product.id} className={`p-3 border rounded-lg ${hasInconsistencies ? 'border-red-200 bg-red-50' : 'border-gray-200'}`}>
+                      <div className="flex items-start justify-between mb-2">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editValues.name}
+                            onChange={(e) => setEditValues(prev => ({ ...prev, name: e.target.value }))}
+                            className="text-sm font-medium border border-gray-300 rounded px-2 py-1 w-full mr-2"
+                          />
+                        ) : (
+                          <h4 className="font-medium">🍔 {product.name}</h4>
+                        )}
+
+                        {!isEditing && (
+                          <button
+                            onClick={() => startEditing(product)}
+                            className="text-blue-600 hover:text-blue-800 ml-2"
+                            title="Éditer ce produit"
+                          >
+                            ✏️
+                          </button>
+                        )}
+                      </div>
+
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-xs font-medium text-gray-600">Composition:</label>
+                            <textarea
+                              value={editValues.composition}
+                              onChange={(e) => setEditValues(prev => ({ ...prev, composition: e.target.value }))}
+                              className="w-full text-xs border border-gray-300 rounded px-2 py-1 mt-1"
+                              rows={2}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs font-medium text-gray-600">Prix sur place:</label>
+                              <input
+                                type="number"
+                                step="0.5"
+                                value={editValues.price_onsite}
+                                onChange={(e) => setEditValues(prev => ({ ...prev, price_onsite: parseFloat(e.target.value) || 0 }))}
+                                className="w-full text-xs border border-gray-300 rounded px-2 py-1 mt-1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-gray-600">Prix livraison:</label>
+                              <input
+                                type="number"
+                                step="0.5"
+                                value={editValues.price_delivery}
+                                onChange={(e) => setEditValues(prev => ({ ...prev, price_delivery: parseFloat(e.target.value) || 0 }))}
+                                className="w-full text-xs border border-gray-300 rounded px-2 py-1 mt-1"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-2 pt-2">
+                            <button
+                              onClick={() => saveEdit(product.id)}
+                              className="flex-1 bg-green-600 text-white text-xs py-1 px-2 rounded hover:bg-green-700"
+                            >
+                              ✅ Sauvegarder
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              className="flex-1 bg-gray-400 text-white text-xs py-1 px-2 rounded hover:bg-gray-500"
+                            >
+                              ❌ Annuler
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm text-gray-600 mb-2">{product.description}</p>
+                          {product.composition && (
+                            <p className="text-xs text-blue-600 mb-2">
+                              <span className="font-medium">Composition:</span> {product.composition}
+                            </p>
+                          )}
+                          <div className="text-xs space-y-1">
+                            <div>Prix sur place: <span className="font-medium">{product.price_on_site_base}€</span></div>
+                            <div>Prix livraison: <span className="font-medium">{product.price_delivery_base}€</span></div>
+                          </div>
+                          {hasInconsistencies && (
+                            <div className="mt-2 text-xs text-red-600">
+                              <span className="font-medium">⚠️ {hasInconsistencies.discrepancies.length} incohérence(s) détectée(s)</span>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -815,65 +1005,25 @@ COMMIT;`;
         </div>
       )}
 
-      {/* Section 4: Système SQL Intégré */}
-      {auditScripts.length > 0 && (
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium flex items-center gap-2">
-              🛠️ Scripts SQL Générés ({auditScripts.length})
-            </h3>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {auditScripts.map((script) => (
-                <div key={script.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="font-medium">{script.command_source}</h4>
-                      <p className="text-sm text-gray-600">{script.ai_explanation}</p>
-                      <p className="text-xs text-gray-500">Créé le: {new Date(script.created_at).toLocaleString('fr-FR')}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${script.dev_status === 'executed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-800 border border-gray-200'}`}>
-                        DEV: {script.dev_status}
-                      </span>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${script.prod_status === 'executed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-800 border border-gray-200'}`}>
-                        PROD: {script.prod_status}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={() => executeScript(script.id, 'DEV')}
-                      disabled={script.dev_status === 'executed'}
-                      className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <TestTube className="w-4 h-4 mr-1" />
-                      Exécuter DEV
-                    </button>
-                    <button
-                      onClick={() => executeScript(script.id, 'PROD')}
-                      disabled={script.dev_status !== 'executed' || script.prod_status === 'executed'}
-                      className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Play className="w-4 h-4 mr-1" />
-                      Exécuter PROD
-                    </button>
-                    <button
-                      onClick={() => copyScript(script.script_sql)}
-                      className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                      <Copy className="w-4 h-4 mr-1" />
-                      Copier Script
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* Section 4: Système SQL Intégré - Version simplifiée pour l'instant */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium flex items-center gap-2">
+            🛠️ Scripts SQL - Audit Bot vs Flyer
+          </h3>
+          <p className="text-sm text-gray-600 mt-2">
+            Les scripts SQL générés par l'audit et l'édition inline apparaîtront ici.
+            Ils s'exécutent par défaut en DEV avec un bouton PROD pour la production.
+          </p>
+        </div>
+        <div className="p-6">
+          <div className="text-center py-8 text-gray-500">
+            📝 Scripts SQL en cours de développement...
+            <br />
+            <span className="text-sm">L'intégration avec le système WorkflowSqlHistory est en cours.</span>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
