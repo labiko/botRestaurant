@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Upload, FileImage, CheckCircle, AlertTriangle, Copy, Play, TestTube } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -680,15 +679,15 @@ COMMIT;`;
             <CardTitle className="flex items-center gap-2">
               🔍 Résultats de Comparaison
               <div className="flex gap-2 ml-4">
-                <Badge variant="outline" className="bg-green-50 text-green-700">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
                   ✅ Base ↔ Bot: {comparisonResults.filter(r => !r.discrepancies.some(d => d.message.includes('bot'))).length}/{comparisonResults.length}
-                </Badge>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
                   ✅ Base ↔ Flyer: {comparisonResults.filter(r => !r.discrepancies.some(d => d.message.includes('flyer'))).length}/{comparisonResults.length}
-                </Badge>
-                <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
                   🚨 {comparisonResults.filter(r => r.discrepancies.length > 0).length} corrections nécessaires
-                </Badge>
+                </span>
               </div>
             </CardTitle>
           </CardHeader>
@@ -701,10 +700,10 @@ COMMIT;`;
                       <h4 className="font-medium">{result.database.name}</h4>
                       <p className="text-sm text-gray-600">{result.database.description}</p>
                     </div>
-                    <Badge className={`${getStatusColor(result.status)} flex items-center gap-1`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium gap-1 ${getStatusColor(result.status)}`}>
                       {getStatusIcon(result.status)}
                       {result.status === 'match' ? 'Conforme' : 'Incohérences'}
-                    </Badge>
+                    </span>
                   </div>
 
                   {result.discrepancies.length > 0 && (
@@ -743,12 +742,12 @@ COMMIT;`;
                       <p className="text-xs text-gray-500">Créé le: {new Date(script.created_at).toLocaleString('fr-FR')}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Badge variant={script.dev_status === 'executed' ? 'default' : 'outline'}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${script.dev_status === 'executed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-800 border border-gray-200'}`}>
                         DEV: {script.dev_status}
-                      </Badge>
-                      <Badge variant={script.prod_status === 'executed' ? 'default' : 'outline'}>
+                      </span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${script.prod_status === 'executed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-800 border border-gray-200'}`}>
                         PROD: {script.prod_status}
-                      </Badge>
+                      </span>
                     </div>
                   </div>
 
