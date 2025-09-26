@@ -397,7 +397,7 @@ export default function AuditBotFlyer() {
           try {
             const formData = new FormData();
             formData.append('image', imageFile);
-            formData.append('provider', 'openai'); // Utiliser OpenAI par défaut
+            formData.append('provider', 'google'); // Utiliser Google Cloud Vision (testé et fonctionnel)
 
             const response = await fetch('/api/ocr/extract', {
               method: 'POST',
