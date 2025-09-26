@@ -197,8 +197,8 @@ export default function AuditBotFlyer() {
         const similarity = similarityScore(flyerData.description.toLowerCase(), dbProduct.composition.toLowerCase());
         console.log(`   Similarité calculée: ${similarity}`);
 
-        if (similarity < 0.95) { // Seuil strict pour détecter même les différences subtiles
-          console.log(`   ❌ Différence détectée ! (seuil: 0.95)`);
+        if (similarity < 0.85) { // Seuil ajusté pour éviter les faux positifs sur variations mineures (œuf/oeuf, cornichons/comichons)
+          console.log(`   ❌ Différence détectée ! (seuil: 0.85)`);
           discrepancies.push({
             type: 'description_mismatch',
             field: 'composition',
@@ -397,7 +397,7 @@ export default function AuditBotFlyer() {
           try {
             const formData = new FormData();
             formData.append('image', imageFile);
-            formData.append('provider', 'google'); // Utiliser Google Cloud Vision (testé et fonctionnel)
+            formData.append('provider', 'openai'); // OpenAI fonctionne mieux pour la structuration des données
 
             const response = await fetch('/api/ocr/extract', {
               method: 'POST',
