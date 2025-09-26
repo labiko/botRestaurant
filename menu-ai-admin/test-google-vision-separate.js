@@ -69,6 +69,13 @@ async function testGoogleVisionSeparate() {
 
 async function compareWithOpenAI(imagePath) {
   try {
+    // Vérifier la clé OpenAI
+    if (!process.env.OPENAI_API_KEY) {
+      console.log('⚠️ OPENAI_API_KEY manquante - Comparaison OpenAI ignorée');
+      console.log('💡 Définissez OPENAI_API_KEY pour activer la comparaison');
+      return;
+    }
+
     const OpenAI = require('openai');
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY

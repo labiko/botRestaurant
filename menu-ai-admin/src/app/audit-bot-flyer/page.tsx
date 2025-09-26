@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Upload, FileImage, CheckCircle, AlertTriangle, Copy, Play, TestTube } from 'lucide-react';
-// import WorkflowSqlHistory from '@/components/WorkflowSqlHistory'; // Commented out for now
+import WorkflowSqlHistory from '@/components/WorkflowSqlHistory';
 
 interface Restaurant {
   id: string;
@@ -509,6 +509,17 @@ COMMIT;`;
       const data = await response.json();
       if (data.success) {
         loadScriptsHistory();
+
+        // Émettre l'événement pour mettre à jour le composant WorkflowSqlHistory
+        window.dispatchEvent(new CustomEvent('workflow-script-updated', {
+          detail: {
+            scriptId: data.scriptId,
+            source: 'audit-bot-flyer',
+            productId: null // Pas de productId spécifique dans ce contexte
+          }
+        }));
+
+        console.log('✅ Script SQL sauvegardé et événement émis');
       }
     } catch (error) {
       console.error('Erreur sauvegarde script:', error);
@@ -681,6 +692,17 @@ COMMIT;`;
       const data = await response.json();
       if (data.success) {
         loadScriptsHistory();
+
+        // Émettre l'événement pour mettre à jour le composant WorkflowSqlHistory
+        window.dispatchEvent(new CustomEvent('workflow-script-updated', {
+          detail: {
+            scriptId: data.scriptId,
+            source: 'audit-bot-flyer',
+            productId: null // Pas de productId spécifique dans ce contexte
+          }
+        }));
+
+        console.log('✅ Script SQL sauvegardé et événement émis');
       }
     } catch (error) {
       console.error('Erreur sauvegarde script:', error);
@@ -1017,11 +1039,10 @@ COMMIT;`;
           </p>
         </div>
         <div className="p-6">
-          <div className="text-center py-8 text-gray-500">
-            📝 Scripts SQL en cours de développement...
-            <br />
-            <span className="text-sm">L'intégration avec le système WorkflowSqlHistory est en cours.</span>
-          </div>
+          <WorkflowSqlHistory
+            filterBySource="audit-bot-flyer"
+            onScriptsRefresh={handleScriptsRefresh}
+          />
         </div>
       </div>
     </div>
