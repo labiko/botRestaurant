@@ -96,6 +96,15 @@ function SidebarContent() {
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
       description: 'Activer/Désactiver restaurants'
+    },
+    {
+      id: 'audit-bot-flyer',
+      label: 'Audit Bot vs Flyer',
+      icon: '🔍',
+      path: '/audit-bot-flyer',
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+      description: 'Vérification intelligente catégorie par catégorie'
     }
   ];
 
