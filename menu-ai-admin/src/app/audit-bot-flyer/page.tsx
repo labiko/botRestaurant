@@ -19,8 +19,9 @@ interface Product {
   id: string;
   name: string;
   description: string;
-  price_on_site: number;
-  price_delivery: number;
+  price_on_site_base: number;
+  price_delivery_base: number;
+  composition?: string;
   workflow_type?: string;
 }
 
@@ -227,13 +228,13 @@ export default function AuditBotFlyer() {
 
     // Comparaison avec bot
     if (botMessage) {
-      if (Math.abs(botMessage.price - dbProduct.price_on_site) > 0.01) {
+      if (Math.abs(botMessage.price - dbProduct.price_on_site_base) > 0.01) {
         discrepancies.push({
           type: 'price_mismatch',
           field: 'price_on_site',
-          dbValue: dbProduct.price_on_site,
+          dbValue: dbProduct.price_on_site_base,
           comparedValue: botMessage.price,
-          message: `Prix différent dans le bot: ${botMessage.price}€ vs ${dbProduct.price_on_site}€ en base`
+          message: `Prix différent dans le bot: ${botMessage.price}€ vs ${dbProduct.price_on_site_base}€ en base`
         });
       }
 
@@ -241,7 +242,7 @@ export default function AuditBotFlyer() {
         discrepancies.push({
           type: 'missing_in_bot',
           field: 'price_delivery',
-          dbValue: dbProduct.price_delivery,
+          dbValue: dbProduct.price_delivery_base,
           comparedValue: null,
           message: 'Prix livraison manquant dans les messages du bot'
         });
@@ -257,13 +258,13 @@ export default function AuditBotFlyer() {
     }
 
     // Comparaison avec flyer
-    if (flyerData && flyerData.priceOnSite && Math.abs(flyerData.priceOnSite - dbProduct.price_on_site) > 0.01) {
+    if (flyerData && flyerData.priceOnSite && Math.abs(flyerData.priceOnSite - dbProduct.price_on_site_base) > 0.01) {
       discrepancies.push({
         type: 'price_mismatch',
         field: 'price_on_site_flyer',
-        dbValue: dbProduct.price_on_site,
+        dbValue: dbProduct.price_on_site_base,
         comparedValue: flyerData.priceOnSite,
-        message: `Prix sur place différent dans le flyer: ${flyerData.priceOnSite}€ vs ${dbProduct.price_on_site}€ en base`
+        message: `Prix sur place différent dans le flyer: ${flyerData.priceOnSite}€ vs ${dbProduct.price_on_site_base}€ en base`
       });
     }
 
@@ -332,8 +333,8 @@ export default function AuditBotFlyer() {
         const mockFlyerProducts: FlyerProduct[] = products.map(p => ({
           name: p.name,
           description: p.description,
-          priceOnSite: p.price_on_site + (Math.random() > 0.7 ? 0.5 : 0),
-          priceDelivery: p.price_delivery
+          priceOnSite: p.price_on_site_base + (Math.random() > 0.7 ? 0.5 : 0),
+          priceDelivery: p.price_delivery_base
         }));
         setFlyerProducts(mockFlyerProducts);
       }
@@ -376,7 +377,7 @@ export default function AuditBotFlyer() {
 ${allFixes.join('\n')}
 
 -- Vérification des modifications
-SELECT p.name, p.price_delivery, p.price_on_site, p.description
+SELECT p.name, p.price_delivery_base, p.price_on_site_base, p.description, p.composition
 FROM france_products p
 WHERE p.restaurant_id = '${selectedRestaurant}'
   AND p.category_id = '${selectedCategory}';
@@ -530,9 +531,14 @@ COMMIT;`;
                   <div key={product.id} className="p-3 border rounded-lg">
                     <h4 className="font-medium">🍔 {product.name}</h4>
                     <p className="text-sm text-gray-600 mb-2">{product.description}</p>
+                    {product.composition && (
+                      <p className="text-xs text-blue-600 mb-2">
+                        <span className="font-medium">Composition:</span> {product.composition}
+                      </p>
+                    )}
                     <div className="text-xs space-y-1">
-                      <div>Prix sur place: <span className="font-medium">{product.price_on_site}€</span></div>
-                      <div>Prix livraison: <span className="font-medium">{product.price_delivery}€</span></div>
+                      <div>Prix sur place: <span className="font-medium">{product.price_on_site_base}€</span></div>
+                      <div>Prix livraison: <span className="font-medium">{product.price_delivery_base}€</span></div>
                     </div>
                   </div>
                 ))}
