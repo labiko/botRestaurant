@@ -25,6 +25,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   currentDriver: FranceUser | null = null;
   availableOrders: DeliveryOrder[] = [];
   isLoading = false;
+
   
   // Compteurs partagés pour les badges
   currentCounters: DeliveryCounters = {
@@ -596,11 +597,8 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
    * NOUVEAU - Formater les items avec le service universel (même format que restaurant)
    */
   getFormattedItems(order: DeliveryOrder): FormattedItem[] {
-    
     const items = this.deliveryOrderItemsService.getOrderItems(order);
-    
     const formattedItems = this.universalOrderDisplayService.formatOrderItems(items || []);
-    
     return formattedItems;
   }
 

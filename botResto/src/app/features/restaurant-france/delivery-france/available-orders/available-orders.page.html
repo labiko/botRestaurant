@@ -137,7 +137,7 @@
           <div class="detail-section" *ngIf="orderHasItems[order.id]">
             <div class="detail-label">📦 Articles commandés:</div>
             <div class="order-items">
-              <div *ngFor="let formattedItem of orderFormattedItems[order.id]" class="item-card">
+              <div *ngFor="let formattedItem of orderFormattedItems[order.id]; let i = index" class="item-card">
                 
                 <!-- En-tête de l'article - FORMAT EXACT restaurant -->
                 <div class="item-header">
@@ -181,6 +181,13 @@
                 <div class="item-additional" *ngIf="formattedItem.additionalItems && formattedItem.additionalItems.length > 0">
                   <div *ngFor="let additionalItem of formattedItem.additionalItems" class="additional-info">
                     <span class="additional-text">{{ additionalItem }}</span>
+                  </div>
+                </div>
+
+                <!-- Pizzas détaillées du menu (nouveau) -->
+                <div class="item-pizza-details" *ngIf="formattedItem.expandedItems && formattedItem.expandedItems.length > 0">
+                  <div *ngFor="let pizzaItem of formattedItem.expandedItems" class="pizza-sub-item">
+                    <span class="pizza-item-text">{{ pizzaItem }}</span>
                   </div>
                 </div>
 

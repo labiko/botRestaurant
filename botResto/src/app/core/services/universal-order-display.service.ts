@@ -16,6 +16,7 @@ export interface FormattedItem {
   inlineConfiguration: string[];
   additionalItems?: string[];
   description?: string;
+  expandedItems?: string[]; // Nouveau champ pour les pizzas détaillées du menu
 }
 
 export interface ConfigurationLine {
@@ -41,6 +42,9 @@ export class UniversalOrderDisplayService {
     }
 
     return items.map(item => {
+      // Extension NonRégressive : Expansion des menu_pizza
+      const expandedItems = this.expandMenuPizza(item);
+
       return {
         productName: this.getProductName(item),
         quantity: item.quantity || 1,
@@ -50,9 +54,28 @@ export class UniversalOrderDisplayService {
         formattedConfiguration: this.formatConfiguration(item.configuration),
         inlineConfiguration: this.formatInlineConfiguration(item.configuration),
         additionalItems: this.formatAdditionalItems(item),
-        description: item.productDescription || item.description
+        description: item.productDescription || item.description,
+        expandedItems: expandedItems // Nouveau champ pour les pizzas détaillées
       };
     });
+  }
+
+  /**
+   * Expansion spécialisée des menus pizza
+   * Gère type:"menu_pizza" avec details.pizzas
+   */
+  private expandMenuPizza(item: any): string[] {
+    // Vérifier si c'est un menu_pizza avec détails
+    if (item.type === 'menu_pizza' && item.details?.pizzas && Array.isArray(item.details.pizzas)) {
+      return item.details.pizzas.map((pizza: any) => {
+        const name = pizza.name || 'Pizza';
+        const size = pizza.size ? ` (${pizza.size})` : '';
+        return `${name}${size}`;
+      });
+    }
+
+    // Retourner tableau vide pour les autres types
+    return [];
   }
 
   /**

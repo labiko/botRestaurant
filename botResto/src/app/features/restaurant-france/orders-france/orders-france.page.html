@@ -195,6 +195,13 @@
               </div>
             </div>
 
+            <!-- Pizzas détaillées du menu (nouveau) -->
+            <div class="item-pizza-details" *ngIf="formattedItem.expandedItems && formattedItem.expandedItems.length > 0">
+              <div *ngFor="let pizzaItem of formattedItem.expandedItems" class="pizza-sub-item">
+                <span class="pizza-item-text">{{ pizzaItem }}</span>
+              </div>
+            </div>
+
             <!-- Description complète si présente -->
             <div class="item-description" *ngIf="formattedItem.description" class="item-description">
               <small class="text-muted">{{ formattedItem.description }}</small>
