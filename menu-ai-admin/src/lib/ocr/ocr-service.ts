@@ -1,7 +1,7 @@
 // src/lib/ocr/ocr-service.ts
 import { OCRProvider, OCRResult } from './interfaces/ocr-provider.interface';
 import { OpenAIProvider } from './providers/openai-provider';
-import { GoogleVisionProvider } from './providers/google-vision-provider';
+// Google Vision provider supprimé - tests séparés uniquement
 
 export class OCRService {
   private providers: Map<string, OCRProvider> = new Map();
@@ -14,13 +14,12 @@ export class OCRService {
 
   private registerProviders() {
     this.providers.set('openai', new OpenAIProvider());
-    this.providers.set('google', new GoogleVisionProvider());
+    // Google Vision supprimé - tests séparés dans script dédié
     // this.providers.set('azure', new AzureCognitiveProvider()); // Future
   }
 
   private detectBestProvider(): string {
-    // Priorité : Google Vision > OpenAI pour la fiabilité OCR
-    if (this.providers.get('google')?.isConfigured()) return 'google';
+    // OpenAI uniquement - simplicité et fiabilité
     if (this.providers.get('openai')?.isConfigured()) return 'openai';
     // if (this.providers.get('azure')?.isConfigured()) return 'azure';
 
