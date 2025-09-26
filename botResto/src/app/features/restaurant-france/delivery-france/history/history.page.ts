@@ -191,9 +191,10 @@ export class HistoryPage implements OnInit, OnDestroy {
    */
   private computeOrderData(): void {
     this.historyOrders.forEach(order => {
-      this.orderItemsCounts[order.id] = this.deliveryOrderItemsService.getOrderItems(order).reduce((total, item) => total + (item.quantity || 1), 0);
-      this.orderHasItems[order.id] = this.deliveryOrderItemsService.hasOrderItems(order);
-      this.orderFormattedItems[order.id] = this.getFormattedItems(order);
+      const formattedItems = this.getFormattedItems(order);
+      this.orderItemsCounts[order.id] = formattedItems.reduce((total, item) => total + (item.quantity || 1), 0);
+      this.orderHasItems[order.id] = formattedItems.length > 0;
+      this.orderFormattedItems[order.id] = formattedItems;
     });
   }
 
@@ -275,10 +276,30 @@ export class HistoryPage implements OnInit, OnDestroy {
 
   /**
    * NOUVEAU - Formater les items avec le service universel (même format que restaurant)
+   * CORRECTION : Convertir object → array pour cohérence avec UniversalOrderDisplayService
    */
   getFormattedItems(order: DeliveryOrder): FormattedItem[] {
-    const items = this.deliveryOrderItemsService.getOrderItems(order);
-    return this.universalOrderDisplayService.formatOrderItems(items || []);
+    console.log('🍕 [History DEBUG] order.items:', order.items);
+    console.log('🍕 [History DEBUG] order.items type:', typeof order.items);
+
+    // CORRECTION : Convertir object → array si nécessaire (même fix que available-orders)
+    let itemsArray: any[] = [];
+    if (order.items && typeof order.items === 'object') {
+      if (Array.isArray(order.items)) {
+        itemsArray = order.items;
+      } else {
+        // Conversion object {0: {...}, 1: {...}} → array [{...}, {...}]
+        itemsArray = Object.values(order.items);
+      }
+    }
+
+    console.log('🍕 [History DEBUG] itemsArray après conversion:', itemsArray);
+
+    // Utiliser UniversalOrderDisplayService directement comme côté restaurant
+    const formattedItems = this.universalOrderDisplayService.formatOrderItems(itemsArray || []);
+    console.log('🍕 [History DEBUG] formattedItems result:', formattedItems);
+
+    return formattedItems;
   }
 
   hasSelectedOptions(selectedOptions: any): boolean {

@@ -186,6 +186,14 @@
                   </div>
                   <span class="item-price">{{ formatPrice(formattedItem.totalPrice) }}</span>
                 </div>
+
+                <!-- Pizzas détaillées du menu (nouveau) -->
+                <div class="item-pizza-details" *ngIf="formattedItem.expandedItems && formattedItem.expandedItems.length > 0">
+                  <div *ngFor="let pizzaItem of formattedItem.expandedItems" class="pizza-sub-item">
+                    <span class="pizza-item-text">{{ pizzaItem }}</span>
+                  </div>
+                </div>
+
                 <div class="item-inline-config" *ngIf="formattedItem.inlineConfiguration && formattedItem.inlineConfiguration.length > 0">
                   <div class="inline-composition-list">
                     <ion-chip 
