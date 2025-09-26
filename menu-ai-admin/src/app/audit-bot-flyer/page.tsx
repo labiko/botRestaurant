@@ -69,6 +69,27 @@ export default function AuditBotFlyer() {
   const [comparisonResults, setComparisonResults] = useState<ComparisonResult[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  // Mode debug
+  const [debugMode, setDebugMode] = useState(false);
+
+  // États pour les notifications
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error' | 'info' | 'warning';
+    message: string;
+    details?: string;
+  } | null>(null);
+
+  // Auto-masquage des notifications
+  useEffect(() => {
+    if (notification && notification.type !== 'info') {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000); // 5 secondes
+
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
 
   // Callback pour refresh des scripts depuis WorkflowSqlHistory
   const handleScriptsRefresh = () => {
@@ -371,26 +392,58 @@ export default function AuditBotFlyer() {
     return products;
   };
 
+  // Fonction pour générer des données flyer fictives en mode debug
+  const generateDebugFlyerData = (): FlyerProduct[] => {
+    return products.map((product, index) => {
+      // Créer quelques variations pour simuler des incohérences
+      const hasDiscrepancy = index % 3 === 0; // 1 produit sur 3 aura une incohérence
+
+      return {
+        name: product.name,
+        description: hasDiscrepancy
+          ? product.composition?.replace('fromage', 'cheddar') || product.description
+          : product.composition || product.description,
+        priceOnSite: hasDiscrepancy
+          ? product.price_on_site_base + 0.5 // Prix légèrement différent
+          : product.price_on_site_base,
+        priceDelivery: hasDiscrepancy
+          ? product.price_delivery_base + 0.5
+          : product.price_delivery_base
+      };
+    });
+  };
+
   const analyzeComparison = async () => {
     if (!products.length) {
       alert('Aucun produit trouvé pour cette catégorie');
       return;
     }
 
-    // Vérification : au moins une image de flyer doit être fournie
-    const hasFlyerImages = uploadedImages.length > 0;
+    // Mode debug : skip la vérification d'images
+    if (!debugMode) {
+      // Vérification : au moins une image de flyer doit être fournie
+      const hasFlyerImages = uploadedImages.length > 0;
 
-    if (!hasFlyerImages) {
-      alert('⚠️ Veuillez uploader au moins une image de flyer pour la comparaison');
-      return;
+      if (!hasFlyerImages) {
+        alert('⚠️ Veuillez uploader au moins une image de flyer pour la comparaison');
+        return;
+      }
     }
 
     setIsAnalyzing(true);
 
     try {
-      // Analyser les images uploadées via l'API OCR réelle
+      // Mode debug : utiliser des données fictives
       let extractedProducts: FlyerProduct[] = [];
-      if (uploadedImages.length > 0) {
+
+      if (debugMode) {
+        console.log('🐛 MODE DEBUG : Génération de données flyer fictives...');
+        extractedProducts = generateDebugFlyerData();
+        setFlyerProducts(extractedProducts);
+        console.log(`🎯 Mode debug : ${extractedProducts.length} produits flyer générés`);
+      }
+      // Mode normal : analyser les images uploadées via l'API OCR réelle
+      else if (uploadedImages.length > 0) {
         console.log(`🔍 Analyse OCR de ${uploadedImages.length} image(s)...`);
 
         for (const imageFile of uploadedImages) {
@@ -565,7 +618,8 @@ COMMIT;`;
 
   const saveEdit = async (productId: string) => {
     try {
-      console.log('🔄 Sauvegarde édition produit:', productId, editValues);
+      console.log('🔄 Début sauvegarde édition produit:', productId);
+      console.log('📝 Valeurs à sauvegarder:', editValues);
 
       // Appel API pour sauvegarder les modifications
       const response = await fetch('/api/products/update', {
@@ -577,67 +631,121 @@ COMMIT;`;
         })
       });
 
+      console.log('🌐 Réponse API status:', response.status);
+
+      if (!response.ok) {
+        console.error('❌ Réponse API non-OK:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('❌ Détails erreur:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
       const data = await response.json();
+      console.log('📊 Données reçues de l\'API:', data);
 
       if (data.success) {
-        // Mettre à jour la liste locale
-        setProducts(prev => prev.map(p =>
-          p.id === productId
-            ? { ...p, ...editValues, composition: editValues.composition }
-            : p
-        ));
+        // ✅ SAUVEGARDER les valeurs originales AVANT mise à jour pour le script SQL
+        const originalProduct = products.find(p => p.id === productId);
+        console.log('📋 Produit original avant mise à jour:', originalProduct);
 
-        // Générer et sauvegarder le script SQL automatiquement
-        const updateSQL = generateUpdateSQL(productId, editValues);
-        if (updateSQL) {
-          await saveGeneratedScript(updateSQL, editValues.name, `Mise à jour manuelle via audit`);
+        // ✅ RECHARGER les produits depuis la base de données pour avoir les vraies données
+        console.log('🔄 Rechargement des produits depuis la base de données...');
+        if (selectedRestaurant && selectedCategory) {
+          await loadProducts(selectedRestaurant, selectedCategory);
+          console.log('✅ Produits rechargés depuis la base');
         }
 
-        alert('✅ Produit mis à jour avec succès');
+        // Générer et sauvegarder le script SQL automatiquement avec les valeurs originales
+        console.log('🛠️ Génération du script SQL...');
+        const updateSQL = generateUpdateSQLWithOriginal(productId, editValues, originalProduct);
+        console.log('📄 Script SQL généré:', updateSQL ? 'OUI' : 'NON');
+        if (updateSQL) {
+          console.log('💾 Sauvegarde du script...');
+          await saveGeneratedScript(updateSQL, editValues.name, `Mise à jour manuelle via audit`);
+          console.log('✅ Script sauvegardé');
+        } else {
+          console.log('⚠️ Aucun script généré - aucun changement détecté ?');
+        }
+
+        // ✅ CORRECTION : Notification au lieu d'alerte
+        setNotification({
+          type: 'success',
+          message: 'Produit mis à jour avec succès',
+          details: `${editValues.name} a été modifié et le script SQL a été généré`
+        });
+
         cancelEditing();
 
-        // Relancer la comparaison pour mettre à jour les incohérences
+        // Relancer la comparaison pour mettre à jour les incohérences APRÈS rechargement des données
         if (flyerProducts.length > 0) {
-          const results = performSimpleComparison(flyerProducts);
-          setComparisonResults(results);
+          console.log('🔄 Relancement de la comparaison après rechargement des données...');
+          // Petit délai pour s'assurer que loadProducts a terminé
+          setTimeout(() => {
+            const results = performSimpleComparison(flyerProducts);
+            setComparisonResults(results);
+            console.log('✅ Comparaison mise à jour avec les nouvelles données de la base');
+          }, 500);
         }
       } else {
-        alert('❌ Erreur lors de la sauvegarde: ' + data.error);
+        // ✅ CORRECTION : Notification d'erreur
+        setNotification({
+          type: 'error',
+          message: 'Erreur lors de la sauvegarde',
+          details: data.error
+        });
       }
     } catch (error) {
       console.error('Erreur sauvegarde édition:', error);
-      alert('❌ Erreur de communication lors de la sauvegarde');
+      // ✅ CORRECTION : Notification d'erreur réseau
+      setNotification({
+        type: 'error',
+        message: 'Erreur de communication',
+        details: 'Impossible de contacter le serveur. Vérifiez votre connexion.'
+      });
     }
   };
 
-  const generateUpdateSQL = (productId: string, updates: any) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return '';
+  const generateUpdateSQLWithOriginal = (productId: string, updates: any, originalProduct: any) => {
+    if (!originalProduct) {
+      console.log('❌ Produit original non trouvé pour ID:', productId);
+      return '';
+    }
 
     const updateFields = [];
     const changes = [];
 
-    if (updates.name !== product.name) {
+    console.log('🔍 Comparaison des valeurs:');
+    console.log('  Nom:', updates.name, 'vs', originalProduct.name);
+    console.log('  Composition:', updates.composition, 'vs', (originalProduct.composition || originalProduct.description));
+    console.log('  Prix sur place:', updates.price_onsite, 'vs', originalProduct.price_on_site_base);
+    console.log('  Prix livraison:', updates.price_delivery, 'vs', originalProduct.price_delivery_base);
+
+    if (updates.name !== originalProduct.name) {
       updateFields.push(`name = '${updates.name.replace(/'/g, "''")}'`);
-      changes.push(`name: "${product.name}" → "${updates.name}"`);
+      changes.push(`name: "${originalProduct.name}" → "${updates.name}"`);
     }
 
-    if (updates.composition !== (product.composition || product.description)) {
+    if (updates.composition !== (originalProduct.composition || originalProduct.description)) {
       updateFields.push(`composition = '${updates.composition.replace(/'/g, "''")}'`);
-      changes.push(`composition: "${product.composition || product.description}" → "${updates.composition}"`);
+      changes.push(`composition: "${originalProduct.composition || originalProduct.description}" → "${updates.composition}"`);
     }
 
-    if (updates.price_onsite !== product.price_on_site_base) {
+    if (updates.price_onsite !== originalProduct.price_on_site_base) {
       updateFields.push(`price_on_site_base = ${updates.price_onsite}`);
-      changes.push(`prix sur place: ${product.price_on_site_base}€ → ${updates.price_onsite}€`);
+      changes.push(`prix sur place: ${originalProduct.price_on_site_base}€ → ${updates.price_onsite}€`);
     }
 
-    if (updates.price_delivery !== product.price_delivery_base) {
+    if (updates.price_delivery !== originalProduct.price_delivery_base) {
       updateFields.push(`price_delivery_base = ${updates.price_delivery}`);
-      changes.push(`prix livraison: ${product.price_delivery_base}€ → ${updates.price_delivery}€`);
+      changes.push(`prix livraison: ${originalProduct.price_delivery_base}€ → ${updates.price_delivery}€`);
     }
 
-    if (updateFields.length === 0) return '';
+    console.log('📊 Changements détectés:', changes.length);
+
+    if (updateFields.length === 0) {
+      console.log('⚠️ Aucun changement détecté - script non généré');
+      return '';
+    }
 
     return `-- Mise à jour produit "${updates.name}" (ID: ${productId})
 -- Modifications: ${changes.join(', ')}
@@ -716,6 +824,24 @@ COMMIT;`;
           <h1 className="text-3xl font-bold text-gray-900">🔍 Audit Bot vs Flyer</h1>
           <p className="text-gray-600">Vérification intelligente catégorie par catégorie avec comparaison Base ↔ Flyer</p>
         </div>
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={debugMode}
+              onChange={(e) => setDebugMode(e.target.checked)}
+              className="rounded"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              🐛 Mode Debug
+            </span>
+          </label>
+          {debugMode && (
+            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+              Données fictives - sans appels IA
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Section 1: Sélection Restaurant et Catégorie */}
@@ -772,100 +898,25 @@ COMMIT;`;
             <div className="p-6">
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {products.map(product => {
-                  const isEditing = editingProduct === product.id;
                   const hasInconsistencies = comparisonResults.find(r => r.productId === product.id && r.discrepancies.length > 0);
 
                   return (
                     <div key={product.id} className={`p-3 border rounded-lg ${hasInconsistencies ? 'border-red-200 bg-red-50' : 'border-gray-200'}`}>
-                      <div className="flex items-start justify-between mb-2">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editValues.name}
-                            onChange={(e) => setEditValues(prev => ({ ...prev, name: e.target.value }))}
-                            className="text-sm font-medium border border-gray-300 rounded px-2 py-1 w-full mr-2"
-                          />
-                        ) : (
-                          <h4 className="font-medium">🍔 {product.name}</h4>
-                        )}
-
-                        {!isEditing && (
-                          <button
-                            onClick={() => startEditing(product)}
-                            className="text-blue-600 hover:text-blue-800 ml-2"
-                            title="Éditer ce produit"
-                          >
-                            ✏️
-                          </button>
-                        )}
+                      <h4 className="font-medium mb-2">🍔 {product.name}</h4>
+                      <p className="text-sm text-gray-600 mb-2">{product.description}</p>
+                      {product.composition && (
+                        <p className="text-xs text-blue-600 mb-2">
+                          <span className="font-medium">Composition:</span> {product.composition}
+                        </p>
+                      )}
+                      <div className="text-xs space-y-1">
+                        <div>Prix sur place: <span className="font-medium">{product.price_on_site_base}€</span></div>
+                        <div>Prix livraison: <span className="font-medium">{product.price_delivery_base}€</span></div>
                       </div>
-
-                      {isEditing ? (
-                        <div className="space-y-2">
-                          <div>
-                            <label className="text-xs font-medium text-gray-600">Composition:</label>
-                            <textarea
-                              value={editValues.composition}
-                              onChange={(e) => setEditValues(prev => ({ ...prev, composition: e.target.value }))}
-                              className="w-full text-xs border border-gray-300 rounded px-2 py-1 mt-1"
-                              rows={2}
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="text-xs font-medium text-gray-600">Prix sur place:</label>
-                              <input
-                                type="number"
-                                step="0.5"
-                                value={editValues.price_onsite}
-                                onChange={(e) => setEditValues(prev => ({ ...prev, price_onsite: parseFloat(e.target.value) || 0 }))}
-                                className="w-full text-xs border border-gray-300 rounded px-2 py-1 mt-1"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs font-medium text-gray-600">Prix livraison:</label>
-                              <input
-                                type="number"
-                                step="0.5"
-                                value={editValues.price_delivery}
-                                onChange={(e) => setEditValues(prev => ({ ...prev, price_delivery: parseFloat(e.target.value) || 0 }))}
-                                className="w-full text-xs border border-gray-300 rounded px-2 py-1 mt-1"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex gap-2 pt-2">
-                            <button
-                              onClick={() => saveEdit(product.id)}
-                              className="flex-1 bg-green-600 text-white text-xs py-1 px-2 rounded hover:bg-green-700"
-                            >
-                              ✅ Sauvegarder
-                            </button>
-                            <button
-                              onClick={cancelEditing}
-                              className="flex-1 bg-gray-400 text-white text-xs py-1 px-2 rounded hover:bg-gray-500"
-                            >
-                              ❌ Annuler
-                            </button>
-                          </div>
+                      {hasInconsistencies && (
+                        <div className="mt-2 text-xs text-red-600">
+                          <span className="font-medium">⚠️ {hasInconsistencies.discrepancies.length} incohérence(s) détectée(s)</span>
                         </div>
-                      ) : (
-                        <>
-                          <p className="text-sm text-gray-600 mb-2">{product.description}</p>
-                          {product.composition && (
-                            <p className="text-xs text-blue-600 mb-2">
-                              <span className="font-medium">Composition:</span> {product.composition}
-                            </p>
-                          )}
-                          <div className="text-xs space-y-1">
-                            <div>Prix sur place: <span className="font-medium">{product.price_on_site_base}€</span></div>
-                            <div>Prix livraison: <span className="font-medium">{product.price_delivery_base}€</span></div>
-                          </div>
-                          {hasInconsistencies && (
-                            <div className="mt-2 text-xs text-red-600">
-                              <span className="font-medium">⚠️ {hasInconsistencies.discrepancies.length} incohérence(s) détectée(s)</span>
-                            </div>
-                          )}
-                        </>
                       )}
                     </div>
                   );
@@ -956,23 +1007,25 @@ COMMIT;`;
 
             <button
               onClick={analyzeComparison}
-              disabled={isAnalyzing || !products.length || !uploadedImages.length}
+              disabled={isAnalyzing || !products.length || (!debugMode && !uploadedImages.length)}
               className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
               {isAnalyzing ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Analyse en cours...
+                  {debugMode ? 'Génération debug...' : 'Analyse en cours...'}
                 </div>
               ) : (
-                '🔍 Analyser et Comparer'
+                debugMode ? '🐛 Analyser (Mode Debug)' : '🔍 Analyser et Comparer'
               )}
             </button>
 
             <p className="text-xs text-gray-500 mt-3">
-              {!uploadedImages.length
-                ? "⚠️ Veuillez uploader au moins une image de flyer pour la comparaison"
-                : `✅ Prêt pour comparaison : Base ↔ Flyer (${uploadedImages.length} images à analyser)`
+              {debugMode
+                ? "🐛 Mode Debug actif : génération automatique de données fictives pour tester l'interface"
+                : !uploadedImages.length
+                  ? "⚠️ Veuillez uploader au moins une image de flyer pour la comparaison"
+                  : `✅ Prêt pour comparaison : Base ↔ Flyer (${uploadedImages.length} images à analyser)`
               }
             </p>
           </div>
@@ -997,31 +1050,147 @@ COMMIT;`;
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {comparisonResults.map((result, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="font-medium">{result.database.name}</h4>
-                      <p className="text-sm text-gray-600">{result.database.composition || result.database.description}</p>
-                    </div>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium gap-1 ${getStatusColor(result.status)}`}>
-                      {getStatusIcon(result.status)}
-                      {result.status === 'match' ? 'Conforme' : 'Incohérences'}
-                    </span>
-                  </div>
+              {comparisonResults.map((result, index) => {
+                const isEditing = editingProduct === result.productId;
+                const hasInconsistencies = result.discrepancies.length > 0;
 
-                  {result.discrepancies.length > 0 && (
-                    <div className="space-y-2">
-                      <h5 className="text-sm font-medium text-red-700">Incohérences détectées:</h5>
-                      <ul className="list-disc list-inside text-sm text-red-600 space-y-1">
-                        {result.discrepancies.map((disc, i) => (
-                          <li key={i}>{disc.message}</li>
-                        ))}
-                      </ul>
+                return (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-xs font-medium text-gray-600">Nom du produit:</label>
+                              <input
+                                type="text"
+                                value={editValues.name}
+                                onChange={(e) => setEditValues(prev => ({ ...prev, name: e.target.value }))}
+                                className="w-full text-sm font-medium border border-gray-300 rounded px-2 py-1 mt-1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-gray-600">Composition:</label>
+                              <textarea
+                                value={editValues.composition}
+                                onChange={(e) => setEditValues(prev => ({ ...prev, composition: e.target.value }))}
+                                className="w-full text-sm border border-gray-300 rounded px-2 py-1 mt-1"
+                                rows={3}
+                                placeholder="Description complète du produit..."
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="text-xs font-medium text-gray-600">Prix sur place (€):</label>
+                                <input
+                                  type="number"
+                                  step="0.5"
+                                  value={editValues.price_onsite}
+                                  onChange={(e) => setEditValues(prev => ({ ...prev, price_onsite: parseFloat(e.target.value) || 0 }))}
+                                  className="w-full text-sm border border-gray-300 rounded px-2 py-1 mt-1"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-gray-600">Prix livraison (€):</label>
+                                <input
+                                  type="number"
+                                  step="0.5"
+                                  value={editValues.price_delivery}
+                                  onChange={(e) => setEditValues(prev => ({ ...prev, price_delivery: parseFloat(e.target.value) || 0 }))}
+                                  className="w-full text-sm border border-gray-300 rounded px-2 py-1 mt-1"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Suggestions du flyer */}
+                            {result.flyerData && (
+                              <div className="bg-orange-50 border border-orange-200 rounded p-2">
+                                <h6 className="text-xs font-medium text-orange-700 mb-1">💡 Données détectées dans le flyer:</h6>
+                                <div className="text-xs text-orange-600 space-y-1">
+                                  <div><strong>Nom:</strong> {result.flyerData.name}</div>
+                                  {result.flyerData.description && <div><strong>Description:</strong> {result.flyerData.description}</div>}
+                                  <div className="flex gap-4">
+                                    {result.flyerData.priceOnSite && <span><strong>Sur place:</strong> {result.flyerData.priceOnSite}€</span>}
+                                    {result.flyerData.priceDelivery && <span><strong>Livraison:</strong> {result.flyerData.priceDelivery}€</span>}
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      setEditValues({
+                                        name: result.flyerData?.name || editValues.name,
+                                        composition: result.flyerData?.description || editValues.composition,
+                                        price_onsite: result.flyerData?.priceOnSite || editValues.price_onsite,
+                                        price_delivery: result.flyerData?.priceDelivery || editValues.price_delivery
+                                      });
+                                    }}
+                                    className="mt-1 text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-2 py-1 rounded"
+                                  >
+                                    🔄 Utiliser ces données
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex gap-2 pt-2">
+                              <button
+                                onClick={() => {
+                                  console.log('🔘 Bouton sauvegarder cliqué !');
+                                  console.log('📋 ProductId:', result.productId);
+                                  console.log('📋 EditValues:', editValues);
+                                  saveEdit(result.productId);
+                                }}
+                                className="bg-green-600 text-white text-sm py-2 px-4 rounded hover:bg-green-700"
+                              >
+                                ✅ Sauvegarder les corrections
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                className="bg-gray-400 text-white text-sm py-2 px-4 rounded hover:bg-gray-500"
+                              >
+                                ❌ Annuler
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <h4 className="font-medium">{result.database.name}</h4>
+                            <p className="text-sm text-gray-600">{result.database.composition || result.database.description}</p>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Sur place: {result.database.price_on_site_base}€ • Livraison: {result.database.price_delivery_base}€
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 ml-4">
+                        {!isEditing && (
+                          <button
+                            onClick={() => startEditing(result.database)}
+                            className="text-blue-600 hover:text-blue-800 p-1"
+                            title={hasInconsistencies ? "Corriger les incohérences" : "Éditer ce produit"}
+                          >
+                            ✏️
+                          </button>
+                        )}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium gap-1 ${getStatusColor(result.status)}`}>
+                          {getStatusIcon(result.status)}
+                          {result.status === 'match' ? 'Conforme' : 'Incohérences'}
+                        </span>
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {!isEditing && result.discrepancies.length > 0 && (
+                      <div className="space-y-2">
+                        <h5 className="text-sm font-medium text-red-700">Incohérences détectées:</h5>
+                        <ul className="list-disc list-inside text-sm text-red-600 space-y-1">
+                          {result.discrepancies.map((disc, i) => (
+                            <li key={i}>{disc.message}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1045,6 +1214,31 @@ COMMIT;`;
           />
         </div>
       </div>
+
+      {/* Composant de notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 max-w-md p-4 rounded-lg shadow-lg z-50 ${
+          notification.type === 'success' ? 'bg-green-100 border border-green-400 text-green-800' :
+          notification.type === 'error' ? 'bg-red-100 border border-red-400 text-red-800' :
+          notification.type === 'warning' ? 'bg-yellow-100 border border-yellow-400 text-yellow-800' :
+          'bg-blue-100 border border-blue-400 text-blue-800'
+        }`}>
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <div className="font-medium">{notification.message}</div>
+              {notification.details && (
+                <div className="text-sm mt-1 opacity-90">{notification.details}</div>
+              )}
+            </div>
+            <button
+              onClick={() => setNotification(null)}
+              className="ml-3 text-lg leading-none opacity-70 hover:opacity-100"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

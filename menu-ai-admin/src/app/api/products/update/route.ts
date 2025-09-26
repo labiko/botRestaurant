@@ -8,9 +8,14 @@ const supabase = createClient(
 
 export async function POST(request: Request) {
   try {
+    console.log('🔄 [API] Début mise à jour produit...');
+
     const { productId, updates } = await request.json();
+    console.log('📝 [API] productId reçu:', productId);
+    console.log('📝 [API] updates reçu:', updates);
 
     if (!productId || !updates) {
+      console.error('❌ [API] Champs manquants:', { productId, updates });
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -37,7 +42,10 @@ export async function POST(request: Request) {
       updateData.price_delivery_base = parseFloat(updates.price_delivery.toString());
     }
 
+    console.log('🗃️ [API] Données préparées pour mise à jour:', updateData);
+
     // Mettre à jour le produit dans la base de données
+    console.log('📡 [API] Exécution requête Supabase...');
     const { data, error } = await supabase
       .from('france_products')
       .update(updateData)
@@ -46,14 +54,14 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error('Erreur Supabase lors de la mise à jour:', error);
+      console.error('❌ [API] Erreur Supabase lors de la mise à jour:', error);
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
       );
     }
 
-    console.log('✅ Produit mis à jour avec succès:', data);
+    console.log('✅ [API] Produit mis à jour avec succès:', data);
 
     return NextResponse.json({
       success: true,

@@ -80,36 +80,43 @@ export class OpenAIProvider implements OCRProvider {
 
   private getPrompt(): string {
     return `
-    Analyse cette image de menu restaurant avec GRANDE ATTENTION et extrais TOUTES les informations.
+    Tu es un expert en extraction de menus restaurant. Analyse cette image et extrais UNIQUEMENT ce qui est RÉELLEMENT visible.
 
-    INSTRUCTIONS CRITIQUES:
-    1. COMPTE d'abord le nombre EXACT de produits visibles sur l'image
-    2. Extrais TOUS les produits - vérifie 2 FOIS pour n'en manquer AUCUN
-    3. Pour les prix, regarde ATTENTIVEMENT:
-       - Prix SUR PLACE (généralement à gauche ou en haut)
-       - Prix LIVRAISON (généralement à droite ou en bas)
-       - Les prix livraison sont souvent = prix sur place + 1€
-    4. Si l'image a plusieurs colonnes ou rangées, traite CHAQUE colonne/rangée
-    5. Inclus TOUS les produits même ceux avec des noms courts comme "180", "270", etc.
+    RÈGLES ABSOLUES - ZÉRO TOLÉRANCE:
+    1. 🚫 NE JAMAIS INVENTER d'ingrédients non visibles
+    2. 🚫 NE JAMAIS SUPPOSER ou extrapoler des informations
+    3. 🚫 NE JAMAIS AJOUTER d'ingrédients "standard" (salade, tomates, etc.) si pas visibles
+    4. ✅ EXTRAIRE uniquement le texte EXACTEMENT tel qu'écrit
+    5. ✅ Si un ingrédient n'est pas lisible ou visible → NE PAS l'inclure
 
-    Format JSON requis:
+    MÉTHODE STRICTE:
+    1. Lis ligne par ligne, produit par produit
+    2. Pour chaque produit:
+       - Nom: copie EXACTEMENT le nom visible
+       - Description: copie UNIQUEMENT les ingrédients/composition visibles
+       - Prix: lis les prix affichés (souvent 2 colonnes: sur place + livraison)
+    3. Ne complète RIEN, n'imagine RIEN
+
+    EXEMPLES DE BONNE EXTRACTION:
+    ✅ Si visible: "CHEESEBURGER - Steak 45g, fromage"
+    ✅ Si visible: "BIG CHEESE - 2 Steaks 45g, cheddar, salade, oignons"
+    ❌ N'ajoute PAS: cornichons, sauce, pain si non mentionnés
+
+    Format JSON strict:
     {
-      "menu_title": "titre exact du menu",
-      "menu_info": "informations sur le service (ex: servis avec frites & boisson)",
-      "total_products_detected": nombre_total_de_produits_vus,
+      "total_products_detected": nombre_exact_de_produits_vus,
       "products": [
         {
-          "name": "nom exact du produit",
-          "description": "description complète avec tous les ingrédients",
-          "price_onsite": nombre_exact_en_euros,
-          "price_delivery": nombre_exact_en_euros,
-          "currency": "€",
-          "position": "rangée_1" ou "rangée_2" si applicable
+          "name": "nom_exact_visible",
+          "description": "ingrédients_uniquement_visibles",
+          "price_onsite": prix_sur_place_ou_null,
+          "price_delivery": prix_livraison_ou_null
         }
       ]
     }
 
-    Retourne UNIQUEMENT le JSON, sans aucun texte avant ou après.
+    IMPORTANT: Si information manquante → utilise null, n'invente pas !
+    Retourne UNIQUEMENT le JSON valide.
     `;
   }
 
