@@ -376,13 +376,23 @@ export class DeliveryAssignmentService {
    */
   private async createAssignmentForDriver(orderId: number, driverId: number): Promise<boolean> {
     try {
+      // Récupérer l'heure actuelle dans le bon fuseau (même fonction que updated_at)
+      const currentTime = await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant();
+
+      // Convertir en Date et ajouter 60 minutes
+      const currentDate = new Date(currentTime);
+      const expiresDate = new Date(currentDate.getTime() + (60 * 60 * 1000));
+
+      // Reformater pour la base de données
+      const expires_at = expiresDate.toISOString();
+
       const { error } = await this.supabaseFranceService.client
         .from('france_delivery_assignments')
         .insert({
           order_id: orderId,
           driver_id: driverId,
-          assignment_status: 'pending'
-          // Plus d'expires_at - simplicité !
+          assignment_status: 'pending',
+          expires_at: expires_at
         });
 
       if (error) {

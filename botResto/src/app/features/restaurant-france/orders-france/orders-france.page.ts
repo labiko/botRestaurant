@@ -497,8 +497,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
           text: 'Plus tard',
           role: 'cancel',
           handler: () => {
-            // Marquer seulement comme "prête" sans assignation
-            this.updateOrderStatusOnly(order, 'prete');
+            // NE RIEN FAIRE - Juste fermer la modal
+            // La commande reste dans son état actuel
           }
         },
         {
