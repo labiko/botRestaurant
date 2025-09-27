@@ -244,8 +244,8 @@ export class DeliveryTokenService {
         .select(`
           *,
           france_orders!order_id (
-            id, status, driver_id, restaurant_id, order_number, 
-            total_amount, delivery_address, customer_name, phone_number
+            id, status, driver_id, restaurant_id, order_number,
+            total_amount, delivery_address, customer_name, phone_number, items
           ),
           france_delivery_drivers!driver_id (id, first_name, last_name, phone_number)
         `)
