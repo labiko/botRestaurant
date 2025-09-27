@@ -676,7 +676,7 @@ export default function BackOfficeRestaurantPage() {
           accent_color: '#ffc107',
           logo_emoji: '🍕',
           subtitle: 'Commandez en 30 secondes sur WhatsApp!',
-          promo_text: '🎉 LIVRAISON GRATUITE DÈS 25€ 🎉',
+          promo_text: '📱 100% DIGITAL SUR WHATSAPP',
           feature_1: JSON.stringify({ emoji: '🚀', text: 'Livraison rapide' }),
           feature_2: JSON.stringify({ emoji: '💯', text: 'Produits frais' }),
           feature_3: JSON.stringify({ emoji: '⭐', text: '4.8 étoiles' }),
@@ -2021,7 +2021,7 @@ export default function BackOfficeRestaurantPage() {
                         value={vitrineSettings?.promo_text || ''}
                         onChange={(e) => updateVitrineField('promo_text', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        placeholder="🎉 LIVRAISON GRATUITE DÈS 25€ 🎉"
+                        placeholder="📱 100% DIGITAL SUR WHATSAPP"
                       />
                     </div>
                   </div>

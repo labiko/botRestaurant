@@ -323,6 +323,10 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     try {
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+      // 🔍 DEBUG_CART_PRESERVATION - Tracer la préservation du panier lors du retour aux catégories
+      console.log('🔍 DEBUG_CART_PRESERVATION: session.sessionData.cart AVANT reset:', JSON.stringify(session.sessionData?.cart));
+      console.log('🔍 DEBUG_CART_PRESERVATION: Type cart AVANT:', typeof session.sessionData?.cart);
+
       // Reset session state vers AWAITING_MENU_CHOICE
       const updatedData = {
         ...session.sessionData,
@@ -330,6 +334,9 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
         availableVariants: null,
         compositeWorkflow: null
       };
+
+      console.log('🔍 DEBUG_CART_PRESERVATION: updatedData.cart APRÈS reset:', JSON.stringify(updatedData?.cart));
+      console.log('🔍 DEBUG_CART_PRESERVATION: Type cart APRÈS:', typeof updatedData?.cart);
       // ✅ CENTRALISATION: Remplacer accès direct DB par SessionManager
       console.log('📝 [CompositeWorkflowExecutor:463] Mise à jour session via SessionManager');
       await this.sessionManager.updateSession(session.id, {

@@ -1206,7 +1206,11 @@ export class UniversalBot implements IMessageHandler {
   private async handleMenuNavigation(phoneNumber: string, session: any, message: string): Promise<void> {
     console.log(`🔍 [handleMenuNavigation] Message reçu: "${message}"`);
     console.log(`🔍 [handleMenuNavigation] Message trimmed: "${message.trim()}"`);
-    
+
+    // 🔍 DEBUG_CART_NAVIGATION - Tracer l'état du panier lors de la navigation
+    console.log('🔍 DEBUG_CART_NAVIGATION: session.sessionData.cart:', JSON.stringify(session.sessionData?.cart));
+    console.log('🔍 DEBUG_CART_NAVIGATION: Type cart:', typeof session.sessionData?.cart);
+
     // Sélection de catégorie par numéro
     const categoryNumber = parseInt(message.trim());
     const categories = session.sessionData?.categories || [];
@@ -1282,7 +1286,13 @@ export class UniversalBot implements IMessageHandler {
       await this.handleCartActions(phoneNumber, session, message);
       return;
     }
-    
+
+    // Détection multisélection
+    if (message.includes(',')) {
+      await this.handleCategoryMultiSelection(phoneNumber, session, message);
+      return;
+    }
+
     const productNumber = parseInt(message.trim());
     const products = session.sessionData?.products || [];
     
@@ -1546,7 +1556,7 @@ export class UniversalBot implements IMessageHandler {
       
       if (error || !products || products.length === 0) {
         console.error('❌ [ShowProducts] Erreur ou aucun produit:', error);
-        await this.messageSender.sendMessage(phoneNumber, 
+        await this.messageSender.sendMessage(phoneNumber,
           `❌ Aucun produit disponible dans la catégorie ${category.name}.\n\nTapez un numéro pour choisir une autre catégorie.`);
         return;
       }
@@ -2469,9 +2479,29 @@ export class UniversalBot implements IMessageHandler {
     }
     
 
+    // 🔍 DEBUG_CART_CONVERSION - Tracer la conversion du panier
+    console.log('🔍 DEBUG_CART_CONVERSION: Type rawCart:', typeof session.sessionData?.cart);
+    console.log('🔍 DEBUG_CART_CONVERSION: rawCart contenu:', JSON.stringify(session.sessionData?.cart));
+    console.log('🔍 DEBUG_CART_CONVERSION: Array.isArray(rawCart):', Array.isArray(session.sessionData?.cart));
+
     // Ajouter au panier
     const rawCart = session.sessionData?.cart || [];
-    const cart = Array.isArray(rawCart) ? rawCart : [];
+    const cart = Array.isArray(rawCart)
+      ? rawCart
+      : (rawCart && typeof rawCart === 'object' ? Object.values(rawCart).map(item => {
+          console.log('🔍 DEBUG_ITEM_MAPPING: item original:', JSON.stringify(item));
+          const mapped = {
+            ...item,
+            productName: item.productName || item.name,
+            unitPrice: item.unitPrice || item.price,
+            categoryName: item.categoryName || 'Menu',
+            configuration: item.configuration || item.details
+          };
+          console.log('🔍 DEBUG_ITEM_MAPPING: item mappé:', JSON.stringify(mapped));
+          return mapped;
+        }) : []);
+
+    console.log('🔍 DEBUG_CART_CONVERSION: cart après conversion:', JSON.stringify(cart));
 
     const cartItem = {
       productId: selectedProduct.id,
@@ -2486,7 +2516,29 @@ export class UniversalBot implements IMessageHandler {
       configuration: selectedProduct.configuration || null
     };
 
-    cart.push(cartItem);
+    // Dans handleQuantityInput, détecter la multisélection
+    const multiProducts = session.sessionData?.multiSelectedProducts;
+    if (multiProducts && multiProducts.length > 1) {
+      // Ajouter TOUS les produits au panier en une fois
+      const allCartItems = multiProducts.map(product => ({
+        productId: product.id,
+        productName: product.name,
+        categoryName: session.sessionData?.currentCategoryName,
+        productDescription: product.name,
+        quantity: 1,
+        unitPrice: product.price,
+        totalPrice: product.price,
+        configuration: null
+      }));
+
+      cart.push(...allCartItems);
+    } else {
+      // Logique existante pour produit unique
+      cart.push(cartItem);
+    }
+
+    // Nettoyer les données de multisélection après usage
+    delete session.sessionData.multiSelectedProducts;
 
     // Calculer le total du panier
     const cartTotal = cart.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
@@ -3188,6 +3240,86 @@ Tapez un numéro entre **1** et **${restaurants?.length || 0}**.`);
       console.error('❌ [RestaurantDiscovery] Erreur updateSessionWithRestaurants:', error);
       throw error;
     }
+  }
+
+  /**
+   * Gérer la multisélection pour catégories simples (ex: PÂTES "4,5")
+   */
+  private async handleCategoryMultiSelection(phoneNumber: string, session: any, message: string): Promise<void> {
+    const selections = message.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    const products = session.sessionData?.products || [];
+
+    // Validation
+    for (const num of selections) {
+      if (num < 1 || num > products.length) {
+        await this.messageSender.sendMessage(phoneNumber,
+          `❌ Choix invalide: ${num}. Choisissez entre 1 et ${products.length}.`);
+        return;
+      }
+    }
+
+    // Créer items panier
+    const cartItems = selections.map(num => ({
+      productId: products[num - 1].id,
+      name: products[num - 1].name,
+      price: products[num - 1].price,
+      quantity: 1,
+      selectedIndex: num
+    }));
+
+    // Mettre à jour session avec panier
+    const currentCart = session.sessionData?.cart || [];
+    const cartArray = Array.isArray(currentCart) ? currentCart : Object.values(currentCart);
+    await this.sessionManager.updateSession(session.id, {
+      sessionData: {
+        ...session.sessionData,
+        cart: [...cartArray, ...cartItems]
+      }
+    });
+
+    // NOUVELLE VALIDATION : Vérifier si tous les produits sont simples
+    const selectedProducts = selections.map(num => products[num - 1]);
+    const hasCompositeProducts = selectedProducts.some(product =>
+      product.requires_steps ||
+      product.workflow_type === 'composite' ||
+      product.type === 'composite' ||
+      (product.france_product_sizes && product.france_product_sizes.length > 0)
+    );
+
+    if (hasCompositeProducts) {
+      const categoryName = session.sessionData?.currentCategoryName || 'cette catégorie';
+      await this.messageSender.sendMessage(phoneNumber,
+        `❌ Multisélection non autorisée pour ${categoryName}.\n` +
+        `🔧 Ces produits nécessitent une configuration individuelle.\n` +
+        `📋 Sélectionnez un produit à la fois (ex: tapez "1")`);
+      return;
+    }
+
+    // Si tous sont simples → Continuer avec la logique simplifiée
+    await this.addMultipleSimpleProducts(phoneNumber, session, selectedProducts);
+  }
+
+  /**
+   * Ajouter plusieurs produits simples
+   */
+  private async addMultipleSimpleProducts(phoneNumber: string, session: any, selectedProducts: any[]): Promise<void> {
+    // Message de confirmation
+    const productNames = selectedProducts.map(p => p.name).join(', ');
+    await this.messageSender.sendMessage(phoneNumber,
+      `✅ Ajouté: ${productNames}\n➡️ Étape suivante...`);
+
+    // Appeler handleQuantityInput UNE SEULE FOIS avec le premier produit
+    // (pour déclencher l'étape suivante comme boissons)
+    const tempSession = {
+      ...session,
+      sessionData: {
+        ...session.sessionData,
+        selectedProduct: selectedProducts[0], // Premier produit pour workflow
+        multiSelectedProducts: selectedProducts // Tous les produits pour le panier
+      }
+    };
+
+    await this.handleQuantityInput(phoneNumber, tempSession, '1');
   }
 }
 

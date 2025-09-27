@@ -172,6 +172,9 @@ export class UniversalOrderDisplayService {
     if (!config) return lines;
     
     Object.entries(config).forEach(([key, value]) => {
+      // Skip 'pizzas' pour éviter duplication avec expandMenuPizza
+      if (key === 'pizzas') return;
+
       const formattedValue = this.formatConfigValue(value);
       if (formattedValue && !this.shouldSkipValue(formattedValue)) {
         lines.push({
@@ -221,14 +224,14 @@ export class UniversalOrderDisplayService {
         if (v.size_name || v.variant_name) {
           return v.size_name || v.variant_name;
         }
-        // Gérer les options normales avec option_name
-        return v.option_name || v;
+        // Gérer les options normales avec option_name ou name (format pizzas)
+        return v.option_name || v.name || v;
       }).join(', ');
     }
     
     if (typeof value === 'object' && value !== null) {
       // Priorité aux propriétés spécifiques selon le type d'objet
-      return value.size_name || value.variant_name || value.option_name || 
+      return value.size_name || value.variant_name || value.option_name ||
              value.label || value.name || value.text || value.title || value.value;
     }
     

@@ -135,9 +135,9 @@ export class UniversalCartFormatter {
     
     // Extraire les noms des sélections de manière robuste
     const values = selections.map(s => {
-      // Si c'est un objet avec option_name
-      if (s && typeof s === 'object' && s.option_name) {
-        return s.option_name;
+      // Si c'est un objet avec option_name ou name
+      if (s && typeof s === 'object' && (s.option_name || s.name)) {
+        return s.option_name || s.name;
       }
       // Si c'est déjà un string
       if (typeof s === 'string') {
@@ -186,25 +186,6 @@ export class UniversalCartFormatter {
       const categoryEmoji = this.getCategoryEmoji(item.productName);
       const itemNumber = index + 1;
       
-      // Ligne principale du produit
-      summary += `${itemNumber}. ${categoryEmoji} ${item.productName}`;
-      
-      // Ajouter la description courte si elle existe
-      if (item.productDescription && item.productDescription !== item.productName) {
-        const shortDesc = this.formatShortDescription(item.productDescription);
-        summary += ` ${shortDesc}`;
-      }
-      
-      summary += '\n';
-      
-      // Configuration détaillée sur ligne séparée
-      if (item.configuration) {
-        const configDetails = this.formatConfigurationSummary(item.configuration);
-        if (configDetails) {
-          summary += `   🔧 ${configDetails}\n`;
-        }
-      }
-      
       // Prix - DIAGNOSTIC BOWL SUPPLÉMENTS
       const calculatedPrice = item.unitPrice * item.quantity;
 
@@ -212,7 +193,24 @@ export class UniversalCartFormatter {
       // Utiliser item.totalPrice si disponible, sinon calculatedPrice
       const finalPrice = item.totalPrice || calculatedPrice;
 
-      summary += `   💰 ${finalPrice} EUR\n`;
+      // Ligne principale du produit avec prix
+      summary += `${itemNumber}. ${categoryEmoji} ${item.productName} - ${finalPrice}€\n`;
+
+      // Configuration détaillée pour menus pizza
+      if (item.configuration || item.details) {
+        const configuration = item.configuration || item.details;
+        if (configuration.pizzas && Array.isArray(configuration.pizzas)) {
+          configuration.pizzas.forEach((pizza: any, pizzaIndex: number) => {
+            const pizzaName = pizza.option_name || pizza.name || '';
+            summary += `   • Pizza ${pizzaIndex + 1}: ${pizzaName}\n`;
+          });
+        } else {
+          const configDetails = this.formatConfigurationSummary(configuration);
+          if (configDetails) {
+            summary += `   🔧 ${configDetails}\n`;
+          }
+        }
+      }
       
       if (index < cart.length - 1) {
         summary += '\n';
@@ -226,14 +224,15 @@ export class UniversalCartFormatter {
    * Formater la configuration pour le résumé du panier
    */
   private formatConfigurationSummary(configuration: any): string {
+    console.log('🔍 DEBUG_FORMAT_CONFIG: configuration reçue:', JSON.stringify(configuration));
     const details: string[] = [];
     
     for (const [_, selections] of Object.entries(configuration)) {
       if (Array.isArray(selections)) {
         const values = selections.map(s => {
           // Si c'est un objet avec option_name
-          if (s && typeof s === 'object' && s.option_name) {
-            return s.option_name;
+          if (s && typeof s === 'object' && (s.option_name || s.name)) {
+            return s.option_name || s.name;
           }
           // Si c'est déjà un string
           if (typeof s === 'string') {
@@ -248,8 +247,10 @@ export class UniversalCartFormatter {
         }
       }
     }
-    
-    return details.join(', ');
+
+    const result = details.join(', ');
+    console.log('🔍 DEBUG_FORMAT_CONFIG: résultat final:', result);
+    return result;
   }
 
   /**
@@ -302,7 +303,7 @@ export class UniversalCartFormatter {
    * Obtenir l'émoji de la catégorie
    */
   private getCategoryEmoji(productName: string): string {
-    const lowerName = productName.toLowerCase();
+    const lowerName = productName?.toLowerCase() || '';
     
     // Rechercher dans le mapping
     for (const [key, emoji] of Object.entries(this.CATEGORY_EMOJIS)) {
