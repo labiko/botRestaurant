@@ -113,14 +113,36 @@
 .item-additional {
   margin-top: 8px;
   margin-bottom: 8px;
-  
+
   .additional-info {
     margin-bottom: 4px;
-    
+
     .additional-text {
       font-size: 0.9rem;
       color: var(--ion-color-primary);
       font-weight: 500;
+    }
+  }
+}
+
+// Pizzas détaillées du menu (nouveau)
+.item-pizza-details {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding-left: 12px;
+  border-left: 3px solid var(--ion-color-tertiary);
+  background: rgba(var(--ion-color-tertiary-rgb), 0.05);
+  border-radius: 0 6px 6px 0;
+
+  .pizza-sub-item {
+    margin-bottom: 4px;
+
+    .pizza-item-text {
+      font-size: 0.85rem;
+      color: var(--ion-color-dark);
+      font-weight: 500;
+      display: block;
+      line-height: 1.3;
     }
   }
 }

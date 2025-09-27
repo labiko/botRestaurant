@@ -16,6 +16,7 @@ export interface FormattedItem {
   inlineConfiguration: string[];
   additionalItems?: string[];
   description?: string;
+  expandedItems?: string[]; // Nouveau champ pour les pizzas détaillées du menu
 }
 
 export interface ConfigurationLine {
@@ -41,7 +42,10 @@ export class UniversalOrderDisplayService {
     }
 
     return items.map(item => {
-      return {
+      // Extension NonRégressive : Expansion des menu_pizza
+      const expandedItems = this.expandMenuPizza(item);
+
+      const formattedItem = {
         productName: this.getProductName(item),
         quantity: item.quantity || 1,
         unitPrice: item.unitPrice || item.price || 0,
@@ -50,9 +54,54 @@ export class UniversalOrderDisplayService {
         formattedConfiguration: this.formatConfiguration(item.configuration),
         inlineConfiguration: this.formatInlineConfiguration(item.configuration),
         additionalItems: this.formatAdditionalItems(item),
-        description: item.productDescription || item.description
+        description: item.productDescription || item.description,
+        expandedItems: expandedItems // Nouveau champ pour les pizzas détaillées
       };
+
+
+      return formattedItem;
     });
+  }
+
+  /**
+   * Expansion spécialisée des menus pizza
+   * Gère type:"menu_pizza" avec details.pizzas
+   */
+  private expandMenuPizza(item: any): string[] {
+    // ÉTAPE 2: Extension progressive non-régressive
+    if (item.type === 'menu_pizza' && item.details) {
+      const result: string[] = [];
+
+      // 1. PIZZAS (existant - garantie non-régression)
+      if (item.details.pizzas && Array.isArray(item.details.pizzas)) {
+        item.details.pizzas.forEach((pizza: any) => {
+          const name = pizza.name || 'Pizza';
+          const size = pizza.size ? ` (${pizza.size})` : '';
+          result.push(`${name}${size}`);
+        });
+      }
+
+      // 2. EXTENSION SÉCURISÉE: Ajouter boissons et accompagnements
+      if (result.length > 0) { // Seulement si pizzas OK
+
+        // Boissons (Array)
+        if (item.details.beverages && Array.isArray(item.details.beverages)) {
+          item.details.beverages.forEach((beverage: any) => {
+            result.push(`${beverage.name || 'Boisson'}`);
+          });
+        }
+
+        // Accompagnements (Object unique)
+        if (item.details.sides && item.details.sides.name) {
+          result.push(`${item.details.sides.name}`);
+        }
+      }
+
+      return result;
+    }
+
+    // Retourner tableau vide pour les autres types
+    return [];
   }
 
   /**
@@ -142,7 +191,7 @@ export class UniversalOrderDisplayService {
    */
   private formatAdditionalItems(item: any): string[] {
     const additionalItems: string[] = [];
-    
+
     // Gérer les boissons incluses
     if (item.selected_drink) {
       const drinkName = `${item.selected_drink.name} ${item.selected_drink.variant || ''}`.trim();
@@ -150,7 +199,7 @@ export class UniversalOrderDisplayService {
     } else if (item.includes_drink) {
       additionalItems.push('🧊 + Boisson incluse');
     }
-    
+
     // Gérer les accompagnements supplémentaires
     if (item.extras && Array.isArray(item.extras)) {
       item.extras.forEach((extra: any) => {
@@ -158,7 +207,7 @@ export class UniversalOrderDisplayService {
         additionalItems.push(`➕ ${extraName}`);
       });
     }
-    
+
     return additionalItems;
   }
 

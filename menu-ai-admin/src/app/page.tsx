@@ -37,7 +37,7 @@ function MenuAIAdminContent() {
   const [copied, setCopied] = useState(false);
 
   // Mode interface avec Édition Moderne réactivée
-  const [mode, setMode] = useState<'command' | 'list' | 'modal'>('command');
+  const [mode, setMode] = useState<'command' | 'list' | 'modal'>('modal');
   const [activeSection, setActiveSection] = useState<string>('');
   const [categoryName, setCategoryName] = useState('');
   const [originalList, setOriginalList] = useState('');
@@ -679,7 +679,6 @@ function MenuAIAdminContent() {
     if (urlSection) {
       console.log('🔍 DEBUG: Section détectée dans URL:', urlSection);
       setActiveSection(urlSection);
-      setMode('command'); // Utiliser mode existant pour toutes les sections
     } else {
       console.log('🔍 DEBUG: Aucune section dans URL, params:', params.toString());
     }
@@ -697,7 +696,6 @@ function MenuAIAdminContent() {
       setActiveSection('');
     } else if (urlSection) {
       setActiveSection(urlSection);
-      setMode('command');
     }
   }, [searchParams]);
 
@@ -760,10 +758,10 @@ function MenuAIAdminContent() {
           <div className="flex justify-between items-center mb-4">
             <div className="text-center flex-1">
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                🤖 Menu AI Modifier
+                🤖 Menu AI Admin
               </h1>
               <p className="text-gray-600">
-                Automatisation intelligente des modifications de menu
+                Interface d'administration pour la gestion des menus
               </p>
             </div>
 
@@ -855,12 +853,12 @@ function MenuAIAdminContent() {
                 </div>
                 <button
                   onClick={() => {
-                    setMode('command');
-                    window.history.pushState({}, '', '/');
+                    setMode('modal');
+                    window.history.pushState({}, '', '/?mode=modal');
                   }}
                   className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
                 >
-                  ← Retour Commandes IA
+                  ← Menu Principal
                 </button>
               </div>
             </div>
@@ -1299,12 +1297,6 @@ OU coller directement le JSON ChatGPT..."
                 Analyser avec IA
               </button>
 
-              <button
-                onClick={() => setMode('command')}
-                className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 font-medium"
-              >
-                📝 Mode Normal
-              </button>
             </div>
 
             <div className="mt-4 text-sm text-gray-600">
@@ -1313,57 +1305,6 @@ OU coller directement le JSON ChatGPT..."
           </div>
         )}
 
-        {/* Input Section */}
-        {mode === 'command' && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">💬 Commande</h2>
-
-            <textarea
-              value={command}
-              onChange={(e) => setCommand(e.target.value)}
-              placeholder="Exemple: Duplique L'AMERICAIN en MINI AMERICAIN à 8€"
-              className="w-full h-32 p-4 border border-gray-300 rounded-lg text-base resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={handleAnalyze}
-                disabled={loading || !command.trim()}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {loading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  '🧠'
-                )}
-                Analyser
-              </button>
-
-              <button
-                onClick={() => setCommand("Duplique L'AMERICAIN en MINI AMERICAIN à 8€")}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
-              >
-                Exemple
-              </button>
-            </div>
-
-            {/* Exemples de commandes */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
-              <div
-                className="bg-blue-50 border border-blue-200 rounded-lg p-3 cursor-pointer hover:bg-blue-100 text-sm"
-                onClick={() => setCommand("Ajouter Coca Cherry 33CL - 2.50€ dans BOISSONS")}
-              >
-                Ajouter Coca Cherry 33CL - 2.50€ dans BOISSONS
-              </div>
-              <div
-                className="bg-blue-50 border border-blue-200 rounded-lg p-3 cursor-pointer hover:bg-blue-100 text-sm"
-                onClick={() => setCommand("Changer prix AMERICAIN de 13.50€ à 14€")}
-              >
-                Changer prix AMERICAIN de 13.50€ à 14€
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Results Section */}
         {result && (

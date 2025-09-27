@@ -25,7 +25,13 @@ export interface WorkflowSqlHistoryRef {
   saveScript: (sql: string, productName: string) => Promise<void>;
 }
 
-export default forwardRef<WorkflowSqlHistoryRef, { productId: number | null }>(function WorkflowSqlHistory({ productId }, ref) {
+interface WorkflowSqlHistoryProps {
+  productId?: number | null;
+  filterBySource?: string;
+  onScriptsRefresh?: () => void;
+}
+
+export default forwardRef<WorkflowSqlHistoryRef, WorkflowSqlHistoryProps>(function WorkflowSqlHistory({ productId, filterBySource, onScriptsRefresh }, ref) {
   const [scripts, setScripts] = useState<SqlScript[]>([]);
   const [showHistory, setShowHistory] = useState(true); // Afficher par défaut
   const [executing, setExecuting] = useState<string | null>(null);
@@ -64,9 +70,53 @@ export default forwardRef<WorkflowSqlHistoryRef, { productId: number | null }>(f
     }
   };
 
+  // API: Charger les scripts par source (pour audit-bot-flyer)
+  const loadScriptsBySource = async () => {
+    if (!filterBySource) return;
+
+    try {
+      console.log('📡 [API] Chargement scripts pour source:', filterBySource);
+      const response = await fetch(`/api/scripts-history?source=${encodeURIComponent(filterBySource)}`);
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('✅ [API] Scripts chargés par source:', data.scripts.length);
+        // Adapter le format des scripts si nécessaire
+        const formattedScripts = data.scripts.map((script: any) => ({
+          id: script.id,
+          created_at: script.created_at,
+          product_name: script.command_source || 'Script SQL',
+          product_id: script.product_id || 0,
+          sql_script: script.script_sql,
+          executed_dev: script.dev_status === 'executed' || script.executed_dev || false,
+          executed_prod: script.prod_status === 'executed' || script.executed_prod || false,
+          dev_executed_at: script.dev_executed_at,
+          prod_executed_at: script.prod_executed_at,
+          modifications_summary: script.modifications_summary || {
+            updates: 0,
+            inserts: 0,
+            deletes: 0,
+            total_options: 0
+          }
+        }));
+        setScripts(formattedScripts);
+      } else {
+        console.error('❌ [API] Erreur chargement par source:', data.error);
+        setScripts([]);
+      }
+    } catch (error) {
+      console.error('❌ [API] Erreur réseau:', error);
+      setScripts([]);
+    }
+  };
+
   // Debug: Fonction pour recharger manuellement
   const reloadHistory = () => {
-    loadScriptsFromAPI();
+    if (filterBySource) {
+      loadScriptsBySource();
+    } else if (productId) {
+      loadScriptsFromAPI();
+    }
   };
 
   // Test: Simuler l'ajout d'un script pour tester la synchronisation
@@ -82,33 +132,47 @@ export default forwardRef<WorkflowSqlHistoryRef, { productId: number | null }>(f
 
   // Charger l'historique depuis l'API
   useEffect(() => {
-    if (!productId) return;
+    // Chargement initial selon le mode
+    if (filterBySource) {
+      console.log('📡 [WORKFLOW-SQL-HISTORY] Chargement par source:', filterBySource);
+      loadScriptsBySource();
+    } else if (productId) {
+      console.log('📡 [WORKFLOW-SQL-HISTORY] Chargement par productId:', productId);
+      loadScriptsFromAPI();
+    }
 
-    // Chargement initial
-    loadScriptsFromAPI();
-
-    // Écouter les événements de mise à jour des scripts
+    // Écouter les événements de mise à jour des scripts (toujours actif)
     const handleScriptUpdate = (event: CustomEvent) => {
       console.log('🎯 [WORKFLOW-SQL-HISTORY] Événement reçu:', {
         eventProductId: event.detail.productId,
         currentProductId: productId,
         source: event.detail.source,
-        scriptId: event.detail.scriptId
+        scriptId: event.detail.scriptId,
+        filterBySource: filterBySource
       });
 
-      if (event.detail.productId === productId) {
-        console.log('✅ [WORKFLOW-SQL-HISTORY] Événement valide, rechargement API en cours...');
-
-        // Recharger depuis l'API après ajout d'un script
+      // Gérer selon le mode
+      if (filterBySource && event.detail.source === filterBySource) {
+        console.log('✅ [WORKFLOW-SQL-HISTORY] Événement valide par source, rechargement...');
+        setTimeout(() => {
+          loadScriptsBySource().then(() => {
+            setShowHistory(true);
+            setNewScriptAdded(true);
+            setTimeout(() => setNewScriptAdded(false), 3000);
+            if (onScriptsRefresh) onScriptsRefresh();
+          });
+        }, 200);
+      } else if (!filterBySource && event.detail.productId === productId) {
+        console.log('✅ [WORKFLOW-SQL-HISTORY] Événement valide par productId, rechargement...');
         setTimeout(() => {
           loadScriptsFromAPI().then(() => {
             setShowHistory(true);
             setNewScriptAdded(true);
             setTimeout(() => setNewScriptAdded(false), 3000);
           });
-        }, 200); // Délai pour s'assurer que l'API est mise à jour
+        }, 200);
       } else {
-        console.log('ℹ️ [WORKFLOW-SQL-HISTORY] Événement ignoré (productId différent)');
+        console.log('ℹ️ [WORKFLOW-SQL-HISTORY] Événement ignoré');
       }
     };
 
@@ -117,7 +181,7 @@ export default forwardRef<WorkflowSqlHistoryRef, { productId: number | null }>(f
     return () => {
       window.removeEventListener('workflow-script-updated', handleScriptUpdate as EventListener);
     };
-  }, [productId]);
+  }, [productId, filterBySource, onScriptsRefresh]);
 
 
   // Sauvegarder un nouveau script via API

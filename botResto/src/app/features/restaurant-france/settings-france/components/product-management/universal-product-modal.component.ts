@@ -197,6 +197,13 @@ export class UniversalProductModalComponent implements OnInit {
       return;
     }
 
+    // ✅ Ne pas charger les composants en mode duplication (produit pas encore créé)
+    if (this.mode === 'duplicate') {
+      console.log('🔄 [UniversalModal] Mode duplication - Skip chargement composants');
+      this.compositeItems = [];
+      return;
+    }
+
     console.log('📦 [UniversalModal] Chargement des éléments composites pour le produit:', this.product.id);
 
     this.productManagementService.getCompositeItems(this.product.id).subscribe({
@@ -214,6 +221,14 @@ export class UniversalProductModalComponent implements OnInit {
   // Méthodes pour gérer les options détaillées
   private async loadProductOptions() {
     if (!this.product || this.product.product_type !== 'composite') {
+      return;
+    }
+
+    // ✅ Ne pas charger les options en mode duplication (produit pas encore créé)
+    if (this.mode === 'duplicate') {
+      console.log('🔄 [UniversalModal] Mode duplication - Skip chargement options');
+      this.productOptions = [];
+      this.groupedOptions = {};
       return;
     }
 

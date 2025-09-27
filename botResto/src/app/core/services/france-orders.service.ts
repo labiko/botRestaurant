@@ -92,10 +92,14 @@ export interface OrderAction {
 export class FranceOrdersService {
   private ordersSubject = new BehaviorSubject<FranceOrder[]>([]);
   public orders$ = this.ordersSubject.asObservable();
-  
+
   // Auto-refresh
   private autoRefreshSubscription?: Subscription;
   private currentRestaurantId?: number;
+
+  // ✅ NOUVEAU : Subject pour signaler restaurant désactivé
+  private restaurantDeactivated = new BehaviorSubject<boolean>(false);
+  public restaurantDeactivated$ = this.restaurantDeactivated.asObservable();
 
   // NOUVEAU : Paramètres de notification par défaut - PAS DE RÉGRESSION
   private readonly defaultNotificationSettings: NotificationSettings = {
@@ -119,7 +123,10 @@ export class FranceOrdersService {
 
   async loadOrders(restaurantId: number): Promise<void> {
     try {
-      // ✅ PLAN INITIAL : Une seule requête optimisée avec fonction SQL
+      // ✅ NOUVEAU : Vérification NON-BLOQUANTE du statut restaurant (parallèle)
+      this.checkRestaurantStatus(restaurantId);
+
+      // ✅ Code existant INCHANGÉ - garantit le fonctionnement normal
       const { data, error } = await this.supabaseFranceService.client
         .rpc('load_orders_with_assignment_state', {
           p_restaurant_id: restaurantId
@@ -799,6 +806,31 @@ export class FranceOrdersService {
       });
     } catch (error) {
       console.error('❌ [FranceOrders] Erreur refresh automatique:', error);
+    }
+  }
+
+  /**
+   * ✅ Vérification asynchrone et non-bloquante du statut restaurant
+   * Cette méthode s'exécute en parallèle sans affecter le chargement des commandes
+   */
+  private async checkRestaurantStatus(restaurantId: number): Promise<void> {
+    try {
+      const { data: restaurant, error } = await this.supabaseFranceService.client
+        .from('france_restaurants')
+        .select('is_active, updated_at')
+        .eq('id', restaurantId)
+        .single();
+
+      // ✅ SEULEMENT si réponse claire ET restaurant désactivé
+      if (!error && restaurant && restaurant.is_active === false) {
+        console.warn('⚠️ Restaurant désactivé par l\'administrateur');
+        this.restaurantDeactivated.next(true);
+      }
+
+      // ✅ En cas d'erreur réseau → on continue normalement (pas de déconnexion)
+    } catch (error) {
+      console.warn('⚠️ [FranceOrders] Impossible de vérifier statut restaurant:', error);
+      // Pas de déconnexion en cas d'erreur réseau pour éviter les fausses déconnexions
     }
   }
 }

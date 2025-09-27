@@ -91,6 +91,14 @@ WHERE id = ${productId};
 
 `;
 
+    // Créer un mapping groupe -> required depuis les steps
+    const groupRequiredMap = new Map<string, boolean>();
+    steps.forEach(step => {
+      step.option_groups.forEach(groupName => {
+        groupRequiredMap.set(groupName, step.required);
+      });
+    });
+
     // Générer les opérations pour chaque groupe
     let globalGroupOrder = 1;
 
@@ -106,7 +114,8 @@ SET
   price_modifier = ${option.price_modifier.toFixed(2)},
   display_order = ${option.display_order},
   group_order = ${globalGroupOrder},
-  option_group = '${groupName.replace(/'/g, "''")}'
+  option_group = '${groupName.replace(/'/g, "''")}',
+  is_required = ${groupRequiredMap.get(groupName) || false}
 WHERE product_id = ${productId}
   AND option_group = '${groupName.replace(/'/g, "''")}'
   AND display_order = ${option.display_order};
@@ -119,6 +128,7 @@ INSERT INTO france_product_options (
   display_order,
   group_order,
   option_group,
+  is_required,
   is_active
 )
 SELECT
@@ -128,6 +138,7 @@ SELECT
   ${option.display_order},
   ${globalGroupOrder},
   '${groupName.replace(/'/g, "''")}',
+  ${groupRequiredMap.get(groupName) || false},
   true
 WHERE NOT EXISTS (
   SELECT 1 FROM france_product_options
@@ -454,6 +465,14 @@ INSERT INTO france_products (
 -- =========================================
 `;
 
+    // 🔥 CORRECTION BUG IS_REQUIRED: Créer mapping groupe -> required
+    const groupRequiredMap = new Map<string, boolean>();
+    steps.forEach(step => {
+      step.option_groups.forEach(groupName => {
+        groupRequiredMap.set(groupName, step.required);
+      });
+    });
+
     // Générer les inserts pour chaque groupe d'options avec group_order correct
     Object.entries(optionGroups).forEach(([groupName, options]) => {
       sql += `\n-- Groupe: ${groupName}\n`;
@@ -484,6 +503,7 @@ INSERT INTO france_products (
   price_modifier,
   display_order,
   group_order,
+  is_required,
   is_active
 ) VALUES (
   (SELECT id FROM france_products WHERE name = '${productName.replace(/'/g, "''")}' AND restaurant_id = ${restaurantId}),
@@ -492,6 +512,7 @@ INSERT INTO france_products (
   ${option.price_modifier.toFixed(2)},
   ${option.display_order},
   ${groupOrder},
+  ${groupRequiredMap.get(groupName) || false},
   true
 );
 

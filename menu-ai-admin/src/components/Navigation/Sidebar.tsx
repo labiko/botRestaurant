@@ -26,15 +26,6 @@ function SidebarContent() {
 
   const navigationItems = [
     {
-      id: 'commands-ia',
-      label: 'Commandes IA',
-      icon: '⚡',
-      path: '/',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      description: 'Interface de commandes intelligentes'
-    },
-    {
       id: 'edition-moderne',
       label: 'Édition Moderne',
       icon: '✨',
@@ -80,13 +71,13 @@ function SidebarContent() {
       description: 'Générateur universel 100% compatible bot'
     },
     {
-      id: 'creer-ia',
-      label: 'Créer avec IA',
+      id: 'ocr-onboarding',
+      label: 'OCR Smart Onboarding',
       icon: '🤖',
-      path: '/?section=creer-ia',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      description: 'Création automatisée par IA'
+      path: '/ocr-onboarding/upload',
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50',
+      description: 'Création restaurant via OCR - 5 étapes automatisées'
     },
     {
       id: 'suppression',
@@ -96,13 +87,28 @@ function SidebarContent() {
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       description: 'Suppression sécurisée'
+    },
+    {
+      id: 'back-office-resto',
+      label: 'Back Office Resto',
+      icon: '🏪',
+      path: '/back-office-restaurant',
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50',
+      description: 'Activer/Désactiver restaurants'
+    },
+    {
+      id: 'audit-bot-flyer',
+      label: 'Audit Bot vs Flyer',
+      icon: '🔍',
+      path: '/audit-bot-flyer',
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+      description: 'Vérification intelligente catégorie par catégorie'
     }
   ];
 
   const isActive = (path: string) => {
-    if (path === '/') {
-      return pathname === '/' && !searchParams.get('mode') && !searchParams.get('section');
-    }
     if (path === '/?mode=modal') {
       return pathname === '/' && searchParams.get('mode') === 'modal';
     }

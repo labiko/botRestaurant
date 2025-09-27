@@ -25,6 +25,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   currentDriver: FranceUser | null = null;
   availableOrders: DeliveryOrder[] = [];
   isLoading = false;
+
   
   // Compteurs partagés pour les badges
   currentCounters: DeliveryCounters = {
@@ -268,6 +269,17 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
       return;
     }
 
+    // 🕐 LOGS TIMEZONE DEBUG
+    const now = new Date();
+    console.log('🕐 [TIMEZONE_DEBUG] ==========================================');
+    console.log('🕐 [TIMEZONE_DEBUG] CLIC ACCEPTER COMMANDE');
+    console.log('🕐 [TIMEZONE_DEBUG] Heure JavaScript locale:', now.toString());
+    console.log('🕐 [TIMEZONE_DEBUG] Heure UTC:', now.toUTCString());
+    console.log('🕐 [TIMEZONE_DEBUG] Heure ISO:', now.toISOString());
+    console.log('🕐 [TIMEZONE_DEBUG] Timezone navigateur:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+    console.log('🕐 [TIMEZONE_DEBUG] Offset timezone (minutes):', now.getTimezoneOffset());
+    console.log('🕐 [TIMEZONE_DEBUG] ==========================================');
+
     const loading = await this.loadingController.create({
       message: 'Acceptation en cours...'
     });
@@ -303,6 +315,18 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
    */
   async acceptOrder(order: DeliveryOrder) {
     if (!this.currentDriver) return;
+
+    // 🕐 LOGS TIMEZONE DEBUG
+    const now = new Date();
+    console.log('🕐 [TIMEZONE_DEBUG] ==========================================');
+    console.log('🕐 [TIMEZONE_DEBUG] CLIC ACCEPTER COMMANDE DIRECTE');
+    console.log('🕐 [TIMEZONE_DEBUG] Commande:', order.order_number);
+    console.log('🕐 [TIMEZONE_DEBUG] Heure JavaScript locale:', now.toString());
+    console.log('🕐 [TIMEZONE_DEBUG] Heure UTC:', now.toUTCString());
+    console.log('🕐 [TIMEZONE_DEBUG] Heure ISO:', now.toISOString());
+    console.log('🕐 [TIMEZONE_DEBUG] Timezone navigateur:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+    console.log('🕐 [TIMEZONE_DEBUG] Offset timezone (minutes):', now.getTimezoneOffset());
+    console.log('🕐 [TIMEZONE_DEBUG] ==========================================');
 
     const alert = await this.alertController.create({
       header: 'Accepter la commande',
@@ -511,9 +535,10 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
    */
   private computeOrderData(): void {
     this.availableOrders.forEach(order => {
-      this.orderItemsCounts[order.id] = this.deliveryOrderItemsService.getOrderItems(order).reduce((total, item) => total + (item.quantity || 1), 0);
-      this.orderHasItems[order.id] = this.deliveryOrderItemsService.hasOrderItems(order);
-      this.orderFormattedItems[order.id] = this.getFormattedItems(order);
+      const formattedItems = this.getFormattedItems(order);
+      this.orderItemsCounts[order.id] = formattedItems.reduce((total, item) => total + (item.quantity || 1), 0);
+      this.orderHasItems[order.id] = formattedItems.length > 0;
+      this.orderFormattedItems[order.id] = formattedItems;
     });
   }
 
@@ -596,11 +621,25 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
    * NOUVEAU - Formater les items avec le service universel (même format que restaurant)
    */
   getFormattedItems(order: DeliveryOrder): FormattedItem[] {
-    
-    const items = this.deliveryOrderItemsService.getOrderItems(order);
-    
-    const formattedItems = this.universalOrderDisplayService.formatOrderItems(items || []);
-    
+    console.log('🍕 [DEBUG] Livreur order.items:', order.items);
+    console.log('🍕 [DEBUG] Livreur order.items type:', typeof order.items);
+
+    // CORRECTION : Convertir l'objet {0: {...}, 1: {...}} en array [{...}, {...}]
+    let itemsArray: any[] = [];
+    if (order.items && typeof order.items === 'object') {
+      if (Array.isArray(order.items)) {
+        itemsArray = order.items;
+      } else {
+        // Convertir objet en array
+        itemsArray = Object.values(order.items);
+      }
+    }
+
+    console.log('🍕 [DEBUG] Livreur itemsArray converti:', itemsArray);
+
+    const formattedItems = this.universalOrderDisplayService.formatOrderItems(itemsArray);
+    console.log('🍕 [DEBUG] Livreur formattedItems result:', formattedItems);
+
     return formattedItems;
   }
 

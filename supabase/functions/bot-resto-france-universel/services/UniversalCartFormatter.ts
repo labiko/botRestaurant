@@ -284,15 +284,6 @@ export class UniversalCartFormatter {
       const totalPriceValue = item.totalPrice || unitPriceCalc;
       const priceDifference = totalPriceValue - unitPriceCalc;
 
-      console.log(`🔍 [DEBUG_PRIX] Formatter - Item: ${item.productName}`);
-      console.log(`🔍 [DEBUG_PRIX] unitPrice: ${item.unitPrice}, quantity: ${item.quantity}`);
-      console.log(`🔍 [DEBUG_PRIX] unitPriceCalc: ${unitPriceCalc}€`);
-      console.log(`🔍 [DEBUG_PRIX] totalPrice: ${item.totalPrice}€`);
-      console.log(`🔍 [DEBUG_PRIX] priceDifference: ${priceDifference}€ ${priceDifference > 0 ? '(SUPPLÉMENTS DÉTECTÉS)' : '(AUCUN SUPPLÉMENT)'}`);
-
-      if (item.configuration) {
-        console.log(`🔍 [DEBUG_PRIX] configuration: ${JSON.stringify(item.configuration)}`);
-      }
 
       return total + totalPriceValue;
     }, 0);

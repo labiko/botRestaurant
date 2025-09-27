@@ -52,7 +52,7 @@ export class DeliveryTokenService {
 
   // Configuration des tokens selon le plan
   private readonly CONFIG = {
-    TOKEN_EXPIRY_MINUTES: 15, // 15 minutes comme spécifié dans les règles
+    TOKEN_EXPIRY_MINUTES: 60, // 1 heure pour laisser plus de temps aux livreurs
     TOKEN_ABSOLUTE_EXPIRY_HOURS: 2, // 2 heures comme spécifié initialement
     REACTIVATION_THRESHOLD_MINUTES: 5,
     TOKEN_LENGTH: 32
@@ -257,14 +257,29 @@ export class DeliveryTokenService {
         return { valid: false, reason: 'Token inexistant' };
       }
 
-      const now = new Date();
+      // 🕐 CORRECTION TIMEZONE : Utiliser l'heure du restaurant pour la comparaison
+      const restaurantId = token.france_orders.restaurant_id;
+      const currentTime = await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant();
+      const now = new Date(currentTime);
+
+      // 🕐 CONVERSION TIMEZONE : expires_at stocké SANS timezone, il faut le convertir
+      const expiresAtUTC = new Date(token.expires_at + 'Z'); // Forcer interprétation UTC
+      const absoluteExpiresAtUTC = new Date(token.absolute_expires_at + 'Z'); // Forcer interprétation UTC
+
+      console.log(`🕐 [TIMEZONE_VALIDATION] Restaurant ${restaurantId}:`);
+      console.log(`🕐 [TIMEZONE_VALIDATION] Heure restaurant (now): ${now.toISOString()}`);
+      console.log(`🕐 [TIMEZONE_VALIDATION] Token expires_at brut: ${token.expires_at}`);
+      console.log(`🕐 [TIMEZONE_VALIDATION] Token expires_at UTC: ${expiresAtUTC.toISOString()}`);
+      console.log(`🕐 [TIMEZONE_VALIDATION] Token absolute_expires_at brut: ${token.absolute_expires_at}`);
+      console.log(`🕐 [TIMEZONE_VALIDATION] Token absolute_expires_at UTC: ${absoluteExpiresAtUTC.toISOString()}`);
+      console.log(`🕐 [TIMEZONE_VALIDATION] Comparaison: ${expiresAtUTC.toISOString()} > ${now.toISOString()} = ${expiresAtUTC > now}`);
 
       // Vérifications de validité
       if (token.used) {
         // Si token utilisé, vérifier si c'est pour accès post-acceptation
         if (token.france_orders.driver_id === token.driver_id) {
           // Token utilisé mais par le bon livreur - permettre l'accès si pas expiré
-          if (new Date(token.expires_at) > now) {
+          if (expiresAtUTC > now) {
             console.log('✅ [DeliveryToken] Accès post-acceptation autorisé');
             return {
               valid: true,
@@ -288,13 +303,15 @@ export class DeliveryTokenService {
         return { valid: false, reason: 'Commande temporairement indisponible' };
       }
 
-      if (new Date(token.expires_at) < now) {
-        console.log('❌ [DeliveryToken] Token expiré (relative)');
+      if (expiresAtUTC < now) {
+        console.log('❌ [DeliveryToken] Token expiré (relative) - expires_at < now');
+        console.log(`❌ [TIMEZONE_VALIDATION] ${expiresAtUTC.toISOString()} < ${now.toISOString()}`);
         return { valid: false, reason: 'Lien expiré' };
       }
 
-      if (new Date(token.absolute_expires_at) < now) {
-        console.log('❌ [DeliveryToken] Token expiré (absolue)');
+      if (absoluteExpiresAtUTC < now) {
+        console.log('❌ [DeliveryToken] Token expiré (absolue) - absolute_expires_at < now');
+        console.log(`❌ [TIMEZONE_VALIDATION] ${absoluteExpiresAtUTC.toISOString()} < ${now.toISOString()}`);
         return { valid: false, reason: 'Lien définitivement expiré' };
       }
 

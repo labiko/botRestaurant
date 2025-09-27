@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Icons System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        button {
+            margin: 10px 5px;
+            padding: 10px 20px;
+            background: #4F46E5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #4338CA;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Système Icônes Complet</h1>
+
+    <div>
+        <h2>📂 Test API Categories</h2>
+        <button onclick="testCategoriesGET()">GET Categories (resto 16)</button>
+        <button onclick="testCategoriesPUT()">PUT Category Icon</button>
+    </div>
+
+    <div>
+        <h2>📦 Test API Products</h2>
+        <button onclick="testProductsGET()">GET Products</button>
+        <button onclick="testProductsPUT()">PUT Product Icon</button>
+    </div>
+
+    <div>
+        <h2>⚙️ Test API Product Options</h2>
+        <button onclick="testOptionsGET()">GET Options</button>
+        <button onclick="testOptionsPUT()">PUT Option Icon</button>
+    </div>
+
+    <div>
+        <h2>🔄 Test Complet Workflow</h2>
+        <button onclick="testCompleteWorkflow()">Tester Workflow Complet</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const log = (message, data = null, type = 'info') => {
+            const results = document.getElementById('results');
+            const time = new Date().toLocaleTimeString();
+            const typeClass = type === 'success' ? 'success' : type === 'error' ? 'error' : '';
+
+            results.innerHTML += `<div class="${typeClass}">[${time}] ${message}</div>`;
+            if (data) {
+                results.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            results.innerHTML += '<hr>';
+            results.scrollTop = results.scrollHeight;
+        };
+
+        // Test Categories API
+        async function testCategoriesGET() {
+            log('🔍 Test GET /api/categories');
+            try {
+                const response = await fetch('/api/categories?restaurant_id=16');
+                const data = await response.json();
+
+                if (response.ok) {
+                    log(`✅ Status: ${response.status}`, data, 'success');
+                } else {
+                    log(`❌ Status: ${response.status}`, data, 'error');
+                }
+            } catch (error) {
+                log(`❌ Erreur GET Categories: ${error.message}`, null, 'error');
+            }
+        }
+
+        async function testCategoriesPUT() {
+            log('🔍 Test PUT /api/categories');
+            try {
+                const response = await fetch('/api/categories', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: 196, // MENU NANA
+                        icon: '🍴'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    log(`✅ Status: ${response.status}`, data, 'success');
+                } else {
+                    log(`❌ Status: ${response.status}`, data, 'error');
+                }
+            } catch (error) {
+                log(`❌ Erreur PUT Categories: ${error.message}`, null, 'error');
+            }
+        }
+
+        // Test Products API
+        async function testProductsGET() {
+            log('🔍 Test GET /api/products');
+            try {
+                const response = await fetch('/api/products?restaurant_id=16&category_id=196');
+                const data = await response.json();
+
+                if (response.ok) {
+                    log(`✅ Status: ${response.status}`, data, 'success');
+                } else {
+                    log(`❌ Status: ${response.status}`, data, 'error');
+                }
+            } catch (error) {
+                log(`❌ Erreur GET Products: ${error.message}`, null, 'error');
+            }
+        }
+
+        async function testProductsPUT() {
+            log('🔍 Test PUT /api/products');
+            try {
+                const response = await fetch('/api/products', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: 1563, // MENU NANA product
+                        icon: '🍽️'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    log(`✅ Status: ${response.status}`, data, 'success');
+                } else {
+                    log(`❌ Status: ${response.status}`, data, 'error');
+                }
+            } catch (error) {
+                log(`❌ Erreur PUT Products: ${error.message}`, null, 'error');
+            }
+        }
+
+        // Test Product Options API
+        async function testOptionsGET() {
+            log('🔍 Test GET /api/product-options');
+            try {
+                const response = await fetch('/api/product-options?product_id=1563');
+                const data = await response.json();
+
+                if (response.ok) {
+                    log(`✅ Status: ${response.status}`, data, 'success');
+                } else {
+                    log(`❌ Status: ${response.status}`, data, 'error');
+                }
+            } catch (error) {
+                log(`❌ Erreur GET Options: ${error.message}`, null, 'error');
+            }
+        }
+
+        async function testOptionsPUT() {
+            log('🔍 Test PUT /api/product-options');
+            try {
+                // D'abord obtenir une option
+                const getResponse = await fetch('/api/product-options?product_id=1563');
+                const getData = await getResponse.json();
+
+                if (getData.success && getData.options && getData.options.length > 0) {
+                    const firstOption = getData.options[0];
+
+                    const response = await fetch('/api/product-options', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: firstOption.id,
+                            icon: '🥤'
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        log(`✅ Status: ${response.status}`, data, 'success');
+                    } else {
+                        log(`❌ Status: ${response.status}`, data, 'error');
+                    }
+                } else {
+                    log('⚠️ Aucune option trouvée pour le test PUT', getData);
+                }
+            } catch (error) {
+                log(`❌ Erreur PUT Options: ${error.message}`, null, 'error');
+            }
+        }
+
+        // Test complet du workflow
+        async function testCompleteWorkflow() {
+            log('🚀 Démarrage test workflow complet');
+
+            // 1. Récupérer les catégories
+            await testCategoriesGET();
+
+            // 2. Mettre à jour une icône de catégorie
+            await testCategoriesPUT();
+
+            // 3. Récupérer les produits
+            await testProductsGET();
+
+            // 4. Mettre à jour une icône de produit
+            await testProductsPUT();
+
+            // 5. Récupérer les options
+            await testOptionsGET();
+
+            // 6. Mettre à jour une icône d'option
+            await testOptionsPUT();
+
+            log('✨ Test workflow complet terminé', null, 'success');
+        }
+
+        // Auto-test au chargement
+        window.addEventListener('load', () => {
+            log('🎯 Page de test chargée - Cliquez sur les boutons pour tester');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+{
+  "image": "burgers",
+  "timestamp": "2025-09-25 19:24:15",
+  "veryfi": {
+    "success": true,
+    "provider": "veryfi",
+    "processing_time": 4.296902894973755,
+    "raw_response": {
+      "account_number": null,
+      "bill_to": {
+        "address": null,
+        "name": null,
+        "parsed_address": null,
+        "vat_number": null
+      },
+      "cashback": null,
+      "category": null,
+      "country_code": "FR",
+      "created_date": "2025-09-25 17:23:54",
+      "currency_code": "EUR",
+      "date": null,
+      "delivery_date": null,
+      "discount": null,
+      "document_reference_number": null,
+      "document_title": null,
+      "document_type": "receipt",
+      "due_date": null,
+      "duplicate_of": null,
+      "external_id": null,
+      "id": 355882987,
+      "img_file_name": "355882987.jpg",
+      "img_thumbnail_url": "https://scdn.veryfi.com/receipts/cef20907ba02506e/0646d192-1e47-4335-8df7-8f3dfe0afeff/thumbnail.jpg?Expires=1758821935&Signature=VrEynxRdsurKMLQZ6OeT~TOq7RKJBGbp5XA8wbU2f5m7TmfPp73mL0cJH0QtOzJKCmtflYpi9orC5QPQd6UCaOdu1Jm-lGCt70TqrVCn0GPqHCipNzOiKXJf2EKAv~-StYiZLErUz61I1rLqRN9o02QXrC-HTHzk~qcP11IoaI8ZOGIxU0GpsqrcH3MmuGc96VOH5Y35p1Vj0y0blt19pY4JNwTy1v7MD7gaJjTb9WHgEwAuV-CdlAd-IAeCEWvubOk0k6EDCnNyoKM0APsBdGSGefTdhucrJrYZ302S8Iizv6ViHlIcSWiZofeTxsz38mTcNKbP-0R0CADbO6TdJg__&Key-Pair-Id=APKAJCILBXEJFZF4DCHQ",
+      "img_url": "https://scdn.veryfi.com/receipts/cef20907ba02506e/0646d192-1e47-4335-8df7-8f3dfe0afeff/9e5eb3c4-9d91-4a33-b82a-d518e02edeef.jpg?Expires=1758821935&Signature=Z9zkQhMv6ccsxToVDhnGrQ~EmAvOUupNUhqgpl3uzKurTkuYwoNAqhhlGgTnMKcBdktdDRf-W9IxX5RJkKY7CvaXOpLPObO264JhfDIfkD8XWG1H31w1LgLfyZCQwE14UiwsQa6jm4meyF8-uweKLBa224pd4m8grRQHQmycgM6fD3VQVk68OsC4jiX7mRHYxPtRQ3Eg5PEk2ENcfTQh6wHXbv8HvTeBK5lkaQPbZ5JG7h6C68buWwad7f5JNk2STiwZax2n--f~vck2v~8Pay8WThy2qLwl1l67cYAZpUh6to7iV0lwmrVbvGqbP4nd-SPIOmpMSFREEevaxsl9DA__&Key-Pair-Id=APKAJCILBXEJFZF4DCHQ",
+      "insurance": null,
+      "invoice_number": null,
+      "is_duplicate": false,
+      "is_money_in": false,
+      "line_items": [
+        {
+          "date": null,
+          "description": "CHEESEBURGER\nCHEESEBURGER\nBIG CHEESE\nLE FISH\nLE CHICKEN",
+          "discount": null,
+          "discount_rate": null,
+          "end_date": null,
+          "full_description": "CHEESEBURGER CHEESEBURGER BIG CHEESE LE FISH LE CHICKEN",
+          "hsn": null,
+          "id": 1648656105,
+          "lot": null,
+          "normalized_description": null,
+          "order": 0,
+          "price": null,
+          "quantity": 1.0,
+          "reference": null,
+          "section": null,
+          "sku": null,
+          "start_date": null,
+          "tags": [],
+          "tax": null,
+          "tax_rate": null,
+          "text": "CHEESEBURGER\tCHEESEBURGER\tBIG CHEESE\tLE FISH\tLE CHICKEN",
+          "total": null,
+          "type": "food",
+          "unit_of_measure": null,
+          "upc": null,
+          "weight": null
+        },
+        {
+          "date": null,
+          "description": "Steak 45g\nfromage\n2 Steaks 45g\nfromage\n2 Steaks 45g, cheddar\nFilet de poisson pané\nGalette de poulet pané",
+          "discount": null,
+          "discount_rate": null,
+          "end_date": null,
+          "full_description": "Steak 45g, fromage, 2 Steaks 45g, fromage, 2 Steaks 45g, cheddar, Filet de poisson pané, Galette de poulet pané",
+          "hsn": null,
+          "id": 1648656106,
+          "lot": null,
+          "normalized_description": null,
+          "order": 1,
+          "price": null,
+          "quantity": 1.0,
+          "reference": null,
+          "section": null,
+          "sku": null,
+          "start_date": null,
+          "tags": [],
+          "tax": null,
+          "tax_rate": null,
+          "text": "Steak 45g, fromage,\t2 Steaks 45g, fromage,\t2 Steaks 45g, cheddar,\tFilet de poisson pané,\tGalette de poulet pané",
+          "total": null,
+          "type": "food",
+          "unit_of_measure": null,
+          "upc": null,
+          "weight": null
+        },
+        {
+          "date": null,
+          "description": "comichons\ncornichons\nsalade, oignons\nfromage, cornichons\nfromage, cornichons",
+          "discount": null,
+          "discount_rate": null,
+          "end_date": null,
+          "full_description": "comichons cornichons salade, oignons fromage, cornichons fromage, cornichons",
+          "hsn": null,
+          "id": 1648656107,
+          "lot": null,
+          "normalized_description": null,
+          "order": 2,
+          "price": null,
+          "quantity": 1.0,
+          "reference": null,
+          "section": null,
+          "sku": null,
+          "start_date": null,
+          "tags": [],
+          "tax": null,
+          "tax_rate": null,
+          "text": "comichons\tcornichons\tsalade, oignons\tfromage, cornichons\tfromage, cornichons",
+          "total": null,
+          "type": "food",
+          "unit_of_measure": null,
+          "upc": null,
+          "weight": null
+        },
+        {
+          "date": null,
+          "description": "SUR PLACE\nSUR PLACE\nSUR PLACE\nSUR PLACE\nSUR PLACE",
+          "discount": null,
+          "discount_rate": null,
+          "end_date": null,
+          "full_description": "SUR PLACE SUR PLACE SUR PLACE SUR PLACE SUR PLACE",
+          "hsn": null,
+          "id": 1648656108,
+          "lot": null,
+          "normalized_description": null,
+          "order": 3,
+          "price": null,
+          "quantity": 1.0,
+          "reference": null,
+          "section": null,
+          "sku": null,
+          "start_date": null,
+          "tags": [],
+          "tax": null,
+          "tax_rate": null,
+          "text": "SUR PLACE\t\tSUR PLACE\t\tSUR PLACE\t\tSUR PLACE\t\tSUR PLACE",
+          "total": null,
+          "type": "food",
+          "unit_of_measure": null,
+          "upc": null,
+          "weight": null
+        },
+        {
+          "date": null,
+          "description": "LE BACON\nGalette de poulet pané, crusty\nSteak 90g, salade\n2 Steaks 90g, cheddar\n2\nSteak 90g\nfromage, oeuf\n3 Steaks 90g, salade\nfromage, cornichons\ntomates, oignons\nbacon\ncornichons\ntomates, cornichons",
+          "discount": null,
+          "discount_rate": null,
+          "end_date": null,
+          "full_description": "LE BACON\nGalette de poulet pané, crusty, Steak 90g, salade 2 Steaks 90g, cheddar, 2 Steak 90g, fromage, oeuf, 3 Steaks 90g, salade, fromage, cornichons  tomates, oignons bacon, cornichons tomates, cornichons",
+          "hsn": null,
+          "id": 1648656109,
+          "lot": null,
+          "normalized_description": null,
+          "order": 4,
+          "price": null,
+          "quantity": 1.0,
+          "reference": null,
+          "section": null,
+          "sku": null,
+          "start_date": null,
+          "tags": [],
+          "tax": null,
+          "tax_rate": null,
+          "text": "LE BACON\t\t270\nGalette de poulet pané, crusty,\tSteak 90g, salade\t2 Steaks 90g, cheddar,\t2 Steak 90g, fromage, oeuf,\t3 Steaks 90g, salade,\nfromage, cornichons\t\t\t\ttomates, oignons\tbacon, cornichons\ttomates, cornichons",
+          "total": 270.0,
+          "type": "food",
+          "unit_of_measure": null,
+          "upc": null,
+          "weight": null
+        }
+      ],
+      "meta": {
+        "language": [
+          "fr",
+          "en"
+        ],
+        "ocr_score": 0.945,
+        "owner": "alpha.diallo.mdalpha",
+        "pages": [
+          {
+            "height": 1059,
+            "language": [
+              "fr",
+              "en"
+            ],
+            "width": 2031
+          }
+        ],
+        "processed_pages": 1,
+        "source": "api",
+        "source_documents": [
+          {
+            "height": 1530,
+            "size_kb": 961,
+            "width": 2040
+          }
+        ],
+        "total_pages": 1
+      },
+      "notes": null,
+      "ocr_text": "NOS BURGERS\n\tPOTATOES\nSERVIS AVEC FRITES & BOISSON 33CL\t\t\t+1€\n\nSURPLACE\t\tSUR PLACE\t\tSUR PLACE\t\tSUR PLACE\n\tSUR PLACE\n5€\t\t6€50\t\t7€50\t\t6€50\t\t6 €50\nLIVRAISON\t\tLIVRAISON\t\tLIVRAISON\nLIVRAISON\n\tLIVRAISON\n6€\t\t7€50\t\t8€50\t\t7€00\t\t7€00\nDOUBLE\nCHEESEBURGER\tCHEESEBURGER\tBIG CHEESE\tLE FISH\tLE CHICKEN\nSteak 45g, fromage,\t2 Steaks 45g, fromage,\t2 Steaks 45g, cheddar,\tFilet de poisson pané,\tGalette de poulet pané,\ncomichons\tcornichons\tsalade, oignons\tfromage, cornichons\tfromage, cornichons\n\nSUR PLACE\t\tSUR PLACE\t\tSUR PLACE\t\tSUR PLACE\t\tSUR PLACE\n7€50\t\t6€50\t\t8€50\t9€50\t\t10€\nLIVRAISON\t\tLIVRAISON\t\tLIVRAISON\nLIVRAISON\t\tLIVRAISON\n8€50\t\t7€50\t\t9€50\t10€50\t\t11€\nLE TOWER\tGÉANT\t\t180\tLE BACON\t\t270\nGalette de poulet pané, crusty,\tSteak 90g, salade\t2 Steaks 90g, cheddar,\t2 Steak 90g, fromage, oeuf,\t3 Steaks 90g, salade,\nfromage, cornichons\t\t\t\ttomates, oignons\tbacon, cornichons\ttomates, cornichons",
+      "order_date": null,
+      "payment": {
+        "card_number": null,
+        "display_name": null,
+        "terms": null,
+        "type": null
+      },
+      "pdf_url": null,
+      "purchase_order_number": null,
+      "reference_number": "VDDHI-82987",
+      "rounding": null,
+      "service_end_date": null,
+      "service_start_date": null,
+      "ship_date": null,
+      "ship_to": {
+        "address": null,
+        "name": null,
+        "parsed_address": null
+      },
+      "shipping": null,
+      "store_number": null,
+      "subtotal": 270.0,
+      "tags": [],
+      "tax": null,
+      "tax_lines": [],
+      "tip": null,
+      "total": 270.0,
+      "total_weight": null,
+      "tracking_number": null,
+      "updated_date": "2025-09-25 17:23:56",
+      "vendor": {
+        "abn_number": null,
+        "account_number": null,
+        "address": null,
+        "bank_name": null,
+        "bank_number": null,
+        "bank_swift": null,
+        "category": "Fast Food",
+        "email": null,
+        "fax_number": null,
+        "iban": null,
+        "lat": null,
+        "lng": null,
+        "logo": "https://cdn.veryfi.com/logos/tmp/ba58cfe9-33a8-4e85-9315-e0cc4fe84f52.png",
+        "name": "NOS BURGERS",
+        "parsed_address": {},
+        "phone_number": null,
+        "raw_address": null,
+        "raw_name": "NOS BURGERS",
+        "reg_number": null,
+        "type": "Fast Food",
+        "vat_number": null,
+        "web": null
+      }
+    },
+    "products_count": 5
+  },
+  "openai": {
+    "success": true,
+    "provider": "openai",
+    "processing_time": 19.58694815635681,
+    "extracted_data": {
+      "total_products_detected": 9,
+      "products": [
+        {
+          "name": "Cheeseburger",
+          "description": "Steak 45g, fromage, cornichons",
+          "price_onsite": 5,
+          "currency": "€"
+        },
+        {
+          "name": "Double Cheeseburger",
+          "description": "2 Steaks 45g, fromage, cornichons",
+          "price_onsite": 6,
+          "currency": "€"
+        },
+        {
+          "name": "Big Cheese",
+          "description": "Steaks 45g, cheddar, salade, oignons",
+          "price_onsite": 7,
+          "currency": "€"
+        },
+        {
+          "name": "Le Fish",
+          "description": "Filet de poisson pané, fromage, cornichons",
+          "price_onsite": 6,
+          "currency": "€"
+        },
+        {
+          "name": "Le Chicken",
+          "description": "Galette de poulet pané, fromage, cornichons",
+          "price_onsite": 6,
+          "currency": "€"
+        },
+        {
+          "name": "Le Tower",
+          "description": "Galette de poulet pané, crusty, fromage, cornichons",
+          "price_onsite": 7,
+          "currency": "€"
+        },
+        {
+          "name": "Géant",
+          "description": "Steak 90g, salade",
+          "price_onsite": 8,
+          "currency": "€"
+        },
+        {
+          "name": "Le Bacon",
+          "description": "2 Steaks 90g, fromage, oeuf, bacon, cornichons",
+          "price_onsite": 9,
+          "currency": "€"
+        },
+        {
+          "name": "270",
+          "description": "3 Steaks 90g, salade, tomates, cornichons",
+          "price_onsite": 10,
+          "currency": "€"
+        }
+      ]
+    },
+    "products_count": 9
+  }
+}

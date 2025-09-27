@@ -40,4 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+# Google Cloud Service Account Keys
+/config/google-service-account.json
+*.json

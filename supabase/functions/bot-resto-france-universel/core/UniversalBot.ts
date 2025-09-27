@@ -1470,14 +1470,7 @@ export class UniversalBot implements IMessageHandler {
         // Lancer le workflow composite universel
         console.log(`🚀 [ProductSelection] Tentative de démarrage workflow composite pour: ${selectedProduct.name}`);
         
-        // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer le démarrage du workflow composite
-        console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection startCompositeWorkflow:', {
-          productId: selectedProduct.id,
-          productName: selectedProduct.name,
-          currentCategoryName: session.sessionData?.currentCategoryName,
-          workflowPath: 'COMPOSITE_WORKFLOW',
-          phoneNumber
-        });
+        // Démarrage workflow composite
         
         await this.compositeWorkflowExecutor.startCompositeWorkflow(phoneNumber, selectedProduct, session);
         console.log(`✅ [ProductSelection] Workflow composite démarré avec succès pour: ${selectedProduct.name}`);
@@ -1499,15 +1492,7 @@ export class UniversalBot implements IMessageHandler {
     // Produit simple - Stocker et traiter avec quantité 1
     console.log('📦 [ProductSelection] Produit simple - Traitement direct avec quantité 1');
     
-    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer le workflow simple (non-composite)
-    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleProductSelection simple workflow:', {
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      product_type: selectedProduct.product_type,
-      workflowPath: 'SIMPLE_WORKFLOW',
-      currentCategoryName: session.sessionData?.currentCategoryName,
-      phoneNumber
-    });
+    // Workflow simple (non-composite)
     
     // Créer session temporaire avec selectedProduct
     const tempSession = {
@@ -1567,6 +1552,17 @@ export class UniversalBot implements IMessageHandler {
       }
       
       console.log(`✅ [ShowProducts] ${products.length} produits trouvés`);
+
+      // DEBUG: Vérifier les icônes récupérées de la base
+      products.forEach(product => {
+        if (product.name.includes('TACOS')) {
+          console.log(`🔍 [DEBUG_SQL_TACOS] Produit récupéré de la base:`);
+          console.log(`🔍 [DEBUG_SQL_TACOS] - ID: ${product.id}`);
+          console.log(`🔍 [DEBUG_SQL_TACOS] - Name: ${product.name}`);
+          console.log(`🔍 [DEBUG_SQL_TACOS] - Icon: "${product.icon}" (${typeof product.icon})`);
+          console.log(`🔍 [DEBUG_SQL_TACOS] - All keys:`, Object.keys(product));
+        }
+      });
       
       // 3. NOUVEAU : Vérifier si cette catégorie doit utiliser l'affichage unifié
       // Charger la config du restaurant si nécessaire
@@ -1594,13 +1590,6 @@ export class UniversalBot implements IMessageHandler {
         
         // Mettre à jour la session pour gérer la sélection
         
-        // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer quand currentCategoryName est défini (ligne 1608)
-        console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.showProductsInCategory ligne 1608:', {
-          categoryId,
-          categoryName: category.name,
-          phoneNumber,
-          action: 'SETTING currentCategoryName in session'
-        });
         
         const updatedData = {
           ...session.sessionData,
@@ -1638,7 +1627,14 @@ export class UniversalBot implements IMessageHandler {
       console.log(`📍 [ShowProducts] Mode de livraison: ${deliveryMode}`);
       console.log(`📍 [ShowProducts] Session complète:`, JSON.stringify(session.sessionData, null, 2));
       
-      let menuText = `${category.icon || '🍽️'} *${category.name.toUpperCase()}*\n`;
+      // Si un seul produit et que le produit a une icône, utiliser l'icône du produit
+      let categoryDisplayIcon = category.icon || '🍽️';
+      if (products.length === 1 && products[0].icon) {
+        categoryDisplayIcon = products[0].icon;
+        console.log(`🔍 [DEBUG_CATEGORY_ICON] Single product with icon detected: ${products[0].name} -> ${products[0].icon}`);
+      }
+
+      let menuText = `${categoryDisplayIcon} *${category.name.toUpperCase()}*\n`;
       menuText += `${deliveryMode === 'livraison' ? '🚚 Prix livraison' : '📍 Prix sur place'}\n\n`;
       
       const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
@@ -1765,14 +1761,6 @@ export class UniversalBot implements IMessageHandler {
       console.log('📝 [ShowProducts] Mise à jour session avec produits');
       
       
-      // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer quand currentCategoryName est défini (ligne 1770)
-      console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.showProductsInCategory ligne 1770:', {
-        categoryId,
-        categoryName: category.name,
-        phoneNumber,
-        productCount: productList.length,
-        action: 'SETTING currentCategoryName in session'
-      });
       
       const updatedData = {
         ...session.sessionData,
@@ -1905,8 +1893,8 @@ export class UniversalBot implements IMessageHandler {
       }
       
       if (!restaurantId) {
-        console.log(`❌ [DEBUG-OrderCreation] RESTAURANT NON SÉLECTIONNÉ - restaurantId: ${restaurantId}`);
-        console.log(`❌ [DEBUG-OrderCreation] Alternative session.restaurant_id: ${session.restaurant_id}`);
+        console.error(`❌ RESTAURANT NON SÉLECTIONNÉ - restaurantId: ${restaurantId}`);
+        console.error(`❌ Alternative session.restaurant_id: ${session.restaurant_id}`);
         await this.messageSender.sendMessage(phoneNumber, '❌ Restaurant non sélectionné. Recommencez votre commande.');
         await this.deleteSession(phoneNumber);
         return;
@@ -2437,16 +2425,7 @@ export class UniversalBot implements IMessageHandler {
     const quantity = parseInt(message.trim());
     const selectedProduct = session.sessionData?.selectedProduct;
     
-    // 🔍 CATEGORY_WORKFLOW_DEBUG - Tracer handleQuantityInput pour workflow simple
-    console.log('🔍 CATEGORY_WORKFLOW_DEBUG - UniversalBot.handleQuantityInput:', {
-      phoneNumber,
-      message,
-      productId: selectedProduct?.id,
-      productName: selectedProduct?.name,
-      product_type: selectedProduct?.product_type,
-      currentCategoryName: session.sessionData?.currentCategoryName,
-      workflowPath: 'QUANTITY_INPUT'
-    });
+    // Traitement quantité pour workflow simple
     
     
     if (!selectedProduct) {
@@ -2507,22 +2486,10 @@ export class UniversalBot implements IMessageHandler {
       configuration: selectedProduct.configuration || null
     };
 
-    // 🔍 DEBUG PANIER - Vérifier l'ajout au panier
-    console.log(`🔍 [DEBUG_PRIX] Panier - Ajout produit:`);
-    console.log(`🔍 [DEBUG_PRIX] Produit: ${cartItem.productName}`);
-    console.log(`🔍 [DEBUG_PRIX] Quantité: ${cartItem.quantity}`);
-    console.log(`🔍 [DEBUG_PRIX] Prix unitaire: ${cartItem.unitPrice}€`);
-    console.log(`🔍 [DEBUG_PRIX] Prix total (avec suppléments): ${cartItem.totalPrice}€`);
-    console.log(`🔍 [DEBUG_PRIX] Différence suppléments: ${cartItem.totalPrice - cartItem.unitPrice}€`);
-    if (cartItem.configuration) {
-      console.log(`🔍 [DEBUG_PRIX] Configuration: ${JSON.stringify(cartItem.configuration)}`);
-    }
-
     cart.push(cartItem);
 
     // Calculer le total du panier
     const cartTotal = cart.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
-    console.log(`🔍 [DEBUG_PRIX] Total panier: ${cartTotal}€ (${cart.length} items)`);
     
     // Utiliser le formatter universel pour le message
     const { UniversalCartFormatter } = await import('../services/UniversalCartFormatter.ts');
@@ -2873,22 +2840,33 @@ export class UniversalBot implements IMessageHandler {
    * Formate un produit avec le nouveau style de séparateurs et emojis
    */
   private formatProductWithSeparators(
-    product: any, 
-    index: number, 
-    categoryIcon: string, 
+    product: any,
+    index: number,
+    categoryIcon: string,
     activePrice: number
   ): string {
     let productBlock = '';
-    
+
     // Séparateur
     productBlock += `━━━━━━━━━━━━━━━━━━━━━\n`;
-    
-    // Nom avec icônes
+
+    // Nom avec icônes - PHASE 2: Support icône produit avec fallback
     // ANCIEN CODE (commenté pour rollback si besoin) :
     // const cleanName = product.name.replace(/^[^\s]+\s/, ''); // Enlève emoji existant - PROBLEME: supprime le premier mot
-    
-    // CORRECTION: Garder le nom complet mais préserver le comportement existant (double categoryIcon)
-    productBlock += `🎯 ${categoryIcon} ${categoryIcon} ${product.name.toUpperCase()}\n`;
+
+    // NOUVEAU: Logique hiérarchique - produit prioritaire, sinon catégorie (préserve comportement existant)
+    const displayIcon = product.icon || categoryIcon; // Fallback automatique sur catégorie
+
+    // DEBUG: Tracer les icônes pour TACOS (console uniquement)
+    if (product.name.includes('TACOS')) {
+      console.log(`🔍 [DEBUG_TACOS_ICON] Product: ${product.name}`);
+      console.log(`🔍 [DEBUG_TACOS_ICON] product.icon: "${product.icon}" (${typeof product.icon})`);
+      console.log(`🔍 [DEBUG_TACOS_ICON] categoryIcon: "${categoryIcon}" (${typeof categoryIcon})`);
+      console.log(`🔍 [DEBUG_TACOS_ICON] displayIcon final: "${displayIcon}" (${typeof displayIcon})`);
+      console.log(`🔍 [DEBUG_TACOS_ICON] Final display will be: 🎯 ${displayIcon} ${displayIcon} ${product.name.toUpperCase()}`);
+    }
+
+    productBlock += `🎯 ${displayIcon} ${displayIcon} ${product.name.toUpperCase()}\n`;
     
     // Composition si disponible
     if (product.composition) {
@@ -2948,11 +2926,6 @@ export class UniversalBot implements IMessageHandler {
       // 2. Créer nouvelle session avec l'état CHOOSING_RESTAURANT_MODE (pattern ligne 843)
       const now = this.getCurrentTime();
       const expiresAt = new Date(now.getTime() + 30 * 60 * 1000); // 30 minutes pour discovery depuis heure Paris
-      console.log('🕐 TIMEZONE_DEBUG - Session expiry calculation:', {
-        now: now.toISOString(),
-        expiresAt: expiresAt.toISOString(),
-        diffMinutes: (expiresAt.getTime() - now.getTime()) / (1000 * 60)
-      });
       
       const supabase = await this.getSupabaseClient();
 
