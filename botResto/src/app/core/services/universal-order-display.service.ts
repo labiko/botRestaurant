@@ -45,7 +45,7 @@ export class UniversalOrderDisplayService {
       // Extension NonRégressive : Expansion des menu_pizza
       const expandedItems = this.expandMenuPizza(item);
 
-      return {
+      const formattedItem = {
         productName: this.getProductName(item),
         quantity: item.quantity || 1,
         unitPrice: item.unitPrice || item.price || 0,
@@ -57,6 +57,9 @@ export class UniversalOrderDisplayService {
         description: item.productDescription || item.description,
         expandedItems: expandedItems // Nouveau champ pour les pizzas détaillées
       };
+
+
+      return formattedItem;
     });
   }
 
@@ -65,13 +68,36 @@ export class UniversalOrderDisplayService {
    * Gère type:"menu_pizza" avec details.pizzas
    */
   private expandMenuPizza(item: any): string[] {
-    // Vérifier si c'est un menu_pizza avec détails
-    if (item.type === 'menu_pizza' && item.details?.pizzas && Array.isArray(item.details.pizzas)) {
-      return item.details.pizzas.map((pizza: any) => {
-        const name = pizza.name || 'Pizza';
-        const size = pizza.size ? ` (${pizza.size})` : '';
-        return `${name}${size}`;
-      });
+    // ÉTAPE 2: Extension progressive non-régressive
+    if (item.type === 'menu_pizza' && item.details) {
+      const result: string[] = [];
+
+      // 1. PIZZAS (existant - garantie non-régression)
+      if (item.details.pizzas && Array.isArray(item.details.pizzas)) {
+        item.details.pizzas.forEach((pizza: any) => {
+          const name = pizza.name || 'Pizza';
+          const size = pizza.size ? ` (${pizza.size})` : '';
+          result.push(`${name}${size}`);
+        });
+      }
+
+      // 2. EXTENSION SÉCURISÉE: Ajouter boissons et accompagnements
+      if (result.length > 0) { // Seulement si pizzas OK
+
+        // Boissons (Array)
+        if (item.details.beverages && Array.isArray(item.details.beverages)) {
+          item.details.beverages.forEach((beverage: any) => {
+            result.push(`${beverage.name || 'Boisson'}`);
+          });
+        }
+
+        // Accompagnements (Object unique)
+        if (item.details.sides && item.details.sides.name) {
+          result.push(`${item.details.sides.name}`);
+        }
+      }
+
+      return result;
     }
 
     // Retourner tableau vide pour les autres types
