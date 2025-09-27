@@ -189,6 +189,12 @@ export class DeliveryNotificationService {
         orderItems = formattedItems.map(item => {
           let itemText = `• ${item.quantity}x ${item.productName}`;
 
+          // NOUVEAU : Ajouter les détails des menus pizza
+          if (item.expandedItems && item.expandedItems.length > 0) {
+            const pizzaDetails = item.expandedItems.map(pizza => `  → ${pizza}`).join('\n');
+            itemText += `\n${pizzaDetails}`;
+          }
+
           // Ajouter la configuration détaillée (même logique que back-office)
           if (item.formattedConfiguration && item.formattedConfiguration.length > 0) {
             const configDetails = item.formattedConfiguration.map(config =>
