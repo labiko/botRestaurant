@@ -3385,7 +3385,10 @@ Tapez un numéro entre **1** et **${restaurants?.length || 0}**.`);
       name: products[num - 1].name,
       price: products[num - 1].price,
       quantity: 1,
-      selectedIndex: num
+      selectedIndex: num,
+      categoryName: session.sessionData?.currentCategoryName || 'Produit',
+      categoryId: session.sessionData?.currentCategoryId || null,
+      icon: products[num - 1].icon || null
     }));
 
     // Mettre à jour session avec panier

@@ -121,7 +121,10 @@ export class CartManagementExecutor extends BaseExecutor {
                     cartItems.push({
                         ...item,
                         quantity: 1,
-                        selectedIndex: index + 1
+                        selectedIndex: index + 1,
+                        categoryName: session.sessionData?.currentCategoryName || 'Produit',
+                        categoryId: session.sessionData?.currentCategoryId || null,
+                        icon: item.icon || null
                     });
                 }
             }
