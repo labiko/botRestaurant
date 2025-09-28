@@ -6,6 +6,7 @@ import universalTemplate from '@/lib/universal-workflow-template.json';
 import WorkflowHelpModal from '@/components/WorkflowHelpModal';
 
 export default function WorkflowUniversalPage() {
+  const [activeTab, setActiveTab] = useState<'workflow' | 'groups'>('workflow');
   const [showHelp, setShowHelp] = useState(false);
   const [productName, setProductName] = useState('MON MENU CUSTOM');
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
@@ -13,6 +14,13 @@ export default function WorkflowUniversalPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [onSitePrice, setOnSitePrice] = useState(0);
   const [deliveryPrice, setDeliveryPrice] = useState(0);
+
+  // États pour l'administration des groupes
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupIcon, setNewGroupIcon] = useState('');
+  const [showIconPicker, setShowIconPicker] = useState(false);
+  const [availableIcons, setAvailableIcons] = useState<any[]>([]);
+  const [iconSearchTerm, setIconSearchTerm] = useState('');
 
   const [steps, setSteps] = useState<WorkflowStep[]>([
     {
@@ -59,7 +67,26 @@ export default function WorkflowUniversalPage() {
   useEffect(() => {
     loadRestaurants();
     loadAvailableGroups();
+    loadAvailableIcons();
   }, []);
+
+  // Charger les icônes disponibles depuis france_icons
+  const loadAvailableIcons = async () => {
+    try {
+      console.log('🔄 Chargement des icônes...');
+      const response = await fetch('/api/icons');
+      console.log('📡 Réponse API icons:', response.status);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Icônes chargées:', data.icons?.length || 0);
+        setAvailableIcons(data.icons || []);
+      } else {
+        console.error('❌ Erreur API icons:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('❌ Erreur chargement icônes:', error);
+    }
+  };
 
   const loadRestaurants = async () => {
     try {
@@ -80,20 +107,18 @@ export default function WorkflowUniversalPage() {
   const loadAvailableGroups = async () => {
     try {
       setLoadingGroups(true);
+      console.log('🔄 Chargement des groupes...');
       const response = await fetch('/api/option-groups');
+      console.log('📡 Réponse API option-groups:', response.status);
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Groupes chargés:', data.groups?.length || 0);
         setAvailableGroups(data.groups || []);
+      } else {
+        console.error('❌ Erreur API option-groups:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('Erreur chargement groupes:', error);
-      // Fallback sur les groupes par défaut en cas d'erreur
-      setAvailableGroups([
-        { group_name: 'Plats', icon: '🍽️' },
-        { group_name: 'Boissons', icon: '🥤' },
-        { group_name: 'Desserts', icon: '🍰' },
-        { group_name: 'Suppléments', icon: '➕' }
-      ]);
+      console.error('❌ Erreur chargement groupes:', error);
     } finally {
       setLoadingGroups(false);
     }
@@ -128,11 +153,44 @@ export default function WorkflowUniversalPage() {
 
   const handleAddOptionGroup = (groupName: string) => {
     if (!optionGroups[groupName]) {
+      // Auto-remplissage intelligent selon le nom du groupe
+      const getDefaultOptions = (group: string): OptionItem[] => {
+        const lowerGroup = group.toLowerCase();
+
+        if (lowerGroup.includes('viande') || lowerGroup.includes('plat')) {
+          return [
+            { name: 'Viande au choix', price_modifier: 0, display_order: 1, emoji: '🥩' },
+            { name: 'Viande de bœuf', price_modifier: 1, display_order: 2, emoji: '🐄' },
+            { name: 'Viande de porc', price_modifier: 0.5, display_order: 3, emoji: '🐷' }
+          ];
+        }
+
+        if (lowerGroup.includes('boisson') || lowerGroup.includes('drink')) {
+          return [
+            { name: 'Coca', price_modifier: 0, display_order: 1, emoji: '🥤' },
+            { name: 'Eau', price_modifier: -1, display_order: 2, emoji: '💧' },
+            { name: 'Jus', price_modifier: 1, display_order: 3, emoji: '🧃' }
+          ];
+        }
+
+        if (lowerGroup.includes('sauce')) {
+          return [
+            { name: 'Sauce tomate', price_modifier: 0, display_order: 1, emoji: '🍅' },
+            { name: 'Sauce blanche', price_modifier: 0, display_order: 2, emoji: '🥛' },
+            { name: 'Sauce épicée', price_modifier: 0.5, display_order: 3, emoji: '🌶️' }
+          ];
+        }
+
+        // Fallback générique
+        return [
+          { name: `Option ${group} 1`, price_modifier: 0, display_order: 1, emoji: '⭐' },
+          { name: `Option ${group} 2`, price_modifier: 1, display_order: 2, emoji: '✨' }
+        ];
+      };
+
       setOptionGroups({
         ...optionGroups,
-        [groupName]: [
-          { name: 'Option 1', price_modifier: 0, display_order: 1 }
-        ]
+        [groupName]: getDefaultOptions(groupName)
       });
     }
   };
@@ -406,6 +464,100 @@ export default function WorkflowUniversalPage() {
     }
   };
 
+  // Fonction pour ajouter un groupe
+  const handleAddGroup = async () => {
+    console.log('🔄 Début ajout groupe:', { newGroupName, newGroupIcon });
+
+    if (!newGroupName.trim() || !newGroupIcon.trim()) {
+      alert('Veuillez remplir tous les champs');
+      return;
+    }
+
+    try {
+      // Calculer le prochain display_order
+      const nextOrder = availableGroups.length > 0
+        ? Math.max(...availableGroups.map(g => g.display_order)) + 1
+        : 1;
+
+      console.log('📊 Ordre calculé:', nextOrder, 'Groupes disponibles:', availableGroups.length);
+
+      const requestData = {
+        group_name: newGroupName,
+        icon: newGroupIcon,
+        display_order: nextOrder
+      };
+
+      console.log('📤 Envoi des données:', requestData);
+
+      const response = await fetch('/api/option-groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData)
+      });
+
+      console.log('📡 Réponse:', response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Succès:', result);
+
+        // Recharger la liste
+        await loadAvailableGroups();
+        // Réinitialiser le formulaire
+        setNewGroupName('');
+        setNewGroupIcon('');
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Erreur réponse:', errorData);
+        alert('Erreur lors de l\'ajout du groupe: ' + (errorData.error || 'Erreur inconnue'));
+      }
+    } catch (error) {
+      console.error('❌ Erreur ajout groupe:', error);
+      alert('Erreur lors de l\'ajout du groupe: ' + error.message);
+    }
+  };
+
+  // Fonction pour supprimer un groupe
+  const handleDeleteGroup = async (id: number, groupName: string) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le groupe "${groupName}" ?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/option-groups/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        // Recharger la liste
+        await loadAvailableGroups();
+      } else {
+        alert('Erreur lors de la suppression du groupe');
+      }
+    } catch (error) {
+      console.error('Erreur suppression groupe:', error);
+      alert('Erreur lors de la suppression du groupe');
+    }
+  };
+
+  // Fermer le sélecteur d'icônes si on clique à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.relative')) {
+        setShowIconPicker(false);
+      }
+    };
+
+    if (showIconPicker) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showIconPicker]);
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
@@ -434,7 +586,37 @@ export default function WorkflowUniversalPage() {
       {/* Modal d'aide */}
       <WorkflowHelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Système de tabs */}
+      <div className="mb-6">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('workflow')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'workflow'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Workflow
+            </button>
+            <button
+              onClick={() => setActiveTab('groups')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'groups'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Gérer les groupes
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      {/* Contenu selon l'onglet actif */}
+      {activeTab === 'workflow' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Configuration */}
         <div className="space-y-6">
           {/* Templates pré-configurés */}
@@ -831,6 +1013,137 @@ export default function WorkflowUniversalPage() {
           )}
         </div>
       </div>
+      ) : (
+        /* Onglet Gérer les groupes */
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-6">➕ Ajouter un groupe</h2>
+
+          {/* Formulaire d'ajout */}
+          <div className="flex gap-4 mb-8">
+            <input
+              type="text"
+              placeholder="Nom du groupe"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Icône"
+                value={newGroupIcon}
+                onChange={(e) => setNewGroupIcon(e.target.value)}
+                onClick={() => setShowIconPicker(true)}
+                className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                readOnly
+              />
+
+              {/* Sélecteur d'icônes */}
+              {showIconPicker && (
+                <div className="absolute top-full mt-2 left-0 z-50 w-80 max-h-96 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg">
+                  <div className="sticky top-0 bg-white p-2 border-b">
+                    <input
+                      type="text"
+                      placeholder="Rechercher une icône..."
+                      value={iconSearchTerm}
+                      onChange={(e) => setIconSearchTerm(e.target.value)}
+                      className="w-full px-2 py-1 border border-gray-300 rounded"
+                    />
+                  </div>
+                  <div className="p-2">
+                    {Object.entries(
+                      availableIcons
+                        .filter(icon =>
+                          !iconSearchTerm ||
+                          icon.name.toLowerCase().includes(iconSearchTerm.toLowerCase()) ||
+                          icon.category.toLowerCase().includes(iconSearchTerm.toLowerCase())
+                        )
+                        .reduce((acc: any, icon) => {
+                          if (!acc[icon.category]) acc[icon.category] = [];
+                          acc[icon.category].push(icon);
+                          return acc;
+                        }, {})
+                    ).map(([category, icons]: [string, any[]]) => (
+                      <div key={category} className="mb-3">
+                        <div className="text-xs font-semibold text-gray-600 mb-1">{category}</div>
+                        <div className="flex flex-wrap gap-1">
+                          {icons.map((icon, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                setNewGroupIcon(icon.emoji);
+                                setShowIconPicker(false);
+                                setIconSearchTerm('');
+                              }}
+                              className="p-2 hover:bg-gray-100 rounded text-2xl"
+                              title={icon.name}
+                            >
+                              {icon.emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={handleAddGroup}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            >
+              Ajouter
+            </button>
+          </div>
+
+          {/* Liste des groupes existants */}
+          <h3 className="text-lg font-semibold mb-4">Groupes existants :</h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Icône
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Nom
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ordre
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {availableGroups.map((group) => (
+                  <tr key={group.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-2xl">
+                      {group.icon}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {group.group_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {group.display_order}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => handleDeleteGroup(group.id, group.group_name)}
+                        className="text-red-600 hover:text-red-900"
+                        title="Supprimer"
+                      >
+                        🗑️
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
