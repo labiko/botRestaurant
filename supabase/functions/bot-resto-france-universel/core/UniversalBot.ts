@@ -3039,7 +3039,7 @@ export class UniversalBot implements IMessageHandler {
       console.log(`🔍 [DEBUG_TACOS_ICON] Final display will be: 🎯 ${displayIcon} ${displayIcon} ${product.name.toUpperCase()}`);
     }
 
-    productBlock += `🎯 ${displayIcon} ${displayIcon} ${product.name.toUpperCase()}\n`;
+    productBlock += `${displayIcon} ${product.name.toUpperCase()}\n`;
     
     // Composition si disponible
     if (product.composition) {

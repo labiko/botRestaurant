@@ -199,7 +199,7 @@ export class PizzaDisplayService {
         
         // Nom de la pizza (enlever l'emoji du nom car il est déjà présent)
         const pizzaName = pizza.name.replace(/^[^\s]+\s/, ''); // Enlève le premier emoji
-        message1 += `🎯 *🍕 ${pizzaName}*\n`;
+        message1 += `*🍕 ${pizzaName}*\n`;
 
         // Description des ingrédients (utiliser le champ description existant)
         if (pizza.description) {
@@ -263,7 +263,7 @@ export class PizzaDisplayService {
 
           // Nom de la pizza (enlever l'emoji du nom car il est déjà présent)
           const pizzaName = pizza.name.replace(/^[^\s]+\s/, ''); // Enlève le premier emoji
-          message2 += `🎯 *🍕 ${pizzaName}*\n`;
+          message2 += `*🍕 ${pizzaName}*\n`;
 
           // Description des ingrédients (utiliser le champ description existant)
           if (pizza.description) {
@@ -350,7 +350,7 @@ export class PizzaDisplayService {
         
         // Nom du menu (enlever l'emoji du nom car il est déjà présent)
         const menuName = menu.name.replace(/^[^\s]+\s/, ''); // Enlève le premier emoji
-        message += `🎯 *📋 ${menuName}*\n`;
+        message += `*📋 ${menuName}*\n`;
         
         // Description du menu (utiliser le champ description existant)
         if (menu.description) {
@@ -443,7 +443,7 @@ export class PizzaDisplayService {
           
           // Nom de la pizza avec la taille
           const pizzaName = pizza.name.replace(/^[^\s]+\s/, ''); // Enlève le premier emoji
-          message += `🎯 *🍕 ${pizzaName} ${data.pizzaSize}*\n`;
+          message += `*🍕 ${pizzaName} ${data.pizzaSize}*\n`;
           
           // Description des ingrédients
           if (pizza.description) {
