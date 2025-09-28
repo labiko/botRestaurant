@@ -35,6 +35,7 @@ export interface OptionItem {
 
 export class WorkflowGeneratorV2 {
 
+
   /**
    * Génère le SQL SMART UPDATE qui préserve les IDs existants
    * Stratégie: UPDATE + INSERT + DELETE pour éviter la perte d'IDs
@@ -95,7 +96,7 @@ WHERE id = ${productId};
     const groupRequiredMap = new Map<string, boolean>();
     steps.forEach(step => {
       step.option_groups.forEach(groupName => {
-        groupRequiredMap.set(groupName, step.required);
+        groupRequiredMap.set(groupName, false);
       });
     });
 
@@ -115,7 +116,8 @@ SET
   display_order = ${option.display_order},
   group_order = ${globalGroupOrder},
   option_group = '${groupName.replace(/'/g, "''")}',
-  is_required = ${groupRequiredMap.get(groupName) || false}
+  is_required = ${groupRequiredMap.get(groupName) || false},
+  icon = COALESCE(NULLIF('${option.emoji}', '🔥🔥🔥'), (SELECT icon FROM france_option_groups WHERE group_name = '${groupName.replace(/'/g, "''")}' LIMIT 1), '❓')
 WHERE product_id = ${productId}
   AND option_group = '${groupName.replace(/'/g, "''")}'
   AND display_order = ${option.display_order};
@@ -129,7 +131,8 @@ INSERT INTO france_product_options (
   group_order,
   option_group,
   is_required,
-  is_active
+  is_active,
+  icon
 )
 SELECT
   ${productId},
@@ -139,7 +142,8 @@ SELECT
   ${globalGroupOrder},
   '${groupName.replace(/'/g, "''")}',
   ${groupRequiredMap.get(groupName) || false},
-  true
+  true,
+  COALESCE(NULLIF('${option.emoji}', '🔥🔥🔥'), (SELECT icon FROM france_option_groups WHERE group_name = '${groupName.replace(/'/g, "''")}' LIMIT 1), '❓')
 WHERE NOT EXISTS (
   SELECT 1 FROM france_product_options
   WHERE product_id = ${productId}
@@ -291,14 +295,16 @@ WHERE product_id = ${productId};
   price_modifier,
   display_order,
   group_order,
-  option_group
+  option_group,
+  icon
 ) VALUES (
   ${productId},
   '${option.name.replace(/'/g, "''")}',
   ${option.price_modifier.toFixed(2)},
   ${option.display_order},
   ${globalGroupOrder},
-  '${groupName.replace(/'/g, "''")}'
+  '${groupName.replace(/'/g, "''")}',
+  COALESCE(NULLIF('${option.emoji}', '🔥🔥🔥'), (SELECT icon FROM france_option_groups WHERE group_name = '${groupName.replace(/'/g, "''")}' LIMIT 1), '❓')
 );
 
 `;
@@ -469,7 +475,7 @@ INSERT INTO france_products (
     const groupRequiredMap = new Map<string, boolean>();
     steps.forEach(step => {
       step.option_groups.forEach(groupName => {
-        groupRequiredMap.set(groupName, step.required);
+        groupRequiredMap.set(groupName, false);
       });
     });
 
@@ -504,7 +510,8 @@ INSERT INTO france_products (
   display_order,
   group_order,
   is_required,
-  is_active
+  is_active,
+  icon
 ) VALUES (
   (SELECT id FROM france_products WHERE name = '${productName.replace(/'/g, "''")}' AND restaurant_id = ${restaurantId}),
   '${groupName.replace(/'/g, "''")}',
@@ -513,7 +520,8 @@ INSERT INTO france_products (
   ${option.display_order},
   ${groupOrder},
   ${groupRequiredMap.get(groupName) || false},
-  true
+  true,
+  COALESCE(NULLIF('${option.emoji}', '🔥🔥🔥'), (SELECT icon FROM france_option_groups WHERE group_name = '${groupName.replace(/'/g, "''")}' LIMIT 1), '❓')
 );
 
 `;

@@ -21,6 +21,7 @@ export default function WorkflowUniversalPage() {
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [availableIcons, setAvailableIcons] = useState<any[]>([]);
   const [iconSearchTerm, setIconSearchTerm] = useState('');
+  const [selectedOptionForIcon, setSelectedOptionForIcon] = useState<{groupName: string, optionIndex: number} | null>(null);
 
   const [steps, setSteps] = useState<WorkflowStep[]>([
     {
@@ -546,17 +547,18 @@ export default function WorkflowUniversalPage() {
       const target = e.target as HTMLElement;
       if (!target.closest('.relative')) {
         setShowIconPicker(false);
+        setSelectedOptionForIcon(null);
       }
     };
 
-    if (showIconPicker) {
+    if (showIconPicker || selectedOptionForIcon) {
       document.addEventListener('click', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('click', handleClickOutside);
     };
-  }, [showIconPicker]);
+  }, [showIconPicker, selectedOptionForIcon]);
 
   return (
     <div className="max-w-7xl mx-auto p-6">
@@ -928,13 +930,67 @@ export default function WorkflowUniversalPage() {
                         }}
                         className="w-20 px-2 py-1 border rounded text-sm"
                       />
-                      <input
-                        type="text"
-                        placeholder="Emoji"
-                        value={option.emoji || ''}
-                        onChange={(e) => handleUpdateOption(groupName, optIndex, 'emoji', e.target.value)}
-                        className="w-16 px-2 py-1 border rounded text-sm"
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Emoji"
+                          value={option.emoji || ''}
+                          onClick={() => setSelectedOptionForIcon({groupName, optionIndex: optIndex})}
+                          onChange={(e) => handleUpdateOption(groupName, optIndex, 'emoji', e.target.value)}
+                          className="w-16 px-2 py-1 border rounded text-sm cursor-pointer"
+                          readOnly
+                        />
+
+                        {/* Sélecteur d'icônes pour cette option */}
+                        {selectedOptionForIcon?.groupName === groupName && selectedOptionForIcon?.optionIndex === optIndex && (
+                          <div className="absolute top-full mt-2 left-0 z-50 w-80 max-h-96 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg">
+                            <div className="sticky top-0 bg-white p-2 border-b">
+                              <input
+                                type="text"
+                                placeholder="Rechercher une icône..."
+                                value={iconSearchTerm}
+                                onChange={(e) => setIconSearchTerm(e.target.value)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded"
+                              />
+                            </div>
+                            <div className="p-2">
+                              {Object.entries(
+                                availableIcons
+                                  .filter(icon =>
+                                    !iconSearchTerm ||
+                                    icon.name.toLowerCase().includes(iconSearchTerm.toLowerCase()) ||
+                                    icon.category.toLowerCase().includes(iconSearchTerm.toLowerCase())
+                                  )
+                                  .reduce((acc: any, icon) => {
+                                    if (!acc[icon.category]) acc[icon.category] = [];
+                                    acc[icon.category].push(icon);
+                                    return acc;
+                                  }, {})
+                              ).map(([category, icons]: [string, any[]]) => (
+                                <div key={category} className="mb-3">
+                                  <div className="text-xs font-semibold text-gray-600 mb-1">{category}</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {icons.map((icon, idx) => (
+                                      <button
+                                        key={idx}
+                                        onClick={() => {
+                                          handleUpdateOption(groupName, optIndex, 'emoji', icon.emoji);
+                                          setSelectedOptionForIcon(null);
+                                          setIconSearchTerm('');
+                                        }}
+                                        className="p-2 hover:bg-gray-100 rounded text-2xl"
+                                        title={icon.name}
+                                      >
+                                        {icon.emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <button
                         onClick={() => handleRemoveOption(groupName, optIndex)}
                         className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"

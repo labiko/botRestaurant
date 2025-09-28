@@ -501,14 +501,22 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     }
     message += '\n\n';
     // Ajouter option "x" pour les étapes facultatives
-    if (!optionGroup.isRequired) {
+    // Fallback compatible avec anciens ET nouveaux workflows
+    const isStepRequired = optionGroup.required !== undefined
+        ? optionGroup.required
+        : optionGroup.isRequired;
+    console.log(`🔍 [DEBUG_REQUIRED] Groupe: ${optionGroup.groupName}, isRequired: ${optionGroup.isRequired}, required: ${optionGroup.required}, final: ${isStepRequired}`);
+    if (!isStepRequired) {
       // Extraire le nom simple du groupe (garniture, boisson, etc.)
       const groupName = optionGroup.groupName || 'option';
+      console.log(`✅ [DEBUG_REQUIRED] Ajout "x. Aucun" pour groupe optionnel: ${groupName}`);
       message += `x. Aucun(e) ${groupName}\n`;
+    } else {
+      console.log(`❌ [DEBUG_REQUIRED] PAS d'ajout "x. Aucun" pour groupe obligatoire: ${optionGroup.groupName}`);
     }
     // Lister les options avec numérotation simple compatible mobile
     optionGroup.options.forEach((option, index)=>{
-      const optionIcon = option.icon ? `${option.icon} ` : '';
+      const optionIcon = (option.icon && option.icon !== 'undefined') ? `${option.icon} ` : '';
       message += `${index + 1}. ${optionIcon}${option.option_name}`;
       if (option.price_modifier && option.price_modifier !== 0) {
         const sign = option.price_modifier > 0 ? '+' : '';
@@ -928,16 +936,24 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     }
     message += '\n\n';
     // Ajouter option "x" pour les étapes facultatives
-    if (!optionGroup.isRequired) {
+    // Fallback compatible avec anciens ET nouveaux workflows
+    const isStepRequired = optionGroup.required !== undefined
+        ? optionGroup.required
+        : optionGroup.isRequired;
+    console.log(`🔍 [DEBUG_REQUIRED] Groupe: ${optionGroup.groupName}, isRequired: ${optionGroup.isRequired}, required: ${optionGroup.required}, final: ${isStepRequired}`);
+    if (!isStepRequired) {
       // Extraire le nom simple du groupe (garniture, boisson, etc.)
       const groupName = optionGroup.groupName || 'option';
+      console.log(`✅ [DEBUG_REQUIRED] Ajout "x. Aucun" pour groupe optionnel: ${groupName}`);
       message += `x. Aucun(e) ${groupName}\n`;
+    } else {
+      console.log(`❌ [DEBUG_REQUIRED] PAS d'ajout "x. Aucun" pour groupe obligatoire: ${optionGroup.groupName}`);
     }
     // Utiliser les noms d'options tels qu'ils sont dans la base (ils contiennent déjà ⿡⿢⿣)
     optionGroup.options.forEach((option, index)=>{
       // Ne pas nettoyer les caractères ⿡⿢⿣ - ils sont les vrais numéros !
       // PHASE 2: Support icônes pour options (si disponible dans option.icon)
-      const optionIcon = option.icon ? `${option.icon} ` : '';
+      const optionIcon = (option.icon && option.icon !== 'undefined') ? `${option.icon} ` : '';
       message += `${index + 1}. ${optionIcon}${option.option_name}`;
       if (option.price_adjustment && option.price_adjustment > 0) {
         message += ` (+${option.price_adjustment}€)`;
