@@ -174,11 +174,15 @@ export class SessionManager implements ISessionManager {
           };
           
           
-          // Préserver spécifiquement pizzaOptionsMap si elle existait et n'est pas dans l'update
-          if (existingSession.session_data.pizzaOptionsMap && !updates.sessionData.pizzaOptionsMap) {
+          // 🚨 [TRACE_FONCTION_L177] FIX PIZZA BUG: Respecter le nettoyage explicite
+          // Préserver pizzaOptionsMap SEULEMENT si elle n'est pas explicitement définie dans l'update
+          if (existingSession.session_data.pizzaOptionsMap &&
+              !updates.sessionData.hasOwnProperty('pizzaOptionsMap')) {
             updates.sessionData.pizzaOptionsMap = existingSession.session_data.pizzaOptionsMap;
             updates.sessionData.totalPizzaOptions = existingSession.session_data.totalPizzaOptions;
-            console.log(`✅ [SessionManager] PizzaOptionsMap préservée (${updates.sessionData.pizzaOptionsMap.length} options)`);
+            console.log(`✅ [TRACE_FONCTION_L181] SessionManager - PizzaOptionsMap préservée (${updates.sessionData.pizzaOptionsMap.length} options)`);
+          } else if (updates.sessionData.hasOwnProperty('pizzaOptionsMap') && updates.sessionData.pizzaOptionsMap === undefined) {
+            console.log(`🚨 [TRACE_FONCTION_L183] SessionManager - PizzaOptionsMap NETTOYÉE explicitement (undefined)`);
           }
         }
       }

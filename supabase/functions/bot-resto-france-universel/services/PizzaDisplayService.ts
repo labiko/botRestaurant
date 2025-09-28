@@ -98,20 +98,36 @@ export class PizzaDisplayService {
    * Vérifier si une catégorie doit utiliser l'affichage unifié
    */
   shouldUseUnifiedDisplay(categorySlug: string): boolean {
-    if (!this.displayConfig?.enabled) return false;
-    
+    console.log(`🚨 [TRACE_FONCTION_L100] shouldUseUnifiedDisplay appelée avec: "${categorySlug}"`);
+
+    if (!this.displayConfig?.enabled) {
+      console.log(`🚨 [TRACE_FONCTION_L101] displayConfig.enabled = false, return false`);
+      return false;
+    }
+
     const pizzaCategories = this.displayConfig.apply_to_categories || ['pizzas'];
     const menuCategories = this.displayConfig.apply_to_menu_categories || ['menu-pizza', 'Menu Pizza', 'menu_pizza'];
-    
+
+    console.log(`🚨 [TRACE_FONCTION_L102] pizzaCategories:`, JSON.stringify(pizzaCategories));
+    console.log(`🚨 [TRACE_FONCTION_L103] menuCategories:`, JSON.stringify(menuCategories));
+
     // DÉTECTION PRÉCISE : Slugs exacts uniquement
-    const isUniversalCategory = categorySlug === 'pizzas' || 
+    const isUniversalCategory = categorySlug === 'pizzas' ||
                                categorySlug === 'menu-pizza' ||
                                categorySlug === 'menu_pizza' ||
                                categorySlug === 'menus';
-    
-    return pizzaCategories.includes(categorySlug) || 
-           menuCategories.includes(categorySlug) ||
-           isUniversalCategory;
+
+    const checkPizza = pizzaCategories.includes(categorySlug);
+    const checkMenu = menuCategories.includes(categorySlug);
+
+    console.log(`🚨 [TRACE_FONCTION_L104] pizzaCategories.includes("${categorySlug}") = ${checkPizza}`);
+    console.log(`🚨 [TRACE_FONCTION_L105] menuCategories.includes("${categorySlug}") = ${checkMenu}`);
+    console.log(`🚨 [TRACE_FONCTION_L106] isUniversalCategory = ${isUniversalCategory}`);
+
+    const result = checkPizza || checkMenu || isUniversalCategory;
+    console.log(`🚨 [TRACE_FONCTION_L107] RÉSULTAT FINAL = ${result}`);
+
+    return result;
   }
   
   /**
@@ -183,7 +199,7 @@ export class PizzaDisplayService {
         
         // Nom de la pizza (enlever l'emoji du nom car il est déjà présent)
         const pizzaName = pizza.name.replace(/^[^\s]+\s/, ''); // Enlève le premier emoji
-        message1 += `🎯 *🍕 ${pizzaName}*\n`;
+        message1 += `*🍕 ${pizzaName}*\n`;
 
         // Description des ingrédients (utiliser le champ description existant)
         if (pizza.description) {
@@ -247,7 +263,7 @@ export class PizzaDisplayService {
 
           // Nom de la pizza (enlever l'emoji du nom car il est déjà présent)
           const pizzaName = pizza.name.replace(/^[^\s]+\s/, ''); // Enlève le premier emoji
-          message2 += `🎯 *🍕 ${pizzaName}*\n`;
+          message2 += `*🍕 ${pizzaName}*\n`;
 
           // Description des ingrédients (utiliser le champ description existant)
           if (pizza.description) {
@@ -334,7 +350,7 @@ export class PizzaDisplayService {
         
         // Nom du menu (enlever l'emoji du nom car il est déjà présent)
         const menuName = menu.name.replace(/^[^\s]+\s/, ''); // Enlève le premier emoji
-        message += `🎯 *📋 ${menuName}*\n`;
+        message += `*📋 ${menuName}*\n`;
         
         // Description du menu (utiliser le champ description existant)
         if (menu.description) {
@@ -427,7 +443,7 @@ export class PizzaDisplayService {
           
           // Nom de la pizza avec la taille
           const pizzaName = pizza.name.replace(/^[^\s]+\s/, ''); // Enlève le premier emoji
-          message += `🎯 *🍕 ${pizzaName} ${data.pizzaSize}*\n`;
+          message += `*🍕 ${pizzaName} ${data.pizzaSize}*\n`;
           
           // Description des ingrédients
           if (pizza.description) {

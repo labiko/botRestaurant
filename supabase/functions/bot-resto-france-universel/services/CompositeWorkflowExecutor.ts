@@ -320,6 +320,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
    * Retour aux catégories - Reset session et affichage menu
    */ async returnToCategories(phoneNumber, session) {
     console.log(`🔙 [returnToCategories] Retour aux catégories demandé`);
+    console.log(`🚨 [TRACE_FONCTION_L321] returnToCategories APPELÉE - CompositeWorkflowExecutor.ts:321`);
     try {
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);

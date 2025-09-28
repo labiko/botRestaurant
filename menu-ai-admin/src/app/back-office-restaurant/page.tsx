@@ -1467,6 +1467,8 @@ export default function BackOfficeRestaurantPage() {
                     setEditingCategory(null);
                     setCategoryProducts([]);
                     setSelectedProducts([]);
+                    setEditingProduct(null);
+                    setIconEditMode('category'); // Reset au mode catégorie par défaut
                   }}
                   className="text-white hover:text-red-200 p-2 hover:bg-white hover:bg-opacity-10 rounded-lg transition-colors"
                 >
@@ -1515,56 +1517,133 @@ export default function BackOfficeRestaurantPage() {
                         Modifier les icônes
                       </h3>
 
-                      {/* Toggle simple entre catégorie et produit */}
-                      {editingProduct && (
-                        <div className="flex justify-center mb-6">
-                          <div className="bg-gray-100 p-1 rounded-lg">
-                            <button
-                              onClick={() => setIconEditMode('category')}
-                              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                iconEditMode === 'category'
-                                  ? 'bg-white text-blue-600 shadow-sm'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
-                            >
-                              🏷️ Catégorie
-                            </button>
-                            <button
-                              onClick={() => setIconEditMode('product')}
-                              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                iconEditMode === 'product'
-                                  ? 'bg-white text-green-600 shadow-sm'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
-                            >
-                              📦 Produit
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Affichage unifié de l'icône actuelle */}
-                      <div className="bg-white border-2 border-gray-200 rounded-xl p-8 mb-8 max-w-md mx-auto">
-                        <div className="text-center">
-                          <div className="text-8xl mb-4">
-                            {iconEditMode === 'product' && editingProduct ? editingProduct.icon || '❓' : editingCategory.icon || '❓'}
-                          </div>
-                          <div className="font-medium text-gray-900 mb-1">
-                            {iconEditMode === 'product' && editingProduct ? editingProduct.name : editingCategory.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {iconEditMode === 'product' ? 'Icône du produit' : 'Icône de la catégorie'}
-                          </div>
+                      {/* Toggle simple entre catégorie et produit - Toujours visible */}
+                      <div className="flex justify-center mb-6">
+                        <div className="bg-gray-100 p-1 rounded-lg">
+                          <button
+                            onClick={() => setIconEditMode('category')}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                              iconEditMode === 'category'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                          >
+                            🏷️ Catégorie
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIconEditMode('product');
+                              setEditingProduct(null); // Réinitialiser pour afficher la liste
+                            }}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                              iconEditMode === 'product'
+                                ? 'bg-white text-green-600 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                          >
+                            📦 Produits
+                          </button>
                         </div>
                       </div>
+
+                      {/* Affichage conditionnel selon le mode */}
+                      {iconEditMode === 'category' ? (
+                        /* Mode Catégorie - Affichage de l'icône de la catégorie */
+                        <div className="bg-white border-2 border-gray-200 rounded-xl p-8 mb-8 max-w-md mx-auto">
+                          <div className="text-center">
+                            <div className="text-8xl mb-4">
+                              {editingCategory.icon || '❓'}
+                            </div>
+                            <div className="font-medium text-gray-900 mb-1">
+                              {editingCategory.name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Icône de la catégorie
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Mode Produit - Affichage de la liste des produits ou du produit sélectionné */
+                        <>
+                          {!editingProduct ? (
+                            /* Liste des produits pour sélection */
+                            <div className="mb-8">
+                              <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                                📦 Sélectionnez un produit
+                              </h4>
+                              {loadingProducts ? (
+                                <div className="text-center py-8">
+                                  <div className="inline-flex items-center px-4 py-2 font-semibold text-sm text-purple-600">
+                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Chargement des produits...
+                                  </div>
+                                </div>
+                              ) : categoryProducts.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                  Aucun produit dans cette catégorie
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-96 overflow-y-auto p-4 bg-gray-50 rounded-xl">
+                                  {categoryProducts.map((product) => (
+                                    <button
+                                      key={product.id}
+                                      onClick={() => setEditingProduct(product)}
+                                      className="p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-green-500 hover:shadow-lg transition-all"
+                                    >
+                                      <div className="text-4xl mb-2">
+                                        {product.icon || '❓'}
+                                      </div>
+                                      <div className="text-sm font-medium text-gray-900 truncate">
+                                        {product.name}
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        {product.price_on_site_base}€
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            /* Produit sélectionné - Affichage de l'icône du produit */
+                            <div>
+                              <div className="bg-white border-2 border-green-200 rounded-xl p-8 mb-4 max-w-md mx-auto">
+                                <div className="text-center">
+                                  <div className="text-8xl mb-4">
+                                    {editingProduct.icon || '❓'}
+                                  </div>
+                                  <div className="font-medium text-gray-900 mb-1">
+                                    {editingProduct.name}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    Icône du produit
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-center mb-8">
+                                <button
+                                  onClick={() => setEditingProduct(null)}
+                                  className="text-sm text-blue-600 hover:text-blue-700 underline"
+                                >
+                                  ← Retour à la liste des produits
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
 
-                    {/* Sélection d'icônes unifiée */}
-                    <div className="mb-8">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4 text-center">
-                        {iconEditMode === 'product' ? '📦 Choisir l\'icône du produit' : '🏷️ Choisir l\'icône de la catégorie'}
-                      </h4>
-                      <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-3 p-4 bg-gray-50 rounded-xl">
+                    {/* Sélection d'icônes unifiée - Affichée seulement quand on a sélectionné ce qu'on veut modifier */}
+                    {(iconEditMode === 'category' || (iconEditMode === 'product' && editingProduct)) && (
+                      <div className="mb-8">
+                        <h4 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+                          {iconEditMode === 'product' ? '📦 Choisir l\'icône du produit' : '🏷️ Choisir l\'icône de la catégorie'}
+                        </h4>
+                        <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-3 p-4 bg-gray-50 rounded-xl">
                         {[
                           '🍽️', '🍕', '🍔', '🌯', '🥙', '🍗', '🥩', '🐟', '🦐', '🍝', '🍜', '🍛',
                           '🥗', '🥬', '🥒', '🍅', '🧅', '🥔', '🍟', '🥤', '☕', '🧃', '🍰', '🍨',
@@ -1587,6 +1666,7 @@ export default function BackOfficeRestaurantPage() {
                         ))}
                       </div>
                     </div>
+                    )}
 
                   </div>
                 </div>

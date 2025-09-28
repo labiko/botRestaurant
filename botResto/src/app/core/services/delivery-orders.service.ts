@@ -187,25 +187,52 @@ export class DeliveryOrdersService {
   /**
    * Accepter une commande (l'assigner au livreur)
    */
-  async acceptOrder(orderId: number, driverId: number): Promise<boolean> {
+  async acceptOrder(orderId: number, driverId: number): Promise<{ success: boolean; message?: string; alreadyTaken?: boolean }> {
     try {
+      // 1. VÉRIFIER si déjà accepté
+      const { data: existing } = await this.supabaseFranceService.client
+        .from('france_orders')
+        .select('driver_id')
+        .eq('id', orderId)
+        .single();
+
+      if (existing?.driver_id) {
+        console.log(`❌ Commande ${orderId} déjà acceptée par driver ${existing.driver_id}`);
+        return {
+          success: false,
+          message: `🚀 Oops ! Cette commande a déjà été récupérée par un autre livreur`,
+          alreadyTaken: true
+        };
+      }
+
+      // 2. UPDATE ATOMIQUE avec condition
       const { error } = await this.supabaseFranceService.client
         .from('france_orders')
         .update({
           driver_id: driverId,
           updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
         })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .is('driver_id', null); // ✅ CONDITION ATOMIQUE
 
       if (error) {
         console.error('Erreur acceptation commande:', error);
-        return false;
+        return {
+          success: false,
+          message: `❌ Erreur technique lors de l'acceptation`
+        };
       }
 
-      return true;
+      return {
+        success: true,
+        message: `✅ Super ! Commande acceptée avec succès`
+      };
     } catch (error) {
       console.error('Erreur service acceptation commande:', error);
-      return false;
+      return {
+        success: false,
+        message: `⚠️ Problème de connexion, veuillez réessayer`
+      };
     }
   }
 
