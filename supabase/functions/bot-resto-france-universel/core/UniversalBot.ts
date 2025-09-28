@@ -2552,15 +2552,22 @@ export class UniversalBot implements IMessageHandler {
   private async handleQuantityInput(phoneNumber: string, session: any, message: string): Promise<void> {
     const startTime = Date.now();
     console.log(`📦 [QuantityInput] Message reçu: "${message}"`);
-    
+
+    console.log('🔍 DEBUG_QUANTITY_INPUT_START: Entrée handleQuantityInput');
+    console.log('🔍 DEBUG_QUANTITY_SESSION:', JSON.stringify(session.sessionData, null, 2));
+
     const quantity = parseInt(message.trim());
     const selectedProduct = session.sessionData?.selectedProduct;
-    
+
+    console.log('🔍 DEBUG_QUANTITY_PRODUCT:', JSON.stringify(selectedProduct, null, 2));
+    console.log('🔍 DEBUG_QUANTITY_VALUE:', quantity);
+
     // Traitement quantité pour workflow simple
-    
-    
+
+
     if (!selectedProduct) {
       console.error('❌ [QuantityInput] Pas de produit sélectionné');
+      console.log('🔍 DEBUG_QUANTITY_NO_PRODUCT: selectedProduct est null/undefined');
       await this.messageSender.sendMessage(phoneNumber, 
         '❌ Erreur de session. Veuillez recommencer votre sélection.');
       return;
@@ -3394,10 +3401,16 @@ Tapez un numéro entre **1** et **${restaurants?.length || 0}**.`);
     // Mettre à jour session avec panier
     const currentCart = session.sessionData?.cart || [];
     const cartArray = Array.isArray(currentCart) ? currentCart : Object.values(currentCart);
+
+    console.log('🔍 DEBUG_CART_BEFORE_UPDATE:', JSON.stringify(currentCart));
+    console.log('🔍 DEBUG_CART_ITEMS_TO_ADD:', JSON.stringify(cartItems));
+    const finalCart = [...cartArray, ...cartItems];
+    console.log('🔍 DEBUG_CART_FINAL:', JSON.stringify(finalCart));
+
     await this.sessionManager.updateSession(session.id, {
       sessionData: {
         ...session.sessionData,
-        cart: [...cartArray, ...cartItems]
+        cart: finalCart
       }
     });
 

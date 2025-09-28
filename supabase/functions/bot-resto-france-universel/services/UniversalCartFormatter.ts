@@ -181,11 +181,15 @@ export class UniversalCartFormatter {
    */
   private formatCartSummary(cart: any[]): string {
     let summary = '🛒 MON PANIER\n\n';
-    
+
     cart.forEach((item, index) => {
+      console.log('🔍 DEBUG_CART_ITEM:', JSON.stringify(item, null, 2));
+      console.log('🔍 DEBUG_CATEGORY_NAME:', item.categoryName);
+      console.log('🔍 DEBUG_CATEGORY_ID:', item.categoryId);
+
       const categoryEmoji = this.getCategoryEmoji(item.productName, item.icon);
       const itemNumber = index + 1;
-      
+
       // Prix - DIAGNOSTIC BOWL SUPPLÉMENTS
       const calculatedPrice = item.unitPrice * item.quantity;
 
@@ -193,8 +197,9 @@ export class UniversalCartFormatter {
       // Utiliser item.totalPrice si disponible, sinon calculatedPrice
       const finalPrice = item.totalPrice || calculatedPrice;
 
-      // Ligne principale du produit avec prix
-      summary += `${itemNumber}. ${categoryEmoji} ${item.productName} - ${finalPrice}€\n`;
+      // Ligne principale du produit avec catégorie si disponible
+      const categoryDisplay = item.categoryName ? ` (${item.categoryName})` : '';
+      summary += `${itemNumber}. ${categoryEmoji} ${item.productName}${categoryDisplay} - ${finalPrice}€\n`;
 
       // Configuration détaillée pour menus pizza
       if (item.configuration || item.details) {

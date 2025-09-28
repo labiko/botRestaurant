@@ -603,9 +603,14 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     }
     // AVANT parseUserSelection, ajouter :
     const choice = message.trim();
+    console.log('🔍 DEBUG_COMPOSITE_WORKFLOW_CHOICE:', choice);
+
     if (choice === '99' || choice === '00' || choice === '0') {
-      // Déléguer aux actions existantes
-      return await this.handleCartActions(phoneNumber, session, message);
+      console.log('🔍 DEBUG_COMPOSITE_TRYING_HANDLECARTACTIONS: Tentative appel handleCartActions');
+      console.error('❌ DEBUG_COMPOSITE_ERROR: handleCartActions method does not exist!');
+      // FIXME: Cette méthode n'existe pas - déléguer au UniversalBot
+      // return await this.handleCartActions(phoneNumber, session, message);
+      console.log('🔍 DEBUG_COMPOSITE_SKIPPING_DELEGATION: Méthode manquante, continue workflow');
     }
     const currentStep = workflowData.currentStep;
     const optionGroup = workflowData.optionGroups[currentStep];
@@ -850,21 +855,37 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
         previousState: session.sessionData?.previousState
       }
     });
-    cart.push({
+    console.log('🔍 DEBUG_COMPOSITE_WORKFLOW_CART_ADD: Ajout produit composite au panier');
+    console.log('🔍 DEBUG_COMPOSITE_BEFORE_ADD:', JSON.stringify(cart));
+    console.log('🔍 DEBUG_COMPOSITE_PRODUCT:', JSON.stringify(selectedProduct));
+    console.log('🔍 DEBUG_COMPOSITE_CATEGORY_NAME:', session.sessionData?.currentCategoryName);
+
+    const cartItem = {
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       categoryName: session.sessionData?.currentCategoryName || 'Produit',
+      categoryId: session.sessionData?.currentCategoryId || null,
+      icon: selectedProduct.icon || null,
       quantity: 1,
       unitPrice: selectedProduct.price,
       totalPrice: selectedProduct.price,
       configuration: selectedProduct.configuration
-    });
+    };
+
+    console.log('🔍 DEBUG_COMPOSITE_CART_ITEM:', JSON.stringify(cartItem));
+    cart.push(cartItem);
+
+    console.log('🔍 DEBUG_COMPOSITE_CART_AFTER_ADD:', JSON.stringify(cart));
+
     const updatedData = {
       ...session.sessionData,
       cart: cart,
       selectedProduct: null,
       compositeWorkflow: null
     };
+
+    console.log('🔍 DEBUG_COMPOSITE_UPDATED_DATA_CART:', JSON.stringify(updatedData.cart));
+
     await supabase.from('france_user_sessions').update({
       bot_state: 'SELECTING_PRODUCTS',
       session_data: updatedData
