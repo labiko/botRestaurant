@@ -1,0 +1,34 @@
+# COMMANDES D'EXTRACTION DES STRUCTURES DE BASE DE DONNÉES
+# ========================================================
+
+## 🔧 EXTRACTION STRUCTURE BASE DEV
+# Project: lphvdoyhwaelmwdfkfuh
+# Host: aws-1-eu-west-3.pooler.supabase.com
+# Fichier de sortie: dev_structure_complete.sql
+
+PGPASSWORD="p4zN25F7Gfw9Py" pg_dump --schema-only --host="aws-1-eu-west-3.pooler.supabase.com" --port="5432" --username="postgres.lphvdoyhwaelmwdfkfuh" --dbname="postgres" --file=dev_structure_complete.sql
+
+## 📊 EXTRACTION STRUCTURE BASE PRODUCTION
+# Project: vywbhlnzvfqtiurwmrac
+# Host: aws-1-eu-west-3.pooler.supabase.com
+# Fichier de sortie: prod_structure_complete.sql
+
+PGPASSWORD="p4zN25F7Gfw9Py" pg_dump --schema-only --host="aws-1-eu-west-3.pooler.supabase.com" --port="5432" --username="postgres.vywbhlnzvfqtiurwmrac" --dbname="postgres" --file=prod_structure_complete.sql
+
+## 📈 RÉSULTATS
+# - DEV: 72 tables (392 KB)
+# - PROD: 68 tables (366 KB)
+# - Différence: +4 tables en DEV
+
+## 🔍 COMMANDES DE COMPARAISON UTILISÉES
+grep "CREATE TABLE" prod_structure_complete.sql > prod_tables.txt
+grep "CREATE TABLE" dev_structure_complete.sql > dev_tables.txt
+diff prod_tables.txt dev_tables.txt
+
+## 📝 COMMANDES DE VÉRIFICATION
+# Compter les tables
+grep "CREATE TABLE" prod_structure_complete.sql | wc -l
+grep "CREATE TABLE" dev_structure_complete.sql | wc -l
+
+# Lister les fichiers générés
+ls -la *structure_complete.sql
