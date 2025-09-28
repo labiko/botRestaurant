@@ -102,8 +102,8 @@ export class UniversalCartFormatter {
   private formatProductDetail(product: any, quantity: number): string {
     let detail = '';
     
-    // Obtenir l'émoji de la catégorie
-    const categoryEmoji = this.getCategoryEmoji(product.name);
+    // Obtenir l'émoji du produit (priorité à la colonne icon)
+    const categoryEmoji = this.getCategoryEmoji(product.name, product.icon);
     
     // Nom du produit avec émoji
     const displayName = quantity > 1 ? `${quantity}x ${product.name}` : product.name;
@@ -183,7 +183,7 @@ export class UniversalCartFormatter {
     let summary = '🛒 MON PANIER\n\n';
     
     cart.forEach((item, index) => {
-      const categoryEmoji = this.getCategoryEmoji(item.productName);
+      const categoryEmoji = this.getCategoryEmoji(item.productName, item.icon);
       const itemNumber = index + 1;
       
       // Prix - DIAGNOSTIC BOWL SUPPLÉMENTS
@@ -300,18 +300,24 @@ export class UniversalCartFormatter {
   }
 
   /**
-   * Obtenir l'émoji de la catégorie
+   * Obtenir l'émoji du produit (priorité à la colonne icon en base)
    */
-  private getCategoryEmoji(productName: string): string {
+  private getCategoryEmoji(productName: string, productIcon?: string): string {
+    // PRIORITÉ 1: Utiliser l'icône de la base de données si disponible
+    if (productIcon && productIcon.trim() !== '') {
+      return productIcon;
+    }
+
+    // FALLBACK: Système automatique basé sur le nom (ancien comportement)
     const lowerName = productName?.toLowerCase() || '';
-    
+
     // Rechercher dans le mapping
     for (const [key, emoji] of Object.entries(this.CATEGORY_EMOJIS)) {
       if (lowerName.includes(key)) {
         return emoji;
       }
     }
-    
+
     // Émoji par défaut
     return '🍽️';
   }

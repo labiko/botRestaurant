@@ -98,20 +98,36 @@ export class PizzaDisplayService {
    * Vérifier si une catégorie doit utiliser l'affichage unifié
    */
   shouldUseUnifiedDisplay(categorySlug: string): boolean {
-    if (!this.displayConfig?.enabled) return false;
-    
+    console.log(`🚨 [TRACE_FONCTION_L100] shouldUseUnifiedDisplay appelée avec: "${categorySlug}"`);
+
+    if (!this.displayConfig?.enabled) {
+      console.log(`🚨 [TRACE_FONCTION_L101] displayConfig.enabled = false, return false`);
+      return false;
+    }
+
     const pizzaCategories = this.displayConfig.apply_to_categories || ['pizzas'];
     const menuCategories = this.displayConfig.apply_to_menu_categories || ['menu-pizza', 'Menu Pizza', 'menu_pizza'];
-    
+
+    console.log(`🚨 [TRACE_FONCTION_L102] pizzaCategories:`, JSON.stringify(pizzaCategories));
+    console.log(`🚨 [TRACE_FONCTION_L103] menuCategories:`, JSON.stringify(menuCategories));
+
     // DÉTECTION PRÉCISE : Slugs exacts uniquement
-    const isUniversalCategory = categorySlug === 'pizzas' || 
+    const isUniversalCategory = categorySlug === 'pizzas' ||
                                categorySlug === 'menu-pizza' ||
                                categorySlug === 'menu_pizza' ||
                                categorySlug === 'menus';
-    
-    return pizzaCategories.includes(categorySlug) || 
-           menuCategories.includes(categorySlug) ||
-           isUniversalCategory;
+
+    const checkPizza = pizzaCategories.includes(categorySlug);
+    const checkMenu = menuCategories.includes(categorySlug);
+
+    console.log(`🚨 [TRACE_FONCTION_L104] pizzaCategories.includes("${categorySlug}") = ${checkPizza}`);
+    console.log(`🚨 [TRACE_FONCTION_L105] menuCategories.includes("${categorySlug}") = ${checkMenu}`);
+    console.log(`🚨 [TRACE_FONCTION_L106] isUniversalCategory = ${isUniversalCategory}`);
+
+    const result = checkPizza || checkMenu || isUniversalCategory;
+    console.log(`🚨 [TRACE_FONCTION_L107] RÉSULTAT FINAL = ${result}`);
+
+    return result;
   }
   
   /**

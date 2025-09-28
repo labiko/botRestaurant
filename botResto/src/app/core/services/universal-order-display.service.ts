@@ -111,14 +111,20 @@ export class UniversalOrderDisplayService {
     // Priorité au nouveau format universel du bot
     const productName = item.productName || item.name || item.display_name || 'Produit';
     const categoryName = item.categoryName || '';
-    
+    const productIcon = item.icon || '';
+
     // Log unique par item pour éviter les boucles infinies
     const itemKey = `${item.productId || item.id || productName}_${categoryName}`;
     if (!this.loggedItems.has(itemKey)) {
       this.loggedItems.add(itemKey);
     }
-    
-    return categoryName ? `${productName} (${categoryName})` : productName;
+
+    // Ajouter l'icône si elle existe et si elle n'est pas déjà dans le nom
+    const nameWithIcon = productIcon && !productName.includes(productIcon)
+      ? `${productIcon} ${productName}`
+      : productName;
+
+    return categoryName ? `${nameWithIcon} (${categoryName})` : nameWithIcon;
   }
 
   /**

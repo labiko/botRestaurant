@@ -530,6 +530,42 @@ export class UniversalBot implements IMessageHandler {
   }
 
   /**
+   * Vérifie si un workflow peut se déclencher dans la catégorie actuelle
+   * SÉCURITÉ : Empêche les workflows pizza hors contexte pizza
+   */
+  private isWorkflowAllowedInCurrentContext(
+    workflowId: string,
+    session: BotSession
+  ): boolean {
+    // Récupérer la catégorie actuelle
+    const currentCategoryId = session.sessionData?.currentCategoryId ||
+                             session.sessionData?.selectedCategoryId;
+
+    // Si pas de catégorie, on est dans le menu principal = OK
+    if (!currentCategoryId) {
+      return true; // Permettre dans menu principal
+    }
+
+    // Trouver le slug de la catégorie
+    const categories = session.sessionData?.categories || [];
+    const currentCategory = categories.find((c: any) => c.id === currentCategoryId);
+    const categorySlug = currentCategory?.slug || '';
+
+    // RÈGLE SIMPLE : Workflows MENU_X uniquement dans pizza/menu
+    const isPizzaWorkflow = workflowId.startsWith('MENU_');
+    const isPizzaCategory = categorySlug.includes('pizza') ||
+                            categorySlug.includes('menu');
+
+    // Si workflow pizza, doit être dans catégorie pizza
+    if (isPizzaWorkflow && !isPizzaCategory) {
+      console.log(`🚫 [SÉCURITÉ] ${workflowId} bloqué dans catégorie "${categorySlug}"`);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
    * Vérifier si un workflow doit être déclenché
    */
   private async shouldTriggerWorkflow(
@@ -537,15 +573,32 @@ export class UniversalBot implements IMessageHandler {
     message: string,
     session: BotSession
   ): Promise<boolean> {
-    
-    // TODO: Implémenter logique de déclenchement basée sur workflow.triggerConditions
-    // Pour l'instant, déclenchement simple basé sur des patterns
-    
-    if (workflow.workflowId === 'MENU_1_WORKFLOW' && message === '1') return true;
-    if (workflow.workflowId === 'MENU_2_WORKFLOW' && message === '2') return true;
-    if (workflow.workflowId === 'MENU_3_WORKFLOW' && message === '3') return true;
-    if (workflow.workflowId === 'MENU_4_WORKFLOW' && message === '4') return true;
-    
+
+    console.log(`🔍 [WORKFLOW] Vérification ${workflow.workflowId} pour message "${message}"`);
+
+    // NOUVELLE SÉCURITÉ : Vérifier le contexte AVANT tout
+    if (!this.isWorkflowAllowedInCurrentContext(workflow.workflowId, session)) {
+      return false;
+    }
+
+    // Garder la logique existante mais simplifiée
+    if (workflow.workflowId === 'MENU_1_WORKFLOW' && message === '1') {
+      console.log(`✅ [WORKFLOW] MENU_1_WORKFLOW activé`);
+      return true;
+    }
+    if (workflow.workflowId === 'MENU_2_WORKFLOW' && message === '2') {
+      console.log(`✅ [WORKFLOW] MENU_2_WORKFLOW activé`);
+      return true;
+    }
+    if (workflow.workflowId === 'MENU_3_WORKFLOW' && message === '3') {
+      console.log(`✅ [WORKFLOW] MENU_3_WORKFLOW activé`);
+      return true;
+    }
+    if (workflow.workflowId === 'MENU_4_WORKFLOW' && message === '4') {
+      console.log(`✅ [WORKFLOW] MENU_4_WORKFLOW activé`);
+      return true;
+    }
+
     return false;
   }
 
@@ -1131,6 +1184,7 @@ export class UniversalBot implements IMessageHandler {
    * Afficher le menu après choix du mode de livraison
    */
   private async showMenuAfterDeliveryModeChoice(phoneNumber: string, restaurant: any, deliveryMode: string, existingSession?: any): Promise<void> {
+    console.log(`🚨 [TRACE_FONCTION_L1133] showMenuAfterDeliveryModeChoice APPELÉE - UniversalBot.ts:1133`);
     const supabase = await this.getSupabaseClient();
     
     // Chargement dynamique des catégories depuis la BDD
@@ -1180,8 +1234,19 @@ export class UniversalBot implements IMessageHandler {
         deliveryMode: deliveryMode,
         selectedServiceMode: deliveryMode, // NOUVEAU: Ajout pour validation rayon
         cart: sessionData?.cart || {},
-        totalPrice: sessionData?.totalPrice || 0
+        totalPrice: sessionData?.totalPrice || 0,
+        // NETTOYAGE COMPLET DES DONNÉES PIZZA
+        pizzaOptionsMap: undefined,
+        totalPizzaOptions: undefined,
+        menuPizzaWorkflow: undefined
       };
+
+      // 🚨 LOG CRITIQUE - Confirmer le nettoyage
+      console.log(`🚨 [TRACE_FONCTION_L1192] showMenuAfterDeliveryModeChoice NETTOIE les données pizza !`);
+      console.log(`🚨 [TRACE_FONCTION_L1193] Avant nettoyage - pizzaOptionsMap: ${sessionData?.pizzaOptionsMap ? 'EXISTS' : 'UNDEFINED'}`);
+      console.log(`🚨 [TRACE_FONCTION_L1194] Avant nettoyage - menuPizzaWorkflow: ${sessionData?.menuPizzaWorkflow ? 'EXISTS' : 'UNDEFINED'}`);
+      console.log(`🚨 [TRACE_FONCTION_L1195] Après nettoyage - pizzaOptionsMap: ${updatedData.pizzaOptionsMap ? 'EXISTS' : 'UNDEFINED'}`);
+      console.log(`🚨 [TRACE_FONCTION_L1196] Après nettoyage - menuPizzaWorkflow: ${updatedData.menuPizzaWorkflow ? 'EXISTS' : 'UNDEFINED'}`);
       
       console.log(`✅ [SESSION] Données session mises à jour:`, {
         deliveryMode: updatedData.deliveryMode,
@@ -1194,8 +1259,21 @@ export class UniversalBot implements IMessageHandler {
       // bot_state sera mis à jour vers VIEWING_MENU une fois que l'utilisateur aura fait son choix
       console.log('📝 [UPDATE_SESSION_04] UniversalBot ligne 1153 - CRITIQUE');
       await this.sessionManager.updateSession(session.id, {
-        // botState: 'VIEWING_MENU', // ← SUPPRIMÉ: on garde CHOOSING_DELIVERY_MODE
-        sessionData: updatedData  // ✅ CORRECTION FINALE: Passer l'objet directement, SessionManager gère JSON.stringify
+        botState: 'VIEWING_MENU', // ✅ CORRECTION: Reset du bot_state pour sortir du workflow pizza
+        currentStep: null, // ✅ CORRECTION: Reset du current_step
+        sessionData: updatedData,  // ✅ CORRECTION FINALE: Passer l'objet directement, SessionManager gère JSON.stringify
+        // 🚨 [TRACE_FONCTION_L1251] FIX PIZZA BUG: NETTOYER AUSSI workflowData !
+        workflowData: {
+          workflowId: '',
+          currentStepId: '',
+          stepHistory: [],
+          selectedItems: {},
+          validationErrors: [],
+          // Nettoyer explicitement les données pizza de workflowData
+          pizzaOptionsMap: undefined,
+          totalPizzaOptions: undefined,
+          menuPizzaWorkflow: undefined
+        }
       });
     }
   }
@@ -1263,6 +1341,7 @@ export class UniversalBot implements IMessageHandler {
    * Gérer la navigation dans une catégorie
    */
   private async handleCategoryNavigation(phoneNumber: string, session: any, message: string): Promise<void> {
+    console.log(`🚨 [TRACE_FONCTION_L1265] handleCategoryNavigation APPELÉE - UniversalBot.ts:1265`);
     // TODO: Implémenter la navigation dans les catégories
     console.log('🔄 [CategoryNavigation] Navigation catégorie - TODO: Implémenter');
     await this.messageSender.sendMessage(phoneNumber, 
@@ -1277,6 +1356,13 @@ export class UniversalBot implements IMessageHandler {
     console.log(`🛒 [ProductSelection] Message reçu: "${message}"`);
     console.log(`🛒 [ProductSelection] État session actuel:`, session.currentState);
     console.log(`🛒 [ProductSelection] Session complète:`, JSON.stringify(session.sessionData, null, 2));
+
+    // 🚨 DEBUG CRITIQUE - Analyser l'état de la session quand on tape "2"
+    console.log(`🚨 [TRACE_FONCTION_L1300] handleProductSelection - Message: "${message}"`);
+    console.log(`🚨 [TRACE_FONCTION_L1301] handleProductSelection - bot_state: ${session.botState}`);
+    console.log(`🚨 [TRACE_FONCTION_L1302] handleProductSelection - pizzaOptionsMap: ${session.sessionData?.pizzaOptionsMap ? 'EXISTS' : 'UNDEFINED'}`);
+    console.log(`🚨 [TRACE_FONCTION_L1303] handleProductSelection - menuPizzaWorkflow: ${session.sessionData?.menuPizzaWorkflow ? 'EXISTS' : 'UNDEFINED'}`);
+    console.log(`🚨 [TRACE_FONCTION_L1304] handleProductSelection - currentCategoryId: ${session.sessionData?.currentCategoryId}`);
 
     
     // RÉUTILISATION: Vérifier les actions rapides 99, 00 avant parseInt
@@ -1331,9 +1417,16 @@ export class UniversalBot implements IMessageHandler {
     // Si c'est un affichage unifié de pizzas, accepter les choix étendus
     const hasPizzaMap = session.sessionData?.pizzaOptionsMap || session.workflowData?.pizzaOptionsMap;
 
+    // 🚨 DEBUG CRITIQUE - Analyser le mode pizza
+    console.log(`🔍 [DEBUG_PIZZA] hasPizzaMap: ${!!hasPizzaMap}`);
+    if (hasPizzaMap) {
+      console.log(`🔍 [DEBUG_PIZZA] pizzaOptionsMap content:`, JSON.stringify(hasPizzaMap, null, 2));
+    }
+
     if (hasPizzaMap) {
       maxValidChoice = session.sessionData?.totalPizzaOptions || session.workflowData?.totalPizzaOptions || products.length;
       console.log(`🍕 [ProductSelection] Mode pizza unifié - Accepte jusqu'à ${maxValidChoice}`);
+      console.log(`🚨 [DEBUG_PIZZA] ATTENTION: Mode pizza activé dans une catégorie qui pourrait ne pas être pizza !`);
     }
     
     if (isNaN(productNumber) || productNumber < 1 || productNumber > maxValidChoice) {
@@ -1523,6 +1616,7 @@ export class UniversalBot implements IMessageHandler {
    * SOLID : Single Responsibility - Une seule responsabilité : afficher les produits
    */
   private async showProductsInCategory(phoneNumber: string, restaurant: any, session: any, categoryId: string): Promise<void> {
+    console.log(`🚨 [TRACE_FONCTION_L1538] showProductsInCategory APPELÉE - UniversalBot.ts:1538`);
     console.log(`📦 [ShowProducts] Chargement produits catégorie ID: ${categoryId}`);
     
     try {
@@ -1577,8 +1671,21 @@ export class UniversalBot implements IMessageHandler {
       // 3. NOUVEAU : Vérifier si cette catégorie doit utiliser l'affichage unifié
       // Charger la config du restaurant si nécessaire
       await this.pizzaDisplayService.loadRestaurantConfig(restaurant.id);
-      
-      if (this.pizzaDisplayService.shouldUseUnifiedDisplay(category.slug)) {
+
+      // 🚨 DEBUG CRITIQUE - Analyser l'affichage unifié pizza
+      console.log(`🔍 [DEBUG_PIZZA_CATEGORY] Catégorie analysée: "${category.slug}"`);
+      console.log(`🔍 [DEBUG_PIZZA_CATEGORY] Nom catégorie: "${category.name}"`);
+      const shouldUsePizza = this.pizzaDisplayService.shouldUseUnifiedDisplay(category.slug);
+      console.log(`🚨 [TRACE_FONCTION_L1594] shouldUseUnifiedDisplay("${category.slug}") = ${shouldUsePizza}`);
+      console.log(`🚨 [TRACE_FONCTION_L1595] Configuration pizza pour category: ${category.slug}`);
+      console.log(`🔍 [DEBUG_PIZZA_CATEGORY] Session avant traitement pizza:`, JSON.stringify({
+        pizzaOptionsMap: session.sessionData?.pizzaOptionsMap ? 'EXISTS' : 'UNDEFINED',
+        totalPizzaOptions: session.sessionData?.totalPizzaOptions,
+        selectedCategoryId: session.sessionData?.selectedCategoryId,
+        currentCategoryId: session.sessionData?.currentCategoryId
+      }));
+
+      if (shouldUsePizza) {
         console.log(`🍕 [ShowProducts] Catégorie ${category.slug} utilise l'affichage unifié`);
         
         // Déterminer le type de contexte
@@ -1615,8 +1722,22 @@ export class UniversalBot implements IMessageHandler {
         });
         
         return; // Sortir pour éviter l'affichage classique
+      } else {
+        // Nettoyer les données pizza de la session pour les catégories non-pizza
+        console.log(`🧹 [CLEANUP] Nettoyage données pizza pour catégorie: ${category.slug}`);
+
+        const cleanedSessionData = {
+          ...session.sessionData,
+          pizzaOptionsMap: undefined,
+          totalPizzaOptions: undefined,
+          menuPizzaWorkflow: undefined
+        };
+
+        await this.sessionManager.updateSession(session.id, {
+          sessionData: cleanedSessionData
+        });
       }
-      
+
       // 3.2 LOGIQUE EXISTANTE PRÉSERVÉE : Si UN SEUL produit avec variantes, affichage direct
       if (products.length === 1) {
         const product = products[0];
