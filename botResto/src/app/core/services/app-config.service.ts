@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
+import { FRANCE_CONFIG } from '../../config/environment-config';
 
 export interface AppEnvironmentConfig {
   production: boolean;
@@ -29,14 +30,18 @@ export class AppConfigService {
     const isDevelopment = this.isDevelopmentEnvironment();
     const baseUrl = this.detectBaseUrl();
 
+    console.log('🔧 [AppConfig] Environnement:', FRANCE_CONFIG.environmentName);
+    console.log('🔧 [AppConfig] Base URL:', baseUrl);
+    console.log('🔧 [AppConfig] Supabase:', FRANCE_CONFIG.supabaseFranceUrl);
+
     return {
       production: !isDevelopment,
       baseUrl: baseUrl,
       apiUrl: baseUrl + '/api',
       webAppUrl: baseUrl,
       tokenAcceptanceUrl: baseUrl + '/restaurant-france/delivery-france/accept',
-      supabaseUrl: environment.supabase?.url || '',
-      supabaseAnonKey: environment.supabase?.anonKey || ''
+      supabaseUrl: FRANCE_CONFIG.supabaseFranceUrl,
+      supabaseAnonKey: FRANCE_CONFIG.supabaseFranceAnonKey
     };
   }
 
@@ -59,11 +64,11 @@ export class AppConfigService {
   }
 
   /**
-   * Détecter l'URL de base (utilise toujours la constante de production)
+   * Détecter l'URL de base (utilise la configuration selon l'environnement)
    */
   private detectBaseUrl(): string {
-    // Utiliser toujours l'URL de production pour éviter les problèmes localhost
-    return environment.productionUrl;
+    // Utiliser l'URL selon l'environnement configuré
+    return FRANCE_CONFIG.vercelUrl;
   }
 
   /**

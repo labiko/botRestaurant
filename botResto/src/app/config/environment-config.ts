@@ -13,12 +13,14 @@ const ENVIRONMENTS = {
   DEV: {
     supabaseFranceUrl: 'https://lphvdoyhwaelmwdfkfuh.supabase.co',
     supabaseFranceAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwaHZkb3lod2FlbG13ZGZrZnVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMDM5MjYsImV4cCI6MjA3Mzc3OTkyNn0.vzB1my0OcAGdZ5qA37cbNnzs2D8K0Kox_L54M4GdydU',
+    vercelUrl: 'https://botrestodev.vercel.app',
     environmentName: 'DEV',
     debugMode: true
   },
   PROD: {
     supabaseFranceUrl: 'https://vywbhlnzvfqtiurwmrac.supabase.co',
     supabaseFranceAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5d2JobG56dmZxdGl1cndtcmFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzE3NzcsImV4cCI6MjA3MjMwNzc3N30.cZHFxzk2FNtxfTaDupsUcSJ6d5KCiVW3Dym9CElkeq0',
+    vercelUrl: 'https://botresto.vercel.app',
     environmentName: 'PROD',
     debugMode: false
   }
@@ -46,6 +48,7 @@ console.log('🔧 [CONFIG] Environnement final:', FINAL_ENVIRONMENT);
 export const FRANCE_CONFIG = {
   supabaseFranceUrl: ENVIRONMENTS[FINAL_ENVIRONMENT].supabaseFranceUrl,
   supabaseFranceAnonKey: ENVIRONMENTS[FINAL_ENVIRONMENT].supabaseFranceAnonKey,
+  vercelUrl: ENVIRONMENTS[FINAL_ENVIRONMENT].vercelUrl,
 
   // Green API (identique pour DEV et PROD)
   greenApi: {
