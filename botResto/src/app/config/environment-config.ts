@@ -24,55 +24,41 @@ const ENVIRONMENTS = {
   }
 };
 
-// DEBUG: Logs pour diagnostiquer les variables d'environnement
-console.log('🔍 [ENV_DEBUG] ==========================================');
-console.log('🔍 [ENV_DEBUG] typeof process:', typeof process);
-console.log('🔍 [ENV_DEBUG] process.env disponible:', typeof process !== 'undefined' && !!process.env);
-if (typeof process !== 'undefined' && process.env) {
-  console.log('🔍 [ENV_DEBUG] NEXT_PUBLIC_SUPABASE_URL dans process.env:', !!process.env['NEXT_PUBLIC_SUPABASE_URL']);
-  console.log('🔍 [ENV_DEBUG] Valeur SUPABASE_URL:', process.env['NEXT_PUBLIC_SUPABASE_URL']?.substring(0, 30) + '...');
-}
-console.log('🔍 [ENV_DEBUG] typeof window:', typeof window);
-console.log('🔍 [ENV_DEBUG] ==========================================');
-
-// Vérification sécurisée de l'environnement pour Angular
-const getEnvVar = (key: string): string | undefined => {
-  // Méthode 1: process.env classique
-  if (typeof process !== 'undefined' && process.env && process.env[key]) {
-    console.log(`✅ [ENV_DEBUG] Trouvé ${key} dans process.env`);
-    return process.env[key];
+// Récupération simple de l'environnement Vercel
+const getVercelEnvironment = (): 'DEV' | 'PROD' => {
+  // Vérification sécurisée pour Angular/Vercel
+  if (typeof process !== 'undefined' && process.env && process.env['NEXT_PUBLIC_ENVIRONMENT']) {
+    const env = process.env['NEXT_PUBLIC_ENVIRONMENT'];
+    return env === 'PROD' ? 'PROD' : 'DEV';
   }
 
-  // Méthode 2: Variables globales injectées par Vercel
-  if (typeof window !== 'undefined' && (window as any).__env__ && (window as any).__env__[key]) {
-    console.log(`✅ [ENV_DEBUG] Trouvé ${key} dans window.__env__`);
-    return (window as any).__env__[key];
-  }
-
-  // Méthode 3: Variables dans window pour Vercel
-  if (typeof window !== 'undefined' && (window as any)[key]) {
-    console.log(`✅ [ENV_DEBUG] Trouvé ${key} dans window`);
-    return (window as any)[key];
-  }
-
-  console.log(`❌ [ENV_DEBUG] ${key} NON TROUVÉ - utilisation fallback`);
-  return undefined;
+  // Fallback local
+  return CURRENT_ENVIRONMENT;
 };
 
-// Configuration finale : Variables Vercel OU config locale
+// Environnement final
+const FINAL_ENVIRONMENT = getVercelEnvironment();
+
+console.log('🔧 [CONFIG] ==========================================');
+console.log('🔧 [CONFIG] CURRENT_ENVIRONMENT (local):', CURRENT_ENVIRONMENT);
+console.log('🔧 [CONFIG] NEXT_PUBLIC_ENVIRONMENT (Vercel):', process.env?.['NEXT_PUBLIC_ENVIRONMENT'] || 'NON DÉFINI');
+console.log('🔧 [CONFIG] FINAL_ENVIRONMENT:', FINAL_ENVIRONMENT);
+console.log('🔧 [CONFIG] ==========================================');
+
+// Configuration finale simplifiée
 export const FRANCE_CONFIG = {
-  supabaseFranceUrl: getEnvVar('NEXT_PUBLIC_SUPABASE_URL') || ENVIRONMENTS[CURRENT_ENVIRONMENT].supabaseFranceUrl,
-  supabaseFranceAnonKey: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') || ENVIRONMENTS[CURRENT_ENVIRONMENT].supabaseFranceAnonKey,
+  supabaseFranceUrl: ENVIRONMENTS[FINAL_ENVIRONMENT].supabaseFranceUrl,
+  supabaseFranceAnonKey: ENVIRONMENTS[FINAL_ENVIRONMENT].supabaseFranceAnonKey,
 
   // Green API (identique pour DEV et PROD)
   greenApi: {
-    instanceId: getEnvVar('NEXT_PUBLIC_GREEN_API_INSTANCE_ID') || '7105313693',
-    apiToken: getEnvVar('NEXT_PUBLIC_GREEN_API_TOKEN') || '994e56511a43455693d2c4c1e4be86384a27eb921c394d5693',
-    baseUrl: getEnvVar('NEXT_PUBLIC_GREEN_API_BASE_URL') || 'https://7105.api.greenapi.com'
+    instanceId: '7105313693',
+    apiToken: '994e56511a43455693d2c4c1e4be86384a27eb921c394d5693',
+    baseUrl: 'https://7105.api.greenapi.com'
   },
 
-  environmentName: ENVIRONMENTS[CURRENT_ENVIRONMENT].environmentName,
-  debugMode: ENVIRONMENTS[CURRENT_ENVIRONMENT].debugMode
+  environmentName: ENVIRONMENTS[FINAL_ENVIRONMENT].environmentName,
+  debugMode: ENVIRONMENTS[FINAL_ENVIRONMENT].debugMode
 };
 
 // Configuration exportée sans logs de debug
