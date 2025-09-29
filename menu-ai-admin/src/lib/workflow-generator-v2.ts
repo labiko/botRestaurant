@@ -116,8 +116,7 @@ SET
   display_order = ${option.display_order},
   group_order = ${globalGroupOrder},
   option_group = '${groupName.replace(/'/g, "''")}',
-  is_required = ${groupRequiredMap.get(groupName) || false},
-  icon = COALESCE(NULLIF('${option.emoji}', '🔥🔥🔥'), (SELECT icon FROM france_option_groups WHERE group_name = '${groupName.replace(/'/g, "''")}' LIMIT 1), '❓')
+  is_required = ${groupRequiredMap.get(groupName) || false}
 WHERE product_id = ${productId}
   AND option_group = '${groupName.replace(/'/g, "''")}'
   AND display_order = ${option.display_order};

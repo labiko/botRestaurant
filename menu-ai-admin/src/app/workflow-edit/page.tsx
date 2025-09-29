@@ -61,6 +61,7 @@ export default function WorkflowEditPage() {
     const restaurantId = urlParams.get('restaurant');
 
     if (editId && restaurantId) {
+      console.log('🚀 [DEBUG ORDRE] 0. DEBUT useEffect - Appel loadProductForEdit');
       setEditProductId(parseInt(editId));
       setEditRestaurantId(parseInt(restaurantId));
       loadProductForEdit(parseInt(editId), parseInt(restaurantId));
@@ -118,7 +119,10 @@ export default function WorkflowEditPage() {
 
       // Charger la configuration workflow réelle
       if (data.workflowConfig && data.workflowConfig.steps_config && data.workflowConfig.steps_config.steps) {
+        console.log('🎯 [DEBUG ORDRE] 1. CHARGEMENT STEPS:', data.workflowConfig.steps_config.steps);
         setSteps(data.workflowConfig.steps_config.steps);
+      } else {
+        console.log('⚠️ [DEBUG ORDRE] 1. PAS DE STEPS TROUVÉS');
       }
 
       // Charger les groupes d'options réels
@@ -134,7 +138,9 @@ export default function WorkflowEditPage() {
 
       // TOUJOURS essayer de charger les vraies données pour l'interface générique
       console.log('🔍 [WORKFLOW-EDIT] Tentative chargement vraies données pour produit:', productId);
-      await loadRealOptionGroups(productId);
+      console.log('🎯 [DEBUG ORDRE] 1.5 APPEL loadRealOptionGroups APRÈS chargement steps');
+      console.log('🎯 [DEBUG ORDRE] 1.5 Steps dans state AVANT appel:', steps);
+      await loadRealOptionGroups(productId, data.workflowConfig.steps_config.steps);
 
     } catch (error) {
       console.error('❌ [WORKFLOW-EDIT] Erreur chargement:', error);
@@ -182,8 +188,11 @@ export default function WorkflowEditPage() {
   };
 
   // Charger les vraies données groupées depuis france_product_options
-  const loadRealOptionGroups = async (productId: number) => {
+  const loadRealOptionGroups = async (productId: number, stepsData?: any[]) => {
     try {
+      console.log('🎯 [DEBUG ORDRE] 2. DEBUT chargement options groupées');
+      console.log('🎯 [DEBUG ORDRE] 2. Steps actuels dans le state:', steps);
+      console.log('🎯 [DEBUG ORDRE] 2. Steps passés en paramètre:', stepsData);
       setLoading(true);
 
       // Validation de l'ID produit
@@ -200,9 +209,42 @@ export default function WorkflowEditPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.optionGroups && data.optionGroups.length > 0) {
-          setRealOptionGroups(data.optionGroups);
+          // Synchroniser max_selections depuis steps_config
+          let enrichedGroups = data.optionGroups;
+          const stepsToUse = stepsData || steps;
+          console.log('🔍 [DEBUG] Steps disponibles:', stepsToUse);
+          console.log('🔍 [DEBUG] Groupes avant enrichissement:', data.optionGroups);
+
+          if (stepsToUse && stepsToUse.length > 0) {
+            enrichedGroups = data.optionGroups.map(group => {
+              console.log(`🔍 [DEBUG] Traitement groupe: ${group.group_name}`);
+
+              // Trouver le step correspondant
+              const matchingStep = stepsToUse.find(
+                step => step.option_groups?.includes(group.group_name)
+              );
+
+              console.log(`🔍 [DEBUG] Step trouvé pour ${group.group_name}:`, matchingStep);
+              console.log(`🔍 [DEBUG] max_selections du step:`, matchingStep?.max_selections);
+              console.log(`🔍 [DEBUG] max_selections du groupe original:`, group.max_selections);
+
+              const finalMaxSelections = matchingStep?.max_selections || group.max_selections || 1;
+              console.log(`🔍 [DEBUG] max_selections final pour ${group.group_name}:`, finalMaxSelections);
+
+              return {
+                ...group,
+                max_selections: finalMaxSelections,
+                is_required: matchingStep?.required ?? group.is_required
+              };
+            });
+          } else {
+            console.log('⚠️ [DEBUG] Aucun steps disponible pour enrichissement');
+          }
+
+          console.log('🔍 [DEBUG] Groupes après enrichissement:', enrichedGroups);
+          setRealOptionGroups(enrichedGroups);
           setUseGenericInterface(true); // ACTIVER l'interface générique
-          console.log('✅ [WORKFLOW-EDIT] Groupes réels chargés:', data.optionGroups.length, 'groupes');
+          console.log('✅ [WORKFLOW-EDIT] Groupes réels chargés:', enrichedGroups.length, 'groupes');
           console.log('🎯 [WORKFLOW-EDIT] Interface générique ACTIVÉE');
         } else {
           console.log('⚠️ [WORKFLOW-EDIT] Aucun groupe trouvé, interface héritée conservée');
@@ -263,13 +305,27 @@ export default function WorkflowEditPage() {
       finalOptionGroups = optionGroups;
     }
 
+    // Mettre à jour les steps avec les max_selections modifiés
+    const updatedSteps = steps.map(step => {
+      const matchingGroup = realOptionGroups.find(group =>
+        step.option_groups?.includes(group.group_name)
+      );
+      if (matchingGroup) {
+        return {
+          ...step,
+          max_selections: matchingGroup.max_selections
+        };
+      }
+      return step;
+    });
+
     const workflow: UniversalWorkflow = {
       productName,
       restaurantId: editRestaurantId || 0,
       categoryName,
       onSitePrice,
       deliveryPrice,
-      steps,
+      steps: updatedSteps,
       optionGroups: finalOptionGroups
     };
 
@@ -578,7 +634,18 @@ export default function WorkflowEditPage() {
                     </h3>
                     <p className="text-sm text-gray-600">
                       {realOptionGroups[activeTabIndex].is_required ? 'Obligatoire' : 'Optionnel'} -
-                      Max {realOptionGroups[activeTabIndex].max_selections} sélection(s)
+                      Max <input
+                        type="number"
+                        min="1"
+                        value={realOptionGroups[activeTabIndex].max_selections}
+                        onChange={(e) => {
+                          const newValue = parseInt(e.target.value) || 1;
+                          const updatedGroups = [...realOptionGroups];
+                          updatedGroups[activeTabIndex].max_selections = newValue;
+                          setRealOptionGroups(updatedGroups);
+                        }}
+                        className="w-12 px-1 py-0.5 border rounded text-center"
+                      /> sélection(s)
                     </p>
                   </div>
                   <button
