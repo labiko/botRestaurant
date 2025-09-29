@@ -49,7 +49,7 @@ console.log('🚨 [DEBUG_LIGNE_48] FICHIER: environment-config.ts');
 console.log('🚨 [DEBUG_LIGNE_49] ==========================================');
 
 // Debug supplémentaire pour confirmer que ce fichier est chargé
-alert('🚨 FICHIER environment-config.ts CHARGÉ - Ligne 51');
+alert('🚨 FICHIER environment-config.ts CHARGÉ - Ligne 51 - FORCER REDEPLOY');
 
 // Configuration finale simplifiée
 export const FRANCE_CONFIG = {
