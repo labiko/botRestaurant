@@ -17,8 +17,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### **🛡️ PROTECTION MASTER**
 - **MASTER = PRODUCTION** : Ne jamais modifier directement
 - **Commit sur master** uniquement pour sauvegarder l'état stable actuel
-- **Aucun merge sur master** sans demande explicite de l'utilisateur
+- **❌ NE JAMAIS MERGER DEV → MASTER** sans demande explicite de l'utilisateur
 - **Master reste intouchable** pendant le développement
+- **PAR DÉFAUT : Commit + push UNIQUEMENT sur DEV**
 
 ### **🚀 BRANCHE DE DÉVELOPPEMENT**
 - **BRANCHE PAR DÉFAUT** : `dev` pour tout le développement
@@ -27,10 +28,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Déploiements depuis `dev`** pour tester
 
 ### **📋 WORKFLOW OBLIGATOIRE**
-1. **Commit + push sur master** pour sauvegarder l'état stable
-2. **Créer branche `dev`** depuis master
-3. **Basculer sur `dev`** comme branche par défaut
-4. **Tout développement sur `dev`** uniquement
+1. **TOUJOURS travailler sur `dev`** par défaut
+2. **Commit + push sur `dev`** pour tous les changements
+3. **NE JAMAIS merger vers master** sans instruction explicite
+4. **Master = Production** - Intouchable sauf demande utilisateur
 5. **Merge vers master** SEULEMENT sur demande explicite utilisateur
 
 ## 🎯 PRINCIPE DE NON-RÉGRESSION
@@ -72,6 +73,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Services universels** : `supabase/functions/bot-resto-france-universel/services/`
 - **Tables universelles** : `restaurants`, `menu_items`, etc.
 - **Deploy universel** : `supabase functions deploy bot-resto-france-universel`
+- **⚠️ DÉPLOIEMENT OBLIGATOIRE** : TOUJOURS déployer sur environnement DEV en premier
 
 Le bot universel est la version de production active qui gère tous les pays. Ne travailler sur les bots spécifiques que si l'utilisateur le demande explicitement.
 
@@ -82,6 +84,7 @@ Le bot universel est la version de production active qui gère tous les pays. Ne
 - **Services** : `supabase/functions/bot-resto-france-universel/services/`
 - **Types** : `supabase/functions/bot-resto-france-universel/types.ts`
 - **Deploy** : `supabase functions deploy bot-resto-france-universel`
+- **🔄 RÈGLE DÉPLOIEMENT** : Toujours déployer en DEV avant PROD
 
 **❌ INTERDICTION ABSOLUE** :
 - **NE JAMAIS analyser** les autres bots (`webhook-whatsapp`, `bot-whatsapp-france`, etc.)
