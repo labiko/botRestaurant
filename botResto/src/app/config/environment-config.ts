@@ -12,7 +12,7 @@ export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' = 'DEV';
 const ENVIRONMENTS = {
   DEV: {
     supabaseFranceUrl: 'https://lphvdoyhwaelmwdfkfuh.supabase.co',
-    supabaseFranceAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwaHZkb3lod2FlbG13ZGZrZnVoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1ODIwMzkyNiwiZXhwIjoyMDczNzc5OTI2fQ.JhO4gqZ2qFc2DmLe-ssyWf3GGOiRVopxBVJtyI8DbkY',
+    supabaseFranceAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwaHZkb3lod2FlbG13ZGZrZnVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMDM5MjYsImV4cCI6MjA3Mzc3OTkyNn0.vzB1my0OcAGdZ5qA37cbNnzs2D8K0Kox_L54M4GdydU',
     // Green API (identique pour DEV et PROD)
     greenApi: {
       instanceId: '7105313693',
