@@ -663,10 +663,21 @@ La commande peut être marquée "En livraison" quand le livreur arrive.
     isExpired: boolean;
   }> {
     try {
-      
+
+      // Vérifier si commande déjà assignée
+      const { data: order } = await this.supabaseFranceService.client
+        .from('france_orders')
+        .select('driver_id')
+        .eq('id', orderId)
+        .single();
+
+      if (order?.driver_id) {
+        return { hasPending: false, pendingDrivers: [], isExpired: false };
+      }
+
       // Vérifier les assignations pending non expirées (30 minutes)
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-      
+
       const { data, error } = await this.supabaseFranceService.client
         .from('france_delivery_assignments')
         .select(`
