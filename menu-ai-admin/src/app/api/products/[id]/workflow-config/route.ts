@@ -136,7 +136,7 @@ export async function GET(
       product: {
         id: product.id,
         name: product.name,
-        price_on_site_base: product.price_on_site_base || (product.price_delivery_base ? product.price_delivery_base - 1 : 10),
+        price_on_site_base: product.price_on_site_base !== null ? product.price_on_site_base : (product.price_delivery_base ? product.price_delivery_base - 1 : 10),
         price_delivery_base: product.price_delivery_base,
         category: {
           name: product.france_menu_categories?.name || 'Non définie'
