@@ -41,7 +41,9 @@ const FINAL_ENVIRONMENT = getVercelEnvironment();
 
 console.log('🔧 [CONFIG] ==========================================');
 console.log('🔧 [CONFIG] CURRENT_ENVIRONMENT (local):', CURRENT_ENVIRONMENT);
-console.log('🔧 [CONFIG] NEXT_PUBLIC_ENVIRONMENT (Vercel):', process.env?.['NEXT_PUBLIC_ENVIRONMENT'] || 'NON DÉFINI');
+console.log('🔧 [CONFIG] NEXT_PUBLIC_ENVIRONMENT (Vercel):',
+  (typeof process !== 'undefined' && process.env?.['NEXT_PUBLIC_ENVIRONMENT']) || 'NON DÉFINI'
+);
 console.log('🔧 [CONFIG] FINAL_ENVIRONMENT:', FINAL_ENVIRONMENT);
 console.log('🔧 [CONFIG] ==========================================');
 
