@@ -39,17 +39,8 @@ const getVercelEnvironment = (): 'DEV' | 'PROD' => {
 // Environnement final
 const FINAL_ENVIRONMENT = getVercelEnvironment();
 
-console.log('🚨 [DEBUG_LIGNE_42] ==========================================');
-console.log('🚨 [DEBUG_LIGNE_43] CURRENT_ENVIRONMENT (local):', CURRENT_ENVIRONMENT);
-console.log('🚨 [DEBUG_LIGNE_44] NEXT_PUBLIC_ENVIRONMENT (Vercel):',
-  (typeof process !== 'undefined' && process.env?.['NEXT_PUBLIC_ENVIRONMENT']) || 'NON DÉFINI'
-);
-console.log('🚨 [DEBUG_LIGNE_47] FINAL_ENVIRONMENT:', FINAL_ENVIRONMENT);
-console.log('🚨 [DEBUG_LIGNE_48] FICHIER: environment-config.ts');
-console.log('🚨 [DEBUG_LIGNE_49] ==========================================');
-
-// Debug supplémentaire pour confirmer que ce fichier est chargé
-alert('🚨 FICHIER environment-config.ts CHARGÉ - Ligne 51 - FORCER REDEPLOY');
+// Configuration utilisée (logs discrets pour debug si nécessaire)
+console.log('🔧 [CONFIG] Environnement final:', FINAL_ENVIRONMENT);
 
 // Configuration finale simplifiée
 export const FRANCE_CONFIG = {
