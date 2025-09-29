@@ -328,8 +328,11 @@ export class HistoryPage implements OnInit, OnDestroy {
   }
 
   openDirections(address: string) {
-    const encodedAddress = encodeURIComponent(address);
-    window.open(`https://www.google.com/maps?q=${encodedAddress}`, '_blank');
+    // Nettoyer le préfixe "Position GPS: " si présent
+    const cleanAddress = address.replace(/^Position GPS:\s*/i, '');
+    const encodedAddress = encodeURIComponent(cleanAddress);
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
+    window.open(url, '_blank');
   }
 
   private async presentToast(message: string) {

@@ -412,14 +412,25 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
   // Nouvelle méthode unifiée pour gestion GPS/Adresse
   openDrivingDirectionsForOrder(order: FranceOrder) {
+    console.log('🗺️ [DEBUG] openDrivingDirectionsForOrder - Order:', order);
+    console.log('🗺️ [DEBUG] Type adresse:', order.delivery_address_type);
+    console.log('🗺️ [DEBUG] Latitude:', order.delivery_latitude);
+    console.log('🗺️ [DEBUG] Adresse brute:', order.delivery_address);
+
     if (order.delivery_address_type === 'geolocation' && order.delivery_latitude) {
-      // GPS : Ouvrir directement avec coordonnées
-      const url = `https://maps.google.com/?q=${order.delivery_latitude},${order.delivery_longitude}`;
+      // GPS : Ouvrir avec itinéraire en voiture
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${order.delivery_latitude},${order.delivery_longitude}&travelmode=driving`;
+      console.log('🗺️ [DEBUG] URL GPS:', url);
       window.open(url, '_blank');
     } else if (order.delivery_address) {
-      // Adresse textuelle : Encoder et ouvrir
-      const encodedAddress = encodeURIComponent(order.delivery_address);
-      const url = `https://maps.google.com/?q=${encodedAddress}`;
+      // Adresse textuelle : Nettoyer le préfixe "Position GPS: " si présent, puis encoder
+      const cleanAddress = order.delivery_address.replace(/^Position GPS:\s*/i, '');
+      console.log('🗺️ [DEBUG] Adresse nettoyée:', cleanAddress);
+
+      const encodedAddress = encodeURIComponent(cleanAddress);
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
+      console.log('🗺️ [DEBUG] URL adresse:', url);
+
       window.open(url, '_blank');
     }
   }
