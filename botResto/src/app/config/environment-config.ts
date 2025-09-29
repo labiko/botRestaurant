@@ -1,16 +1,33 @@
-// 🔧 CONFIGURATION ENVIRONNEMENT - VARIABLES VERCEL
+// 🔧 CONFIGURATION ENVIRONNEMENT - HYBRIDE LOCAL/VERCEL
 // =========================================================
-// Configuration automatique via variables d'environnement Vercel
+// MODIFIER CETTE VARIABLE POUR BASCULER EN LOCAL !
 // =========================================================
 
-// Détection automatique environnement via variables Vercel
-const isProduction = process.env['VERCEL_ENV'] === 'production';
-const environmentName = isProduction ? 'PROD' : 'DEV';
+export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' = 'DEV';
 
-// Configuration unifiée avec variables d'environnement
+// =========================================================
+// CONFIGURATIONS HYBRIDES
+// =========================================================
+
+const ENVIRONMENTS = {
+  DEV: {
+    supabaseFranceUrl: 'https://lphvdoyhwaelmwdfkfuh.supabase.co',
+    supabaseFranceAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwaHZkb3lod2FlbG13ZGZrZnVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMDM5MjYsImV4cCI6MjA3Mzc3OTkyNn0.vzB1my0OcAGdZ5qA37cbNnzs2D8K0Kox_L54M4GdydU',
+    environmentName: 'DEV',
+    debugMode: true
+  },
+  PROD: {
+    supabaseFranceUrl: 'https://vywbhlnzvfqtiurwmrac.supabase.co',
+    supabaseFranceAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5d2JobG56dmZxdGl1cndtcmFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzE3NzcsImV4cCI6MjA3MjMwNzc3N30.cZHFxzk2FNtxfTaDupsUcSJ6d5KCiVW3Dym9CElkeq0',
+    environmentName: 'PROD',
+    debugMode: false
+  }
+};
+
+// Configuration finale : Variables Vercel OU config locale
 export const FRANCE_CONFIG = {
-  supabaseFranceUrl: process.env['NEXT_PUBLIC_SUPABASE_URL'] || '',
-  supabaseFranceAnonKey: process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] || '',
+  supabaseFranceUrl: process.env['NEXT_PUBLIC_SUPABASE_URL'] || ENVIRONMENTS[CURRENT_ENVIRONMENT].supabaseFranceUrl,
+  supabaseFranceAnonKey: process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] || ENVIRONMENTS[CURRENT_ENVIRONMENT].supabaseFranceAnonKey,
 
   // Green API (identique pour DEV et PROD)
   greenApi: {
@@ -19,8 +36,8 @@ export const FRANCE_CONFIG = {
     baseUrl: process.env['NEXT_PUBLIC_GREEN_API_BASE_URL'] || 'https://7105.api.greenapi.com'
   },
 
-  environmentName,
-  debugMode: !isProduction
+  environmentName: ENVIRONMENTS[CURRENT_ENVIRONMENT].environmentName,
+  debugMode: ENVIRONMENTS[CURRENT_ENVIRONMENT].debugMode
 };
 
 // Configuration exportée sans logs de debug
