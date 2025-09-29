@@ -174,9 +174,9 @@ export class UniversalOrderDisplayService {
    */
   private formatConfiguration(config: any): ConfigurationLine[] {
     const lines: ConfigurationLine[] = [];
-    
+
     if (!config) return lines;
-    
+
     Object.entries(config).forEach(([key, value]) => {
       // Skip 'pizzas' pour éviter duplication avec expandMenuPizza
       if (key === 'pizzas') return;
@@ -186,11 +186,11 @@ export class UniversalOrderDisplayService {
         lines.push({
           category: this.getCategoryLabel(key),
           value: formattedValue,
-          icon: this.getCategoryIcon(key)
+          icon: this.extractIconFromValue(value) || this.getCategoryIcon(key)
         });
       }
     });
-    
+
     return lines;
   }
 
@@ -297,6 +297,23 @@ export class UniversalOrderDisplayService {
     };
     
     return categoryIcons[key.toLowerCase()] || '▷';
+  }
+
+  /**
+   * Extraire l'icône depuis la valeur de configuration
+   */
+  private extractIconFromValue(value: any): string {
+    if (Array.isArray(value)) {
+      // Prendre l'icône du premier élément qui en a une
+      for (const item of value) {
+        if (item && typeof item === 'object' && item.icon) {
+          return item.icon;
+        }
+      }
+    } else if (value && typeof value === 'object' && value.icon) {
+      return value.icon;
+    }
+    return '';
   }
 
   /**
