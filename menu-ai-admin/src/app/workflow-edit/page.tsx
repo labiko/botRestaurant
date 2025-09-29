@@ -592,7 +592,7 @@ export default function WorkflowEditPage() {
                     type="number"
                     step="0.50"
                     value={onSitePrice}
-                    onChange={(e) => setOnSitePrice(parseFloat(e.target.value))}
+                    onChange={(e) => setOnSitePrice(parseFloat(e.target.value) || 0)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
@@ -602,7 +602,7 @@ export default function WorkflowEditPage() {
                     type="number"
                     step="0.50"
                     value={deliveryPrice}
-                    onChange={(e) => setDeliveryPrice(parseFloat(e.target.value))}
+                    onChange={(e) => setDeliveryPrice(parseFloat(e.target.value) || 0)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
