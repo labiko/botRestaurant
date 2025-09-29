@@ -55,6 +55,9 @@ export interface OrderData {
   delivery_mode: string;
   delivery_address?: string;
   delivery_address_id?: number;
+  delivery_latitude?: number; // NOUVEAU
+  delivery_longitude?: number; // NOUVEAU
+  delivery_address_type?: 'text' | 'geolocation'; // NOUVEAU
   status: string;
   order_number: string;
   delivery_validation_code?: string;
@@ -431,6 +434,15 @@ export class OrderService {
       if (deliveryAddress) {
         orderData.delivery_address = deliveryAddress.full_address || deliveryAddress;
         orderData.delivery_address_id = deliveryAddress.id;
+
+        // NOUVEAU: Si géolocalisation, ajouter les coordonnées
+        if (deliveryAddress.address_type === 'geolocation') {
+          orderData.delivery_latitude = deliveryAddress.latitude;
+          orderData.delivery_longitude = deliveryAddress.longitude;
+          orderData.delivery_address_type = 'geolocation';
+        } else {
+          orderData.delivery_address_type = 'text';
+        }
       }
       
       // Créer la commande

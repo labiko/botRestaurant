@@ -214,6 +214,12 @@ export class UniversalBot implements IMessageHandler {
    */
   async handleMessage(phoneNumber: string, message: string): Promise<void> {
     try {
+      // NOUVEAU: Détection partage position GPS
+      if (message.startsWith('GPS:')) {
+        await this.handleGpsLocationReceived(phoneNumber, message);
+        return;
+      }
+
       // PRIORITÉ 1: Détection numéro téléphone restaurant (accès QR code)
       const isPhone = this.isPhoneNumberFormat(message);
       
@@ -1106,11 +1112,23 @@ export class UniversalBot implements IMessageHandler {
       case 'AWAITING_ADDRESS_CHOICE':
         await this.handleAddressChoice(phoneNumber, session, message);
         break;
-        
+
       case 'AWAITING_NEW_ADDRESS':
         await this.handleNewAddressInput(phoneNumber, session, message);
         break;
-        
+
+      case 'AWAITING_GPS_LOCATION':
+        await this.handleGpsLocationShare(phoneNumber, session, message);
+        break;
+
+      case 'AWAITING_GPS_LABEL':
+        await this.handleGpsLabelChoice(phoneNumber, session, message);
+        break;
+
+      case 'AWAITING_GPS_CUSTOM_LABEL':
+        await this.handleGpsCustomLabel(phoneNumber, session, message);
+        break;
+
       case 'AWAITING_ADDRESS_CONFIRMATION':
         await this.handleAddressConfirmation(phoneNumber, session, message);
         break;
@@ -2105,45 +2123,62 @@ export class UniversalBot implements IMessageHandler {
   private async handleDeliveryAddressWorkflow(phoneNumber: string, session: any): Promise<void> {
     console.log(`📍 [AddressWorkflow] Début pour: ${phoneNumber}`);
 
-    // NOUVEAU: Récupérer le mode de collecte d'adresse pour ce restaurant
     const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
-    const deliveryMode = await this.addressService.getDeliveryAddressMode(restaurantId);
-    console.log(`🔧 [AddressWorkflow] Mode de collecte: ${deliveryMode} pour restaurant ${restaurantId}`);
+    const cleanPhone = phoneNumber.replace('@c.us', '');
 
-    if (deliveryMode === 'geolocation') {
-      // NOUVEAU: Mode géolocalisation pour Guinée
-      const geoMessage = await this.addressService.getDeliveryInfoRequest(restaurantId);
-      await this.messageSender.sendMessage(phoneNumber, geoMessage);
+    // Récupérer config resto
+    const deliveryAddressMode = await this.addressService.getDeliveryAddressMode(restaurantId);
+    console.log(`🔧 [AddressWorkflow] Mode de collecte: ${deliveryAddressMode}`);
+
+    // Récupérer adresses existantes (GPS OU Texte selon config)
+    const existingAddresses = await this.addressService.getCustomerAddresses(cleanPhone);
+    console.log(`📍 [AddressWorkflow] ${existingAddresses.length} adresses trouvées`);
+
+    if (existingAddresses.length > 0) {
+      // ✅ Client a des adresses → Afficher liste
+      let message = `📍 *Vos adresses enregistrées :*\n\n`;
+
+      existingAddresses.forEach((addr, index) => {
+        const icon = this.getAddressIcon(addr.address_label);
+        const defaultMark = addr.is_default ? ' ⭐' : '';
+        message += `${index + 1}. ${icon} ${addr.address_label}${defaultMark}\n`;
+        message += `   ${addr.full_address}\n\n`;
+      });
+
+      const nextNum = existingAddresses.length + 1;
+
+      // Option selon config resto
+      if (deliveryAddressMode === 'geolocation') {
+        message += `${nextNum}. 📍 Partager ma position\n\n`;
+      } else {
+        message += `${nextNum}. ➕ Nouvelle adresse\n\n`;
+      }
+
+      message += `Tapez le numéro de votre choix`;
+
+      await this.messageSender.sendMessage(phoneNumber, message);
 
       await this.sessionManager.updateSession(session.id, {
-        botState: 'AWAITING_GEOLOCATION',
+        botState: 'AWAITING_ADDRESS_CHOICE',
         sessionData: {
           ...session.sessionData,
-          deliveryMode: 'livraison',
-          awaitingGeoLocation: true
+          existingAddresses: existingAddresses,
+          showGpsOption: deliveryAddressMode === 'geolocation'
         }
       });
-    } else {
-      // EXISTANT: Mode adresse textuelle pour France (inchangé)
-      const cleanPhone = phoneNumber.replace('@c.us', '');
-      const existingAddresses = await this.addressService.getCustomerAddresses(cleanPhone);
 
-      if (existingAddresses.length > 0) {
-        // Afficher les adresses existantes
-        const addressMessage = this.addressService.formatAddressSelectionMessage(existingAddresses);
-        await this.messageSender.sendMessage(phoneNumber, addressMessage);
+    } else {
+      // ✅ Première adresse
+      if (deliveryAddressMode === 'geolocation') {
+        await this.messageSender.sendMessage(phoneNumber,
+          '📍 *Première livraison !*\n\n📍 *Partagez votre position GPS* via WhatsApp'
+        );
 
         await this.sessionManager.updateSession(session.id, {
-          botState: 'AWAITING_ADDRESS_CHOICE',
-          sessionData: (() => {
-            return {
-              ...session.sessionData,
-              existingAddresses
-            };
-          })()
+          botState: 'AWAITING_GPS_LOCATION',
+          sessionData: session.sessionData
         });
       } else {
-        // Première adresse
         await this.messageSender.sendMessage(phoneNumber,
           '📍 *Première livraison !*\n\n📝 *Saisissez votre adresse complète*\n\n💡 *Exemple : 15 rue de la Paix, 75001 Paris*'
         );
@@ -2206,34 +2241,49 @@ export class UniversalBot implements IMessageHandler {
   private async handleAddressChoice(phoneNumber: string, session: any, message: string): Promise<void> {
     try {
       const choice = parseInt(message.trim());
+      const text = message.trim();
       const existingAddresses = session.sessionData?.existingAddresses || [];
-      
-      if (choice === existingAddresses.length + 1) {
-        // Nouvelle adresse
-        await this.messageSender.sendMessage(phoneNumber, 
-          '📝 *Saisissez votre nouvelle adresse complète*\n\n💡 *Exemple : 15 rue de la Paix, 75001 Paris*'
-        );
-        
-        await this.sessionManager.updateSession(session.id, {
-          botState: 'AWAITING_NEW_ADDRESS',
-          sessionData: session.sessionData
-        });
-        return;
-      }
-      
+      const showGpsOption = session.sessionData?.showGpsOption || false;
+
+      // ✅ Choix adresse existante
       if (choice >= 1 && choice <= existingAddresses.length) {
-        // Adresse existante sélectionnée
         const selectedAddress = existingAddresses[choice - 1];
         console.log(`📍 [AddressChoice] Adresse sélectionnée: ${selectedAddress.address_label}`);
-        
+
+        // Mettre à jour dernière utilisée = défaut
+        await this.updateDefaultAddress(phoneNumber, selectedAddress.id);
+
         // Traiter la commande avec cette adresse
         await this.processOrderWithAddress(phoneNumber, session, selectedAddress);
         return;
       }
-      
+
+      // ✅ Partage position (SI option disponible)
+      if (showGpsOption && choice === existingAddresses.length + 1) {
+        await this.messageSender.sendMessage(phoneNumber,
+          '📍 *Partagez votre position GPS* maintenant via WhatsApp'
+        );
+
+        await this.sessionManager.updateSession(session.id, {
+          botState: 'AWAITING_GPS_LOCATION',
+          sessionData: session.sessionData
+        });
+        return;
+      }
+
+      // ✅ Saisie directe adresse (texte libre - non numérique)
+      if (isNaN(choice) && text.length >= 10) {
+        // Réutiliser le workflow existant
+        await this.handleNewAddressInput(phoneNumber, session, text);
+        return;
+      }
+
       // Choix invalide
-      await this.messageSender.sendMessage(phoneNumber, '❌ Choix invalide. Veuillez sélectionner un numéro valide.');
-      
+      const maxChoice = existingAddresses.length + (showGpsOption ? 1 : 0);
+      await this.messageSender.sendMessage(phoneNumber,
+        `❌ Choix invalide. Tapez un numéro entre 1 et ${maxChoice}\nOu tapez votre adresse directement`
+      );
+
     } catch (error) {
       console.error('❌ [AddressChoice] Erreur:', error);
       await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors du choix d\'adresse. Veuillez réessayer.');
@@ -2246,7 +2296,13 @@ export class UniversalBot implements IMessageHandler {
   private async handleNewAddressInput(phoneNumber: string, session: any, message: string): Promise<void> {
     try {
       const addressText = message.trim();
-      
+
+      // NOUVEAU: Gestion code "99" pour voir les adresses enregistrées
+      if (addressText === '99') {
+        await this.handleAddressListRequest(phoneNumber, session);
+        return;
+      }
+
       if (addressText.length < 10) {
         await this.messageSender.sendMessage(phoneNumber, '❌ Adresse trop courte. Veuillez saisir une adresse complète.');
         return;
@@ -2431,7 +2487,8 @@ export class UniversalBot implements IMessageHandler {
         google_place_id: address.place_id,
         latitude: address.geometry.location.lat,
         longitude: address.geometry.location.lng,
-        is_default: existingAddresses.length === 0
+        is_default: existingAddresses.length === 0,
+        address_type: address.place_id ? 'text' : 'geolocation' // NOUVEAU: Type selon source
       });
       
       if (savedAddress) {
@@ -2896,9 +2953,14 @@ export class UniversalBot implements IMessageHandler {
     try {
       console.log('📍 [GeolocationSharing] === DÉBUT GESTION GÉOLOCALISATION ===');
 
+      // DEBUG: Afficher le format exact du message reçu
+      console.log('🔍 [GeolocationSharing] DEBUG MESSAGE TYPE:', typeof message);
+      console.log('🔍 [GeolocationSharing] DEBUG MESSAGE CONTENT:', JSON.stringify(message));
+      console.log('🔍 [GeolocationSharing] DEBUG MESSAGE STRING:', String(message));
+
       // Vérifier si le message contient des coordonnées
-      // Format WhatsApp: location: {latitude: xx, longitude: yy}
-      const locationMatch = message.match(/location:\s*{\s*latitude:\s*([\d.-]+),\s*longitude:\s*([\d.-]+)\s*}/i);
+      // Format Green API: GPS:latitude,longitude
+      const locationMatch = message.match(/GPS:([\d.-]+),([\d.-]+)/i);
 
       if (locationMatch) {
         const latitude = parseFloat(locationMatch[1]);
@@ -2906,35 +2968,30 @@ export class UniversalBot implements IMessageHandler {
 
         console.log(`✅ [GeolocationSharing] Coordonnées reçues: ${latitude}, ${longitude}`);
 
-        // Sauvegarder l'adresse géolocalisée
-        const cleanPhone = phoneNumber.replace('@c.us', '');
-        const savedAddress = await this.addressService.saveGeolocationAddress(
-          cleanPhone,
-          latitude,
-          longitude
-        );
-
-        if (savedAddress) {
-          console.log('✅ [GeolocationSharing] Adresse géolocalisée sauvegardée');
-
-          // Mettre à jour la session avec les coordonnées
-          await this.sessionManager.updateSession(session.id, {
-            sessionData: {
-              ...session.sessionData,
-              deliveryAddress: savedAddress,
-              deliveryCoordinates: { latitude, longitude }
+        // Créer la structure d'adresse pour saveNewAddressAndProcess (pas de double sauvegarde)
+        const gpsAddress = {
+          formatted_address: `Position GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+          place_id: null,
+          geometry: {
+            location: {
+              lat: latitude,
+              lng: longitude
             }
-          });
+          }
+        };
 
-          // Créer la commande avec géolocalisation
-          await this.processOrderWithMode(phoneNumber, session, 'livraison');
-        } else {
-          await this.messageSender.sendMessage(phoneNumber,
-            '❌ Erreur lors de la sauvegarde de votre position. Veuillez réessayer.'
-          );
-        }
+        // Mettre à jour la session avec les coordonnées
+        await this.sessionManager.updateSession(session.id, {
+          sessionData: {
+            ...session.sessionData,
+            deliveryCoordinates: { latitude, longitude }
+          }
+        });
+
+        // Suivre le même workflow que la saisie d'adresse normale
+        await this.saveNewAddressAndProcess(phoneNumber, session, gpsAddress);
+
       } else {
-        // Position non reçue ou format invalide
         await this.messageSender.sendMessage(phoneNumber,
           '❌ Position non reçue. Merci de partager votre position ou tapez "annuler".'
         );
@@ -3541,6 +3598,297 @@ Tapez un numéro entre **1** et **${restaurants?.length || 0}**.`);
 
     await this.handleQuantityInput(phoneNumber, tempSession, '1');
   }
+
+  /**
+   * NOUVEAU: Handler affichage liste adresses après "99"
+   */
+  private async handleAddressListRequest(phoneNumber: string, session: any): Promise<void> {
+    try {
+      // Récupérer config restaurant
+      const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
+      const supabase = await this.getSupabaseClient();
+
+      const { data: restaurant } = await supabase
+        .from('france_restaurants')
+        .select('delivery_address_mode')
+        .eq('id', restaurantId)
+        .single();
+
+      // Récupérer adresses client
+      const cleanPhone = phoneNumber.replace('@c.us', '');
+      const existingAddresses = await this.addressService.getCustomerAddresses(cleanPhone);
+
+      // Afficher liste
+      let message = existingAddresses?.length > 0
+        ? `📍 *Vos adresses enregistrées :*\n\n`
+        : `Aucune adresse enregistrée.\n\n`;
+
+      // Lister adresses existantes
+      existingAddresses?.forEach((addr: any, index: number) => {
+        const icon = this.getAddressIcon(addr.address_label);
+        const defaultMark = addr.is_default ? ' ⭐' : '';
+        message += `${index + 1}. ${icon} ${addr.address_label}${defaultMark}\n`;
+        message += `   ${addr.full_address}\n\n`;
+      });
+
+      const nextNum = (existingAddresses?.length || 0) + 1;
+
+      // Option partage position (SI resto en mode geolocation)
+      const showGpsOption = restaurant?.delivery_address_mode === 'geolocation';
+      if (showGpsOption) {
+        message += `${nextNum}. 📍 Partager ma position\n\n`;
+      }
+
+      message += `Tapez le numéro de votre choix\n`;
+      message += `Ou tapez votre adresse directement`;
+
+      await this.messageSender.sendMessage(phoneNumber, message);
+
+      await this.sessionManager.updateSession(session.id, {
+        botState: 'AWAITING_ADDRESS_CHOICE',
+        sessionData: {
+          ...session.sessionData,
+          existingAddresses: existingAddresses || [],
+          showGpsOption: showGpsOption
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ [AddressListRequest] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors de la récupération des adresses. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * NOUVEAU: Handler réception position GPS
+   */
+  private async handleGpsLocationShare(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      // La position GPS devrait venir via le type 'location' du message WhatsApp
+      // Ce handler gère les messages texte pendant l'attente GPS
+      await this.messageSender.sendMessage(phoneNumber,
+        '⏳ En attente de votre position GPS...\n\n📍 Utilisez le bouton "📎 Pièce jointe" puis "Position" dans WhatsApp'
+      );
+    } catch (error) {
+      console.error('❌ [GpsLocationShare] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur. Tapez "annuler" pour recommencer.');
+    }
+  }
+
+  /**
+   * NOUVEAU: Mettre à jour adresse par défaut
+   */
+  private async updateDefaultAddress(phoneNumber: string, addressId: number): Promise<void> {
+    try {
+      const supabase = await this.getSupabaseClient();
+      const cleanPhone = phoneNumber.replace('@c.us', '');
+
+      // Retirer is_default de toutes
+      await supabase
+        .from('france_customer_addresses')
+        .update({ is_default: false })
+        .eq('phone_number', `${cleanPhone}@c.us`);
+
+      // Mettre celle-ci en défaut
+      await supabase
+        .from('france_customer_addresses')
+        .update({
+          is_default: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', addressId);
+
+      console.log(`✅ [updateDefaultAddress] Adresse ${addressId} définie par défaut`);
+    } catch (error) {
+      console.error('❌ [updateDefaultAddress] Erreur:', error);
+    }
+  }
+
+  /**
+   * NOUVEAU: Obtenir icône selon label adresse
+   */
+  private getAddressIcon(label: string): string {
+    if (label.includes('Maison')) return '🏠';
+    if (label.includes('Bureau')) return '💼';
+    if (label.includes('Travail')) return '🏢';
+    if (label.includes('GPS') || label.includes('Position')) return '📍';
+    return '📍';
+  }
+
+  /**
+   * NOUVEAU: Gérer réception position GPS réelle
+   */
+  private async handleGpsLocationReceived(phoneNumber: string, gpsMessage: string): Promise<void> {
+    try {
+      console.log('📍 [GPS] Réception position GPS:', gpsMessage);
+
+      const session = await this.sessionManager.getSession(phoneNumber);
+
+      if (!session || session.botState !== 'AWAITING_GPS_LOCATION') {
+        console.log('⚠️ [GPS] Position GPS reçue mais état invalide:', session?.botState);
+        return;
+      }
+
+      // Extraire coordonnées du format "GPS:lat,lng"
+      const coords = gpsMessage.replace('GPS:', '').split(',');
+      const latitude = parseFloat(coords[0]);
+      const longitude = parseFloat(coords[1]);
+
+      console.log('📍 [GPS] Coordonnées extraites:', { latitude, longitude });
+
+      // NOUVEAU: Stocker coordonnées temporairement et demander label
+      await this.sessionManager.updateSession(session.id, {
+        botState: 'AWAITING_GPS_LABEL',
+        sessionData: {
+          ...session.sessionData,
+          pendingGpsLocation: {
+            latitude: latitude,
+            longitude: longitude
+          }
+        }
+      });
+
+      // Demander label
+      await this.messageSender.sendMessage(phoneNumber,
+        '📍 *Position enregistrée !*\n\n' +
+        'Comment voulez-vous nommer cette adresse ?\n\n' +
+        '1. 🏠 Maison\n' +
+        '2. 💼 Bureau\n' +
+        '3. 🏢 Travail\n' +
+        '4. ✏️ Autre (saisir nom)\n\n' +
+        'Tapez le numéro de votre choix'
+      );
+
+    } catch (error) {
+      console.error('❌ [GPS] Erreur traitement position:', error);
+      await this.messageSender.sendMessage(phoneNumber,
+        '❌ Erreur traitement position GPS. Réessayez.'
+      );
+    }
+  }
+
+  /**
+   * NOUVEAU: Gérer choix du label pour adresse GPS
+   */
+  private async handleGpsLabelChoice(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      const choice = parseInt(message.trim());
+      let label = '';
+
+      switch (choice) {
+        case 1:
+          label = 'Maison';
+          break;
+        case 2:
+          label = 'Bureau';
+          break;
+        case 3:
+          label = 'Travail';
+          break;
+        case 4:
+          // Demander saisie libre
+          await this.messageSender.sendMessage(phoneNumber,
+            '✏️ Quel nom voulez-vous donner à cette adresse ?\n\n' +
+            '💡 Exemple : Chez Pierre, Salle de sport, Resto préféré...'
+          );
+          await this.sessionManager.updateSession(session.id, {
+            botState: 'AWAITING_GPS_CUSTOM_LABEL',
+            sessionData: session.sessionData
+          });
+          return;
+        default:
+          await this.messageSender.sendMessage(phoneNumber, '❌ Choix invalide. Tapez 1, 2, 3 ou 4');
+          return;
+      }
+
+      // Sauvegarder avec label prédéfini
+      await this.saveGpsAddressWithLabel(phoneNumber, session, label);
+
+    } catch (error) {
+      console.error('❌ [GpsLabelChoice] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur. Tapez "annuler" pour recommencer.');
+    }
+  }
+
+  /**
+   * NOUVEAU: Gérer label personnalisé pour adresse GPS
+   */
+  private async handleGpsCustomLabel(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      const customLabel = message.trim();
+
+      if (customLabel.length < 2) {
+        await this.messageSender.sendMessage(phoneNumber, '❌ Nom trop court. Minimum 2 caractères.');
+        return;
+      }
+
+      if (customLabel.length > 50) {
+        await this.messageSender.sendMessage(phoneNumber, '❌ Nom trop long. Maximum 50 caractères.');
+        return;
+      }
+
+      // Sauvegarder avec label personnalisé
+      await this.saveGpsAddressWithLabel(phoneNumber, session, customLabel);
+
+    } catch (error) {
+      console.error('❌ [GpsCustomLabel] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber, '❌ Erreur. Réessayez.');
+    }
+  }
+
+  /**
+   * NOUVEAU: Sauvegarder adresse GPS avec label et créer commande
+   */
+  private async saveGpsAddressWithLabel(phoneNumber: string, session: any, label: string): Promise<void> {
+    try {
+      const { latitude, longitude } = session.sessionData.pendingGpsLocation;
+      const cleanPhone = phoneNumber.replace('@c.us', '');
+      const supabase = await this.getSupabaseClient();
+
+      console.log(`💾 [GPS] Sauvegarde adresse avec label: ${label}`);
+
+      // Retirer is_default des autres adresses
+      await supabase
+        .from('france_customer_addresses')
+        .update({ is_default: false })
+        .eq('phone_number', `${cleanPhone}@c.us`);
+
+      // Créer nouvelle adresse avec label personnalisé
+      const { data: savedAddress, error } = await supabase
+        .from('france_customer_addresses')
+        .insert({
+          phone_number: `${cleanPhone}@c.us`,
+          address_label: label,
+          full_address: `Position GPS: ${latitude}, ${longitude}`,
+          address_type: 'geolocation',
+          latitude: latitude,
+          longitude: longitude,
+          is_default: true,
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (error || !savedAddress) {
+        console.error('❌ [GPS] Erreur sauvegarde adresse:', error);
+        await this.messageSender.sendMessage(phoneNumber,
+          '❌ Erreur enregistrement adresse. Réessayez.'
+        );
+        return;
+      }
+
+      console.log(`✅ [GPS] Adresse GPS "${label}" sauvegardée avec ID: ${savedAddress.id}`);
+
+      // Traiter commande avec cette adresse
+      await this.processOrderWithAddress(phoneNumber, session, savedAddress);
+
+    } catch (error) {
+      console.error('❌ [saveGpsAddressWithLabel] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber,
+        '❌ Erreur sauvegarde. Tapez "annuler" pour recommencer.'
+      );
+    }
+  }
 }
 
 /**
@@ -3548,14 +3896,14 @@ Tapez un numéro entre **1** et **${restaurants?.length || 0}**.`);
  * SOLID - Dependency Injection : Injection des dépendances
  */
 export class UniversalBotFactory {
-  
+
   static create(
     sessionManager: ISessionManager,
     configManager: IRestaurantConfigManager,
     workflowExecutor: IWorkflowExecutor,
     messageSender: IMessageSender
   ): UniversalBot {
-    
+
     return new UniversalBot(
       sessionManager,
       configManager,
