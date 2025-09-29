@@ -21,6 +21,7 @@ export class DeliveryModesService {
     this.supabaseKey = supabaseKey;
   }
 
+
   /**
    * Récupère les modes de service disponibles pour un restaurant
    * Retourne uniquement les modes activés, triés par display_order

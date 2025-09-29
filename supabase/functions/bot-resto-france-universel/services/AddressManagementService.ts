@@ -20,6 +20,7 @@ export interface CustomerAddress {
   whatsapp_name?: string;
   created_at?: string;
   updated_at?: string;
+  address_type?: 'text' | 'geolocation'; // Nouveau: type d'adresse
 }
 
 export class AddressManagementService {
@@ -73,6 +74,75 @@ export class AddressManagementService {
     } catch (error) {
       console.error('❌ [AddressService] Exception:', error);
       return [];
+    }
+  }
+
+  /**
+   * Obtenir le mode de collecte d'adresse pour un restaurant
+   */
+  async getDeliveryAddressMode(restaurantId: number): Promise<'address' | 'geolocation'> {
+    try {
+      const { data, error } = await this.supabase
+        .from('france_restaurants')
+        .select('delivery_address_mode')
+        .eq('id', restaurantId)
+        .single();
+
+      if (error || !data) {
+        console.log('⚠️ [AddressService] Mode adresse non trouvé, utilisation mode par défaut: address');
+        return 'address'; // Défaut = comportement France existant
+      }
+
+      return data.delivery_address_mode || 'address';
+    } catch (error) {
+      console.error('❌ [AddressService] Erreur récupération mode adresse:', error);
+      return 'address'; // Défaut = comportement France existant
+    }
+  }
+
+  /**
+   * Générer le message de demande d'information de livraison
+   * selon le paramétrage du restaurant
+   */
+  async getDeliveryInfoRequest(restaurantId: number): Promise<string> {
+    const mode = await this.getDeliveryAddressMode(restaurantId);
+
+    if (mode === 'geolocation') {
+      return `📍 *Partage de position requis*\n\n` +
+             `Pour la livraison, merci de partager votre position :\n` +
+             `📎 *Pièce jointe* → *Position* → *Envoyer votre position actuelle*\n\n` +
+             `Ou tapez "annuler" pour revenir au menu`;
+    } else {
+      // Comportement existant France inchangé
+      return `📍 *Merci d'indiquer votre adresse de livraison* :\n\n` +
+             `Exemple : 12 Rue de la Paix, 75002 Paris\n\n` +
+             `Ou tapez "annuler" pour revenir au menu`;
+    }
+  }
+
+  /**
+   * Sauvegarder une adresse géolocalisée
+   */
+  async saveGeolocationAddress(phoneNumber: string, latitude: number, longitude: number): Promise<CustomerAddress | null> {
+    try {
+      const existingAddresses = await this.getCustomerAddresses(phoneNumber);
+      const label = this.generateAddressLabel(existingAddresses);
+
+      const address: CustomerAddress = {
+        phone_number: phoneNumber.includes('@c.us') ? phoneNumber : `${phoneNumber}@c.us`,
+        address_label: label,
+        full_address: `Position GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+        latitude: latitude,
+        longitude: longitude,
+        is_default: true,
+        is_active: true,
+        address_type: 'geolocation'
+      };
+
+      return await this.saveAddress(address);
+    } catch (error) {
+      console.error('❌ [AddressService] Erreur sauvegarde géolocalisation:', error);
+      return null;
     }
   }
 

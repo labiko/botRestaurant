@@ -1026,6 +1026,11 @@ export class UniversalBot implements IMessageHandler {
 
 
     switch (session.botState) {
+      case 'AWAITING_GEOLOCATION':
+        // NOUVEAU: Gestion de la géolocalisation pour livraison (Guinée)
+        await this.handleGeolocationSharing(phoneNumber, session, message);
+        break;
+
       case 'POST_ORDER_NOTES':
         // Gestion des notes post-commande
         if (this.getCurrentTime().getTime() > session.sessionData?.expiresAt) {
@@ -2099,35 +2104,55 @@ export class UniversalBot implements IMessageHandler {
    */
   private async handleDeliveryAddressWorkflow(phoneNumber: string, session: any): Promise<void> {
     console.log(`📍 [AddressWorkflow] Début pour: ${phoneNumber}`);
-    
-    // Récupérer les adresses existantes
-    const cleanPhone = phoneNumber.replace('@c.us', '');
-    const existingAddresses = await this.addressService.getCustomerAddresses(cleanPhone);
-    
-    if (existingAddresses.length > 0) {
-      // Afficher les adresses existantes
-      const addressMessage = this.addressService.formatAddressSelectionMessage(existingAddresses);
-      await this.messageSender.sendMessage(phoneNumber, addressMessage);
-      
+
+    // NOUVEAU: Récupérer le mode de collecte d'adresse pour ce restaurant
+    const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
+    const deliveryMode = await this.addressService.getDeliveryAddressMode(restaurantId);
+    console.log(`🔧 [AddressWorkflow] Mode de collecte: ${deliveryMode} pour restaurant ${restaurantId}`);
+
+    if (deliveryMode === 'geolocation') {
+      // NOUVEAU: Mode géolocalisation pour Guinée
+      const geoMessage = await this.addressService.getDeliveryInfoRequest(restaurantId);
+      await this.messageSender.sendMessage(phoneNumber, geoMessage);
+
       await this.sessionManager.updateSession(session.id, {
-        botState: 'AWAITING_ADDRESS_CHOICE',
-        sessionData: (() => {
-          return {
-            ...session.sessionData,
-            existingAddresses
-          };
-        })()
+        botState: 'AWAITING_GEOLOCATION',
+        sessionData: {
+          ...session.sessionData,
+          deliveryMode: 'livraison',
+          awaitingGeoLocation: true
+        }
       });
     } else {
-      // Première adresse
-      await this.messageSender.sendMessage(phoneNumber, 
-        '📍 *Première livraison !*\n\n📝 *Saisissez votre adresse complète*\n\n💡 *Exemple : 15 rue de la Paix, 75001 Paris*'
-      );
-      
-      await this.sessionManager.updateSession(session.id, {
-        botState: 'AWAITING_NEW_ADDRESS',
-        sessionData: session.sessionData
-      });
+      // EXISTANT: Mode adresse textuelle pour France (inchangé)
+      const cleanPhone = phoneNumber.replace('@c.us', '');
+      const existingAddresses = await this.addressService.getCustomerAddresses(cleanPhone);
+
+      if (existingAddresses.length > 0) {
+        // Afficher les adresses existantes
+        const addressMessage = this.addressService.formatAddressSelectionMessage(existingAddresses);
+        await this.messageSender.sendMessage(phoneNumber, addressMessage);
+
+        await this.sessionManager.updateSession(session.id, {
+          botState: 'AWAITING_ADDRESS_CHOICE',
+          sessionData: (() => {
+            return {
+              ...session.sessionData,
+              existingAddresses
+            };
+          })()
+        });
+      } else {
+        // Première adresse
+        await this.messageSender.sendMessage(phoneNumber,
+          '📍 *Première livraison !*\n\n📝 *Saisissez votre adresse complète*\n\n💡 *Exemple : 15 rue de la Paix, 75001 Paris*'
+        );
+
+        await this.sessionManager.updateSession(session.id, {
+          botState: 'AWAITING_NEW_ADDRESS',
+          sessionData: session.sessionData
+        });
+      }
     }
   }
 
@@ -2865,6 +2890,64 @@ export class UniversalBot implements IMessageHandler {
   }
 
   /**
+   * NOUVEAU: Gérer le partage de géolocalisation pour la livraison
+   */
+  private async handleGeolocationSharing(phoneNumber: string, session: any, message: string): Promise<void> {
+    try {
+      console.log('📍 [GeolocationSharing] === DÉBUT GESTION GÉOLOCALISATION ===');
+
+      // Vérifier si le message contient des coordonnées
+      // Format WhatsApp: location: {latitude: xx, longitude: yy}
+      const locationMatch = message.match(/location:\s*{\s*latitude:\s*([\d.-]+),\s*longitude:\s*([\d.-]+)\s*}/i);
+
+      if (locationMatch) {
+        const latitude = parseFloat(locationMatch[1]);
+        const longitude = parseFloat(locationMatch[2]);
+
+        console.log(`✅ [GeolocationSharing] Coordonnées reçues: ${latitude}, ${longitude}`);
+
+        // Sauvegarder l'adresse géolocalisée
+        const cleanPhone = phoneNumber.replace('@c.us', '');
+        const savedAddress = await this.addressService.saveGeolocationAddress(
+          cleanPhone,
+          latitude,
+          longitude
+        );
+
+        if (savedAddress) {
+          console.log('✅ [GeolocationSharing] Adresse géolocalisée sauvegardée');
+
+          // Mettre à jour la session avec les coordonnées
+          await this.sessionManager.updateSession(session.id, {
+            sessionData: {
+              ...session.sessionData,
+              deliveryAddress: savedAddress,
+              deliveryCoordinates: { latitude, longitude }
+            }
+          });
+
+          // Créer la commande avec géolocalisation
+          await this.processOrderWithMode(phoneNumber, session, 'livraison');
+        } else {
+          await this.messageSender.sendMessage(phoneNumber,
+            '❌ Erreur lors de la sauvegarde de votre position. Veuillez réessayer.'
+          );
+        }
+      } else {
+        // Position non reçue ou format invalide
+        await this.messageSender.sendMessage(phoneNumber,
+          '❌ Position non reçue. Merci de partager votre position ou tapez "annuler".'
+        );
+      }
+    } catch (error) {
+      console.error('❌ [GeolocationSharing] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber,
+        '❌ Une erreur est survenue. Veuillez réessayer ou contacter le support.'
+      );
+    }
+  }
+
+  /**
    * Gérer le choix du client quand son adresse est hors de la zone de livraison
    */
   private async handleOutOfZoneChoice(phoneNumber: string, session: any, message: string): Promise<void> {
@@ -2872,10 +2955,10 @@ export class UniversalBot implements IMessageHandler {
       console.log('🔄 [OutOfZoneChoice] === DÉBUT GESTION CHOIX HORS ZONE ===');
       console.log(`🔄 [OutOfZoneChoice] Message reçu: "${message}"`);
       console.log(`🔄 [OutOfZoneChoice] Session data:`, JSON.stringify(session.sessionData, null, 2));
-      
+
       const choice = parseInt(message.trim());
       console.log(`🔄 [OutOfZoneChoice] Choix parsé: ${choice} (type: ${typeof choice})`);
-      
+
       if (choice === 1) {
         console.log('🔄 [OutOfZoneChoice] CHOIX 1: Essayer une autre adresse');
         // Essayer une autre adresse

@@ -12,9 +12,10 @@ export interface Restaurant {
   id: number;
   name: string;
   latitude: number;
-  longitude: number;  
+  longitude: number;
   delivery_zone_km: number;
   is_open: boolean;
+  delivery_address_mode?: 'address' | 'geolocation'; // Paramétrage livraison
 }
 
 export interface RestaurantWithDistance extends Restaurant {

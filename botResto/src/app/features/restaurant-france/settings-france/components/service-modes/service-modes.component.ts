@@ -34,7 +34,8 @@ export class ServiceModesComponent implements OnInit, OnDestroy {
   deliveryZoneKm: number = 5;
   deliveryFee: number = 2.50;
   minOrderAmount: number = 0;
-  
+  deliveryAddressMode: 'address' | 'geolocation' = 'address'; // NOUVEAU
+
   // Inline editing state
   isEditingDeliveryZone: boolean = false;
   tempDeliveryZoneKm: number = 5;
@@ -255,6 +256,7 @@ export class ServiceModesComponent implements OnInit, OnDestroy {
           this.deliveryZoneKm = config.delivery_zone_km || 5;
           this.deliveryFee = config.delivery_fee || 2.50;
           this.minOrderAmount = config.min_order_amount || 0;
+          this.deliveryAddressMode = config.delivery_address_mode || 'address'; // NOUVEAU
         },
         error: (error) => {
           console.error('Error loading restaurant config:', error);
@@ -315,6 +317,34 @@ export class ServiceModesComponent implements OnInit, OnDestroy {
       this.tempDeliveryZoneKm = this.deliveryZoneKm; // Revert
     } finally {
       loading.dismiss();
+    }
+  }
+
+  // NOUVEAU: Vérifier si le mode livraison est activé
+  hasDeliveryMode(): boolean {
+    return this.serviceModes.some(mode =>
+      mode.service_mode === 'livraison' && mode.is_enabled
+    );
+  }
+
+  // NOUVEAU: Mettre à jour le mode de collecte d'adresse
+  async updateDeliveryAddressMode() {
+    try {
+      const loading = await this.loadingController.create({
+        message: 'Mise à jour du mode d\'adresse...'
+      });
+      await loading.present();
+
+      await this.restaurantConfigService.updateDeliveryAddressMode(
+        this.restaurantId,
+        this.deliveryAddressMode
+      ).toPromise();
+
+      await loading.dismiss();
+      this.presentToast('Mode de collecte d\'adresse mis à jour', 'success');
+    } catch (error) {
+      console.error('Error updating delivery address mode:', error);
+      this.presentToast('Erreur lors de la mise à jour', 'danger');
     }
   }
 

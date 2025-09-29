@@ -230,19 +230,36 @@
         <div *ngIf="order.delivery_mode === 'livraison'" class="delivery-info">
           <div class="delivery-header">
             <h4>Informations livraison:</h4>
-            <ion-button 
-              *ngIf="order.delivery_mode === 'livraison' && order.delivery_address"
-              fill="solid" 
-              size="small" 
+            <!-- Bouton adaptatif selon type d'adresse -->
+            <ion-button
+              *ngIf="order.delivery_mode === 'livraison' && (order.delivery_address || order.delivery_latitude)"
+              fill="solid"
+              size="small"
               color="primary"
               class="maps-button"
-              (click)="openDrivingDirectionsFromAddress(order.delivery_address)">
+              (click)="openDrivingDirectionsForOrder(order)">
               <ion-icon name="navigate" slot="start"></ion-icon>
-              Itinéraire
+              {{ order.delivery_address_type === 'geolocation' ? 'Voir GPS' : 'Itinéraire' }}
             </ion-button>
           </div>
           
-          <p *ngIf="order.delivery_address"><strong>Adresse:</strong> {{ order.delivery_address }}</p>
+          <!-- Affichage adaptatif de l'adresse -->
+          <p *ngIf="order.delivery_address_type === 'text' && order.delivery_address">
+            <strong>Adresse:</strong> {{ order.delivery_address }}
+          </p>
+
+          <p *ngIf="order.delivery_address_type === 'geolocation' && order.delivery_latitude">
+            <strong>Position GPS:</strong>
+            <span class="gps-coords">
+              📍 Lat: {{ order.delivery_latitude?.toFixed(6) }},
+              Lng: {{ order.delivery_longitude?.toFixed(6) }}
+            </span>
+          </p>
+
+          <!-- Fallback pour ancienne données sans type -->
+          <p *ngIf="!order.delivery_address_type && order.delivery_address">
+            <strong>Adresse:</strong> {{ order.delivery_address }}
+          </p>
           <p *ngIf="order.date_validation_code && order.status === 'livree'"><strong>Livrée le:</strong> {{ formatDateTime(order.date_validation_code) }}</p>
           <p *ngIf="order.date_validation_code"><strong>Date validation:</strong> {{ formatDateTime(order.date_validation_code) }}</p>
           

@@ -85,6 +85,7 @@ Le bot universel est la version de production active qui gère tous les pays. Ne
 - **Types** : `supabase/functions/bot-resto-france-universel/types.ts`
 - **Deploy** : `supabase functions deploy bot-resto-france-universel`
 - **🔄 RÈGLE DÉPLOIEMENT** : Toujours déployer en DEV avant PROD
+- **❌ INTERDIT PROD** : Ne JAMAIS déployer en PROD sauf demande explicite
 
 **❌ INTERDICTION ABSOLUE** :
 - **NE JAMAIS analyser** les autres bots (`webhook-whatsapp`, `bot-whatsapp-france`, etc.)

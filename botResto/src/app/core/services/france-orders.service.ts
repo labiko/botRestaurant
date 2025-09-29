@@ -29,6 +29,9 @@ export interface FranceOrder {
   total_amount: number;
   delivery_mode: string;
   delivery_address?: string;
+  delivery_latitude?: number; // NOUVEAU: Coordonnée GPS
+  delivery_longitude?: number; // NOUVEAU: Coordonnée GPS
+  delivery_address_type?: 'text' | 'geolocation'; // NOUVEAU: Type d'adresse
   payment_mode: string;
   payment_method?: string;
   status: string;

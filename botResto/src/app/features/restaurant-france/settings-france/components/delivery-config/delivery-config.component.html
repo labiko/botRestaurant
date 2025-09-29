@@ -34,6 +34,24 @@
             <ion-toggle formControlName="delivery_enabled" color="success"></ion-toggle>
           </ion-item>
 
+          <!-- NOUVEAU: Mode de collecte d'adresse -->
+          <ion-item>
+            <ion-label>
+              <h3>Mode de collecte d'adresse</h3>
+              <p>Comment les clients partagent leur adresse</p>
+            </ion-label>
+            <ion-select
+              formControlName="delivery_address_mode"
+              interface="popover">
+              <ion-select-option value="address">
+                📝 Saisie textuelle (France/Europe)
+              </ion-select-option>
+              <ion-select-option value="geolocation">
+                📍 Partage GPS (Guinée/Afrique)
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
         </div>
 
         <div class="form-actions">

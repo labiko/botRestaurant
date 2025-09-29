@@ -58,7 +58,7 @@
               <h3>Configuration livraison</h3>
               <div class="delivery-zone-inline">
                 <span class="label">Zone de livraison:</span>
-                <ion-input 
+                <ion-input
                   *ngIf="isEditingDeliveryZone; else displayZone"
                   [(ngModel)]="tempDeliveryZoneKm"
                   type="number"
@@ -75,6 +75,7 @@
               </div>
             </ion-label>
           </ion-item>
+
         </div>
 
         <!-- Mode spécifique: Sur place -->
@@ -102,6 +103,50 @@
       </ion-card-content>
     </ion-card>
   </div>
+
+  <!-- NOUVEAU: Configuration Mode d'Adresse Livraison -->
+  <ion-card *ngIf="hasDeliveryMode()" class="delivery-address-config-card">
+    <ion-card-header>
+      <ion-card-title color="tertiary">
+        <ion-icon name="location" slot="start"></ion-icon>
+        Mode de Collecte d'Adresse
+      </ion-card-title>
+      <ion-card-subtitle>
+        Configurez comment les clients partagent leur adresse de livraison
+      </ion-card-subtitle>
+    </ion-card-header>
+
+    <ion-card-content>
+      <ion-item>
+        <ion-label>
+          <h3>Type de collecte d'adresse</h3>
+          <p>Choisissez la méthode adaptée à votre zone géographique</p>
+        </ion-label>
+        <ion-select
+          [(ngModel)]="deliveryAddressMode"
+          interface="popover"
+          (ionChange)="updateDeliveryAddressMode()">
+          <ion-select-option value="address">
+            📝 Saisie textuelle (France/Europe)
+          </ion-select-option>
+          <ion-select-option value="geolocation">
+            📍 Partage GPS (Guinée/Afrique)
+          </ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <div class="address-mode-description" [ngSwitch]="deliveryAddressMode">
+        <div *ngSwitchCase="'address'" class="mode-description text-mode">
+          <ion-icon name="create" color="primary"></ion-icon>
+          <span>Les clients saisissent leur adresse complète (ex: 12 rue de la Paix, Paris)</span>
+        </div>
+        <div *ngSwitchCase="'geolocation'" class="mode-description gps-mode">
+          <ion-icon name="navigate" color="success"></ion-icon>
+          <span>Les clients partagent leur position GPS via WhatsApp</span>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
 
   <!-- Instructions -->
   <ion-card class="info-card">

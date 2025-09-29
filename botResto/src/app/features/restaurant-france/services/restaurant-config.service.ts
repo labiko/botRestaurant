@@ -23,6 +23,7 @@ export interface RestaurantConfig {
   country_code: string;
   password_hash: string;
   hide_delivery_info?: boolean;
+  delivery_address_mode?: 'address' | 'geolocation'; // NOUVEAU
 }
 
 export interface BusinessHours {
@@ -188,6 +189,22 @@ export class RestaurantConfigService {
         .from('restaurant_bot_configs')
         .update({ available_workflows: workflows })
         .eq('restaurant_id', restaurantId)
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+      })
+    );
+  }
+
+  /**
+   * NOUVEAU: Met à jour le mode de collecte d'adresse de livraison
+   */
+  updateDeliveryAddressMode(restaurantId: number, mode: 'address' | 'geolocation'): Observable<void> {
+    return from(
+      this.supabase
+        .from('france_restaurants')
+        .update({ delivery_address_mode: mode })
+        .eq('id', restaurantId)
     ).pipe(
       map(({ error }) => {
         if (error) throw error;

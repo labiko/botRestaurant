@@ -410,13 +410,28 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     }
   }
 
+  // Nouvelle méthode unifiée pour gestion GPS/Adresse
+  openDrivingDirectionsForOrder(order: FranceOrder) {
+    if (order.delivery_address_type === 'geolocation' && order.delivery_latitude) {
+      // GPS : Ouvrir directement avec coordonnées
+      const url = `https://maps.google.com/?q=${order.delivery_latitude},${order.delivery_longitude}`;
+      window.open(url, '_blank');
+    } else if (order.delivery_address) {
+      // Adresse textuelle : Encoder et ouvrir
+      const encodedAddress = encodeURIComponent(order.delivery_address);
+      const url = `https://maps.google.com/?q=${encodedAddress}`;
+      window.open(url, '_blank');
+    }
+  }
+
+  // Méthode legacy conservée pour compatibilité
   openDrivingDirectionsFromAddress(address: string) {
     if (address && address.trim()) {
       const encodedAddress = encodeURIComponent(address.trim());
-      
+
       // Détecter le type d'appareil pour optimiser l'expérience
       const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
+
       if (isMobile) {
         // Sur mobile : ouvrir l'app Google Maps avec navigation directe
         const mobileUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving&dir_action=navigate`;

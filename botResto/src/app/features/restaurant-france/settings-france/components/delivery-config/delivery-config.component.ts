@@ -70,7 +70,8 @@ export class DeliveryConfigComponent implements OnInit, OnDestroy {
       delivery_zone_km: [5, [Validators.required, Validators.min(1)]],
       min_order_amount: [15, [Validators.required, Validators.min(0)]],
       delivery_fee: [2.50, [Validators.required, Validators.min(0)]],
-      delivery_enabled: [true]
+      delivery_enabled: [true],
+      delivery_address_mode: ['address'] // NOUVEAU: Valeur par défaut 'address'
     });
   }
 
@@ -89,7 +90,8 @@ export class DeliveryConfigComponent implements OnInit, OnDestroy {
             this.deliveryForm.patchValue({
               delivery_zone_km: config.delivery_zone_km,
               min_order_amount: config.min_order_amount,
-              delivery_fee: config.delivery_fee
+              delivery_fee: config.delivery_fee,
+              delivery_address_mode: config.delivery_address_mode || 'address' // NOUVEAU
             });
           },
           error: (error) => {
@@ -165,8 +167,16 @@ export class DeliveryConfigComponent implements OnInit, OnDestroy {
     await loading.present();
 
     try {
-      // Note: This would require an update method for restaurant delivery config
-      // For now, we'll just show success
+      const formValues = this.deliveryForm.value;
+
+      // NOUVEAU: Mise à jour du mode de collecte d'adresse
+      if (formValues.delivery_address_mode) {
+        await this.restaurantConfigService.updateDeliveryAddressMode(
+          this.restaurantId,
+          formValues.delivery_address_mode
+        ).toPromise();
+      }
+
       this.presentToast('Configuration de livraison sauvegardée', 'success');
     } catch (error) {
       console.error('Error saving delivery config:', error);
