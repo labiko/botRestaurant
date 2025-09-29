@@ -61,6 +61,8 @@ export default function WorkflowEditPage() {
     const restaurantId = urlParams.get('restaurant');
 
     if (editId && restaurantId) {
+      console.log('🔍 DEBUG_ICONS: ===== DEBUT useEffect =====');
+      console.log('🔍 DEBUG_ICONS: editId:', editId, 'restaurantId:', restaurantId);
       console.log('🚀 [DEBUG ORDRE] 0. DEBUT useEffect - Appel loadProductForEdit');
       setEditProductId(parseInt(editId));
       setEditRestaurantId(parseInt(restaurantId));
@@ -88,9 +90,12 @@ export default function WorkflowEditPage() {
 
   const loadProductForEdit = async (productId: number, restaurantId: number) => {
     try {
+      console.log('🔍 DEBUG_ICONS: ===== DEBUT loadProductForEdit =====');
+      console.log('🔍 DEBUG_ICONS: productId:', productId, 'restaurantId:', restaurantId);
       setLoading(true);
 
       // Charger les vraies données depuis l'API
+      console.log('🔍 DEBUG_ICONS: Appel workflow-config API...');
       const response = await fetch(`/api/products/${productId}/workflow-config`);
 
       if (!response.ok) {
@@ -137,10 +142,12 @@ export default function WorkflowEditPage() {
       });
 
       // TOUJOURS essayer de charger les vraies données pour l'interface générique
+      console.log('🔍 DEBUG_ICONS: ===== AVANT APPEL loadRealOptionGroups =====');
       console.log('🔍 [WORKFLOW-EDIT] Tentative chargement vraies données pour produit:', productId);
       console.log('🎯 [DEBUG ORDRE] 1.5 APPEL loadRealOptionGroups APRÈS chargement steps');
       console.log('🎯 [DEBUG ORDRE] 1.5 Steps dans state AVANT appel:', steps);
       await loadRealOptionGroups(productId, data.workflowConfig.steps_config.steps);
+      console.log('🔍 DEBUG_ICONS: ===== APRÈS APPEL loadRealOptionGroups =====');
 
     } catch (error) {
       console.error('❌ [WORKFLOW-EDIT] Erreur chargement:', error);
@@ -190,6 +197,8 @@ export default function WorkflowEditPage() {
   // Charger les vraies données groupées depuis france_product_options
   const loadRealOptionGroups = async (productId: number, stepsData?: any[]) => {
     try {
+      console.log('🔍 DEBUG_ICONS: ===== DEBUT loadRealOptionGroups =====');
+      console.log('🔍 DEBUG_ICONS: productId:', productId);
       console.log('🎯 [DEBUG ORDRE] 2. DEBUT chargement options groupées');
       console.log('🎯 [DEBUG ORDRE] 2. Steps actuels dans le state:', steps);
       console.log('🎯 [DEBUG ORDRE] 2. Steps passés en paramètre:', stepsData);
@@ -203,11 +212,14 @@ export default function WorkflowEditPage() {
 
       // Appel API pour charger les options réelles groupées
       const apiUrl = `/api/products/${productId}/options-grouped`;
+      console.log('🔍 DEBUG_ICONS: Appel API:', apiUrl);
       console.log('🔍 [WORKFLOW-EDIT] Appel API:', apiUrl);
       const response = await fetch(apiUrl);
+      console.log('🔍 DEBUG_ICONS: Réponse API reçue, status:', response.status);
 
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 DEBUG_ICONS: Données reçues de l\'API:', JSON.stringify(data, null, 2));
         if (data.success && data.optionGroups && data.optionGroups.length > 0) {
           // Synchroniser max_selections depuis steps_config
           let enrichedGroups = data.optionGroups;
@@ -251,13 +263,17 @@ export default function WorkflowEditPage() {
         }
       } else {
         const errorText = await response.text();
+        console.log('🔍 DEBUG_ICONS: ERREUR API - status:', response.status);
+        console.log('🔍 DEBUG_ICONS: ERREUR API - text:', errorText);
         console.error('❌ [WORKFLOW-EDIT] Erreur API options-grouped:', response.status, errorText);
         console.error('❌ [WORKFLOW-EDIT] URL appelée:', apiUrl);
       }
     } catch (error) {
+      console.log('🔍 DEBUG_ICONS: EXCEPTION dans loadRealOptionGroups:', error);
       console.error('❌ [WORKFLOW-EDIT] Erreur chargement groupes:', error);
     } finally {
       setLoading(false);
+      console.log('🔍 DEBUG_ICONS: ===== FIN loadRealOptionGroups =====');
     }
   };
 
@@ -291,7 +307,7 @@ export default function WorkflowEditPage() {
           name: option.option_name,
           price_modifier: option.price_modifier,
           display_order: option.display_order,
-          emoji: getEmojiForGroup(group.group_name, option.option_name)
+          emoji: (option.icon && option.icon !== 'undefined') ? option.icon : getEmojiForGroup(group.group_name, option.option_name)
         }));
       });
 
@@ -659,7 +675,7 @@ export default function WorkflowEditPage() {
                 {/* Liste des options du groupe avec formatage selon le plan */}
                 <div className="space-y-2">
                   {realOptionGroups[activeTabIndex].options.map((option, optionIndex) => {
-                    const emoji = getEmojiForGroup(realOptionGroups[activeTabIndex].group_name, option.option_name);
+                    const emoji = (option.icon && option.icon !== 'undefined') ? option.icon : getEmojiForGroup(realOptionGroups[activeTabIndex].group_name, option.option_name);
                     const priceDisplay = option.price_modifier === 0 ? '(gratuit)' :
                                        option.price_modifier > 0 ? `(+${option.price_modifier.toFixed(2)}€)` :
                                        `(${option.price_modifier.toFixed(2)}€)`;

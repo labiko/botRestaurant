@@ -21,12 +21,18 @@ export async function GET(
     }
 
     // Charger toutes les options du produit groupées par option_group
+    console.log(`🔍 DEBUG_ICONS: Chargement options pour produit ${productId}`);
     const { data: options, error: optionsError } = await supabase
       .from('france_product_options')
       .select('*')
       .eq('product_id', productId)
       .order('group_order', { ascending: true })
       .order('display_order', { ascending: true });
+
+    console.log(`🔍 DEBUG_ICONS: Options trouvées: ${options?.length || 0}`);
+    if (options && options.length > 0) {
+      console.log(`🔍 DEBUG_ICONS: Premier élément:`, JSON.stringify(options[0], null, 2));
+    }
 
     if (optionsError) {
       console.error('Erreur chargement options:', optionsError);
@@ -59,18 +65,24 @@ export async function GET(
         });
       }
 
+      console.log(`🔍 DEBUG_ICONS: ${option.option_name} -> icon: ${option.icon}`);
+
       groupedOptions.get(groupName).options.push({
         id: option.id,
         option_name: option.option_name,
         price_modifier: option.price_modifier,
         display_order: option.display_order,
-        is_active: option.is_active
+        is_active: option.is_active,
+        icon: option.icon
       });
     });
 
     // Convertir en array et trier par group_order
     const optionGroupsArray = Array.from(groupedOptions.values())
       .sort((a, b) => a.group_order - b.group_order);
+
+    console.log(`🔍 DEBUG_ICONS: Réponse finale - ${optionGroupsArray.length} groupes`);
+    console.log(`🔍 DEBUG_ICONS: Premier groupe:`, JSON.stringify(optionGroupsArray[0], null, 2));
 
     return NextResponse.json({
       success: true,

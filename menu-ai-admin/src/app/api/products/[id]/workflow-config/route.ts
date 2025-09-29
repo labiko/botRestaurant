@@ -74,21 +74,30 @@ export async function GET(
 
       // Si on a des vraies options, les organiser par groupe
       if (realOptions && realOptions.length > 0) {
+        console.log('🔍 DEBUG_ICONS: realOptions trouvées:', realOptions.length);
+        console.log('🔍 DEBUG_ICONS: Premier élément:', JSON.stringify(realOptions[0], null, 2));
+
         // Grouper les options par leur groupe (à déterminer selon la structure de france_product_options)
         // Pour l'instant, créer des groupes par défaut
         optionGroups = {
-          'Plats principaux': realOptions.slice(0, 3).map((opt, index) => ({
-            name: opt.name || `Option ${index + 1}`,
-            price_modifier: opt.price_modifier || 0,
-            display_order: index + 1,
-            emoji: opt.emoji || '🍽️'
-          })),
-          'Suppléments': realOptions.slice(3).map((opt, index) => ({
-            name: opt.name || `Supplément ${index + 1}`,
-            price_modifier: opt.price_modifier || 0,
-            display_order: index + 1,
-            emoji: opt.emoji || '➕'
-          }))
+          'Plats principaux': realOptions.slice(0, 3).map((opt, index) => {
+            console.log(`🔍 DEBUG_ICONS: Plat ${index + 1} - emoji: ${opt.emoji}, icon: ${opt.icon}`);
+            return {
+              name: opt.name || `Option ${index + 1}`,
+              price_modifier: opt.price_modifier || 0,
+              display_order: index + 1,
+              emoji: opt.emoji
+            };
+          }),
+          'Suppléments': realOptions.slice(3).map((opt, index) => {
+            console.log(`🔍 DEBUG_ICONS: Supplément ${index + 1} - emoji: ${opt.emoji}, icon: ${opt.icon}`);
+            return {
+              name: opt.name || `Supplément ${index + 1}`,
+              price_modifier: opt.price_modifier || 0,
+              display_order: index + 1,
+              emoji: opt.emoji
+            };
+          })
         };
       } else {
         // Pas d'options réelles trouvées, utiliser les groupes depuis steps_config
@@ -107,13 +116,13 @@ export async function GET(
                 name: `Option ${groupName} 1`,
                 price_modifier: 0,
                 display_order: 1,
-                emoji: '🍽️'
+                emoji: undefined
               },
               {
                 name: `Option ${groupName} 2`,
                 price_modifier: 1,
                 display_order: 2,
-                emoji: '➕'
+                emoji: undefined
               }
             ];
           });
