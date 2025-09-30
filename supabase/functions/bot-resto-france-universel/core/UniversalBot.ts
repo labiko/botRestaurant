@@ -2163,7 +2163,7 @@ export class UniversalBot implements IMessageHandler {
         sessionData: {
           ...session.sessionData,
           existingAddresses: existingAddresses,
-          showGpsOption: deliveryAddressMode === 'geolocation'
+          showGpsOption: deliveryAddressMode !== 'text'
         }
       });
 
