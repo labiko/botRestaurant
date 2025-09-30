@@ -36,12 +36,12 @@ export class PaymentLinkService {
 
     try {
       const response = await fetch(
-        `${environment.supabaseUrl}/functions/v1/payment-link-sender`,
+        `${environment.supabaseFranceUrl}/functions/v1/payment-link-sender`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${environment.supabaseAnonKey}`
+            'Authorization': `Bearer ${environment.supabaseFranceAnonKey}`
           },
           body: JSON.stringify(request)
         }
