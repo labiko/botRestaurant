@@ -374,7 +374,6 @@ export default function OCRDeployPage() {
       {deploymentStatus === 'deploying' && renderDeployingStep()}
       {deploymentStatus === 'success' && renderSuccessStep()}
       {deploymentStatus === 'error' && renderErrorStep()}
-      </div>
     </div>
   );
 }
