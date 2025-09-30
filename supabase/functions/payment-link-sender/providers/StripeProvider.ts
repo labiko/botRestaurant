@@ -57,6 +57,9 @@ export class StripeProvider {
         mode: 'payment',
         success_url: config.success_url || `${Deno.env.get('APP_URL')}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: config.cancel_url || `${Deno.env.get('APP_URL')}/payment/cancel`,
+        payment_method_types: ['card'],
+        customer_email: order.customer_email,
+        billing_address_collection: 'auto',
         line_items: [
           {
             price_data: {
