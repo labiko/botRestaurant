@@ -82,6 +82,9 @@ export interface FranceOrder {
   // NOUVEAU : Paiement en ligne
   online_payment_status?: 'not_sent' | 'link_sent' | 'paid' | 'failed';
   payment_date?: string;  // Date de paiement
+  payment_link_url?: string;  // URL du lien de paiement
+  payment_link_sent_at?: string;  // Date d'envoi du lien
+  payment_link_status?: string;  // Statut du lien (pending, sent, paid, etc.)
 }
 
 export interface OrderAction {

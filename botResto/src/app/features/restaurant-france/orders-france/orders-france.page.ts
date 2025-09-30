@@ -1023,4 +1023,39 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     }
   }
 
+  async copyPaymentLink(order: FranceOrder) {
+    if (!order.payment_link_url) {
+      const toast = await this.toastController.create({
+        message: '⚠️ Aucun lien de paiement disponible',
+        duration: 2000,
+        color: 'warning',
+        position: 'top'
+      });
+      await toast.present();
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(order.payment_link_url);
+
+      const toast = await this.toastController.create({
+        message: '✅ Lien copié dans le presse-papier !',
+        duration: 2000,
+        color: 'success',
+        position: 'top'
+      });
+      await toast.present();
+    } catch (error) {
+      console.error('❌ [OrdersFrance] Erreur copie lien:', error);
+
+      const toast = await this.toastController.create({
+        message: '❌ Impossible de copier le lien',
+        duration: 2000,
+        color: 'danger',
+        position: 'top'
+      });
+      await toast.present();
+    }
+  }
+
 }

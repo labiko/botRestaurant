@@ -1,3 +1,30 @@
 {
-  "typescript.preferences.autoImportFileExcludePatterns": ["@ionic/angular/common", "@ionic/angular/standalone"]
+  "typescript.preferences.autoImportFileExcludePatterns": ["@ionic/angular/common", "@ionic/angular/standalone"],
+
+  // Désactiver complètement les mises à jour de VS Code
+  "update.mode": "none",
+  "update.enableWindowsBackgroundUpdates": false,
+  "update.showReleaseNotes": false,
+  "update.channel": "none",
+
+  // Désactiver les mises à jour automatiques des extensions
+  "extensions.autoUpdate": false,
+  "extensions.autoCheckUpdates": false,
+
+  // Bloquer les mises à jour en arrière-plan des extensions
+  "extensions.backgroundUpdates": false,
+  "extensions.autoUpdateExtensions": [],
+
+  // Désactiver les recommandations et notifications
+  "extensions.ignoreRecommendations": true,
+  "extensions.showRecommendationsOnlyOnDemand": true,
+
+  // Désactiver toutes les notifications de mise à jour
+  "workbench.enableExperiments": false,
+  "workbench.settings.enableNaturalLanguageSearch": false,
+
+  // Désactiver la télémétrie (optionnel)
+  "telemetry.telemetryLevel": "off",
+  "telemetry.enableCrashReporter": false,
+  "telemetry.enableTelemetry": false
 }

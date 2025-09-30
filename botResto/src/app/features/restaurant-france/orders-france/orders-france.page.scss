@@ -1017,3 +1017,45 @@
     color: var(--ion-color-success);
   }
 }
+
+// ============================================================================
+// PAYMENT LINK SENT - Badge + Copy button
+// ============================================================================
+.payment-link-sent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  ion-chip {
+    margin: 0;
+    flex: 1;
+
+    ion-label {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      small {
+        font-size: 0.75rem;
+        opacity: 0.8;
+      }
+    }
+  }
+
+  ion-button {
+    --padding-start: 8px;
+    --padding-end: 8px;
+    height: 36px;
+    margin: 0;
+
+    ion-icon {
+      font-size: 20px;
+    }
+
+    &:hover {
+      transform: scale(1.05);
+      transition: transform 0.2s ease;
+    }
+  }
+}

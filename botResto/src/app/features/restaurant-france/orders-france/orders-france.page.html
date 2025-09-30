@@ -425,9 +425,9 @@
 
         <!-- Actions -->
         <div class="order-actions">
-          <!-- Payment link button (NEW) -->
+          <!-- Payment link button - Visible si aucun lien envoyé -->
           <ion-button
-            *ngIf="order.online_payment_status !== 'paid'"
+            *ngIf="!order.online_payment_status || order.online_payment_status === 'not_sent'"
             size="small"
             color="success"
             fill="outline"
@@ -436,11 +436,29 @@
             💳 Envoyer lien paiement
           </ion-button>
 
-          <!-- Payment status (NEW) -->
+          <!-- Payment link sent - Visible si lien envoyé mais pas encore payé -->
+          <div *ngIf="order.online_payment_status === 'link_sent'" class="payment-link-sent">
+            <ion-chip color="warning">
+              <ion-icon name="link-outline"></ion-icon>
+              <ion-label>
+                🔗 Lien envoyé
+                <br>
+                <small *ngIf="order.payment_link_sent_at">{{ order.payment_link_sent_at | date:'dd/MM/yyyy HH:mm' }}</small>
+              </ion-label>
+            </ion-chip>
+            <ion-button
+              size="small"
+              fill="clear"
+              (click)="copyPaymentLink(order)">
+              <ion-icon name="copy-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+
+          <!-- Payment status - Visible si paiement effectué -->
           <ion-chip *ngIf="order.online_payment_status === 'paid'" color="success">
             <ion-icon name="checkmark-circle"></ion-icon>
             <ion-label>
-              Payé en ligne
+              ✅ Payé en ligne
               <br>
               <small *ngIf="order.payment_date">{{ order.payment_date | date:'dd/MM/yyyy HH:mm' }}</small>
             </ion-label>
