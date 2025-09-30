@@ -92,11 +92,20 @@ serve(async (req) => {
     // ========================================================================
     let paymentResult;
 
+    // Préparer les URLs de callback
+    const appUrl = Deno.env.get('APP_URL') || 'https://botrestodev.vercel.app';
+    const configWithUrls = {
+      ...config,
+      success_url: `${appUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/payment/cancel`
+    };
+
     switch (config.provider) {
       case 'stripe':
         console.log('💳 [Payment Link Sender] Utilisation Stripe');
+        console.log(`🔗 [Payment Link Sender] Callback URLs: success=${configWithUrls.success_url}, cancel=${configWithUrls.cancel_url}`);
         const stripeProvider = new StripeProvider(config.api_key_secret);
-        paymentResult = await stripeProvider.createPaymentLink(order, config);
+        paymentResult = await stripeProvider.createPaymentLink(order, configWithUrls);
         break;
 
       case 'lengopay':
