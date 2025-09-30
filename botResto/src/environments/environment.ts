@@ -23,7 +23,13 @@ export const environment = {
 
   // 🔍 INDICATEUR D'ENVIRONNEMENT
   environmentName: 'DEV',
-  debugMode: true
+  debugMode: true,
+
+  // 💳 Configuration URLs de callback paiement
+  payment: {
+    successUrl: 'https://botresto.vercel.app/payment/success',
+    cancelUrl: 'https://botresto.vercel.app/payment/cancel'
+  }
 };
 
 /*

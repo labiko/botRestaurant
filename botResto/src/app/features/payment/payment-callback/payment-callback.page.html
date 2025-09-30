@@ -1,0 +1,68 @@
+<ion-content>
+  <div class="callback-wrapper">
+
+    <!-- LOADING -->
+    <div class="callback-container loading" *ngIf="status === 'loading'">
+      <div class="spinner-wrapper">
+        <ion-spinner name="crescent" color="primary"></ion-spinner>
+      </div>
+      <h2>Vérification du paiement...</h2>
+    </div>
+
+    <!-- SUCCESS -->
+    <div class="callback-container success" *ngIf="status === 'success'">
+      <div class="animation-wrapper">
+        <div class="checkmark-circle">
+          <svg class="checkmark" viewBox="0 0 60 60">
+            <circle class="circle" cx="30" cy="30" r="28" fill="none" stroke="#4CAF50" stroke-width="3"/>
+            <path class="check" d="M15,30 L25,40 L45,20" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <h1>Paiement réussi !</h1>
+      <p class="subtitle">Votre commande est confirmée</p>
+
+      <div class="order-summary" *ngIf="orderNumber">
+        <ion-icon name="receipt-outline"></ion-icon>
+        <span>Commande #{{ orderNumber }}</span>
+      </div>
+
+      <p class="redirect-text">
+        <ion-icon name="time-outline"></ion-icon>
+        Redirection automatique...
+      </p>
+    </div>
+
+    <!-- CANCEL -->
+    <div class="callback-container cancel" *ngIf="status === 'cancel'">
+      <div class="animation-wrapper">
+        <ion-icon name="close-circle" class="error-icon"></ion-icon>
+      </div>
+
+      <h1>Paiement annulé</h1>
+      <p class="subtitle">Votre commande est en attente</p>
+
+      <ion-button expand="block" (click)="retryPayment()" class="retry-button">
+        <ion-icon name="arrow-back-outline" slot="start"></ion-icon>
+        Retour aux commandes
+      </ion-button>
+    </div>
+
+    <!-- ERROR -->
+    <div class="callback-container error" *ngIf="status === 'error'">
+      <div class="animation-wrapper">
+        <ion-icon name="alert-circle" class="error-icon"></ion-icon>
+      </div>
+
+      <h1>Erreur</h1>
+      <p class="subtitle">Une erreur s'est produite lors de la vérification</p>
+
+      <ion-button expand="block" (click)="retryPayment()" class="retry-button">
+        <ion-icon name="arrow-back-outline" slot="start"></ion-icon>
+        Retour aux commandes
+      </ion-button>
+    </div>
+
+  </div>
+</ion-content>
