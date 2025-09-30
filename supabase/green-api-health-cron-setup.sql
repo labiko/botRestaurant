@@ -18,14 +18,15 @@ SELECT cron.unschedule('green-api-health-check');
 
 -- ========================================
 -- ÉTAPE 3: Créer le job cron
--- Pattern: */15 * * * * = Toutes les 15 minutes
+-- Pattern: */1 * * * * = Toutes les 1 minute (TEST)
+-- ⚠️ ATTENTION: Pour production, revenir à */15 * * * *
 -- ========================================
 
 -- REMPLACER [YOUR-SUPABASE-ANON-KEY] par la vraie clé ANON du projet DEV
 
 SELECT cron.schedule(
   'green-api-health-check',           -- Nom du job
-  '*/15 * * * *',                      -- Toutes les 15 minutes
+  '*/1 * * * *',                       -- ⚠️ TEST: Toutes les 1 minute
   $$
   SELECT net.http_post(
     url := 'https://lphvdoyhwaelmwdfkfuh.supabase.co/functions/v1/green-api-health-monitor',
