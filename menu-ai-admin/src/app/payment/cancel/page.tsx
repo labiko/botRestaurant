@@ -1,22 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function PaymentCancelPage() {
-  const router = useRouter();
-
   useEffect(() => {
     console.log('❌ [PaymentCancel] Paiement annulé par l\'utilisateur');
-
-    // Redirection automatique après 5 secondes
-    const timer = setTimeout(() => {
-      console.log('🔄 [PaymentCancel] Redirection vers dashboard...');
-      // router.push('/dashboard'); // À activer plus tard
-    }, 5000);
-
-    return () => clearTimeout(timer);
-  }, [router]);
+  }, []);
 
   return (
     <div style={{
@@ -89,64 +78,6 @@ export default function PaymentCancelPage() {
           </p>
         </div>
 
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          justifyContent: 'center',
-          flexWrap: 'wrap'
-        }}>
-          <button
-            onClick={() => {
-              console.log('🔙 [PaymentCancel] Retour à la commande');
-              // router.back(); // À activer plus tard
-            }}
-            style={{
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '12px 24px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
-          >
-            Réessayer le paiement
-          </button>
-
-          <button
-            onClick={() => {
-              console.log('🏠 [PaymentCancel] Retour au dashboard');
-              // router.push('/dashboard'); // À activer plus tard
-            }}
-            style={{
-              backgroundColor: '#f3f4f6',
-              color: '#374151',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              padding: '12px 24px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-          >
-            Retour au tableau de bord
-          </button>
-        </div>
-
-        <p style={{
-          fontSize: '14px',
-          color: '#9ca3af',
-          marginTop: '24px'
-        }}>
-          Redirection automatique dans 5 secondes...
-        </p>
       </div>
 
       <style jsx>{`

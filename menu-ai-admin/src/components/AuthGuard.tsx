@@ -43,6 +43,11 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     return <>{children}</>;
   }
 
+  // Pages de paiement : afficher sans layout (standalone)
+  if (pathname.startsWith('/payment')) {
+    return <>{children}</>;
+  }
+
   // Pages protégées : afficher avec layout complet si connecté
   if (user) {
     return (
