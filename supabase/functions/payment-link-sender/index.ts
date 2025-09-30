@@ -16,6 +16,8 @@ interface PaymentLinkRequest {
   senderType: 'restaurant' | 'driver' | 'system';
   customMessage?: string;      // Message personnalisé (optionnel)
   expiresIn?: number;          // Durée d'expiration en heures (défaut: 24h)
+  successUrl?: string;         // URL de redirection succès (depuis client)
+  cancelUrl?: string;          // URL de redirection annulation (depuis client)
 }
 
 interface PaymentLinkResponse {
@@ -47,7 +49,7 @@ serve(async (req) => {
     );
 
     const body: PaymentLinkRequest = await req.json();
-    const { orderId, senderId, senderType, customMessage, expiresIn } = body;
+    const { orderId, senderId, senderType, customMessage, expiresIn, successUrl, cancelUrl } = body;
 
     console.log(`📋 [Payment Link Sender] Commande #${orderId}, Sender: ${senderType}`);
 
@@ -92,18 +94,19 @@ serve(async (req) => {
     // ========================================================================
     let paymentResult;
 
-    // Préparer les URLs de callback
-    const appUrl = Deno.env.get('APP_URL') || 'https://botrestodev.vercel.app';
+    // Utiliser les URLs du client (ou fallback)
     const configWithUrls = {
       ...config,
-      success_url: `${appUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/payment/cancel`
+      success_url: successUrl || `${Deno.env.get('APP_URL')}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl || `${Deno.env.get('APP_URL')}/payment/cancel`
     };
+
+    console.log(`🔗 [Payment Link Sender] Callback URLs reçues du client: success=${successUrl}, cancel=${cancelUrl}`);
 
     switch (config.provider) {
       case 'stripe':
         console.log('💳 [Payment Link Sender] Utilisation Stripe');
-        console.log(`🔗 [Payment Link Sender] Callback URLs: success=${configWithUrls.success_url}, cancel=${configWithUrls.cancel_url}`);
+        console.log(`🔗 [Payment Link Sender] URLs finales: success=${configWithUrls.success_url}, cancel=${configWithUrls.cancel_url}`);
         const stripeProvider = new StripeProvider(config.api_key_secret);
         paymentResult = await stripeProvider.createPaymentLink(order, configWithUrls);
         break;

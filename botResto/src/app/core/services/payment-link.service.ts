@@ -13,6 +13,8 @@ export interface SendPaymentLinkRequest {
   senderType: 'restaurant' | 'driver' | 'system';
   customMessage?: string;
   expiresIn?: number;
+  successUrl?: string;
+  cancelUrl?: string;
 }
 
 export interface SendPaymentLinkResponse {
@@ -34,6 +36,15 @@ export class PaymentLinkService {
   async sendPaymentLink(request: SendPaymentLinkRequest): Promise<SendPaymentLinkResponse> {
     console.log('💳 [PaymentLinkService] Envoi lien paiement pour commande:', request.orderId);
 
+    // Ajouter les URLs de callback depuis FRANCE_CONFIG
+    const requestWithUrls = {
+      ...request,
+      successUrl: FRANCE_CONFIG.payment.successUrl,
+      cancelUrl: FRANCE_CONFIG.payment.cancelUrl
+    };
+
+    console.log('🔗 [PaymentLinkService] Callback URLs:', requestWithUrls.successUrl, requestWithUrls.cancelUrl);
+
     try {
       const response = await fetch(
         `${FRANCE_CONFIG.supabaseFranceUrl}/functions/v1/payment-link-sender`,
@@ -42,7 +53,7 @@ export class PaymentLinkService {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(request)
+          body: JSON.stringify(requestWithUrls)
         }
       );
 
