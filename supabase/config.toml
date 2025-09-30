@@ -42,5 +42,8 @@ verify_jwt = false
 [functions.bot-resto-france-universel]
 verify_jwt = false
 
+[functions.payment-link-sender]
+verify_jwt = false
+
 [analytics]
 enabled = false

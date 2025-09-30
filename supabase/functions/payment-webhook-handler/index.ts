@@ -58,7 +58,7 @@ async function handleStripeWebhook(req: Request, signature: string | null) {
 
   let event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
     console.log(`✅ [Webhook Handler] Événement Stripe vérifié: ${event.type}`);
   } catch (err: any) {
     console.error('❌ [Webhook Handler] Erreur vérification signature:', err);
@@ -79,11 +79,11 @@ async function handleStripeWebhook(req: Request, signature: string | null) {
 
     const session = event.data.object as any;
 
-    // Trouver le payment_link correspondant
+    // Trouver le payment_link correspondant par session.id
     const { data: paymentLink, error: linkError } = await supabase
       .from('payment_links')
       .select('*')
-      .eq('payment_intent_id', session.payment_intent)
+      .eq('payment_intent_id', session.id)
       .single();
 
     if (linkError || !paymentLink) {

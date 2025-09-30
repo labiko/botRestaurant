@@ -81,6 +81,7 @@ export interface FranceOrder {
   pendingDriverNames?: string;
   // NOUVEAU : Paiement en ligne
   online_payment_status?: 'not_sent' | 'link_sent' | 'paid' | 'failed';
+  payment_date?: string;  // Date de paiement
 }
 
 export interface OrderAction {
@@ -148,12 +149,7 @@ export class FranceOrdersService {
       }
 
       const processedOrders = data?.map((order: any) => this.processOrder(order)) || [];
-      
-      // 🔍 LOGS DIAGNOSTICS: Analyser le total_amount des commandes
-      if (processedOrders.length > 0) {
-        const firstOrder = processedOrders[0];
-      }
-      
+
       this.ordersSubject.next(processedOrders);
     } catch (error) {
       console.error('Erreur service commandes France:', error);

@@ -113,11 +113,17 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     
     // S'abonner aux changements de commandes avec enrichissement WhatsApp
     this.ordersSubscription = this.franceOrdersService.orders$.subscribe(async (orders) => {
-      
+
       // Enrichir les commandes avec les noms WhatsApp
       this.orders = await this.addressWhatsAppService.enrichOrdersWithWhatsAppNames(orders);
-      
-      
+
+      // 🔍 DEBUG: Vérifier le online_payment_status de la commande 171
+      const order171 = orders.find(o => o.id === 171);
+      if (order171) {
+        console.log('🔍 [DEBUG] Commande 171 - online_payment_status:', order171.online_payment_status);
+        console.log('🔍 [DEBUG] Commande 171 - payment_date:', order171.payment_date);
+      }
+
       // Vérifier et jouer le son pour les nouvelles commandes
       this.audioNotificationService.checkAndPlayForNewOrders(this.restaurantId).subscribe({
         next: (playedCount) => {
@@ -128,7 +134,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
           console.error('❌ [AudioNotification] Erreur lors de la vérification audio:', error);
         }
       });
-      
+
       // DEBUG TEMPORAIRE - Chercher 1209-0013
       this.debugAllOrders();
       this.isLoading = false;
@@ -951,6 +957,22 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   // ========================================================================
   // PAYMENT LINK METHODS (NEW)
   // ========================================================================
+
+  /**
+   * Récupérer les informations de paiement d'une commande
+   */
+  async getPaymentInfo(orderId: number) {
+    const { data } = await this.supabaseFranceService.client
+      .from('payment_links')
+      .select('status, paid_at')
+      .eq('order_id', orderId)
+      .eq('status', 'paid')
+      .order('paid_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    return data;
+  }
 
   /**
    * Envoyer un lien de paiement à un client

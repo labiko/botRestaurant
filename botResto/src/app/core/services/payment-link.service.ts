@@ -40,8 +40,7 @@ export class PaymentLinkService {
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${environment.supabaseFranceAnonKey}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(request)
         }

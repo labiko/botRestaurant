@@ -27,6 +27,17 @@ interface PaymentLinkResponse {
 }
 
 serve(async (req) => {
+  // Gestion CORS
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
+  }
+
   console.log('📥 [Payment Link Sender] Nouvelle requête');
 
   try {
@@ -117,7 +128,7 @@ serve(async (req) => {
         config_id: config.id,
         provider: config.provider,
         payment_link_url: paymentResult.paymentUrl,
-        payment_intent_id: paymentResult.paymentIntentId,
+        payment_intent_id: paymentResult.metadata?.sessionId || paymentResult.paymentIntentId,
         amount: order.total_amount,
         currency: config.config?.currency || 'EUR',
         status: 'pending',
@@ -144,7 +155,7 @@ serve(async (req) => {
     try {
       // Appel direct à Green API
       const whatsappResponse = await fetch(
-        `${Deno.env.get('GREEN_API_URL')}/waInstance${Deno.env.get('GREEN_API_INSTANCE')}/sendMessage/${Deno.env.get('GREEN_API_TOKEN')}`,
+        `${Deno.env.get('GREEN_API_URL')}/waInstance${Deno.env.get('GREEN_API_INSTANCE_ID')}/sendMessage/${Deno.env.get('GREEN_API_TOKEN')}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -187,7 +198,10 @@ serve(async (req) => {
         paymentUrl: paymentResult.paymentUrl,
         messageSent: true
       }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        },
         status: 200
       });
 
@@ -202,7 +216,10 @@ serve(async (req) => {
         messageSent: false,
         error: 'Lien créé mais envoi WhatsApp échoué'
       }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        },
         status: 200
       });
     }
@@ -215,7 +232,10 @@ serve(async (req) => {
       error: error.message || 'Erreur inconnue'
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      }
     });
   }
 });
@@ -234,6 +254,9 @@ function formatPaymentMessage(order: any, paymentUrl: string, config: any): stri
     ? Math.round(order.total_amount)
     : order.total_amount.toFixed(2);
 
+  // Nettoyer l'URL de tout espace ou retour à la ligne potentiel
+  const cleanUrl = paymentUrl.trim().replace(/\s+/g, '');
+
   return `💳 *PAIEMENT EN LIGNE*
 
 Bonjour ${order.customer_name || 'cher client'},
@@ -244,7 +267,7 @@ Votre commande #${order.order_number} est prête !
 
 Pour finaliser votre commande, veuillez effectuer le paiement en ligne :
 
-🔗 ${paymentUrl}
+🔗 ${cleanUrl}
 
 ⏱️ Ce lien expire dans 24 heures.
 

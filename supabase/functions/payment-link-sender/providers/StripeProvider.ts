@@ -44,24 +44,16 @@ export class StripeProvider {
     console.log(`💳 [Stripe] Création lien pour commande #${order.order_number}`);
 
     try {
-      // Créer un Payment Intent
-      const paymentIntent = await this.stripe.paymentIntents.create({
-        amount: Math.round(order.total_amount * 100), // Convertir en centimes
-        currency: config.config.currency || 'eur',
-        payment_method_types: config.config.payment_methods || ['card'],
-        metadata: {
-          order_id: order.id.toString(),
-          order_number: order.order_number,
-          restaurant_id: order.restaurant_id.toString(),
-          customer_phone: order.phone_number
-        }
-      });
-
-      console.log(`✅ [Stripe] Payment Intent créé: ${paymentIntent.id}`);
-
-      // Créer un Checkout Session
+      // Créer un Checkout Session avec payment_intent_data
       const session = await this.stripe.checkout.sessions.create({
-        payment_intent: paymentIntent.id,
+        payment_intent_data: {
+          metadata: {
+            order_id: order.id.toString(),
+            order_number: order.order_number,
+            restaurant_id: order.restaurant_id.toString(),
+            customer_phone: order.phone_number
+          }
+        },
         mode: 'payment',
         success_url: config.success_url || `${Deno.env.get('APP_URL')}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: config.cancel_url || `${Deno.env.get('APP_URL')}/payment/cancel`,
@@ -86,10 +78,10 @@ export class StripeProvider {
       return {
         success: true,
         paymentUrl: session.url!,
-        paymentIntentId: paymentIntent.id,
+        paymentIntentId: session.payment_intent as string,
         metadata: {
           sessionId: session.id,
-          paymentIntentId: paymentIntent.id,
+          paymentIntentId: session.payment_intent,
           amount: order.total_amount,
           currency: config.config.currency || 'eur'
         }
