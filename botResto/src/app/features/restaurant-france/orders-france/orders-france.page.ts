@@ -977,9 +977,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
           position: 'top'
         });
         await toast.present();
-
-        // Recharger les commandes pour voir le nouveau statut
-        await this.manualRefresh();
       } else {
         const toast = await this.toastController.create({
           message: '⚠️ Lien créé mais envoi WhatsApp échoué',
