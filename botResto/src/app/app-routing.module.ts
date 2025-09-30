@@ -44,17 +44,12 @@ const routes: Routes = [
     loadChildren: () => import('./features/restaurant-france/restaurant-france.module').then( m => m.RestaurantFranceModule)
   },
   {
-    path: 'payment',
-    children: [
-      {
-        path: 'success',
-        loadChildren: () => import('./features/payment/payment-callback/payment-callback.module').then( m => m.PaymentCallbackPageModule)
-      },
-      {
-        path: 'cancel',
-        loadChildren: () => import('./features/payment/payment-callback/payment-callback.module').then( m => m.PaymentCallbackPageModule)
-      }
-    ]
+    path: 'payment/success',
+    loadChildren: () => import('./features/payment/payment-callback/payment-callback.module').then( m => m.PaymentCallbackPageModule)
+  },
+  {
+    path: 'payment/cancel',
+    loadChildren: () => import('./features/payment/payment-callback/payment-callback.module').then( m => m.PaymentCallbackPageModule)
   },
   // Wildcard TOUJOURS en dernier pour ne pas capturer les routes définies
   {
