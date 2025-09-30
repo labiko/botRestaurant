@@ -66,7 +66,14 @@ export default function GreenAPIHealthPage() {
     loadData();
     loadRebootConfig();
     const interval = setInterval(loadData, 60000);
-    return () => clearInterval(interval);
+
+    // Polling pour traiter la queue de reboots planifiés (toutes les 30 secondes)
+    const queueInterval = setInterval(processQueue, 30000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(queueInterval);
+    };
   }, []);
 
   async function loadData() {
@@ -137,6 +144,27 @@ export default function GreenAPIHealthPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function processQueue() {
+    try {
+      // Traiter silencieusement la queue sans montrer de loader
+      const response = await fetch('/api/green-api-health/process-queue', {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Si un reboot a été traité, recharger les données
+        if (result.processed > 0) {
+          await loadData();
+          await loadRebootConfig();
+        }
+      }
+    } catch (err) {
+      // Ignorer les erreurs de queue en silence
+      console.error('Queue processing error:', err);
     }
   }
 

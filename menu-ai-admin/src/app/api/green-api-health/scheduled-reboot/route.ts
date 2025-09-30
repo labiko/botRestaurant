@@ -9,15 +9,34 @@ export async function GET() {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Récupérer la première ligne (ordre par ID) au lieu de .single()
     const { data, error } = await supabase
       .from('green_api_scheduled_reboots')
       .select('*')
-      .single();
+      .order('id', { ascending: true })
+      .limit(1);
 
     if (error) {
-      // Si la table est vide ou la ligne n'existe pas, créer une config par défaut
-      if (error.code === 'PGRST116') {
-        const defaultConfig = {
+      console.error('Error fetching scheduled reboot config:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Si aucune ligne n'existe, créer une config par défaut
+    if (!data || data.length === 0) {
+      const { data: inserted, error: insertError } = await supabase
+        .from('green_api_scheduled_reboots')
+        .insert({
+          scheduled_time: '03:00:00',
+          timezone: 'Europe/Paris',
+          is_enabled: false
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error creating default config:', insertError);
+        // Retourner la config par défaut même si l'insertion échoue
+        return NextResponse.json({
           id: 1,
           scheduled_time: '03:00:00',
           timezone: 'Europe/Paris',
@@ -26,29 +45,14 @@ export async function GET() {
           next_execution_at: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        };
-
-        // Tenter de créer la ligne par défaut
-        const { data: inserted, error: insertError } = await supabase
-          .from('green_api_scheduled_reboots')
-          .insert(defaultConfig)
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error('Error creating default config:', insertError);
-          // Retourner la config par défaut même si l'insertion échoue
-          return NextResponse.json(defaultConfig);
-        }
-
-        return NextResponse.json(inserted);
+        });
       }
 
-      console.error('Error fetching scheduled reboot config:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(inserted);
     }
 
-    return NextResponse.json(data);
+    // Retourner la première ligne
+    return NextResponse.json(data[0]);
   } catch (error: any) {
     console.error('Error in scheduled-reboot GET:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -70,7 +74,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Mettre à jour la configuration (toujours ID 1 - singleton)
+    // Récupérer la première config existante (ordre par ID)
+    const { data: existing, error: fetchError } = await supabase
+      .from('green_api_scheduled_reboots')
+      .select('*')
+      .order('id', { ascending: true })
+      .limit(1);
+
+    if (fetchError || !existing || existing.length === 0) {
+      console.error('Error fetching config for update:', fetchError);
+      return NextResponse.json({ error: 'No configuration found' }, { status: 404 });
+    }
+
+    // Mettre à jour la première configuration
     const { data, error } = await supabase
       .from('green_api_scheduled_reboots')
       .update({
@@ -78,7 +94,7 @@ export async function POST(request: Request) {
         is_enabled: is_enabled,
         updated_at: new Date().toISOString()
       })
-      .eq('id', 1)
+      .eq('id', existing[0].id)
       .select()
       .single();
 

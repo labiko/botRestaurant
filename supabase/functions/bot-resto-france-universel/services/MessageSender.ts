@@ -146,7 +146,7 @@ export class MessageSender implements IMessageSender {
       });
 
       // Appel API Green API
-      const response = await fetch(`${this.baseUrl}/sendMessage/${this.apiToken}`, {
+      const response = await fetch(`${this.baseUrl}/waInstance${this.instanceId}/sendMessage/${this.apiToken}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

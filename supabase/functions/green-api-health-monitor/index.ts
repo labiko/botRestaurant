@@ -61,40 +61,15 @@ serve(async (req) => {
       if (state.stateInstance !== 'authorized') {
         result.status = 'unhealthy'
 
-        // 3. Tenter reboot automatique
-        result.reboot_triggered = true
-        const rebootResponse = await fetch(
-          `${BASE_URL}/waInstance${GREEN_API_INSTANCE}/reboot/${GREEN_API_TOKEN}`
-        )
-
-        if (rebootResponse.ok) {
-          const rebootData = await rebootResponse.json()
-          result.reboot_success = rebootData.isReboot === true
-
-          if (result.reboot_success) {
-            result.status = 'rebooted'
-          } else {
-            // ⚠️ REBOOT ÉCHOUÉ - Notifier support
-            result.status = 'critical_failure'
-            await sendSupportAlert(supabase, {
-              type: 'reboot_failed',
-              instance: GREEN_API_INSTANCE,
-              stateInstance: state.stateInstance,
-              error: 'Reboot command returned false'
-            })
-            result.support_notified = true
-          }
-        } else {
-          // ⚠️ REBOOT NON ACCESSIBLE - Notifier support
-          result.status = 'critical_failure'
-          result.reboot_success = false
-          await sendSupportAlert(supabase, {
-            type: 'reboot_unreachable',
-            instance: GREEN_API_INSTANCE,
-            httpStatus: rebootResponse.status
-          })
-          result.support_notified = true
-        }
+        // ⚠️ NE PAS REBOOTER - Juste alerter le support
+        // (Car reboot déconnecte WhatsApp et nécessite scan QR code)
+        await sendSupportAlert(supabase, {
+          type: 'instance_not_authorized',
+          instance: GREEN_API_INSTANCE,
+          stateInstance: state.stateInstance,
+          error: `Instance state is "${state.stateInstance}" instead of "authorized"`
+        })
+        result.support_notified = true
       }
 
     } catch (fetchError) {
@@ -289,6 +264,18 @@ function formatAlertMessage(alertData: any): string {
       message += `1. L'instance ne répond plus\n`
       message += `2. Reboot automatique a échoué\n`
       message += `3. Intervention manuelle critique`
+      break
+
+    case 'instance_not_authorized':
+      message += `⚠️ *INSTANCE NON AUTORISÉE*\n\n`
+      message += `État détecté: ${alertData.stateInstance}\n`
+      message += `Erreur: ${alertData.error}\n\n`
+      message += `ℹ️ *PAS DE REBOOT AUTOMATIQUE*\n`
+      message += `Le reboot déconnecte WhatsApp (nécessite scan QR)\n\n`
+      message += `⚠️ *ACTION SUGGÉRÉE:*\n`
+      message += `1. Vérifier le dashboard Green API\n`
+      message += `2. Reconnecter WhatsApp si nécessaire\n`
+      message += `3. Ou attendre la reconnexion automatique`
       break
 
     case 'complete_failure':
