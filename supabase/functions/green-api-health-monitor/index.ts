@@ -5,9 +5,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const GREEN_API_INSTANCE = '7105313693'
-const GREEN_API_TOKEN = '994e56511a43455693d2c4c1e4be86384a27eb921c394d5693'
-const BASE_URL = 'https://7105.api.greenapi.com'
+// Utilisation des secrets Supabase
+const GREEN_API_INSTANCE = Deno.env.get('GREEN_API_INSTANCE_ID') ?? ''
+const GREEN_API_TOKEN = Deno.env.get('GREEN_API_TOKEN') ?? ''
+const BASE_URL = Deno.env.get('GREEN_API_URL') ?? 'https://7105.api.greenapi.com'
 
 interface HealthCheckResult {
   timestamp: string

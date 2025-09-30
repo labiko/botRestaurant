@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const GREEN_API_INSTANCE = '7105313693';
-const GREEN_API_TOKEN = '994e56511a43455693d2c4c1e4be86384a27eb921c394d5693';
-const BASE_URL = 'https://7105.api.greenapi.com';
+// Utilisation des variables d'environnement
+const GREEN_API_INSTANCE = process.env.GREEN_API_INSTANCE_ID || '7105313693';
+const GREEN_API_TOKEN = process.env.GREEN_API_TOKEN || '';
+const BASE_URL = process.env.GREEN_API_URL || 'https://7105.api.greenapi.com';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
