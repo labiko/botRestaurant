@@ -79,6 +79,8 @@ export interface FranceOrder {
   hasAnyAssignment?: boolean; // N'importe quelle assignation pending (même expirée)
   pendingDriversCount?: number;
   pendingDriverNames?: string;
+  // NOUVEAU : Paiement en ligne
+  online_payment_status?: 'not_sent' | 'link_sent' | 'paid' | 'failed';
 }
 
 export interface OrderAction {
