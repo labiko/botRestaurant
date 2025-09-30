@@ -425,11 +425,28 @@
 
         <!-- Actions -->
         <div class="order-actions">
+          <!-- Payment link button (NEW) -->
+          <ion-button
+            *ngIf="order.online_payment_status !== 'paid'"
+            size="small"
+            color="success"
+            fill="outline"
+            (click)="sendPaymentLink(order)">
+            <ion-icon name="card-outline" slot="start"></ion-icon>
+            💳 Envoyer lien paiement
+          </ion-button>
+
+          <!-- Payment status (NEW) -->
+          <div *ngIf="order.online_payment_status === 'paid'" class="payment-status-badge">
+            <ion-icon name="checkmark-circle" color="success"></ion-icon>
+            <span>Payé en ligne</span>
+          </div>
+
           <!-- Status update buttons -->
           <div *ngIf="order.availableActions && order.availableActions.length > 0" class="status-actions">
-            <ion-button 
+            <ion-button
               *ngFor="let action of order.availableActions"
-              size="small" 
+              size="small"
               [color]="action.color"
               [hidden]="shouldHideActionButton(order, action)"
               (click)="onActionButtonClick(order, action)">

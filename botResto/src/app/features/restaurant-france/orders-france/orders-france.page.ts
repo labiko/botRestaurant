@@ -12,6 +12,7 @@ import { SupabaseFranceService } from '../../../core/services/supabase-france.se
 import { FuseauHoraireService } from '../../../core/services/fuseau-horaire.service';
 import { DeliveryTrackingService } from '../../../core/services/delivery-tracking.service';
 import { AudioNotificationService } from '../../../core/services/audio-notification.service';
+import { PaymentLinkService } from '../../../core/services/payment-link.service';
 
 @Component({
   selector: 'app-orders-france',
@@ -47,7 +48,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     private addressWhatsAppService: AddressWhatsAppService,
     private supabaseFranceService: SupabaseFranceService,
     private deliveryTrackingService: DeliveryTrackingService,
-    private audioNotificationService: AudioNotificationService
+    private audioNotificationService: AudioNotificationService,
+    private paymentLinkService: PaymentLinkService
   ) {
     // Récupérer l'ID du restaurant depuis la session
     const id = this.authService.getCurrentRestaurantId();
@@ -943,6 +945,62 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       console.error('❌ [OrdersFrance] Erreur gestion désactivation restaurant:', error);
       // En cas d'erreur, forcer quand même la déconnexion
       this.router.navigate(['/restaurant-france/auth-france/login-france']);
+    }
+  }
+
+  // ========================================================================
+  // PAYMENT LINK METHODS (NEW)
+  // ========================================================================
+
+  /**
+   * Envoyer un lien de paiement à un client
+   */
+  async sendPaymentLink(order: FranceOrder) {
+    console.log('💳 [OrdersFrance] Envoi lien paiement pour commande:', order.id);
+
+    const loading = await this.toastController.create({
+      message: 'Envoi du lien de paiement...',
+      duration: 0
+    });
+    await loading.present();
+
+    try {
+      const result = await this.paymentLinkService.sendFromRestaurant(order.id);
+
+      await loading.dismiss();
+
+      if (result.success && result.messageSent) {
+        const toast = await this.toastController.create({
+          message: '✅ Lien de paiement envoyé avec succès !',
+          duration: 3000,
+          color: 'success',
+          position: 'top'
+        });
+        await toast.present();
+
+        // Recharger les commandes pour voir le nouveau statut
+        this.loadOrders();
+      } else {
+        const toast = await this.toastController.create({
+          message: '⚠️ Lien créé mais envoi WhatsApp échoué',
+          duration: 4000,
+          color: 'warning',
+          position: 'top'
+        });
+        await toast.present();
+      }
+
+    } catch (error: any) {
+      await loading.dismiss();
+
+      console.error('❌ [OrdersFrance] Erreur envoi lien paiement:', error);
+
+      const alert = await this.alertController.create({
+        header: 'Erreur',
+        message: error.message || 'Impossible d\'envoyer le lien de paiement',
+        buttons: ['OK']
+      });
+      await alert.present();
     }
   }
 
