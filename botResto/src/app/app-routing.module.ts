@@ -56,6 +56,7 @@ const routes: Routes = [
       }
     ]
   },
+  // Wildcard TOUJOURS en dernier pour ne pas capturer les routes définies
   {
     path: '**',
     redirectTo: 'restaurant-france/auth-france/login-france'
