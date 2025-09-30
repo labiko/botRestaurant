@@ -2171,7 +2171,7 @@ export class UniversalBot implements IMessageHandler {
       // ✅ Première adresse
       if (deliveryAddressMode === 'geolocation') {
         await this.messageSender.sendMessage(phoneNumber,
-          '📍 *Première livraison !*\n\n📍 *ENVOYEZ VOTRE POSITION GPS PRÉCISE :*\n• Cliquez sur l\'icône 📎 (trombone)\n• Sélectionnez "Localisation"\n• Attendez que la précision soit ≤ 50 mètres\n• ✅ Choisissez "Envoyer votre localisation actuelle" (position GPS exacte)\n• ❌ NE PAS choisir "Partager position en direct" (ne fonctionne pas)\n• ❌ NE PAS choisir les lieux suggérés (Police, Centre, etc.)\n• ⚠ Si précision > 50m : cliquez ← en haut à gauche et réessayez'
+          '📍 *Première livraison !*\n\n📍 *ENVOYEZ VOTRE POSITION GPS*\n\n🔹 Cliquez 📎 → Localisation\n🔹 Attendez 10s (stabilisation)\n🔹 Vérifiez précision ≤ 50m\n🔹 "Envoyer localisation actuelle"\n\n❌ Évitez: Position en direct / Lieux suggérés'
         );
 
         await this.sessionManager.updateSession(session.id, {
@@ -2261,7 +2261,7 @@ export class UniversalBot implements IMessageHandler {
       // ✅ Partage position (SI option disponible)
       if (showGpsOption && choice === existingAddresses.length + 1) {
         await this.messageSender.sendMessage(phoneNumber,
-          '📍 *ENVOYEZ VOTRE POSITION GPS PRÉCISE :*\n• Cliquez sur l\'icône 📎 (trombone)\n• Sélectionnez "Localisation"\n• Attendez que la précision soit ≤ 50 mètres\n• ✅ Choisissez "Envoyer votre localisation actuelle" (position GPS exacte)\n• ❌ NE PAS choisir "Partager position en direct" (ne fonctionne pas)\n• ❌ NE PAS choisir les lieux suggérés (Police, Centre, etc.)\n• ⚠ Si précision > 50m : cliquez ← en haut à gauche et réessayez'
+          '📍 *ENVOYEZ VOTRE POSITION GPS*\n\n🔹 Cliquez 📎 → Localisation\n🔹 Attendez 10s (stabilisation)\n🔹 Vérifiez précision ≤ 50m\n🔹 "Envoyer localisation actuelle"\n\n❌ Évitez: Position en direct / Lieux suggérés'
         );
 
         await this.sessionManager.updateSession(session.id, {
