@@ -105,7 +105,16 @@ function SidebarContent() {
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       description: 'Vérification intelligente catégorie par catégorie'
-    }
+    },
+    ...(process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' ? [{
+      id: 'green-api-health',
+      label: 'Green API Health',
+      icon: '📊',
+      path: '/green-api-health',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      description: 'Monitoring Green API (DEV uniquement)'
+    }] : [])
   ];
 
   const isActive = (path: string) => {
