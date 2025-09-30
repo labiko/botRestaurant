@@ -149,18 +149,27 @@ export default function GreenAPIHealthPage() {
 
   async function processQueue() {
     try {
-      // Traiter silencieusement la queue sans montrer de loader
-      const response = await fetch('/api/green-api-health/process-queue', {
-        method: 'POST'
-      });
+      // Traiter les deux queues en parallèle
+      const [rebootResponse, healthResponse] = await Promise.all([
+        fetch('/api/green-api-health/process-queue', { method: 'POST' }),
+        fetch('/api/green-api-health/process-health-queue', { method: 'POST' })
+      ]);
 
-      if (response.ok) {
-        const result = await response.json();
-        // Si un reboot a été traité, recharger les données
-        if (result.processed > 0) {
-          await loadData();
-          await loadRebootConfig();
-        }
+      let shouldReload = false;
+
+      if (rebootResponse.ok) {
+        const rebootResult = await rebootResponse.json();
+        if (rebootResult.processed > 0) shouldReload = true;
+      }
+
+      if (healthResponse.ok) {
+        const healthResult = await healthResponse.json();
+        if (healthResult.processed > 0) shouldReload = true;
+      }
+
+      if (shouldReload) {
+        await loadData();
+        await loadRebootConfig();
       }
     } catch (err) {
       // Ignorer les erreurs de queue en silence
