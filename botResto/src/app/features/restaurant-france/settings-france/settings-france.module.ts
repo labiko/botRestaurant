@@ -16,6 +16,7 @@ import { OptionsManagementComponent } from './components/options-management/opti
 import { WorkflowConfigComponent } from './components/workflow-config/workflow-config.component';
 import { ServiceModesComponent } from './components/service-modes/service-modes.component';
 import { AudioNotificationsConfigComponent } from './components/audio-notifications-config/audio-notifications-config.component';
+import { PaymentConfigComponent } from './components/payment-config/payment-config.component';
 
 @NgModule({
   imports: [
@@ -23,7 +24,8 @@ import { AudioNotificationsConfigComponent } from './components/audio-notificati
     FormsModule,
     ReactiveFormsModule,
     IonicModule,
-    SettingsFrancePageRoutingModule
+    SettingsFrancePageRoutingModule,
+    PaymentConfigComponent
   ],
   declarations: [
     SettingsFrancePage,

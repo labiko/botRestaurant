@@ -13,7 +13,7 @@ import { takeUntil } from 'rxjs/operators';
 export class SettingsFrancePage implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
-  currentTab: 'restaurant' | 'products' | 'options' | 'workflows' | 'service-modes' | 'audio-notifications' = 'restaurant';
+  currentTab: 'restaurant' | 'products' | 'options' | 'workflows' | 'service-modes' | 'audio-notifications' | 'payment' = 'restaurant';
   restaurantName: string = 'Configuration Restaurant'; // Default name
   restaurantId: number;
 
@@ -58,7 +58,7 @@ export class SettingsFrancePage implements OnInit, OnDestroy {
   /**
    * Switch between tabs
    */
-  switchTab(tab: 'restaurant' | 'products' | 'options' | 'workflows' | 'service-modes' | 'audio-notifications') {
+  switchTab(tab: 'restaurant' | 'products' | 'options' | 'workflows' | 'service-modes' | 'audio-notifications' | 'payment') {
     this.currentTab = tab;
   }
 

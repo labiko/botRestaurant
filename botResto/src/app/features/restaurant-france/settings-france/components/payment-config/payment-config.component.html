@@ -1,0 +1,167 @@
+<!-- Loading -->
+<div *ngIf="currentState === 'loading'" class="loading-state">
+  <ion-spinner></ion-spinner>
+  <p>Chargement...</p>
+</div>
+
+<!-- Empty (pas de config) -->
+<div *ngIf="currentState === 'empty'" class="empty-state">
+  <ion-icon name="card-outline" class="big-icon"></ion-icon>
+  <h2>Configuration Paiement en ligne</h2>
+  <p>Aucune configuration trouvée</p>
+  <p class="subtitle">Pour accepter les paiements en ligne, choisissez votre mode de paiement.</p>
+  <ion-button (click)="openGuide()" fill="outline">
+    📖 Voir le guide
+  </ion-button>
+  <ion-button (click)="showForm()" color="primary">
+    ➕ Configurer un mode de paiement
+  </ion-button>
+</div>
+
+<!-- Form -->
+<div *ngIf="currentState === 'form'" class="form-state">
+  <h2>Configuration Paiement</h2>
+
+  <!-- Sélection du provider -->
+  <ion-item>
+    <ion-label position="stacked">🏦 Mode de paiement</ion-label>
+    <ion-select [(ngModel)]="form.provider" (ionChange)="onProviderChange()">
+      <ion-select-option *ngFor="let p of availableProviders" [value]="p.value">
+        {{ p.label }}
+      </ion-select-option>
+    </ion-select>
+  </ion-item>
+
+  <!-- Champs spécifiques STRIPE -->
+  <ng-container *ngIf="form.provider === 'stripe'">
+    <ion-item>
+      <ion-label position="stacked">🔑 Clé publique</ion-label>
+      <ion-input [(ngModel)]="form.api_key_public" placeholder="pk_test_..."></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">🔒 Clé secrète</ion-label>
+      <ion-input [(ngModel)]="form.api_key_secret" type="password" placeholder="sk_test_..."></ion-input>
+    </ion-item>
+  </ng-container>
+
+  <!-- Champs spécifiques LENGOPAY -->
+  <ng-container *ngIf="form.provider === 'lengopay'">
+    <ion-item>
+      <ion-label position="stacked">🔑 License Key</ion-label>
+      <ion-input [(ngModel)]="form.license_key" placeholder="VmVHNGZud2h1..."></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">🌐 Website ID</ion-label>
+      <ion-input [(ngModel)]="form.website_id" placeholder="wyp6J7uN3pVG2Pjn"></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">🆔 Merchant ID</ion-label>
+      <ion-input [(ngModel)]="form.merchant_id" placeholder="merchant_xxx"></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">📞 Téléphone marchand</ion-label>
+      <ion-input [(ngModel)]="form.telephone_marchand" type="tel" placeholder="+224 XXX XXX XXX"></ion-input>
+    </ion-item>
+  </ng-container>
+
+  <!-- Toggle actif (commun à tous) -->
+  <ion-item>
+    <ion-label>✅ Activer paiement en ligne</ion-label>
+    <ion-toggle [(ngModel)]="form.is_active"></ion-toggle>
+  </ion-item>
+
+  <div class="button-group">
+    <ion-button (click)="cancelForm()" fill="outline">
+      Annuler
+    </ion-button>
+    <ion-button (click)="saveConfig()" color="primary">
+      Enregistrer
+    </ion-button>
+  </div>
+</div>
+
+<!-- Active (config existante) -->
+<div *ngIf="currentState === 'active'" class="active-state">
+  <div class="status-badge success">
+    <ion-icon name="checkmark-circle"></ion-icon>
+    Configuration active
+  </div>
+
+  <!-- Affichage du provider actif -->
+  <ion-item>
+    <ion-label>
+      <p>🏦 Mode de paiement</p>
+      <h3>{{ paymentConfig?.provider | uppercase }}</h3>
+    </ion-label>
+  </ion-item>
+
+  <h3>📊 Statistiques (7 derniers jours)</h3>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">{{ stats?.links_sent || 0 }}</div>
+      <div class="stat-label">Liens envoyés</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats?.payments_succeeded || 0 }}</div>
+      <div class="stat-label">Paiements réussis</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats?.total_amount || 0 }} EUR</div>
+      <div class="stat-label">Montant total</div>
+    </div>
+  </div>
+
+  <!-- Identifiants selon le provider -->
+  <h3>🔑 Identifiants</h3>
+
+  <!-- Si Stripe -->
+  <ng-container *ngIf="paymentConfig?.provider === 'stripe'">
+    <ion-item>
+      <ion-label>
+        <p>Clé publique</p>
+        <h3>{{ paymentConfig?.api_key_public?.substring(0, 30) }}... ✓</h3>
+      </ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label>
+        <p>Clé secrète</p>
+        <h3>•••••••••••••••••••• ✓</h3>
+      </ion-label>
+    </ion-item>
+  </ng-container>
+
+  <!-- Si Lengopay -->
+  <ng-container *ngIf="paymentConfig?.provider === 'lengopay'">
+    <ion-item>
+      <ion-label>
+        <p>License Key</p>
+        <h3>{{ paymentConfig?.license_key?.substring(0, 20) }}... ✓</h3>
+      </ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label>
+        <p>Website ID</p>
+        <h3>{{ paymentConfig?.website_id }} ✓</h3>
+      </ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label>
+        <p>Téléphone marchand</p>
+        <h3>{{ paymentConfig?.telephone_marchand }} ✓</h3>
+      </ion-label>
+    </ion-item>
+  </ng-container>
+
+  <div class="button-group">
+    <ion-button (click)="showForm()" fill="outline">
+      Modifier la configuration
+    </ion-button>
+    <ion-button (click)="openProviderDashboard()" fill="outline">
+      Voir Dashboard {{ paymentConfig?.provider }}
+    </ion-button>
+  </div>
+</div>

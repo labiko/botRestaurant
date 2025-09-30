@@ -82,6 +82,17 @@
         </div>
         <div class="tab-indicator"></div>
       </div>
+
+      <div class="tab-card" [class.active]="currentTab === 'payment'" (click)="switchTab('payment')">
+        <div class="tab-icon">
+          <ion-icon name="card"></ion-icon>
+        </div>
+        <div class="tab-content">
+          <h3>Paiement en ligne</h3>
+          <p>Configuration Stripe / Lengopay</p>
+        </div>
+        <div class="tab-indicator"></div>
+      </div>
     </div>
 
     <!-- Content Area -->
@@ -115,6 +126,11 @@
       <!-- Audio Notifications Configuration -->
       <div *ngIf="currentTab === 'audio-notifications'" class="tab-content-wrapper">
         <app-audio-notifications-config></app-audio-notifications-config>
+      </div>
+
+      <!-- Payment Configuration -->
+      <div *ngIf="currentTab === 'payment'" class="tab-content-wrapper">
+        <app-payment-config></app-payment-config>
       </div>
 
     </div>
