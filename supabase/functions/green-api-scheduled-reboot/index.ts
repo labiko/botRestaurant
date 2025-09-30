@@ -1,6 +1,6 @@
-// Edge Function: Green API Health Monitor
-// Exécution automatique toutes les 15 minutes via pg_cron
-// Vérifie l'état de l'instance Green API, tente reboot si nécessaire, notifie support si échec
+// Edge Function: Green API Scheduled Reboot
+// Exécution planifiée quotidienne du reboot Green API
+// Déclenché via configuration horaire dans green_api_scheduled_reboots
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -30,125 +30,122 @@ serve(async (req) => {
   )
 
   try {
+    // 1. Vérifier si le reboot planifié est activé
+    const { data: config, error: configError } = await supabase
+      .from('green_api_scheduled_reboots')
+      .select('*')
+      .eq('id', 1)
+      .single()
+
+    if (configError || !config) {
+      return new Response(JSON.stringify({
+        error: 'Configuration not found',
+        timestamp: new Date().toISOString()
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (!config.is_enabled) {
+      return new Response(JSON.stringify({
+        message: 'Scheduled reboot is disabled',
+        timestamp: new Date().toISOString()
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
     const result: HealthCheckResult = {
       timestamp: new Date().toISOString(),
       status: 'healthy',
-      reboot_triggered: false,
+      reboot_triggered: true, // Toujours true pour un reboot planifié
       support_notified: false
     }
 
-    // 1. Vérifier l'état de l'instance (timeout 10s)
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10000)
-
+    // 2. Vérifier l'état actuel de l'instance avant reboot
     try {
       const stateResponse = await fetch(
         `${BASE_URL}/waInstance${GREEN_API_INSTANCE}/getStateInstance/${GREEN_API_TOKEN}`,
-        { signal: controller.signal }
+        { signal: AbortSignal.timeout(10000) }
       )
-      clearTimeout(timeout)
 
       result.response_time_ms = Date.now() - startTime
 
-      if (!stateResponse.ok) {
-        throw new Error(`HTTP ${stateResponse.status}`)
+      if (stateResponse.ok) {
+        const state = await stateResponse.json()
+        result.state_instance = state.stateInstance
       }
+    } catch (stateError) {
+      console.warn('⚠️ Could not check state before reboot:', stateError.message)
+      // Continue avec le reboot même si le check échoue
+    }
 
-      const state = await stateResponse.json()
-      result.state_instance = state.stateInstance
+    // 3. Exécuter le reboot planifié
+    console.log('🔄 [Scheduled Reboot] Exécution reboot planifié...')
 
-      // 2. Vérifier si instance autorisée
-      if (state.stateInstance !== 'authorized') {
-        result.status = 'unhealthy'
+    try {
+      const rebootResponse = await fetch(
+        `${BASE_URL}/waInstance${GREEN_API_INSTANCE}/reboot/${GREEN_API_TOKEN}`,
+        { signal: AbortSignal.timeout(10000) }
+      )
 
-        // 3. Tenter reboot automatique
-        result.reboot_triggered = true
-        const rebootResponse = await fetch(
-          `${BASE_URL}/waInstance${GREEN_API_INSTANCE}/reboot/${GREEN_API_TOKEN}`
-        )
+      if (rebootResponse.ok) {
+        const rebootData = await rebootResponse.json()
+        result.reboot_success = rebootData.isReboot === true
 
-        if (rebootResponse.ok) {
-          const rebootData = await rebootResponse.json()
-          result.reboot_success = rebootData.isReboot === true
-
-          if (result.reboot_success) {
-            result.status = 'rebooted'
-          } else {
-            // ⚠️ REBOOT ÉCHOUÉ - Notifier support
-            result.status = 'critical_failure'
-            await sendSupportAlert(supabase, {
-              type: 'reboot_failed',
-              instance: GREEN_API_INSTANCE,
-              stateInstance: state.stateInstance,
-              error: 'Reboot command returned false'
-            })
-            result.support_notified = true
-          }
+        if (result.reboot_success) {
+          result.status = 'rebooted'
+          console.log('✅ [Scheduled Reboot] Reboot exécuté avec succès')
         } else {
-          // ⚠️ REBOOT NON ACCESSIBLE - Notifier support
+          // ⚠️ REBOOT ÉCHOUÉ - Notifier support
           result.status = 'critical_failure'
-          result.reboot_success = false
+          result.error_message = 'Scheduled reboot command returned false'
           await sendSupportAlert(supabase, {
-            type: 'reboot_unreachable',
+            type: 'scheduled_reboot_failed',
             instance: GREEN_API_INSTANCE,
-            httpStatus: rebootResponse.status
+            stateInstance: result.state_instance,
+            error: 'Reboot command returned false'
           })
           result.support_notified = true
         }
-      }
-
-    } catch (fetchError) {
-      clearTimeout(timeout)
-
-      // Erreur réseau ou timeout
-      result.status = 'critical_failure'
-      result.error_message = fetchError.message
-      result.response_time_ms = Date.now() - startTime
-
-      // Tenter reboot en dernier recours
-      try {
-        result.reboot_triggered = true
-        const rebootResponse = await fetch(
-          `${BASE_URL}/waInstance${GREEN_API_INSTANCE}/reboot/${GREEN_API_TOKEN}`
-        )
-
-        if (rebootResponse.ok) {
-          const rebootData = await rebootResponse.json()
-          result.reboot_success = rebootData.isReboot === true
-
-          if (!result.reboot_success) {
-            // ⚠️ TIMEOUT + REBOOT ÉCHOUÉ - Notifier support
-            await sendSupportAlert(supabase, {
-              type: 'timeout_and_reboot_failed',
-              instance: GREEN_API_INSTANCE,
-              error: fetchError.message,
-              responseTimeMs: result.response_time_ms
-            })
-            result.support_notified = true
-          }
-        } else {
-          // ⚠️ TIMEOUT + REBOOT INACCESSIBLE - Notifier support
-          result.reboot_success = false
-          await sendSupportAlert(supabase, {
-            type: 'complete_failure',
-            instance: GREEN_API_INSTANCE,
-            error: `Timeout: ${fetchError.message} + Reboot HTTP ${rebootResponse.status}`
-          })
-          result.support_notified = true
-        }
-      } catch (rebootError) {
-        // ⚠️ ÉCHEC TOTAL - Notifier support
+      } else {
+        // ⚠️ REBOOT NON ACCESSIBLE - Notifier support
+        result.status = 'critical_failure'
+        result.reboot_success = false
+        result.error_message = `Reboot endpoint returned HTTP ${rebootResponse.status}`
         await sendSupportAlert(supabase, {
-          type: 'complete_failure',
+          type: 'scheduled_reboot_unreachable',
           instance: GREEN_API_INSTANCE,
-          error: `Primary: ${fetchError.message} | Reboot: ${rebootError.message}`
+          httpStatus: rebootResponse.status
         })
         result.support_notified = true
       }
+    } catch (rebootError) {
+      // ⚠️ ERREUR COMPLÈTE - Notifier support
+      result.status = 'critical_failure'
+      result.reboot_success = false
+      result.error_message = rebootError.message
+      await sendSupportAlert(supabase, {
+        type: 'scheduled_reboot_error',
+        instance: GREEN_API_INSTANCE,
+        error: rebootError.message
+      })
+      result.support_notified = true
     }
 
-    // 4. Logger dans Supabase
+    // 4. Logger dans Supabase avec trigger_type = 'scheduled'
     await logHealthCheck(supabase, result)
+
+    // 5. Mettre à jour la configuration avec last_executed_at
+    await supabase
+      .from('green_api_scheduled_reboots')
+      .update({
+        last_executed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', 1)
 
     return new Response(JSON.stringify(result), {
       headers: { 'Content-Type': 'application/json' },
@@ -156,7 +153,7 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    console.error('❌ [Health Monitor] Fatal error:', error)
+    console.error('❌ [Scheduled Reboot] Fatal error:', error)
 
     return new Response(JSON.stringify({
       error: error.message,
@@ -169,7 +166,7 @@ serve(async (req) => {
 })
 
 /**
- * Logger le résultat du health check
+ * Logger le résultat du reboot planifié
  */
 async function logHealthCheck(supabase: any, result: HealthCheckResult) {
   try {
@@ -183,7 +180,7 @@ async function logHealthCheck(supabase: any, result: HealthCheckResult) {
       response_time_ms: result.response_time_ms,
       support_notified: result.support_notified,
       support_notification_sent_at: result.support_notified ? new Date().toISOString() : null,
-      trigger_type: 'automatic' // Check automatique via pg_cron
+      trigger_type: 'scheduled' // Reboot planifié quotidien
     })
   } catch (error) {
     console.error('❌ [logHealthCheck] Erreur:', error)
@@ -199,7 +196,6 @@ async function sendSupportAlert(supabase: any, alertData: {
   stateInstance?: string
   error?: string
   httpStatus?: number
-  responseTimeMs?: number
 }) {
   try {
     console.log('🚨 [Support Alert] Déclenchement notification:', alertData.type)
@@ -257,13 +253,13 @@ async function sendSupportAlert(supabase: any, alertData: {
 function formatAlertMessage(alertData: any): string {
   const timestamp = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })
 
-  let message = `🚨 *ALERTE GREEN API* 🚨\n\n`
+  let message = `🚨 *ALERTE REBOOT PLANIFIÉ* 🚨\n\n`
   message += `⏰ ${timestamp}\n`
   message += `📱 Instance: ${alertData.instance}\n\n`
 
   switch (alertData.type) {
-    case 'reboot_failed':
-      message += `❌ *REBOOT ÉCHOUÉ*\n\n`
+    case 'scheduled_reboot_failed':
+      message += `❌ *REBOOT PLANIFIÉ ÉCHOUÉ*\n\n`
       message += `État détecté: ${alertData.stateInstance}\n`
       message += `Commande reboot exécutée mais retour négatif\n\n`
       message += `⚠️ *ACTION REQUISE:*\n`
@@ -272,7 +268,7 @@ function formatAlertMessage(alertData: any): string {
       message += `3. Vérifier la connexion WhatsApp`
       break
 
-    case 'reboot_unreachable':
+    case 'scheduled_reboot_unreachable':
       message += `❌ *ENDPOINT REBOOT INACCESSIBLE*\n\n`
       message += `HTTP Status: ${alertData.httpStatus}\n\n`
       message += `⚠️ *ACTION REQUISE:*\n`
@@ -281,22 +277,12 @@ function formatAlertMessage(alertData: any): string {
       message += `3. Tester manuellement le reboot`
       break
 
-    case 'timeout_and_reboot_failed':
-      message += `❌ *TIMEOUT + REBOOT ÉCHOUÉ*\n\n`
-      message += `Erreur: ${alertData.error}\n`
-      message += `Temps réponse: ${alertData.responseTimeMs}ms\n\n`
-      message += `⚠️ *ACTION REQUISE:*\n`
-      message += `1. L'instance ne répond plus\n`
-      message += `2. Reboot automatique a échoué\n`
-      message += `3. Intervention manuelle critique`
-      break
-
-    case 'complete_failure':
-      message += `🔴 *ÉCHEC COMPLET DU SYSTÈME*\n\n`
+    case 'scheduled_reboot_error':
+      message += `🔴 *ERREUR REBOOT PLANIFIÉ*\n\n`
       message += `Erreur: ${alertData.error}\n\n`
       message += `⚠️ *ACTION IMMÉDIATE REQUISE:*\n`
-      message += `1. Instance complètement inaccessible\n`
-      message += `2. Reboot impossible\n`
+      message += `1. L'instance ne répond plus\n`
+      message += `2. Reboot planifié a échoué\n`
       message += `3. Vérifier dashboard Green API\n`
       message += `4. Contact support Green API si nécessaire`
       break

@@ -163,7 +163,8 @@ async function logHealthCheck(supabase: any, result: HealthCheckResult) {
       reboot_success: result.reboot_success,
       response_time_ms: result.response_time_ms,
       support_notified: result.support_notified,
-      support_notification_sent_at: result.support_notified ? new Date().toISOString() : null
+      support_notification_sent_at: result.support_notified ? new Date().toISOString() : null,
+      trigger_type: 'manual' // Check manuel via bouton UI
     });
   } catch (error) {
     console.error('Error logging health check:', error);
