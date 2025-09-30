@@ -5,7 +5,7 @@
 // ============================================================================
 
 import { Injectable } from '@angular/core';
-import { environment } from 'src/environments/environment';
+import { FRANCE_CONFIG } from '../../config/environment-config';
 
 export interface SendPaymentLinkRequest {
   orderId: number;
@@ -36,7 +36,7 @@ export class PaymentLinkService {
 
     try {
       const response = await fetch(
-        `${environment.supabaseFranceUrl}/functions/v1/payment-link-sender`,
+        `${FRANCE_CONFIG.supabaseFranceUrl}/functions/v1/payment-link-sender`,
         {
           method: 'POST',
           headers: {

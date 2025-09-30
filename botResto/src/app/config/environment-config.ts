@@ -57,6 +57,12 @@ export const FRANCE_CONFIG = {
     baseUrl: 'https://7105.api.greenapi.com'
   },
 
+  // URLs de callback paiement
+  payment: {
+    successUrl: `${ENVIRONMENTS[FINAL_ENVIRONMENT].vercelUrl}/payment/success`,
+    cancelUrl: `${ENVIRONMENTS[FINAL_ENVIRONMENT].vercelUrl}/payment/cancel`
+  },
+
   environmentName: ENVIRONMENTS[FINAL_ENVIRONMENT].environmentName,
   debugMode: ENVIRONMENTS[FINAL_ENVIRONMENT].debugMode
 };
