@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paiement réussi</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: #f0f9ff;
+      padding: 20px;
+    }
+
+    .container {
+      background-color: white;
+      border-radius: 16px;
+      padding: 48px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .checkmark-container {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      border-radius: 50%;
+      background-color: #10b981;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: scaleUp 0.5s ease-out;
+    }
+
+    @keyframes scaleUp {
+      0% {
+        transform: scale(0);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: bold;
+      color: #1f2937;
+      margin-bottom: 12px;
+    }
+
+    .message {
+      font-size: 16px;
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+
+    .session-info {
+      background-color: #f3f4f6;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+
+    .session-info p {
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .session-info strong {
+      color: #1f2937;
+      word-break: break-all;
+    }
+
+    .redirect-message {
+      font-size: 14px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="checkmark-container">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+
+    <h1>Paiement réussi !</h1>
+
+    <p class="message">Votre paiement a été traité avec succès</p>
+
+    <div class="session-info" id="sessionInfo" style="display: none;">
+      <p>ID de session: <strong id="sessionId"></strong></p>
+    </div>
+
+    <p class="redirect-message">Vous allez être redirigé automatiquement...</p>
+  </div>
+
+  <script>
+    // Récupération du session_id depuis l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+
+    if (sessionId) {
+      console.log('✅ [PaymentSuccess] Session ID:', sessionId);
+      document.getElementById('sessionId').textContent = sessionId;
+      document.getElementById('sessionInfo').style.display = 'block';
+    } else {
+      console.log('⚠️ [PaymentSuccess] Aucun session_id trouvé dans l\'URL');
+    }
+
+    // Redirection automatique après 3 secondes (à activer plus tard)
+    // setTimeout(() => {
+    //   window.location.href = '/dashboard';
+    // }, 3000);
+  </script>
+</body>
+</html>

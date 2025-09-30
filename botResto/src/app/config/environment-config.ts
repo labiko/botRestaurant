@@ -57,10 +57,10 @@ export const FRANCE_CONFIG = {
     baseUrl: 'https://7105.api.greenapi.com'
   },
 
-  // URLs de callback paiement
+  // URLs de callback paiement (fichiers statiques dans menu-ai-admin)
   payment: {
-    successUrl: `${ENVIRONMENTS[FINAL_ENVIRONMENT].vercelUrl}/payment/success`,
-    cancelUrl: `${ENVIRONMENTS[FINAL_ENVIRONMENT].vercelUrl}/payment/cancel`
+    successUrl: `https://menu-ai-admin.vercel.app/payment-success.html`,
+    cancelUrl: `https://menu-ai-admin.vercel.app/payment-cancel.html`
   },
 
   environmentName: ENVIRONMENTS[FINAL_ENVIRONMENT].environmentName,
