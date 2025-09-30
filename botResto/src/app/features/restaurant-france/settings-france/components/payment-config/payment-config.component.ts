@@ -48,6 +48,7 @@ export class PaymentConfigComponent implements OnInit {
     private toastController: ToastController
   ) {
     this.restaurantId = this.authService.getCurrentRestaurantId()!;
+    console.log('💳 [PaymentConfig] Restaurant ID:', this.restaurantId);
   }
 
   async ngOnInit() {
@@ -56,19 +57,23 @@ export class PaymentConfigComponent implements OnInit {
 
   async loadConfig() {
     this.currentState = 'loading';
+    console.log('💳 [PaymentConfig] loadConfig() - Restaurant ID:', this.restaurantId);
 
     try {
       const config = await this.paymentService.getConfig(this.restaurantId);
+      console.log('💳 [PaymentConfig] Config récupérée:', config);
 
       if (config) {
         this.paymentConfig = config;
         this.stats = await this.paymentService.getStats(this.restaurantId);
+        console.log('💳 [PaymentConfig] Stats:', this.stats);
         this.currentState = 'active';
       } else {
+        console.warn('💳 [PaymentConfig] Aucune config trouvée pour restaurant_id:', this.restaurantId);
         this.currentState = 'empty';
       }
     } catch (error) {
-      console.error('Erreur chargement config:', error);
+      console.error('💳 [PaymentConfig] Erreur chargement config:', error);
       this.currentState = 'empty';
     }
   }

@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
-import { SupabaseClient, createClient } from '@supabase/supabase-js';
-import { environment } from '../../../environments/environment';
+import { SupabaseFranceService } from './supabase-france.service';
 
 export interface PaymentConfig {
   id: number;
@@ -34,38 +33,39 @@ export interface PaymentStats {
   providedIn: 'root'
 })
 export class RestaurantPaymentConfigService {
-  private supabase: SupabaseClient;
 
-  constructor() {
-    this.supabase = createClient(
-      environment.supabaseFranceUrl,
-      environment.supabaseFranceAnonKey
-    );
-  }
+  constructor(private supabaseFranceService: SupabaseFranceService) {}
 
   /**
    * Récupère la configuration de paiement d'un restaurant
    */
   async getConfig(restaurantId: number): Promise<PaymentConfig | null> {
+    console.log('🔍 [Service] getConfig() - restaurant_id:', restaurantId);
+
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await this.supabaseFranceService.client
         .from('restaurant_payment_configs')
         .select('*')
         .eq('restaurant_id', restaurantId)
         .eq('is_active', true)
         .single();
 
+      console.log('🔍 [Service] Supabase response - data:', data, 'error:', error);
+
       if (error) {
         if (error.code === 'PGRST116') {
           // Aucune config trouvée
+          console.warn('🔍 [Service] PGRST116 - Aucune config trouvée');
           return null;
         }
+        console.error('🔍 [Service] Erreur Supabase:', error);
         throw error;
       }
 
+      console.log('🔍 [Service] Config trouvée:', data);
       return data;
     } catch (error) {
-      console.error('Erreur getConfig:', error);
+      console.error('🔍 [Service] Exception getConfig:', error);
       return null;
     }
   }
@@ -80,7 +80,7 @@ export class RestaurantPaymentConfigService {
 
       if (existing) {
         // UPDATE
-        const { error } = await this.supabase
+        const { error } = await this.supabaseFranceService.client
           .from('restaurant_payment_configs')
           .update({
             ...config,
@@ -91,7 +91,7 @@ export class RestaurantPaymentConfigService {
         if (error) throw error;
       } else {
         // INSERT
-        const { error } = await this.supabase
+        const { error } = await this.supabaseFranceService.client
           .from('restaurant_payment_configs')
           .insert({
             restaurant_id: restaurantId,
@@ -113,7 +113,7 @@ export class RestaurantPaymentConfigService {
    */
   async deleteConfig(restaurantId: number): Promise<void> {
     try {
-      const { error } = await this.supabase
+      const { error } = await this.supabaseFranceService.client
         .from('restaurant_payment_configs')
         .update({ is_active: false })
         .eq('restaurant_id', restaurantId);
@@ -133,7 +133,7 @@ export class RestaurantPaymentConfigService {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
-      const { data, error } = await this.supabase
+      const { data, error } = await this.supabaseFranceService.client
         .from('payment_links')
         .select('status, amount, currency')
         .eq('restaurant_id', restaurantId)
