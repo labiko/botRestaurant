@@ -11,6 +11,7 @@ export interface PaymentConfig {
   license_key?: string;
   website_id?: string;
   telephone_marchand?: string;
+  api_url?: string;  // Ajout pour LengoPay
   config: any;
   success_url?: string;
   cancel_url?: string;
@@ -60,6 +61,27 @@ export class RestaurantPaymentConfigService {
         }
         console.error('🔍 [Service] Erreur Supabase:', error);
         throw error;
+      }
+
+      if (data) {
+        // Mapping spécifique UNIQUEMENT pour LengoPay (ne pas casser Stripe)
+        if (data.provider === 'lengopay') {
+          const mappedConfig: PaymentConfig = {
+            ...data,
+            // Pour LengoPay UNIQUEMENT : extraire depuis config JSON
+            license_key: data.config?.license_key || data.api_key_secret,
+            website_id: data.config?.website_id || data.merchant_id,
+            telephone_marchand: data.config?.telephone_marchand || '',
+            api_url: data.config?.api_url || 'https://sandbox.lengopay.com/api/v1/payments'
+          };
+
+          console.log('🔍 [Service] Config LengoPay mappée:', mappedConfig);
+          return mappedConfig;
+        }
+
+        // Pour Stripe et autres providers : retourner les données telles quelles
+        console.log('🔍 [Service] Config trouvée (autre provider):', data);
+        return data;
       }
 
       console.log('🔍 [Service] Config trouvée:', data);

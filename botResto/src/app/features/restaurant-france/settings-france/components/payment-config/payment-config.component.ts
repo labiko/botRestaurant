@@ -36,6 +36,7 @@ export class PaymentConfigComponent implements OnInit {
     website_id: '',
     merchant_id: '',
     telephone_marchand: '',
+    api_url: '',
     // Commun
     config: { currency: 'EUR' }
   };
@@ -90,6 +91,7 @@ export class PaymentConfigComponent implements OnInit {
         website_id: this.paymentConfig.website_id || '',
         merchant_id: this.paymentConfig.merchant_id || '',
         telephone_marchand: this.paymentConfig.telephone_marchand || '',
+        api_url: this.paymentConfig.api_url || '',
         config: this.paymentConfig.config || { currency: 'EUR' }
       };
     }
@@ -104,6 +106,7 @@ export class PaymentConfigComponent implements OnInit {
     this.form.website_id = '';
     this.form.merchant_id = '';
     this.form.telephone_marchand = '';
+    this.form.api_url = '';
   }
 
   async saveConfig() {
@@ -123,6 +126,7 @@ export class PaymentConfigComponent implements OnInit {
         configData.website_id = this.form.website_id;
         configData.merchant_id = this.form.merchant_id;
         configData.telephone_marchand = this.form.telephone_marchand;
+        configData.api_url = this.form.api_url;
       }
 
       await this.paymentService.saveConfig(this.restaurantId, configData);
