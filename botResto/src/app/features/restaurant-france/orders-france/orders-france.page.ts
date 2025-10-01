@@ -88,9 +88,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
     // Debug pour analyser les conditions d'affichage livreur - sera appelé après loadOrders
     this.debugDriverDisplay();
-
-    // 🧪 TEST TIMEZONE - Afficher l'heure actuelle
-    await this.testTimezone();
   }
 
   // Debug pour analyser les conditions d'affichage livreur
@@ -105,28 +102,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     }, 2000); // Attendre 2s que les commandes se chargent
   }
 
-  // 🧪 TEST TIMEZONE - Afficher l'heure actuelle du restaurant
-  async testTimezone() {
-    try {
-      const currentTime = await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant();
-
-      const alert = await this.alertController.create({
-        header: '🧪 TEST TIMEZONE BACKOFFICE',
-        message: `
-          <strong>📍 Restaurant ID:</strong> ${this.restaurantId}<br><br>
-          <strong>⏰ Heure actuelle:</strong><br>
-          ${currentTime}<br><br>
-          <strong>💡 Comparez avec le bot:</strong><br>
-          Envoyez "debug" au bot WhatsApp
-        `,
-        buttons: ['OK']
-      });
-
-      await alert.present();
-    } catch (error) {
-      console.error('❌ Erreur test timezone:', error);
-    }
-  }
 
   // DEBUG TEMPORAIRE - Appelé automatiquement
   debugAllOrders() {
