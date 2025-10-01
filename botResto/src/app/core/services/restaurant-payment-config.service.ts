@@ -117,11 +117,16 @@ export class RestaurantPaymentConfigService {
         }
       });
 
-      // Vérifier si une config existe déjà
-      const existing = await this.getConfig(restaurantId);
+      // Vérifier si une config existe déjà (sans filtrer par is_active)
+      const { data: existing, error: checkError } = await this.supabaseFranceService.client
+        .from('restaurant_payment_configs')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .single();
 
-      if (existing) {
-        // UPDATE
+      if (existing && !checkError) {
+        // UPDATE - Une config existe déjà
+        console.log('🔄 [PaymentConfig] Mise à jour config existante ID:', existing.id);
         const { error } = await this.supabaseFranceService.client
           .from('restaurant_payment_configs')
           .update({
@@ -132,7 +137,8 @@ export class RestaurantPaymentConfigService {
 
         if (error) throw error;
       } else {
-        // INSERT
+        // INSERT - Aucune config n'existe
+        console.log('➕ [PaymentConfig] Création nouvelle config pour restaurant:', restaurantId);
         const { error } = await this.supabaseFranceService.client
           .from('restaurant_payment_configs')
           .insert({

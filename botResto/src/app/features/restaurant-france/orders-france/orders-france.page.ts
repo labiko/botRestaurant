@@ -39,6 +39,9 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   // Propriété pour le mode envoi automatique
   autoSendEnabled: boolean = false;
 
+  // Propriété pour vérifier si paiement en ligne activé
+  paymentConfigActive: boolean = false;
+
   private restaurantId: number;
 
   constructor(
@@ -990,17 +993,32 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
         .from('restaurant_payment_configs')
         .select('provider, is_active, auto_send_on_order')
         .eq('restaurant_id', this.restaurantId)
-        .eq('is_active', true)
         .single();
 
       if (!error && data) {
-        // Vérifier si c'est LengoPay et mode auto
+        // Vérifier l'état de la configuration
+        this.paymentConfigActive = data.is_active === true;
         this.isLengoPay = data.provider === 'lengopay';
-        this.autoSendEnabled = data.auto_send_on_order || false;
-        console.log('💳 [OrdersFrance] Provider:', data.provider, 'isLengoPay:', this.isLengoPay, 'autoSend:', this.autoSendEnabled);
+        this.autoSendEnabled = this.paymentConfigActive && (data.auto_send_on_order || false);
+
+        console.log('💳 [OrdersFrance] Config:', {
+          provider: data.provider,
+          isActive: this.paymentConfigActive,
+          isLengoPay: this.isLengoPay,
+          autoSend: this.autoSendEnabled
+        });
+      } else {
+        // Pas de config = tout désactivé
+        this.paymentConfigActive = false;
+        this.isLengoPay = false;
+        this.autoSendEnabled = false;
       }
     } catch (error) {
       console.error('❌ [OrdersFrance] Erreur vérification config paiement:', error);
+      // En cas d'erreur = tout désactivé par sécurité
+      this.paymentConfigActive = false;
+      this.isLengoPay = false;
+      this.autoSendEnabled = false;
     }
   }
 

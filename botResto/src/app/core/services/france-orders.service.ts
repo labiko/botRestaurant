@@ -856,8 +856,9 @@ export class FranceOrdersService {
         .eq('is_active', true)
         .single();
 
-      if (configError || !paymentConfig) {
-        // Pas de configuration de paiement = pas d'envoi automatique
+      if (configError || !paymentConfig || !paymentConfig.is_active) {
+        // Pas de configuration active = pas d'envoi automatique
+        console.log('💳 [FranceOrders] Pas de config paiement active - envoi automatique désactivé');
         return;
       }
 
