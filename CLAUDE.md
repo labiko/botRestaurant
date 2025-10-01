@@ -387,3 +387,36 @@ Avant chaque déploiement:
 ## 📋 RÈGLE OBLIGATOIRE SQL
 
 **⚠️ IMPORTANT**: Avant de donner TOUTE requête SQL, TOUJOURS vérifier le fichier `database_fr_structure.sql` pour connaître les VRAIES tables et colonnes. Ne jamais deviner les noms de tables.
+
+## 📝 GESTION DES VERSIONS DE FONCTIONS SQL
+
+**⚠️ RÈGLE OBLIGATOIRE**: Pour chaque modification de fonction SQL :
+
+### **Création de fichiers versionnés :**
+1. **TOUJOURS créer un nouveau fichier** avec numéro de version incrémenté
+2. **Format obligatoire** : `nom_fonction_vX.sql` où X est le numéro de version
+3. **Exemple** : `load_orders_with_assignment_state_v1.sql`, `load_orders_with_assignment_state_v2.sql`, etc.
+4. **Inclure un en-tête** avec date, problème résolu et changements
+
+### **Avant chaque commit :**
+1. **SUPPRIMER toutes les anciennes versions** (v1, v2, v3...)
+2. **GARDER UNIQUEMENT la dernière version** (ex: v4 si c'est la dernière)
+3. **Renommer si nécessaire** pour que la version finale soit claire
+
+### **Exemple de workflow :**
+```
+1. Création initiale → load_orders_with_assignment_state_v1.sql
+2. Correction bug → load_orders_with_assignment_state_v2.sql
+3. Optimisation → load_orders_with_assignment_state_v3.sql
+4. Avant commit → Supprimer v1 et v2, garder uniquement v3
+```
+
+### **Structure d'en-tête obligatoire :**
+```sql
+-- ========================================================================
+-- VERSION: vX
+-- DATE: YYYY-MM-DD
+-- PROBLÈME RÉSOLU: Description du problème
+-- CHANGEMENTS: Liste des modifications
+-- ========================================================================
+```
