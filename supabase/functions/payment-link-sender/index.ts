@@ -94,14 +94,22 @@ serve(async (req) => {
     // ========================================================================
     let paymentResult;
 
-    // Utiliser les URLs du client (ou fallback)
+    // Utiliser les URLs du client, ou de la config DB, ou fallback fixe
+    console.log(`🔧 [Payment Link Sender] AVANT assemblage URLs:`);
+    console.log(`   - successUrl (client): ${successUrl}`);
+    console.log(`   - cancelUrl (client): ${cancelUrl}`);
+    console.log(`   - config.success_url (DB): ${config.success_url}`);
+    console.log(`   - config.cancel_url (DB): ${config.cancel_url}`);
+
     const configWithUrls = {
       ...config,
-      success_url: successUrl || `${Deno.env.get('APP_URL')}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancelUrl || `${Deno.env.get('APP_URL')}/payment/cancel`
+      success_url: successUrl || config.success_url || `https://menu-ai-admin.vercel.app/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl || config.cancel_url || `https://menu-ai-admin.vercel.app/payment-cancel.html?session_id={CHECKOUT_SESSION_ID}`
     };
 
-    console.log(`🔗 [Payment Link Sender] Callback URLs reçues du client: success=${successUrl}, cancel=${cancelUrl}`);
+    console.log(`🔗 [Payment Link Sender] APRÈS assemblage URLs:`);
+    console.log(`   - success_url finale: ${configWithUrls.success_url}`);
+    console.log(`   - cancel_url finale: ${configWithUrls.cancel_url}`);
 
     switch (config.provider) {
       case 'stripe':

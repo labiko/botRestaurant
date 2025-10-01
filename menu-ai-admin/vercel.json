@@ -3,11 +3,11 @@
   "rewrites": [
     {
       "source": "/payment-success",
-      "destination": "/payment-success.html"
+      "destination": "/payment-success.html?$1"
     },
     {
       "source": "/payment-cancel",
-      "destination": "/payment-cancel.html"
+      "destination": "/payment-cancel.html?$1"
     }
   ]
 }

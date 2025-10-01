@@ -42,8 +42,19 @@ export class StripeProvider {
 
   async createPaymentLink(order: Order, config: PaymentConfig): Promise<PaymentLinkResult> {
     console.log(`💳 [Stripe] Création lien pour commande #${order.order_number}`);
+    console.log(`🔗 [Stripe] URLs reçues dans config:`);
+    console.log(`   - success_url: ${config.success_url}`);
+    console.log(`   - cancel_url: ${config.cancel_url}`);
 
     try {
+      // URLs finales qui seront envoyées à Stripe
+      const finalSuccessUrl = config.success_url || `https://menu-ai-admin.vercel.app/payment-success.html?session_id={CHECKOUT_SESSION_ID}`;
+      const finalCancelUrl = config.cancel_url || `https://menu-ai-admin.vercel.app/payment-cancel.html?session_id={CHECKOUT_SESSION_ID}`;
+
+      console.log(`🎯 [Stripe] URLs FINALES envoyées à Stripe:`);
+      console.log(`   - success_url: ${finalSuccessUrl}`);
+      console.log(`   - cancel_url: ${finalCancelUrl}`);
+
       // Créer un Checkout Session avec payment_intent_data
       const session = await this.stripe.checkout.sessions.create({
         payment_intent_data: {
@@ -55,8 +66,8 @@ export class StripeProvider {
           }
         },
         mode: 'payment',
-        success_url: config.success_url || `${Deno.env.get('APP_URL')}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: config.cancel_url || `${Deno.env.get('APP_URL')}/payment/cancel`,
+        success_url: finalSuccessUrl,
+        cancel_url: finalCancelUrl,
         payment_method_types: ['card'],
         billing_address_collection: 'auto',
         line_items: [
@@ -76,6 +87,8 @@ export class StripeProvider {
 
       console.log(`✅ [Stripe] Checkout Session créé: ${session.id}`);
       console.log(`🔗 [Stripe] URL: ${session.url}`);
+      console.log(`🔗 [Stripe] success_url configurée: ${session.success_url}`);
+      console.log(`🔗 [Stripe] cancel_url configurée: ${session.cancel_url}`);
 
       return {
         success: true,

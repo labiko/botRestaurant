@@ -69,8 +69,9 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - login (page de connexion)
+     * - payment- (pages de callback paiement)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|login|auth).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|login|auth|payment-).*)',
   ],
   runtime: 'nodejs', // Forcer l'utilisation de Node.js runtime au lieu d'Edge Runtime
 };

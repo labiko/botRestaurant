@@ -18,80 +18,225 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      background-color: #fef2f2;
+      background: linear-gradient(135deg, #fef7f7 0%, #fecaca 100%);
       padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 20% 80%, rgba(239, 68, 68, 0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(220, 38, 38, 0.1) 0%, transparent 50%);
     }
 
     .container {
       background-color: white;
-      border-radius: 16px;
+      border-radius: 24px;
       padding: 48px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
       max-width: 500px;
       width: 100%;
       text-align: center;
+      position: relative;
+      z-index: 1;
+      transform: translateY(20px);
+      animation: slideUp 0.8s ease-out forwards;
+    }
+
+    @keyframes slideUp {
+      to {
+        transform: translateY(0);
+      }
     }
 
     .icon-container {
-      width: 80px;
-      height: 80px;
-      margin: 0 auto 24px;
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 32px;
       border-radius: 50%;
-      background-color: #ef4444;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: scaleUp 0.5s ease-out;
+      animation: shakeIn 1s ease-out;
+      position: relative;
+      box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
     }
 
-    @keyframes scaleUp {
+    .icon-container::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #ef4444, #dc2626, #b91c1c);
+      z-index: -1;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes shakeIn {
       0% {
-        transform: scale(0);
+        transform: scale(0) rotate(-45deg);
         opacity: 0;
       }
       50% {
-        transform: scale(1.1);
+        transform: scale(1.2) rotate(15deg);
+      }
+      70% {
+        transform: scale(0.9) rotate(-5deg);
       }
       100% {
-        transform: scale(1);
+        transform: scale(1) rotate(0deg);
         opacity: 1;
       }
     }
 
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+      }
+    }
+
+    .cancel-icon {
+      animation: drawX 0.8s ease-out 0.5s both;
+    }
+
+    @keyframes drawX {
+      0% {
+        stroke-dasharray: 0 40;
+        stroke-dashoffset: 0;
+      }
+      100% {
+        stroke-dasharray: 40 40;
+        stroke-dashoffset: 0;
+      }
+    }
+
     h1 {
-      font-size: 32px;
-      font-weight: bold;
-      color: #1f2937;
-      margin-bottom: 12px;
+      font-size: 36px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #1f2937, #374151);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+      animation: fadeInUp 0.6s ease-out 0.3s both;
     }
 
     .message {
-      font-size: 16px;
+      font-size: 18px;
       color: #6b7280;
-      margin-bottom: 24px;
+      margin-bottom: 32px;
       line-height: 1.6;
+      animation: fadeInUp 0.6s ease-out 0.4s both;
+    }
+
+    .order-info {
+      background: linear-gradient(135deg, #fef7f7, #fef2f2);
+      border: 2px solid #fecaca;
+      padding: 24px;
+      border-radius: 16px;
+      margin-bottom: 32px;
+      animation: fadeInUp 0.6s ease-out 0.5s both;
+    }
+
+    .order-info h3 {
+      color: #7f1d1d;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .order-info p {
+      font-size: 16px;
+      color: #991b1b;
+      margin-bottom: 8px;
+    }
+
+    .order-info strong {
+      color: #7f1d1d;
+      font-weight: 600;
     }
 
     .info-box {
-      background-color: #fef3c7;
-      border: 1px solid #fbbf24;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 24px;
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      border: 2px solid #fbbf24;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 32px;
+      animation: fadeInUp 0.6s ease-out 0.6s both;
     }
 
     .info-box p {
-      font-size: 14px;
+      font-size: 16px;
       color: #92400e;
-      line-height: 1.5;
+      line-height: 1.6;
+      margin: 0;
     }
 
+    .retry-button {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      border: none;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      animation: fadeInUp 0.6s ease-out 0.7s both;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    }
+
+    .retry-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .session-info {
+      background-color: #f8fafc;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .session-info p {
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .session-info strong {
+      color: #1e293b;
+      word-break: break-all;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="icon-container">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round">
+      <svg class="cancel-icon" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round">
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
@@ -103,15 +248,66 @@
       Vous avez annulé le paiement. Aucun montant n'a été débité de votre compte.
     </p>
 
+    <div class="order-info" id="orderInfo" style="display: none;">
+      <h3>📋 Commande concernée</h3>
+      <p>Commande n° <strong id="orderNumber">-</strong></p>
+      <p>Montant: <strong id="totalAmount">-</strong></p>
+    </div>
+
     <div class="info-box">
       <p>
-        💡 Votre commande est toujours en attente. Vous pouvez réessayer le paiement à tout moment.
+        💡 Votre commande est toujours en attente. Vous pouvez réessayer le paiement à tout moment en contactant le restaurant.
       </p>
     </div>
+
+    <div class="session-info" id="sessionInfo" style="display: none;">
+      <p>ID de session: <strong id="sessionId"></strong></p>
+    </div>
+
+    <button class="retry-button" onclick="window.history.back()">
+      🔄 Retour à la commande
+    </button>
   </div>
 
   <script>
     console.log('❌ [PaymentCancel] Paiement annulé par l\'utilisateur');
+
+    // Récupération du session_id depuis l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+
+    if (sessionId) {
+      console.log('❌ [PaymentCancel] Session ID:', sessionId);
+      document.getElementById('sessionId').textContent = sessionId;
+      document.getElementById('sessionInfo').style.display = 'block';
+
+      // Appel API pour récupérer les infos de commande
+      console.log('🔄 [PaymentCancel] Appel API /api/payment-info...');
+      fetch(`/api/payment-info?session_id=${sessionId}`)
+        .then(response => {
+          console.log('📡 [PaymentCancel] Réponse API status:', response.status);
+          return response.json();
+        })
+        .then(data => {
+          console.log('📋 [PaymentCancel] Données reçues:', data);
+          if (data.error) {
+            console.log('❌ [PaymentCancel] Erreur API:', data.error);
+          }
+          if (data.order_number) {
+            console.log('✅ [PaymentCancel] Affichage des infos commande');
+            document.getElementById('orderNumber').textContent = data.order_number;
+            document.getElementById('totalAmount').textContent = data.total_amount ? `${data.total_amount}€` : '-';
+            document.getElementById('orderInfo').style.display = 'block';
+          } else {
+            console.log('⚠️ [PaymentCancel] Pas de order_number dans la réponse');
+          }
+        })
+        .catch(error => {
+          console.log('❌ [PaymentCancel] Erreur récupération commande:', error);
+        });
+    } else {
+      console.log('⚠️ [PaymentCancel] Aucun session_id trouvé dans l\'URL');
+    }
   </script>
 </body>
 </html>

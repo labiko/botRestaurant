@@ -36,14 +36,13 @@ export class PaymentLinkService {
   async sendPaymentLink(request: SendPaymentLinkRequest): Promise<SendPaymentLinkResponse> {
     console.log('💳 [PaymentLinkService] Envoi lien paiement pour commande:', request.orderId);
 
-    // Ajouter les URLs de callback depuis FRANCE_CONFIG
+    // Laisser la fonction Supabase utiliser la config DB ou les fallbacks
     const requestWithUrls = {
-      ...request,
-      successUrl: FRANCE_CONFIG.payment.successUrl,
-      cancelUrl: FRANCE_CONFIG.payment.cancelUrl
+      ...request
+      // successUrl et cancelUrl supprimés - utilise la config DB
     };
 
-    console.log('🔗 [PaymentLinkService] Callback URLs:', requestWithUrls.successUrl, requestWithUrls.cancelUrl);
+    console.log('🔗 [PaymentLinkService] Utilisation config DB pour les URLs de callback');
 
     try {
       const response = await fetch(
