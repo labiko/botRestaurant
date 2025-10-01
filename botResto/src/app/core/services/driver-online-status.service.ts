@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { SupabaseFranceService } from './supabase-france.service';
 import { DriverLocationService } from './driver-location.service';
+import { FuseauHoraireService } from './fuseau-horaire.service';
 
 export interface OnlineStatusUpdate {
   driverId: number;
@@ -21,7 +22,8 @@ export class DriverOnlineStatusService {
 
   constructor(
     private supabaseFranceService: SupabaseFranceService,
-    private driverLocationService: DriverLocationService
+    private driverLocationService: DriverLocationService,
+    private fuseauHoraireService: FuseauHoraireService
   ) {}
 
   /**
@@ -79,9 +81,9 @@ export class DriverOnlineStatusService {
       // 1. Mettre à jour immédiatement en base de données
       const { error } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
-        .update({ 
+        .update({
           is_online: newStatus,
-          updated_at: new Date().toISOString()
+          updated_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
         })
         .eq('id', driverId);
 
@@ -176,9 +178,9 @@ export class DriverOnlineStatusService {
 
       const { error } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
-        .update({ 
+        .update({
           is_online: isOnline,
-          updated_at: new Date().toISOString()
+          updated_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
         })
         .eq('id', driverId);
 

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { SupabaseFranceService } from './supabase-france.service';
+import { FuseauHoraireService } from './fuseau-horaire.service';
 
 export interface FranceDriver {
   id: number;
@@ -39,7 +40,10 @@ export class DriversFranceService {
   private driversSubject = new BehaviorSubject<FranceDriver[]>([]);
   public drivers$ = this.driversSubject.asObservable();
 
-  constructor(private supabaseFranceService: SupabaseFranceService) { }
+  constructor(
+    private supabaseFranceService: SupabaseFranceService,
+    private fuseauHoraireService: FuseauHoraireService
+  ) { }
 
   /**
    * Charger les livreurs d'un restaurant
@@ -162,7 +166,7 @@ export class DriversFranceService {
         .from('france_delivery_drivers')
         .update({
           is_active: isActive,
-          updated_at: new Date().toISOString()
+          updated_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
         })
         .eq('id', driverId);
 
@@ -185,12 +189,12 @@ export class DriversFranceService {
     try {
       const updateData: any = {
         is_online: isOnline,
-        updated_at: new Date().toISOString()
+        updated_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
       };
 
       // Si on met en ligne, mettre à jour la localisation
       if (isOnline) {
-        updateData.last_location_update = new Date().toISOString();
+        updateData.last_location_update = await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant();
       }
 
       const { error } = await this.supabaseFranceService.client

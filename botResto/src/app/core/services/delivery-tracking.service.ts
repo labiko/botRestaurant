@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { SupabaseFranceService } from './supabase-france.service';
 import { DeliveryNotificationService } from './delivery-notification.service';
+import { FuseauHoraireService } from './fuseau-horaire.service';
 
 export interface OrderTrackingStats {
   orderId: number;
@@ -32,7 +33,8 @@ export class DeliveryTrackingService {
 
   constructor(
     private supabaseFranceService: SupabaseFranceService,
-    private deliveryNotificationService: DeliveryNotificationService
+    private deliveryNotificationService: DeliveryNotificationService,
+    private fuseauHoraireService: FuseauHoraireService
   ) {}
 
   /**
@@ -274,9 +276,9 @@ export class DeliveryTrackingService {
       // 1. Mettre à jour le statut de la commande
       const { error: updateError } = await this.supabaseFranceService.client
         .from('france_orders')
-        .update({ 
+        .update({
           status: 'prete',
-          updated_at: new Date().toISOString()
+          updated_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
         })
         .eq('id', orderId)
         .eq('restaurant_id', restaurantId);

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, timer, Subscription } from 'rxjs';
 import { SupabaseFranceService } from './supabase-france.service';
+import { FuseauHoraireService } from './fuseau-horaire.service';
 
 // Mock interface pour Capacitor Geolocation (évite l'erreur de build)
 interface MockGeolocation {
@@ -80,7 +81,10 @@ export class DriverLocationService {
   private readonly LOW_ACCURACY_TIMEOUT = 15000; // 15 secondes
   private readonly LOCATION_MAX_AGE = 60000; // 1 minute
 
-  constructor(private supabaseFranceService: SupabaseFranceService) {}
+  constructor(
+    private supabaseFranceService: SupabaseFranceService,
+    private fuseauHoraireService: FuseauHoraireService
+  ) {}
 
   /**
    * Démarrer le tracking de localisation pour un livreur
@@ -115,7 +119,7 @@ export class DriverLocationService {
           latitude: initialLocation.latitude,
           longitude: initialLocation.longitude,
           accuracy: initialLocation.accuracy,
-          timestamp: new Date().toISOString()
+          timestamp: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
         });
       }
 
@@ -371,7 +375,7 @@ export class DriverLocationService {
         .from('france_delivery_drivers')
         .update({
           is_online: isOnline,
-          updated_at: new Date().toISOString()
+          updated_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
         })
         .eq('id', driverId);
 
@@ -432,7 +436,7 @@ export class DriverLocationService {
             latitude: position.latitude,
             longitude: position.longitude,
             accuracy: position.accuracy,
-            timestamp: new Date().toISOString()
+            timestamp: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
           };
 
           // Mettre à jour le subject

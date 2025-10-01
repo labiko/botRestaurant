@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { SupabaseFranceService } from './supabase-france.service';
 import { FranceDriver } from './drivers-france.service';
+import { FuseauHoraireService } from './fuseau-horaire.service';
 
 export interface DriverStatusUpdate {
   driverId: number;
@@ -30,7 +31,10 @@ export class DriverStatusManagementService {
   private statusUpdatesSubject = new BehaviorSubject<DriverStatusUpdate | null>(null);
   public statusUpdates$ = this.statusUpdatesSubject.asObservable();
 
-  constructor(private supabaseFranceService: SupabaseFranceService) {}
+  constructor(
+    private supabaseFranceService: SupabaseFranceService,
+    private fuseauHoraireService: FuseauHoraireService
+  ) {}
 
   /**
    * Valider si le changement de statut est possible
@@ -116,7 +120,7 @@ export class DriverStatusManagementService {
         .from('france_delivery_drivers')
         .update({
           is_active: newStatus,
-          updated_at: new Date().toISOString()
+          updated_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
         })
         .eq('id', driverId)
         .select('*')
