@@ -38,14 +38,19 @@ import { LocationService, ICoordinates } from '../../_shared/application/service
 export class UniversalBot implements IMessageHandler {
 
   /**
-   * Obtenir l'heure actuelle dans le bon fuseau horaire PARIS
-   * ✅ Version finale optimisée avec format Paris validé + DEBUG
+   * Obtenir l'heure actuelle dans le bon fuseau horaire du restaurant
+   * ✅ Version finale avec support multi-timezone
    */
   private getCurrentTime(): Date {
+    // Utiliser le contexte restaurant si disponible
+    if (this.currentRestaurantContext) {
+      return this.currentRestaurantContext.getCurrentTime();
+    }
 
-    // Formatter pour timezone Paris (gère automatiquement heure d'été/hiver)
-    const parisFormatter = new Intl.DateTimeFormat('fr-FR', {
-      timeZone: 'Europe/Paris',
+    // Fallback sur Europe/Paris si pas de contexte
+    const timezone = 'Europe/Paris';
+    const formatter = new Intl.DateTimeFormat('fr-FR', {
+      timeZone: timezone,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -56,29 +61,23 @@ export class UniversalBot implements IMessageHandler {
     });
 
     const utcNow = new Date();
-
-    // Format: "17/09/2025 22:06:36" (validé comme correct)
-    const parisFormatted = parisFormatter.format(utcNow);
+    const formatted = formatter.format(utcNow);
 
     // Parsing du format DD/MM/YYYY HH:mm:ss
-    const parts = parisFormatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+    const parts = formatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
     if (parts) {
       const [, day, month, year, hour, minute, second] = parts;
-      const parisDate = new Date(
+      return new Date(
         parseInt(year),
-        parseInt(month) - 1, // Mois 0-indexé
+        parseInt(month) - 1,
         parseInt(day),
         parseInt(hour),
         parseInt(minute),
         parseInt(second)
       );
-
-
-      return parisDate;
     }
 
-    // Fallback UTC si parsing échoue (ne devrait jamais arriver)
-    console.warn('🕐 [DEBUG_TIMEZONE] === FALLBACK UTC - PARSING ÉCHOUÉ ===');
+    // Fallback UTC si parsing échoue
     return utcNow;
   }
   private compositeWorkflowExecutor: CompositeWorkflowExecutor;
@@ -214,6 +213,62 @@ export class UniversalBot implements IMessageHandler {
    */
   async handleMessage(phoneNumber: string, message: string): Promise<void> {
     try {
+      // 🧪 COMMANDE DEBUG: Test timezone restaurant
+      if (message.toLowerCase().trim() === 'debug') {
+        console.log('🧪 [DEBUG] Commande debug reçue de:', phoneNumber);
+
+        // Restaurant ID 1 en dur pour les tests
+        const restaurantId = 1;
+
+        // Exécuter le test
+        await this.testRestaurantTimezone(restaurantId);
+
+        // Récupérer les infos pour affichage WhatsApp
+        const supabase = await this.getSupabaseClient();
+        const { data: restaurant } = await supabase
+          .from('france_restaurants')
+          .select('id, name, timezone')
+          .eq('id', restaurantId)
+          .single();
+
+        if (restaurant) {
+          const context = this.timezoneService.createContext(restaurant);
+          const currentTime = context.getCurrentTime();
+          const formattedTime = context.formatTime(currentTime);
+          const formattedDateTime = context.formatDateTime(currentTime);
+          const dayName = context.getCurrentDayName();
+
+          // Heure Paris pour comparaison
+          const parisTime = new Date().toLocaleString('fr-FR', {
+            timeZone: 'Europe/Paris',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+
+          await this.messageSender.sendMessage(phoneNumber,
+            `🧪 **DEBUG MODE - TIMEZONE TEST**
+
+📍 **Restaurant**: ${restaurant.name}
+🆔 **ID**: ${restaurantId}
+🌍 **Timezone**: ${restaurant.timezone}
+
+⏰ **Heure Restaurant**: ${formattedTime}
+📅 **Date complète**: ${formattedDateTime}
+📆 **Jour**: ${dayName}
+
+🔄 **Comparaison**:
+🇫🇷 Heure Paris: ${parisTime}
+🌍 Heure Restaurant: ${formattedTime}
+
+📋 Logs détaillés disponibles sur le serveur.
+
+💡 Tapez "resto" pour continuer.`
+          );
+        }
+
+        return;
+      }
+
       // NOUVEAU: Détection partage position GPS
       if (message.startsWith('GPS:')) {
         await this.handleGpsLocationReceived(phoneNumber, message);
@@ -812,7 +867,103 @@ export class UniversalBot implements IMessageHandler {
   private getRestaurantContext(): RestaurantContext | null {
     return this.currentRestaurantContext;
   }
-  
+
+  /**
+   * 🧪 MÉTHODE DE TEST - Vérification timezone restaurant
+   * Récupère le timezone du restaurant et affiche des logs détaillés
+   */
+  private async testRestaurantTimezone(restaurantId: number): Promise<void> {
+    console.log('\n🧪 ========================================');
+    console.log('🧪 TEST TIMEZONE RESTAURANT');
+    console.log('🧪 ========================================');
+
+    try {
+      // 1. Récupérer le restaurant depuis la base
+      const supabase = await this.getSupabaseClient();
+      console.log(`🔍 [TEST] Récupération restaurant ID: ${restaurantId}`);
+
+      const { data: restaurant, error } = await supabase
+        .from('france_restaurants')
+        .select('id, name, slug, timezone, country_code')
+        .eq('id', restaurantId)
+        .single();
+
+      if (error || !restaurant) {
+        console.error('❌ [TEST] Erreur récupération restaurant:', error);
+        return;
+      }
+
+      console.log('✅ [TEST] Restaurant récupéré:');
+      console.log(`   - ID: ${restaurant.id}`);
+      console.log(`   - Nom: ${restaurant.name}`);
+      console.log(`   - Slug: ${restaurant.slug}`);
+      console.log(`   - Timezone: ${restaurant.timezone}`);
+      console.log(`   - Country: ${restaurant.country_code}`);
+
+      // 2. Créer le contexte timezone
+      console.log('\n🌍 [TEST] Création contexte timezone...');
+      const context = this.timezoneService.createContext(restaurant);
+      console.log('✅ [TEST] Contexte créé:');
+      console.log(`   - Timezone configuré: ${context.timezone}`);
+
+      // 3. Tester les méthodes du contexte
+      console.log('\n⏰ [TEST] Tests des méthodes de temps:');
+
+      const currentTime = context.getCurrentTime();
+      console.log(`   - getCurrentTime(): ${currentTime}`);
+      console.log(`   - Type: ${typeof currentTime}`);
+      console.log(`   - ISO: ${currentTime.toISOString()}`);
+
+      const formattedTime = context.formatTime(currentTime);
+      console.log(`   - formatTime(): ${formattedTime}`);
+
+      const formattedDateTime = context.formatDateTime(currentTime);
+      console.log(`   - formatDateTime(): ${formattedDateTime}`);
+
+      const timeString = context.getCurrentTimeString();
+      console.log(`   - getCurrentTimeString(): ${timeString}`);
+
+      const dayName = context.getCurrentDayName();
+      console.log(`   - getCurrentDayName(): ${dayName}`);
+
+      // 4. Comparaison avec Europe/Paris
+      console.log('\n🔄 [TEST] Comparaison avec Europe/Paris:');
+      const parisTime = new Date().toLocaleString('fr-FR', {
+        timeZone: 'Europe/Paris',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      console.log(`   - Heure Paris: ${parisTime}`);
+      console.log(`   - Heure Restaurant: ${timeString}`);
+      console.log(`   - Différence: ${restaurant.timezone === 'Europe/Paris' ? 'AUCUNE (même timezone)' : 'DIFFÉRENTE'}`);
+
+      // 5. Test avec une date future
+      console.log('\n⏭️ [TEST] Test calcul date future (+ 2 heures):');
+      const futureDate = new Date(currentTime.getTime() + 2 * 60 * 60 * 1000);
+      const futureDateFormatted = context.formatDateTime(futureDate);
+      console.log(`   - Date future: ${futureDateFormatted}`);
+
+      // 6. Test jour de la semaine
+      console.log('\n📅 [TEST] Test jour de la semaine:');
+      const parisDay = new Date().toLocaleDateString('fr-FR', {
+        timeZone: 'Europe/Paris',
+        weekday: 'long'
+      });
+      console.log(`   - Jour Paris: ${parisDay}`);
+      console.log(`   - Jour Restaurant: ${dayName}`);
+      console.log(`   - Match: ${parisDay.toLowerCase() === dayName ? '✅ OUI' : '❌ NON'}`);
+
+      console.log('\n🧪 ========================================');
+      console.log('✅ TEST TERMINÉ AVEC SUCCÈS');
+      console.log('🧪 ========================================\n');
+
+    } catch (error) {
+      console.error('❌ [TEST] Erreur durant le test:', error);
+      console.log('🧪 ========================================\n');
+    }
+  }
+
   /**
    * Gérer l'accès direct à un restaurant
    */

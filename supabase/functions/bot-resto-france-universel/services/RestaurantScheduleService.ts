@@ -164,11 +164,18 @@ export class RestaurantScheduleService {
    */
   private getCurrentDay(timezone: string = 'Europe/Paris'): string {
     const now = new Date();
-    const dayIndex = now.getDay(); // 0 = dimanche, 1 = lundi, etc.
-    
-    const dayName = this.DAYS[dayIndex];
-    
-    return dayName;
+    const localeDateString = now.toLocaleDateString('en-US', {
+      timeZone: timezone,
+      weekday: 'short'
+    });
+
+    const dayMap: { [key: string]: number } = {
+      'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3,
+      'Thu': 4, 'Fri': 5, 'Sat': 6
+    };
+
+    const dayIndex = dayMap[localeDateString.split(',')[0]] || 0;
+    return this.DAYS[dayIndex];
   }
 
   /**

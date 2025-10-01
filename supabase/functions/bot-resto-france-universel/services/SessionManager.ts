@@ -39,11 +39,9 @@ export class SessionManager implements ISessionManager {
    * Obtenir l'heure actuelle dans le bon fuseau horaire PARIS
    * ✅ Version finale optimisée avec format Paris validé + DEBUG
    */
-  private getCurrentTime(): Date {
-
-    // Formatter pour timezone Paris (gère automatiquement heure d'été/hiver)
-    const parisFormatter = new Intl.DateTimeFormat('fr-FR', {
-      timeZone: 'Europe/Paris',
+  private getCurrentTime(timezone: string = 'Europe/Paris'): Date {
+    const formatter = new Intl.DateTimeFormat('fr-FR', {
+      timeZone: timezone,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -54,29 +52,21 @@ export class SessionManager implements ISessionManager {
     });
 
     const utcNow = new Date();
+    const formatted = formatter.format(utcNow);
 
-    // Format: "17/09/2025 22:06:36" (validé comme correct)
-    const parisFormatted = parisFormatter.format(utcNow);
-
-    // Parsing du format DD/MM/YYYY HH:mm:ss
-    const parts = parisFormatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+    const parts = formatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
     if (parts) {
       const [, day, month, year, hour, minute, second] = parts;
-      const parisDate = new Date(
+      return new Date(
         parseInt(year),
-        parseInt(month) - 1, // Mois 0-indexé
+        parseInt(month) - 1,
         parseInt(day),
         parseInt(hour),
         parseInt(minute),
         parseInt(second)
       );
-
-
-      return parisDate;
     }
 
-    // Fallback UTC si parsing échoue (ne devrait jamais arriver)
-    console.warn('🕐 [DEBUG_TIMEZONE] === FALLBACK UTC - PARSING ÉCHOUÉ ===');
     return utcNow;
   }
 
