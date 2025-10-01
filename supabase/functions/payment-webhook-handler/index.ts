@@ -13,7 +13,44 @@ serve(async (req) => {
 
   try {
     const signature = req.headers.get('stripe-signature');
-    const provider = req.headers.get('x-payment-provider') || 'stripe';
+    let provider = req.headers.get('x-payment-provider');
+
+    // Auto-détection du provider si pas de header
+    if (!provider) {
+      if (signature) {
+        provider = 'stripe';
+        console.log('🔍 [Webhook Handler] Provider auto-détecté: Stripe (signature présente)');
+      } else {
+        // Examiner le content-type et payload pour détecter LengoPay
+        const contentType = req.headers.get('content-type') || '';
+        console.log(`🔍 [Webhook Handler] Content-Type: ${contentType}`);
+
+        if (contentType.includes('application/x-www-form-urlencoded')) {
+          provider = 'lengopay';
+          console.log('🔍 [Webhook Handler] Provider auto-détecté: LengoPay (form-urlencoded)');
+        } else {
+          // Essayer de lire comme JSON
+          try {
+            const clonedReq = req.clone();
+            const payload = await clonedReq.json();
+
+            if (payload.pay_id || payload.payment_id || payload.event || payload.status) {
+              provider = 'lengopay';
+              console.log('🔍 [Webhook Handler] Provider auto-détecté: LengoPay (payload structure)');
+            } else {
+              provider = 'stripe'; // fallback
+              console.log('🔍 [Webhook Handler] Provider fallback: Stripe');
+            }
+          } catch (jsonError) {
+            // Si ce n'est pas du JSON, c'est probablement LengoPay
+            provider = 'lengopay';
+            console.log('🔍 [Webhook Handler] Provider auto-détecté: LengoPay (non-JSON)');
+          }
+        }
+      }
+    }
+
+    console.log(`🏦 [Webhook Handler] Provider final: ${provider}`);
 
     if (provider === 'stripe') {
       return await handleStripeWebhook(req, signature);
@@ -194,7 +231,54 @@ async function handleStripeWebhook(req: Request, signature: string | null) {
 async function handleLengopayWebhook(req: Request) {
   console.log('💳 [Webhook Handler] Traitement webhook Lengopay');
 
-  const payload = await req.json();
+  // LOGS DÉTAILLÉS - Headers reçus
+  console.log('📋 [LengoPay Webhook] Headers reçus:');
+  for (const [key, value] of req.headers.entries()) {
+    console.log(`   ${key}: ${value}`);
+  }
+
+  // Lire le payload selon le content-type
+  const contentType = req.headers.get('content-type') || '';
+  let payload: any = {};
+
+  if (contentType.includes('application/x-www-form-urlencoded')) {
+    // Traiter form data
+    const formData = await req.formData();
+    console.log('📦 [LengoPay Webhook] Form data reçu:');
+
+    for (const [key, value] of formData.entries()) {
+      payload[key] = value;
+      console.log(`   ${key}: ${value}`);
+    }
+  } else {
+    // Essayer JSON
+    try {
+      payload = await req.json();
+      console.log('📦 [LengoPay Webhook] JSON payload reçu:');
+      console.log(JSON.stringify(payload, null, 2));
+    } catch (e) {
+      // En dernier recours, lire comme texte
+      const text = await req.text();
+      console.log('📦 [LengoPay Webhook] Text payload reçu:', text);
+
+      // Parser manuellement si c'est du form-urlencoded dans du texte
+      if (text.includes('=')) {
+        const params = new URLSearchParams(text);
+        for (const [key, value] of params.entries()) {
+          payload[key] = value;
+        }
+      }
+    }
+  }
+
+  // LOGS DÉTAILLÉS - Analyse des champs
+  console.log('🔍 [LengoPay Webhook] Analyse des champs:');
+  console.log(`   - payload.pay_id: ${payload.pay_id}`);
+  console.log(`   - payload.status: ${payload.status}`);
+  console.log(`   - payload.amount: ${payload.amount}`);
+  console.log(`   - payload.message: ${payload.message}`);
+  console.log(`   - payload.Client: ${payload.Client}`);
+  console.log(`   - payload.event: ${payload.event}`);
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -202,22 +286,39 @@ async function handleLengopayWebhook(req: Request) {
   );
 
   // Traiter selon le format Lengopay (à adapter selon la vraie doc Lengopay)
-  if (payload.event === 'payment.success' || payload.status === 'completed') {
-    console.log('💰 [Webhook Handler] Paiement Lengopay complété');
+  console.log('🔄 [LengoPay Webhook] Vérification des conditions de succès...');
+
+  if (payload.status === 'SUCCESS' || payload.event === 'payment.success' || payload.status === 'completed') {
+    console.log('💰 [LengoPay Webhook] Paiement Lengopay complété - Traitement...');
+
+    // Déterminer l'ID de paiement à rechercher
+    const paymentId = payload.pay_id || payload.payment_id || payload.id;
+    console.log(`🔍 [LengoPay Webhook] Recherche payment_link avec payment_intent_id: ${paymentId}`);
 
     const { data: paymentLink, error: linkError } = await supabase
       .from('payment_links')
       .select('*')
-      .eq('payment_intent_id', payload.payment_id || payload.id)
+      .eq('payment_intent_id', paymentId)
       .single();
 
+    console.log('📊 [LengoPay Webhook] Résultat recherche payment_link:');
+    console.log(`   - Trouvé: ${paymentLink ? 'OUI' : 'NON'}`);
+    console.log(`   - Erreur: ${linkError ? linkError.message : 'AUCUNE'}`);
+
+    if (paymentLink) {
+      console.log(`   - ID: ${paymentLink.id}`);
+      console.log(`   - Order ID: ${paymentLink.order_id}`);
+      console.log(`   - Status actuel: ${paymentLink.status}`);
+    }
+
     if (linkError || !paymentLink) {
-      console.error('❌ [Webhook Handler] Payment link introuvable:', linkError);
+      console.error('❌ [LengoPay Webhook] Payment link introuvable:', linkError);
       throw new Error('Payment link introuvable');
     }
 
     // Mettre à jour payment_links
-    await supabase
+    console.log(`🔄 [LengoPay Webhook] Mise à jour payment_links ID: ${paymentLink.id}`);
+    const { error: updateLinkError } = await supabase
       .from('payment_links')
       .update({
         status: 'paid',
@@ -226,8 +327,15 @@ async function handleLengopayWebhook(req: Request) {
       })
       .eq('id', paymentLink.id);
 
+    if (updateLinkError) {
+      console.error('❌ [LengoPay Webhook] Erreur mise à jour payment_links:', updateLinkError);
+    } else {
+      console.log('✅ [LengoPay Webhook] Payment_links mis à jour avec succès');
+    }
+
     // Mettre à jour france_orders
-    await supabase
+    console.log(`🔄 [LengoPay Webhook] Mise à jour france_orders ID: ${paymentLink.order_id}`);
+    const { error: updateOrderError } = await supabase
       .from('france_orders')
       .update({
         online_payment_status: 'paid',
@@ -235,7 +343,18 @@ async function handleLengopayWebhook(req: Request) {
       })
       .eq('id', paymentLink.order_id);
 
-    console.log(`✅ [Webhook Handler] Commande ${paymentLink.order_id} marquée comme payée (Lengopay)`);
+    if (updateOrderError) {
+      console.error('❌ [LengoPay Webhook] Erreur mise à jour france_orders:', updateOrderError);
+    } else {
+      console.log('✅ [LengoPay Webhook] France_orders mis à jour avec succès');
+    }
+
+    console.log(`🎉 [LengoPay Webhook] Commande ${paymentLink.order_id} marquée comme payée !`);
+  } else {
+    console.log('ℹ️ [LengoPay Webhook] Événement non traité:');
+    console.log(`   - Status: ${payload.status}`);
+    console.log(`   - Event: ${payload.event}`);
+    console.log('   Aucune action prise.');
   }
 
   return new Response(JSON.stringify({ received: true }), {
