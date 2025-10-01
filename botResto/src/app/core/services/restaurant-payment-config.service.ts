@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { SupabaseFranceService } from './supabase-france.service';
+import { FuseauHoraireService } from './fuseau-horaire.service';
 
 export interface PaymentConfig {
   id: number;
@@ -35,7 +36,10 @@ export interface PaymentStats {
 })
 export class RestaurantPaymentConfigService {
 
-  constructor(private supabaseFranceService: SupabaseFranceService) {}
+  constructor(
+    private supabaseFranceService: SupabaseFranceService,
+    private fuseauHoraireService: FuseauHoraireService
+  ) {}
 
   /**
    * Récupère la configuration de paiement d'un restaurant
@@ -131,7 +135,7 @@ export class RestaurantPaymentConfigService {
           .from('restaurant_payment_configs')
           .update({
             ...validFields,
-            updated_at: new Date().toISOString()
+            updated_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
           })
           .eq('id', existing.id);
 
@@ -144,8 +148,8 @@ export class RestaurantPaymentConfigService {
           .insert({
             restaurant_id: restaurantId,
             ...validFields,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            created_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant(),
+            updated_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
           });
 
         if (error) throw error;

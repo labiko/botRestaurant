@@ -153,7 +153,7 @@ export class DeliveryAssignmentService {
         .from('france_delivery_assignments')
         .update({
           assignment_status: 'accepted',
-          responded_at: new Date().toISOString(),
+          responded_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant(),
           response_time_seconds: responseTimeSeconds
         })
         .eq('id', assignmentId)
@@ -202,7 +202,7 @@ export class DeliveryAssignmentService {
         .from('france_delivery_assignments')
         .update({
           assignment_status: 'rejected',
-          responded_at: new Date().toISOString(),
+          responded_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant(),
           response_time_seconds: responseTimeSeconds
         })
         .eq('id', assignmentId)
@@ -278,7 +278,7 @@ export class DeliveryAssignmentService {
         .from('france_delivery_assignments')
         .update({
           assignment_status: 'rejected',
-          responded_at: new Date().toISOString()
+          responded_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
         })
         .eq('id', assignmentId);
     } catch (error) {
@@ -525,7 +525,7 @@ Répondez:
         .from('france_delivery_assignments')
         .update({
           assignment_status: 'rejected',
-          responded_at: new Date().toISOString()
+          responded_at: await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant()
         })
         .eq('order_id', orderId)
         .eq('assignment_status', 'pending')
