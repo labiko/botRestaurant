@@ -277,6 +277,11 @@ function formatPaymentMessage(order: any, paymentUrl: string, config: any): stri
   // Nettoyer l'URL de tout espace ou retour à la ligne potentiel
   const cleanUrl = paymentUrl.trim().replace(/\s+/g, '');
 
+  // Message d'expiration selon le provider
+  const expirationMessage = config.provider === 'lengopay'
+    ? '⏱️ Ce lien expire dans 15 minutes.'
+    : '⏱️ Ce lien expire dans 24 heures.';
+
   return `💳 *PAIEMENT EN LIGNE*
 
 Bonjour ${order.customer_name || 'cher client'},
@@ -289,7 +294,7 @@ Pour finaliser votre commande, veuillez effectuer le paiement en ligne :
 
 🔗 ${cleanUrl}
 
-⏱️ Ce lien expire dans 24 heures.
+${expirationMessage}
 
 Merci de votre confiance !
 ${restaurantName}`;

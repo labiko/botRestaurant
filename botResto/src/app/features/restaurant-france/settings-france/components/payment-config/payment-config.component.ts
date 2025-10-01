@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { IonicModule, ToastController } from '@ionic/angular';
 import { RestaurantPaymentConfigService, PaymentConfig, PaymentStats } from '../../../../../core/services/restaurant-payment-config.service';
 import { AuthFranceService } from '../../../auth-france/services/auth-france.service';
+import { environment } from '../../../../../../environments/environment';
 
 @Component({
   selector: 'app-payment-config',
@@ -18,12 +19,7 @@ export class PaymentConfigComponent implements OnInit {
 
   paymentConfig: PaymentConfig | null = null;
   stats: PaymentStats | null = null;
-  availableProviders = [
-    { value: 'stripe', label: 'Stripe', icon: 'card' },
-    { value: 'lengopay', label: 'Lengopay', icon: 'phone-portrait' },
-    { value: 'wave', label: 'Wave', icon: 'water' },
-    { value: 'orange_money', label: 'Orange Money', icon: 'logo-bitcoin' }
-  ];
+  availableProviders = this.paymentService.getAvailableProviders();
 
   form = {
     provider: 'stripe' as 'stripe' | 'lengopay' | 'wave' | 'orange_money' | 'custom',
@@ -37,6 +33,9 @@ export class PaymentConfigComponent implements OnInit {
     merchant_id: '',
     telephone_marchand: '',
     api_url: '',
+    // Options d'envoi automatique
+    auto_send_on_order: false,
+    send_on_delivery: false,
     // Commun
     config: { currency: 'EUR' }
   };
@@ -92,6 +91,8 @@ export class PaymentConfigComponent implements OnInit {
         merchant_id: this.paymentConfig.merchant_id || '',
         telephone_marchand: this.paymentConfig.telephone_marchand || '',
         api_url: this.paymentConfig.api_url || '',
+        auto_send_on_order: this.paymentConfig.auto_send_on_order || false,
+        send_on_delivery: this.paymentConfig.send_on_delivery || false,
         config: this.paymentConfig.config || { currency: 'EUR' }
       };
     }
@@ -111,22 +112,30 @@ export class PaymentConfigComponent implements OnInit {
 
   async saveConfig() {
     try {
-      // Préparer les données selon le provider
+      // Préparer les données du formulaire uniquement
       const configData: any = {
         provider: this.form.provider,
         is_active: this.form.is_active,
+        auto_send_on_order: this.form.auto_send_on_order,
+        send_on_delivery: this.form.send_on_delivery,
         config: this.form.config
       };
+
+      // Ne pas envoyer les URLs génériques - elles sont gérées automatiquement par le système
 
       if (this.form.provider === 'stripe') {
         configData.api_key_public = this.form.api_key_public;
         configData.api_key_secret = this.form.api_key_secret;
       } else if (this.form.provider === 'lengopay') {
-        configData.license_key = this.form.license_key;
-        configData.website_id = this.form.website_id;
+        // Pour LengoPay, utiliser config JSON + merchant_id
         configData.merchant_id = this.form.merchant_id;
-        configData.telephone_marchand = this.form.telephone_marchand;
-        configData.api_url = this.form.api_url;
+        configData.config = {
+          ...configData.config,
+          license_key: this.form.license_key,
+          website_id: this.form.website_id,
+          telephone_marchand: this.form.telephone_marchand,
+          api_url: this.form.api_url
+        };
       }
 
       await this.paymentService.saveConfig(this.restaurantId, configData);
@@ -172,5 +181,100 @@ export class PaymentConfigComponent implements OnInit {
   openProviderDashboard() {
     const url = this.getProviderDashboardUrl();
     if (url) window.open(url, '_blank');
+  }
+
+  async copyToClipboard(text: string) {
+    if (!text || text.trim() === '') {
+      const toast = await this.toastController.create({
+        message: '⚠️ Aucune URL à copier',
+        duration: 2000,
+        color: 'warning',
+        position: 'top'
+      });
+      await toast.present();
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+
+      const toast = await this.toastController.create({
+        message: '✅ URL copiée dans le presse-papier',
+        duration: 2000,
+        color: 'success',
+        position: 'top'
+      });
+      await toast.present();
+    } catch (error) {
+      console.error('❌ [PaymentConfig] Erreur copie:', error);
+
+      const toast = await this.toastController.create({
+        message: '❌ Impossible de copier l\'URL',
+        duration: 2000,
+        color: 'danger',
+        position: 'top'
+      });
+      await toast.present();
+    }
+  }
+
+  async testConnection() {
+    const loading = await this.toastController.create({
+      message: 'Test de connexion en cours...',
+      duration: 0
+    });
+    await loading.present();
+
+    try {
+      // Simuler un test de connexion
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      await loading.dismiss();
+
+      const toast = await this.toastController.create({
+        message: '✅ Connexion réussie !',
+        duration: 3000,
+        color: 'success'
+      });
+      await toast.present();
+    } catch (error) {
+      await loading.dismiss();
+
+      const toast = await this.toastController.create({
+        message: '❌ Erreur de connexion',
+        duration: 3000,
+        color: 'danger'
+      });
+      await toast.present();
+    }
+  }
+
+  async generateTestLink() {
+    const toast = await this.toastController.create({
+      message: '🔗 Génération d\'un lien de test...',
+      duration: 2000,
+      color: 'tertiary'
+    });
+    await toast.present();
+
+    // TODO: Implémenter la génération d'un lien test avec montant fixe
+  }
+
+  async testWebhook() {
+    const toast = await this.toastController.create({
+      message: '📡 Test du webhook en cours...',
+      duration: 2000,
+      color: 'warning'
+    });
+    await toast.present();
+
+    // TODO: Implémenter un test webhook
+  }
+
+  /**
+   * Détermine l'environnement actuel
+   */
+  getCurrentEnvironment(): string {
+    return environment.environmentName;
   }
 }

@@ -64,24 +64,22 @@ export class RestaurantPaymentConfigService {
       }
 
       if (data) {
+        // Mapping pour TOUS les providers
+        const mappedConfig: PaymentConfig = {
+          ...data
+        };
+
         // Mapping spécifique UNIQUEMENT pour LengoPay (ne pas casser Stripe)
         if (data.provider === 'lengopay') {
-          const mappedConfig: PaymentConfig = {
-            ...data,
-            // Pour LengoPay UNIQUEMENT : extraire depuis config JSON
-            license_key: data.config?.license_key || data.api_key_secret,
-            website_id: data.config?.website_id || data.merchant_id,
-            telephone_marchand: data.config?.telephone_marchand || '',
-            api_url: data.config?.api_url || 'https://sandbox.lengopay.com/api/v1/payments'
-          };
-
-          console.log('🔍 [Service] Config LengoPay mappée:', mappedConfig);
-          return mappedConfig;
+          // Pour LengoPay UNIQUEMENT : extraire depuis config JSON
+          mappedConfig.license_key = data.config?.license_key || data.api_key_secret;
+          mappedConfig.website_id = data.config?.website_id || data.merchant_id;
+          mappedConfig.telephone_marchand = data.config?.telephone_marchand || '';
+          mappedConfig.api_url = data.config?.api_url || 'https://sandbox.lengopay.com/api/v1/payments';
         }
 
-        // Pour Stripe et autres providers : retourner les données telles quelles
-        console.log('🔍 [Service] Config trouvée (autre provider):', data);
-        return data;
+        console.log('🔍 [Service] Config mappée:', mappedConfig);
+        return mappedConfig;
       }
 
       console.log('🔍 [Service] Config trouvée:', data);
@@ -97,6 +95,28 @@ export class RestaurantPaymentConfigService {
    */
   async saveConfig(restaurantId: number, config: Partial<PaymentConfig>): Promise<void> {
     try {
+      // Filtrer uniquement les champs valides de la table
+      const validFields: any = {
+        provider: config.provider,
+        api_key_public: config.api_key_public,
+        api_key_secret: config.api_key_secret,
+        merchant_id: config.merchant_id,
+        config: config.config,
+        webhook_url: config.webhook_url,
+        success_url: config.success_url,
+        cancel_url: config.cancel_url,
+        is_active: config.is_active,
+        auto_send_on_order: config.auto_send_on_order,
+        send_on_delivery: config.send_on_delivery
+      };
+
+      // Supprimer les champs undefined
+      Object.keys(validFields).forEach(key => {
+        if (validFields[key] === undefined) {
+          delete validFields[key];
+        }
+      });
+
       // Vérifier si une config existe déjà
       const existing = await this.getConfig(restaurantId);
 
@@ -105,7 +125,7 @@ export class RestaurantPaymentConfigService {
         const { error } = await this.supabaseFranceService.client
           .from('restaurant_payment_configs')
           .update({
-            ...config,
+            ...validFields,
             updated_at: new Date().toISOString()
           })
           .eq('id', existing.id);
@@ -117,7 +137,7 @@ export class RestaurantPaymentConfigService {
           .from('restaurant_payment_configs')
           .insert({
             restaurant_id: restaurantId,
-            ...config,
+            ...validFields,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });

@@ -490,6 +490,32 @@
   }
 }
 
+// Messages mode automatique
+.auto-mode-chip {
+  margin-bottom: 8px;
+  --background: rgba(var(--ion-color-success-rgb), 0.1);
+  --border-color: var(--ion-color-success);
+
+  ion-icon {
+    color: var(--ion-color-success);
+  }
+}
+
+.auto-mode-info {
+  margin: 8px 0;
+
+  ion-note {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+
+    ion-icon {
+      color: var(--ion-color-success);
+    }
+  }
+}
+
 // Section code de validation
 .validation-code-section {
   margin-top: 16px;

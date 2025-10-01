@@ -182,3 +182,85 @@
     }
   }
 }
+
+// Styles pour les nouvelles sections
+.url-text {
+  font-family: monospace;
+  font-size: 0.9rem;
+  word-break: break-all;
+  color: var(--ion-color-primary);
+}
+
+.test-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+
+  ion-button {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+
+    ion-button {
+      min-width: 100%;
+    }
+  }
+}
+
+.active-state h3 {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  color: var(--ion-color-dark);
+  font-weight: 600;
+  border-bottom: 2px solid var(--ion-color-light);
+  padding-bottom: 8px;
+}
+
+// Styles spécifiques au formulaire webhook
+.form-state h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 24px 0 16px 0;
+  color: var(--ion-color-dark);
+  border-bottom: 1px solid var(--ion-color-light);
+  padding-bottom: 8px;
+}
+
+.environment-info {
+  margin: 16px 0;
+
+  ion-card {
+    margin: 0;
+    border-radius: 8px;
+  }
+
+  p {
+    margin: 8px 0;
+    font-size: 0.9rem;
+  }
+
+  .small-text {
+    font-size: 0.8rem;
+    color: var(--ion-color-medium);
+    font-style: italic;
+  }
+}
+
+.form-state ion-item {
+  --border-color: rgba(0, 0, 0, 0.1);
+  margin-bottom: 12px;
+
+  ion-input[readonly] {
+    --color: var(--ion-color-medium);
+    font-family: monospace;
+    font-size: 0.85rem;
+  }
+
+  ion-button[fill="clear"] {
+    --color: var(--ion-color-primary);
+  }
+}

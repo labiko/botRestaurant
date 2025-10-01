@@ -425,9 +425,35 @@
 
         <!-- Actions -->
         <div class="order-actions">
-          <!-- Payment link button - Visible si aucun lien envoyé -->
+          <!-- Message clair mode auto activé -->
+          <ion-chip *ngIf="autoSendEnabled && !isLengoPay" color="success" outline class="auto-mode-chip">
+            <ion-icon name="checkmark-circle" slot="start"></ion-icon>
+            <ion-label>✅ Lien de paiement envoyé automatiquement</ion-label>
+          </ion-chip>
+
+          <!-- Payment link button - Comportement différent selon le provider -->
+          <!-- Pour LengoPay : toujours visible tant que pas payé (même avec mode auto) -->
           <ion-button
-            *ngIf="!order.online_payment_status || order.online_payment_status === 'not_sent'"
+            *ngIf="isLengoPay && order.online_payment_status !== 'paid'"
+            size="small"
+            [color]="order.online_payment_status === 'link_sent' ? 'warning' : 'success'"
+            fill="outline"
+            (click)="sendPaymentLink(order)">
+            <ion-icon name="card-outline" slot="start"></ion-icon>
+            {{ order.online_payment_status === 'link_sent' ? '🔄 Renvoyer lien' : '💳 Envoyer lien paiement' }}
+          </ion-button>
+
+          <!-- Message clair pour LengoPay avec mode auto -->
+          <div *ngIf="isLengoPay && autoSendEnabled" class="auto-mode-info">
+            <ion-note color="success">
+              <ion-icon name="checkmark-circle" size="small"></ion-icon>
+              ✅ Lien de paiement envoyé automatiquement
+            </ion-note>
+          </div>
+
+          <!-- Pour Stripe : masquer si mode auto activé, sinon comportement existant -->
+          <ion-button
+            *ngIf="!isLengoPay && !autoSendEnabled && (!order.online_payment_status || order.online_payment_status === 'not_sent' || order.online_payment_status === 'failed')"
             size="small"
             color="success"
             fill="outline"
@@ -436,23 +462,14 @@
             💳 Envoyer lien paiement
           </ion-button>
 
-          <!-- Payment link sent - Visible si lien envoyé mais pas encore payé -->
-          <div *ngIf="order.online_payment_status === 'link_sent'" class="payment-link-sent">
-            <ion-chip color="warning">
-              <ion-icon name="link-outline"></ion-icon>
-              <ion-label>
-                🔗 Lien envoyé
-                <br>
-                <small *ngIf="order.payment_link_sent_at">{{ order.payment_link_sent_at | date:'dd/MM/yyyy HH:mm' }}</small>
-              </ion-label>
-            </ion-chip>
-            <ion-button
-              size="small"
-              fill="clear"
-              (click)="copyPaymentLink(order)">
-              <ion-icon name="copy-outline" slot="icon-only"></ion-icon>
-            </ion-button>
-          </div>
+          <!-- Payment link sent indicator -->
+          <ion-chip *ngIf="order.online_payment_status === 'link_sent'" color="warning" class="payment-status-chip">
+            <ion-icon name="link-outline"></ion-icon>
+            <ion-label>
+              🔗 Lien envoyé
+              <small *ngIf="order.payment_link_sent_at"> - {{ order.payment_link_sent_at | date:'HH:mm' }}</small>
+            </ion-label>
+          </ion-chip>
 
           <!-- Payment status - Visible si paiement effectué -->
           <ion-chip *ngIf="order.online_payment_status === 'paid'" color="success">

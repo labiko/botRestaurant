@@ -8,6 +8,7 @@ import { UniversalOrderDisplayService } from './universal-order-display.service'
 import { AutoRefreshService } from './auto-refresh.service';
 import { FuseauHoraireService } from './fuseau-horaire.service';
 import { AudioNotificationService } from './audio-notification.service';
+import { PaymentLinkService } from './payment-link.service';
 import { REFRESH_CONFIG } from '../config/refresh.config';
 
 // Interface pour les paramètres de notification WhatsApp
@@ -127,7 +128,8 @@ export class FranceOrdersService {
     private universalOrderDisplayService: UniversalOrderDisplayService,
     private autoRefreshService: AutoRefreshService,
     private fuseauHoraireService: FuseauHoraireService,
-    private audioNotificationService: AudioNotificationService
+    private audioNotificationService: AudioNotificationService,
+    private paymentLinkService: PaymentLinkService
   ) { }
 
   async loadOrders(restaurantId: number): Promise<void> {
@@ -385,7 +387,10 @@ export class FranceOrdersService {
       if (statusChanged) {
         try {
           await this.sendWhatsAppNotification(orderId, newStatus);
-          
+
+          // Étape 2.5: NOUVEAU - Envoi automatique lien de paiement selon configuration restaurant
+          await this.handleAutomaticPaymentLink(orderId, newStatus);
+
           // Étape 3: NOUVEAU - Déclencher le système de notification des livreurs si commande prête pour livraison
           await this.handleDeliveryNotifications(orderId, newStatus);
         } catch (whatsappError) {
@@ -835,6 +840,57 @@ export class FranceOrdersService {
     } catch (error) {
       console.warn('⚠️ [FranceOrders] Impossible de vérifier statut restaurant:', error);
       // Pas de déconnexion en cas d'erreur réseau pour éviter les fausses déconnexions
+    }
+  }
+
+  /**
+   * NOUVEAU - Gère l'envoi automatique des liens de paiement selon la configuration du restaurant
+   */
+  private async handleAutomaticPaymentLink(orderId: number, newStatus: string): Promise<void> {
+    try {
+      // Récupérer la configuration de paiement du restaurant
+      const { data: paymentConfig, error: configError } = await this.supabaseFranceService.client
+        .from('restaurant_payment_configs')
+        .select('auto_send_on_order, send_on_delivery, is_active')
+        .eq('restaurant_id', this.currentRestaurantId)
+        .eq('is_active', true)
+        .single();
+
+      if (configError || !paymentConfig) {
+        // Pas de configuration de paiement = pas d'envoi automatique
+        return;
+      }
+
+      let shouldSendPaymentLink = false;
+
+      // Vérifier si on doit envoyer selon le statut
+      if (newStatus === 'prete' && paymentConfig.auto_send_on_order) {
+        // Commande prête + envoi automatique activé
+        shouldSendPaymentLink = true;
+        console.log('💳 [FranceOrders] Envoi automatique - Commande prête');
+      } else if (newStatus === 'en_livraison' && paymentConfig.send_on_delivery) {
+        // En livraison + envoi à la livraison activé
+        shouldSendPaymentLink = true;
+        console.log('💳 [FranceOrders] Envoi automatique - En livraison');
+      }
+
+      if (shouldSendPaymentLink) {
+        // Envoyer le lien de paiement via le service existant
+        const result = await this.paymentLinkService.sendPaymentLink({
+          orderId: orderId,
+          senderType: 'system'
+        });
+
+        if (result.success) {
+          console.log('✅ [FranceOrders] Lien de paiement envoyé automatiquement pour commande', orderId);
+        } else {
+          console.error('❌ [FranceOrders] Échec envoi automatique lien paiement:', result.error);
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ [FranceOrders] Erreur envoi automatique lien paiement (non bloquant):', error);
+      // Ne pas faire échouer le changement de statut si l'envoi de paiement échoue
     }
   }
 }

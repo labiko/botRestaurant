@@ -33,6 +33,12 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   filteredOrdersCount: number = 0;
   totalOrdersCount: number = 0;
 
+  // Propriété pour détecter LengoPay
+  isLengoPay: boolean = false;
+
+  // Propriété pour le mode envoi automatique
+  autoSendEnabled: boolean = false;
+
   private restaurantId: number;
 
   constructor(
@@ -63,6 +69,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   ngOnInit() {
     this.initializeOrders();
     this.startAutoRefresh();
+    this.checkPaymentConfig();
 
     // Configurer le restaurant pour les notifications audio
     this.audioNotificationService.setCurrentRestaurant(this.restaurantId);
@@ -110,7 +117,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
   private async initializeOrders() {
     this.isLoading = true;
-    
+
     // S'abonner aux changements de commandes avec enrichissement WhatsApp
     this.ordersSubscription = this.franceOrdersService.orders$.subscribe(async (orders) => {
 
@@ -155,7 +162,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
   async manualRefresh(event?: any) {
     try {
-      
       // Vérifier que nous avons un restaurant_id
       if (!this.restaurantId) {
         console.error('❌ [OrdersFrance] Aucun restaurant_id disponible pour le refresh');
@@ -977,6 +983,27 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   /**
    * Envoyer un lien de paiement à un client
    */
+  // Méthode pour vérifier la configuration de paiement
+  async checkPaymentConfig() {
+    try {
+      const { data, error } = await this.supabaseFranceService.client
+        .from('restaurant_payment_configs')
+        .select('provider, is_active, auto_send_on_order')
+        .eq('restaurant_id', this.restaurantId)
+        .eq('is_active', true)
+        .single();
+
+      if (!error && data) {
+        // Vérifier si c'est LengoPay et mode auto
+        this.isLengoPay = data.provider === 'lengopay';
+        this.autoSendEnabled = data.auto_send_on_order || false;
+        console.log('💳 [OrdersFrance] Provider:', data.provider, 'isLengoPay:', this.isLengoPay, 'autoSend:', this.autoSendEnabled);
+      }
+    } catch (error) {
+      console.error('❌ [OrdersFrance] Erreur vérification config paiement:', error);
+    }
+  }
+
   async sendPaymentLink(order: FranceOrder) {
     console.log('💳 [OrdersFrance] Envoi lien paiement pour commande:', order.id);
 
