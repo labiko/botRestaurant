@@ -41,8 +41,6 @@ export class PaymentConfigComponent implements OnInit {
   };
 
   restaurantId: number;
-  testOrderId: number | null = null;
-  checkInterval: any = null;
 
   constructor(
     private paymentService: RestaurantPaymentConfigService,
@@ -254,7 +252,7 @@ export class PaymentConfigComponent implements OnInit {
 
   async generateTestLink() {
     const loading = await this.toastController.create({
-      message: '🔗 Création commande test...',
+      message: '🔗 Génération lien test...',
       duration: 0
     });
     await loading.present();
@@ -269,61 +267,40 @@ export class PaymentConfigComponent implements OnInit {
         throw new Error(result.error || 'Erreur génération lien test');
       }
 
-      this.testOrderId = result.orderId!;
-
-      // Afficher les instructions avec le lien
+      // Afficher le lien avec bouton copier
       const alert = await this.alertController.create({
-        header: '🧪 Test de configuration complet',
-        cssClass: 'test-webhook-alert',
+        header: '🔗 Lien de paiement test',
         message: `
           <div style="text-align: left;">
-            <p><strong>✅ Étape 1 : Lien généré</strong></p>
+            <p style="font-size: 14px; margin-bottom: 12px;">
+              Lien de test généré (1€) :
+            </p>
             <p style="font-size: 12px; word-break: break-all; background: #f0f0f0; padding: 8px; border-radius: 4px;">
               ${result.paymentUrl}
             </p>
 
-            <p style="margin-top: 16px;"><strong>📋 Étape 2 : Effectuer le paiement test</strong></p>
-            <ol style="font-size: 13px; padding-left: 20px;">
-              <li>Cliquez sur "Ouvrir le lien"</li>
-              <li>Utilisez la carte test Stripe :
-                <ul>
-                  <li><strong>Numéro</strong> : 4242 4242 4242 4242</li>
-                  <li><strong>Date</strong> : n'importe quelle date future</li>
-                  <li><strong>CVC</strong> : n'importe quel 3 chiffres</li>
-                </ul>
-              </li>
-              <li>Complétez le paiement</li>
-            </ol>
-
-            <p style="margin-top: 16px;"><strong>🔍 Étape 3 : Vérification webhook</strong></p>
-            <p style="font-size: 13px;">
-              Après le paiement, cliquez sur "Vérifier webhook" pour voir si le statut a été mis à jour automatiquement.
+            <p style="margin-top: 16px; font-size: 13px;">
+              <strong>Carte test Stripe :</strong>
             </p>
-
-            <p style="margin-top: 12px; padding: 8px; background: #fff3cd; border-radius: 4px; font-size: 12px;">
-              ⚠️ <strong>Si le webhook ne fonctionne pas</strong>, vérifiez que l'URL webhook est bien configurée dans votre dashboard Stripe.
-            </p>
+            <ul style="font-size: 13px; padding-left: 20px;">
+              <li><strong>Numéro</strong> : 4242 4242 4242 4242</li>
+              <li><strong>Date</strong> : n'importe quelle date future</li>
+              <li><strong>CVC</strong> : n'importe quel 3 chiffres</li>
+            </ul>
           </div>
         `,
         buttons: [
           {
-            text: 'Copier lien',
+            text: 'Copier',
             handler: () => {
               navigator.clipboard.writeText(result.paymentUrl!);
               this.showToast('✅ Lien copié', 'success');
             }
           },
           {
-            text: 'Ouvrir le lien',
+            text: 'Ouvrir',
             handler: () => {
               window.open(result.paymentUrl, '_blank');
-            }
-          },
-          {
-            text: 'Vérifier webhook',
-            cssClass: 'primary-button',
-            handler: async () => {
-              await this.checkWebhookResult();
             }
           },
           {
@@ -358,99 +335,6 @@ export class PaymentConfigComponent implements OnInit {
     // TODO: Implémenter un test webhook
   }
 
-  /**
-   * Vérifier si le webhook a traité le paiement
-   */
-  async checkWebhookResult() {
-    if (!this.testOrderId) {
-      await this.showToast('❌ Aucun test en cours', 'warning');
-      return;
-    }
-
-    const loading = await this.toastController.create({
-      message: '🔍 Vérification webhook...',
-      duration: 0
-    });
-    await loading.present();
-
-    try {
-      const result = await this.paymentService.checkWebhookStatus(this.testOrderId);
-
-      loading.dismiss();
-
-      if (result.webhookWorking) {
-        // Webhook fonctionne !
-        const alert = await this.alertController.create({
-          header: '✅ Webhook configuré correctement !',
-          message: `
-            <div style="text-align: center; padding: 20px;">
-              <p style="font-size: 48px; margin: 0;">✅</p>
-              <p style="font-size: 16px; font-weight: bold; margin: 16px 0 8px 0;">
-                Félicitations !
-              </p>
-              <p style="font-size: 14px; color: #666;">
-                Le webhook Stripe est correctement configuré.<br>
-                Le statut du paiement a été mis à jour automatiquement.
-              </p>
-              <div style="margin-top: 16px; padding: 12px; background: #d4edda; border-radius: 8px;">
-                <p style="margin: 0; font-size: 13px; color: #155724;">
-                  <strong>Statut :</strong> ${result.paymentStatus}
-                </p>
-              </div>
-            </div>
-          `,
-          buttons: ['Super !']
-        });
-        await alert.present();
-
-      } else {
-        // Webhook ne fonctionne pas
-        const alert = await this.alertController.create({
-          header: '⚠️ Webhook non configuré',
-          message: `
-            <div style="text-align: left;">
-              <p><strong>Statut actuel :</strong> ${result.paymentStatus}</p>
-
-              <p style="margin-top: 16px;">Le webhook n'a pas mis à jour le statut automatiquement.</p>
-
-              <p style="margin-top: 12px;"><strong>📋 Actions à faire :</strong></p>
-              <ol style="font-size: 13px; padding-left: 20px;">
-                <li>Vérifiez que vous avez bien effectué le paiement</li>
-                <li>Si le paiement est fait, configurez le webhook dans Stripe :
-                  <ul style="margin-top: 8px;">
-                    <li>Allez dans votre dashboard Stripe</li>
-                    <li>Développeurs → Webhooks</li>
-                    <li>Ajoutez l'endpoint webhook</li>
-                    <li>Sélectionnez les événements nécessaires</li>
-                  </ul>
-                </li>
-                <li>Réessayez le test après configuration</li>
-              </ol>
-            </div>
-          `,
-          buttons: [
-            {
-              text: 'Voir Dashboard Stripe',
-              handler: () => {
-                window.open('https://dashboard.stripe.com/webhooks', '_blank');
-              }
-            },
-            {
-              text: 'OK'
-            }
-          ]
-        });
-        await alert.present();
-      }
-
-      // Réinitialiser
-      this.testOrderId = null;
-
-    } catch (error: any) {
-      loading.dismiss();
-      await this.showToast(`❌ ${error.message}`, 'danger');
-    }
-  }
 
   private async showToast(message: string, color: 'success' | 'warning' | 'danger') {
     const toast = await this.toastController.create({

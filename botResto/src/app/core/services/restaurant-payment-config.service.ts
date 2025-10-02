@@ -236,69 +236,53 @@ export class RestaurantPaymentConfigService {
   }
 
   /**
-   * Créer une commande de test pour générer un lien de paiement
-   */
-  async createTestOrder(restaurantId: number): Promise<number> {
-    // Créer une commande test dans france_orders
-    const { data: order, error } = await this.supabaseFranceService.client
-      .from('france_orders')
-      .insert({
-        restaurant_id: restaurantId,
-        order_number: `TEST-${Date.now()}`,
-        customer_name: 'Test Webhook',
-        phone_number: '0000000000',
-        delivery_mode: 'sur_place',
-        total_amount: 1.00,
-        payment_mode: 'maintenant',
-        online_payment_status: 'pending',
-        status: 'pending',
-        is_test_order: true, // Flag pour identifier les commandes test
-        items: [{
-          name: 'Test Stripe Webhook',
-          quantity: 1,
-          price: 1.00
-        }]
-      })
-      .select('id')
-      .single();
-
-    if (error) throw error;
-    return order.id;
-  }
-
-  /**
-   * Générer un lien de paiement test
+   * Générer un lien de paiement test (sans créer de commande)
    */
   async generateTestPaymentLink(restaurantId: number): Promise<{
     success: boolean;
-    orderId?: number;
     paymentUrl?: string;
     error?: string;
   }> {
     try {
-      // 1. Créer une commande test
-      const orderId = await this.createTestOrder(restaurantId);
+      // Récupérer la config du restaurant
+      const config = await this.getConfig(restaurantId);
 
-      // 2. Appeler l'Edge Function pour générer le lien
-      const { data, error } = await this.supabaseFranceService.client.functions.invoke(
-        'payment-link-sender',
-        {
-          body: {
-            orderId: orderId,
-            senderType: 'system',
-            customMessage: '🧪 Ceci est un lien de paiement TEST (1€)'
-          }
-        }
-      );
-
-      if (error || !data?.success) {
-        throw new Error(data?.error || error?.message || 'Erreur génération lien');
+      if (!config || config.provider !== 'stripe') {
+        throw new Error('Configuration Stripe non trouvée');
       }
+
+      if (!config.api_key_secret) {
+        throw new Error('Clé secrète Stripe manquante');
+      }
+
+      // Créer une session Stripe directement
+      const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.api_key_secret}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          'mode': 'payment',
+          'line_items[0][price_data][currency]': config.config?.currency || 'eur',
+          'line_items[0][price_data][product_data][name]': 'Test Configuration Stripe',
+          'line_items[0][price_data][unit_amount]': '100', // 1€ en centimes
+          'line_items[0][quantity]': '1',
+          'success_url': config.success_url || FRANCE_CONFIG.payment.successUrl,
+          'cancel_url': config.cancel_url || FRANCE_CONFIG.payment.cancelUrl
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Erreur Stripe');
+      }
+
+      const session = await response.json();
 
       return {
         success: true,
-        orderId: orderId,
-        paymentUrl: data.paymentUrl
+        paymentUrl: session.url
       };
     } catch (error: any) {
       return {
@@ -306,33 +290,5 @@ export class RestaurantPaymentConfigService {
         error: error.message
       };
     }
-  }
-
-  /**
-   * Vérifier si le webhook a traité la commande test
-   */
-  async checkWebhookStatus(orderId: number): Promise<{
-    webhookWorking: boolean;
-    paymentStatus: string;
-    details?: any;
-  }> {
-    const { data: order } = await this.supabaseFranceService.client
-      .from('france_orders')
-      .select('online_payment_status, payment_method')
-      .eq('id', orderId)
-      .single();
-
-    if (!order) {
-      return {
-        webhookWorking: false,
-        paymentStatus: 'unknown'
-      };
-    }
-
-    return {
-      webhookWorking: order.online_payment_status === 'paid',
-      paymentStatus: order.online_payment_status,
-      details: order
-    };
   }
 }
