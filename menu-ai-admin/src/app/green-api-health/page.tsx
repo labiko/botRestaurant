@@ -67,12 +67,12 @@ export default function GreenAPIHealthPage() {
     loadRebootConfig();
     const interval = setInterval(loadData, 60000);
 
-    // Polling pour traiter la queue de reboots planifiés (toutes les 30 secondes)
-    const queueInterval = setInterval(processQueue, 30000);
+    // Polling désactivé - Les jobs cron gèrent automatiquement les reboots planifiés
+    // const queueInterval = setInterval(processQueue, 30000);
 
     return () => {
       clearInterval(interval);
-      clearInterval(queueInterval);
+      // clearInterval(queueInterval);
     };
   }, []);
 
