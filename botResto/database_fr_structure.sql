@@ -151,7 +151,7 @@ CREATE TABLE public.france_delivery_drivers (
   restaurant_id integer NOT NULL,
   first_name character varying NOT NULL,
   last_name character varying NOT NULL,
-  phone_number character varying NOT NULL UNIQUE CHECK (phone_number::text ~ '^0[67][0-9]{8}$'::text),
+  phone_number character varying NOT NULL UNIQUE,
   email character varying,
   is_active boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
@@ -161,6 +161,7 @@ CREATE TABLE public.france_delivery_drivers (
   current_longitude numeric,
   last_location_update timestamp with time zone DEFAULT now(),
   password character varying NOT NULL DEFAULT '000000'::character varying,
+  country_code character varying,
   CONSTRAINT france_delivery_drivers_pkey PRIMARY KEY (id),
   CONSTRAINT france_delivery_drivers_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
 );
@@ -252,6 +253,7 @@ CREATE TABLE public.france_orders (
   delivery_longitude numeric,
   delivery_address_type character varying DEFAULT 'text'::character varying,
   online_payment_status character varying DEFAULT 'not_sent'::character varying CHECK (online_payment_status::text = ANY (ARRAY['not_sent'::character varying, 'link_sent'::character varying, 'paid'::character varying, 'failed'::character varying]::text[])),
+  customer_country_code character varying,
   CONSTRAINT france_orders_pkey PRIMARY KEY (id),
   CONSTRAINT france_orders_delivery_address_id_fkey FOREIGN KEY (delivery_address_id) REFERENCES public.france_customer_addresses(id),
   CONSTRAINT france_orders_driver_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id),
