@@ -97,11 +97,11 @@ Merci pour votre commande !
   constructor(private http: HttpClient) {}
 
   /**
-   * Envoie un message WhatsApp à un client français
+   * Envoie un message WhatsApp à un client
    */
-  async sendMessage(clientPhone: string, message: string, orderNumber?: string): Promise<boolean> {
+  async sendMessage(clientPhone: string, message: string, orderNumber?: string, countryCode?: string): Promise<boolean> {
     try {
-      const cleanPhone = this.cleanFrenchPhoneNumber(clientPhone);
+      const cleanPhone = this.cleanPhoneNumber(clientPhone, countryCode);
       const chatId = `${cleanPhone}@c.us`;
       const url = `${this.baseUrl}/waInstance${this.GREEN_API_INSTANCE_ID_FRANCE}/sendMessage/${this.GREEN_API_TOKEN_FRANCE}`;
       
@@ -145,9 +145,10 @@ Merci pour votre commande !
    * Envoie une notification de changement de statut
    */
   async sendOrderStatusNotification(
-    clientPhone: string, 
-    status: keyof MessageTemplateFrance, 
-    orderData: OrderDataFrance
+    clientPhone: string,
+    status: keyof MessageTemplateFrance,
+    orderData: OrderDataFrance,
+    countryCode?: string
   ): Promise<boolean> {
     try {
       console.log(`🔍 [WhatsAppFrance] SendStatusNotification called with status: "${status}"`);
@@ -166,8 +167,8 @@ Merci pour votre commande !
       const message = this.fillTemplateFrance(template, orderData);
       
       console.log(`📄 [WhatsAppFrance] Final message:`, message.substring(0, 200) + '...');
-      
-      const result = await this.sendMessage(clientPhone, message, orderData.orderNumber);
+
+      const result = await this.sendMessage(clientPhone, message, orderData.orderNumber, countryCode);
       console.log(`📤 [WhatsAppFrance] SendMessage result:`, result);
       
       return result;
@@ -179,44 +180,33 @@ Merci pour votre commande !
   }
 
   /**
-   * Nettoie et formate les numéros français
+   * Nettoie et formate les numéros de téléphone internationaux
    */
-  private cleanFrenchPhoneNumber(phone: string): string {
+  private cleanPhoneNumber(phone: string, countryCode?: string): string {
     let cleaned = phone.replace(/[^\d+]/g, '');
-    
-    console.log(`🇫🇷 [WhatsAppFrance] Original phone: ${phone}, Cleaned: ${cleaned}`);
-    
+
+    console.log(`📞 [WhatsApp] Original: ${phone}, Code pays: ${countryCode}`);
+
     // Enlever le + si présent
     if (cleaned.startsWith('+')) {
       cleaned = cleaned.substring(1);
     }
-    
-    // Si commence par 00, enlever
-    if (cleaned.startsWith('00')) {
-      cleaned = cleaned.substring(2);
-    }
-    
-    // Si numéro français avec code pays 33
-    if (cleaned.startsWith('33') && cleaned.length >= 11) {
-      console.log(`🇫🇷 [WhatsAppFrance] French number with country code: ${cleaned}`);
+
+    // Si code pays fourni, vérifier qu'il est présent
+    if (countryCode) {
+      if (!cleaned.startsWith(countryCode)) {
+        // Enlever le 0 initial si présent
+        if (cleaned.startsWith('0')) {
+          cleaned = cleaned.substring(1);
+        }
+        cleaned = countryCode + cleaned;
+      }
+      console.log(`✅ [WhatsApp] Formatted with code ${countryCode}: ${cleaned}`);
       return cleaned;
     }
-    
-    // Si numéro français local (06, 07, etc.)
-    if (cleaned.startsWith('0') && cleaned.length === 10) {
-      cleaned = '33' + cleaned.substring(1);
-      console.log(`🇫🇷 [WhatsAppFrance] French local number, added country code: ${cleaned}`);
-      return cleaned;
-    }
-    
-    // Si commence par 6 ou 7 (format mobile français sans le 0)
-    if ((cleaned.startsWith('6') || cleaned.startsWith('7')) && cleaned.length === 9) {
-      cleaned = '33' + cleaned;
-      console.log(`🇫🇷 [WhatsAppFrance] French mobile without 0, added country code: ${cleaned}`);
-      return cleaned;
-    }
-    
-    console.log(`🇫🇷 [WhatsAppFrance] Returning cleaned number as-is: ${cleaned}`);
+
+    // Sinon, le numéro est déjà au format international complet
+    console.log(`✅ [WhatsApp] International number: ${cleaned}`);
     return cleaned;
   }
 
@@ -409,11 +399,12 @@ ${restaurantName} 💫`;
    * Envoie le code d'accès à un nouveau livreur (Template 2 - Chaleureux)
    */
   async sendDriverAccessCode(
-    driverPhone: string, 
-    driverName: string, 
+    driverPhone: string,
+    driverName: string,
     accessCode: string,
     restaurantName: string,
-    restaurantPhone?: string
+    restaurantPhone?: string,
+    driverCountryCode?: string
   ): Promise<boolean> {
     try {
       console.log(`🔐 [WhatsAppFrance] Sending access code to driver: ${driverName} (${driverPhone})`);
@@ -446,14 +437,14 @@ Prêt pour les premières commandes ? 🍕🏍️
 
 Bonne route partenaire ! 💪`;
 
-      const result = await this.sendMessage(driverPhone, message);
-      
+      const result = await this.sendMessage(driverPhone, message, undefined, driverCountryCode);
+
       if (result) {
         console.log(`✅ [WhatsAppFrance] Access code sent successfully to ${driverName}`);
       } else {
         console.error(`❌ [WhatsAppFrance] Failed to send access code to ${driverName}`);
       }
-      
+
       return result;
       
     } catch (error) {

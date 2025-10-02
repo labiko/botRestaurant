@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { SupabaseFranceService } from './supabase-france.service';
 import { FuseauHoraireService } from './fuseau-horaire.service';
+import { PhoneNumberUtilsService } from './phone-number-utils.service';
 
 export interface FranceDriver {
   id: number;
@@ -42,7 +43,8 @@ export class DriversFranceService {
 
   constructor(
     private supabaseFranceService: SupabaseFranceService,
-    private fuseauHoraireService: FuseauHoraireService
+    private fuseauHoraireService: FuseauHoraireService,
+    private phoneNumberUtils: PhoneNumberUtilsService
   ) { }
 
   /**
@@ -130,6 +132,9 @@ export class DriversFranceService {
    */
   async createDriver(restaurantId: number, driverData: CreateDriverRequest): Promise<boolean> {
     try {
+      // Extraire le code pays du numéro
+      const countryCode = this.phoneNumberUtils.extractCountryCode(driverData.phone_number);
+
       const { error } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
         .insert({
@@ -140,7 +145,8 @@ export class DriversFranceService {
           email: driverData.email,
           password: driverData.access_code, // Code 6 chiffres au lieu du hash
           is_active: driverData.is_active,
-          is_online: driverData.is_online
+          is_online: driverData.is_online,
+          country_code: countryCode
         });
 
       if (error) {

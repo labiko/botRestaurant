@@ -54,24 +54,45 @@
           <span style="color: #6c5ce7;">📞</span> Contact
         </h3>
 
-        <!-- Téléphone -->
+        <!-- Sélecteur de pays -->
         <div style="margin-bottom: 15px;">
           <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #2d3436; font-size: 14px;">
-            Téléphone mobile <span style="color: #e17055;">*</span>
+            🌍 Pays <span style="color: #e17055;">*</span>
           </label>
-          <input 
-            type="tel" 
+          <select
+            formControlName="country_code_selector"
+            (change)="onCountryChange()"
+            style="width: 100%; padding: 10px; border: 2px solid #6c5ce7; border-radius: 6px; font-size: 14px; box-sizing: border-box; cursor: pointer; background: white;"
+            [style.border-color]="hasError('country_code_selector') ? '#e17055' : '#6c5ce7'">
+            <option *ngFor="let country of availableCountries" [value]="country.code">
+              {{country.flag}} {{country.name}} (+{{country.code}})
+            </option>
+          </select>
+        </div>
+
+        <!-- Téléphone local -->
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #2d3436; font-size: 14px;">
+            📱 Numéro de téléphone <span style="color: #e17055;">*</span>
+          </label>
+          <input
+            type="tel"
             formControlName="phone_number"
-            placeholder="0612345678"
-            maxlength="10"
+            placeholder="Ex: 0612345678 ou 620123456"
+            maxlength="15"
             (input)="onPhoneInput($event)"
             style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
             [style.border-color]="hasError('phone_number') ? '#e17055' : '#ddd'"
             (focus)="$event.target.style.borderColor='#6c5ce7'"
             (blur)="$event.target.style.borderColor = hasError('phone_number') ? '#e17055' : '#ddd'">
-          <div *ngIf="!hasError('phone_number') && driverForm.get('phone_number')?.value" style="color: #636e72; font-size: 12px; margin-top: 4px; font-style: italic;">
-            {{formattedPhone}}
+
+          <!-- Numéro final formaté -->
+          <div *ngIf="!hasError('phone_number') && getFinalPhoneNumber()" style="margin-top: 8px; padding: 8px; background: #d1f2eb; border-radius: 6px; border-left: 4px solid #00b894;">
+            <p style="margin: 0; color: #00b894; font-size: 13px; font-weight: 600;">
+              ✅ Numéro final : {{getFinalPhoneNumber()}}
+            </p>
           </div>
+
           <div *ngIf="hasError('phone_number')" style="color: #e17055; font-size: 12px; margin-top: 4px;">
             {{getErrorMessage('phone_number')}}
           </div>

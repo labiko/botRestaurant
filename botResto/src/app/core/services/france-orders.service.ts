@@ -462,7 +462,8 @@ export class FranceOrdersService {
       const success = await this.whatsAppFranceService.sendOrderStatusNotification(
         orderData.phone_number,
         whatsappStatus,
-        this.formatOrderDataForWhatsApp(orderData)
+        this.formatOrderDataForWhatsApp(orderData),
+        orderData.customer_country_code
       );
 
       if (success) {

@@ -45,26 +45,51 @@
     </div>
 
     <form [formGroup]="loginForm" (ngSubmit)="onLogin()" class="login-form">
+      <!-- Sélecteur de pays pour livreur uniquement -->
+      <div class="input-container" *ngIf="selectedProfileType === 'driver'">
+        <ion-item class="modern-input" lines="none">
+          <div class="input-prefix">
+            <ion-icon name="globe-outline"></ion-icon>
+          </div>
+          <div class="input-content">
+            <ion-label position="floating" class="modern-label">Pays</ion-label>
+            <ion-select formControlName="country_code_selector" interface="popover">
+              <ion-select-option *ngFor="let country of availableCountries" [value]="country.code">
+                {{country.flag}} {{country.name}} (+{{country.code}})
+              </ion-select-option>
+            </ion-select>
+          </div>
+        </ion-item>
+      </div>
+
+      <!-- Sélecteur de pays pour restaurant -->
+      <div class="input-container" *ngIf="selectedProfileType === 'restaurant'">
+        <ion-item class="modern-input" lines="none">
+          <div class="input-prefix">
+            <ion-icon name="globe-outline"></ion-icon>
+          </div>
+          <div class="input-content">
+            <ion-label position="floating" class="modern-label">Pays</ion-label>
+            <ion-select formControlName="country_code_selector" interface="popover">
+              <ion-select-option *ngFor="let country of availableCountries" [value]="country.code">
+                {{country.flag}} {{country.name}} (+{{country.code}})
+              </ion-select-option>
+            </ion-select>
+          </div>
+        </ion-item>
+      </div>
+
       <div class="input-container">
         <ion-item class="modern-input phone-input" lines="none">
           <div class="input-prefix">
-            <div class="french-indicator">
-              <div class="flag-background">
-                <span class="flag-blue"></span>
-                <span class="flag-white"></span>
-                <span class="flag-red"></span>
-              </div>
-            </div>
             <ion-icon name="call-outline" class="phone-icon"></ion-icon>
           </div>
           <div class="input-content">
-            <ion-label position="floating" class="modern-label">
-              {{ selectedProfileType === 'restaurant' ? 'Téléphone restaurant' : 'Numéro mobile (06 ou 07)' }}
-            </ion-label>
-            <ion-input 
-              formControlName="phone" 
-              type="tel" 
-              [placeholder]="selectedProfileType === 'restaurant' ? '06 12 34 56 78' : getPhoneFormatHelp()"
+            <ion-label position="floating" class="modern-label">Numéro local</ion-label>
+            <ion-input
+              formControlName="phone"
+              type="tel"
+              [placeholder]="getPhoneFormatHelp()"
               clearInput="true"
               class="phone-number-input">
             </ion-input>

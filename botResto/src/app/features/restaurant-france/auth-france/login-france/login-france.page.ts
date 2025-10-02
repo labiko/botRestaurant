@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { LoadingController, ToastController } from '@ionic/angular';
 import { AuthFranceService } from '../services/auth-france.service';
 import { PhoneFormatService } from '../../../../core/services/phone-format.service';
+import { PhoneNumberUtilsService, CountryCodeConfig } from '../../../../core/services/phone-number-utils.service';
 import { Location } from '@angular/common';
 
 @Component({
@@ -19,11 +20,13 @@ export class LoginFrancePage implements OnInit, OnDestroy {
   showPassword = false;
   isLoading = false;
   errorMessage = '';
+  availableCountries: CountryCodeConfig[] = [];
 
   constructor(
     private formBuilder: FormBuilder,
     private authFranceService: AuthFranceService,
     private phoneFormatService: PhoneFormatService,
+    private phoneNumberUtils: PhoneNumberUtilsService,
     private router: Router,
     private loadingController: LoadingController,
     private toastController: ToastController,
@@ -34,15 +37,19 @@ export class LoginFrancePage implements OnInit, OnDestroy {
 
   private setupForm() {
     this.loginForm = this.formBuilder.group({
+      country_code_selector: ['33', [Validators.required]],
       phone: ['', [Validators.required, this.phoneValidator.bind(this)]],
       password: ['', [Validators.required, this.passwordValidator.bind(this)]]
     });
   }
 
   ngOnInit() {
+    // Charger les pays disponibles
+    this.availableCountries = this.phoneNumberUtils.getAllCountryCodes();
+
     // Bloquer complètement la navigation arrière
     this.preventBackNavigation();
-    
+
     // Vérifier si déjà connecté
     if (this.authFranceService.isAuthenticated()) {
       this.redirectToDashboard();
@@ -117,8 +124,19 @@ export class LoginFrancePage implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     try {
+      // Combiner indicatif + numéro local pour tous les types
+      const selectedCode = this.loginForm.value.country_code_selector;
+      let localNumber = this.loginForm.value.phone.trim().replace(/\s+/g, '');
+
+      // Enlever le 0 initial si présent
+      if (localNumber.startsWith('0')) {
+        localNumber = localNumber.substring(1);
+      }
+
+      const finalPhoneNumber = `${selectedCode}${localNumber}`;
+
       const credentials = {
-        phone: this.loginForm.value.phone.trim(),
+        phone: finalPhoneNumber,
         password: this.loginForm.value.password,
         userType: this.selectedProfileType
       };
@@ -171,15 +189,11 @@ export class LoginFrancePage implements OnInit, OnDestroy {
     const phone = control.value;
     if (!phone) return null;
 
-    // Pour les livreurs, utiliser les règles strictes
-    if (this.selectedProfileType === 'driver') {
-      const validation = this.phoneFormatService.isValidDriverPhone(phone);
-      return validation.valid ? null : { phoneInvalid: validation.message };
-    }
+    // Validation numéro local uniquement (8-15 chiffres)
+    const cleanPhone = phone.replace(/\D/g, '');
 
-    // Pour les restaurants, validation plus souple
-    if (phone.length < 10) {
-      return { phoneInvalid: 'Numéro trop court' };
+    if (cleanPhone.length < 8 || cleanPhone.length > 15) {
+      return { phoneInvalid: 'Le numéro doit contenir entre 8 et 15 chiffres' };
     }
 
     return null;
@@ -206,10 +220,7 @@ export class LoginFrancePage implements OnInit, OnDestroy {
    * Obtenir le texte d'aide pour le format attendu
    */
   getPhoneFormatHelp(): string {
-    if (this.selectedProfileType === 'driver') {
-      return this.phoneFormatService.getPhoneFormatExample();
-    }
-    return 'Numéro de téléphone du restaurant';
+    return '0612345678 ou 620123456';
   }
 
   /**

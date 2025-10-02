@@ -114,9 +114,9 @@ export class RestaurantPaymentConfigService {
         send_on_delivery: config.send_on_delivery
       };
 
-      // Supprimer les champs undefined
+      // Supprimer les champs undefined, null et chaînes vides
       Object.keys(validFields).forEach(key => {
-        if (validFields[key] === undefined) {
+        if (validFields[key] === undefined || validFields[key] === null || validFields[key] === '') {
           delete validFields[key];
         }
       });

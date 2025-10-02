@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { SupabaseFranceService } from '../../../../core/services/supabase-france.service';
 import { PhoneFormatService } from '../../../../core/services/phone-format.service';
+import { PhoneNumberUtilsService } from '../../../../core/services/phone-number-utils.service';
 import { DriverSessionMonitorService } from '../../../../core/services/driver-session-monitor.service';
 
 export interface FranceUser {
@@ -15,6 +16,7 @@ export interface FranceUser {
   email?: string;
   restaurantId: number;
   isActive: boolean;
+  countryCode?: string; // Code pays du livreur
 }
 
 export interface AuthResult {
@@ -44,6 +46,7 @@ export class AuthFranceService {
   constructor(
     private supabaseFranceService: SupabaseFranceService,
     private phoneFormatService: PhoneFormatService,
+    private phoneNumberUtils: PhoneNumberUtilsService,
     private driverSessionMonitorService: DriverSessionMonitorService
   ) {
     this.checkExistingSession();
@@ -90,10 +93,19 @@ export class AuthFranceService {
   async loginRestaurant(phone: string, password: string): Promise<AuthResult> {
     try {
 
+      // Valider que le numéro contient un country_code
+      const countryCode = this.phoneNumberUtils.extractCountryCode(phone);
+      if (!countryCode) {
+        return {
+          success: false,
+          message: 'Format de téléphone invalide'
+        };
+      }
+
       // Rechercher le restaurant par téléphone
       const { data: restaurant, error } = await this.supabaseFranceService.client
         .from('france_restaurants')
-        .select('id, name, phone, whatsapp_number, password_hash, is_active')
+        .select('id, name, phone, whatsapp_number, password_hash, is_active, country_code')
         .or(`phone.eq.${phone},whatsapp_number.eq.${phone}`)
         .single();
 
@@ -166,7 +178,8 @@ export class AuthFranceService {
         name: restaurant.name,
         phoneNumber: phone,
         restaurantId: restaurant.id,
-        isActive: restaurant.is_active
+        isActive: restaurant.is_active,
+        countryCode: restaurant.country_code
       };
 
       this.setCurrentUser(user);
@@ -189,29 +202,26 @@ export class AuthFranceService {
   async loginDriver(phone: string, password: string): Promise<AuthResult> {
     try {
 
-      // Valider le format du numéro de téléphone
-      const phoneValidation = this.phoneFormatService.isValidDriverPhone(phone);
-      if (!phoneValidation.valid) {
-        return { 
-          success: false, 
-          message: phoneValidation.message || 'Format de téléphone invalide' 
+      // Valider que le numéro contient un country_code
+      const countryCode = this.phoneNumberUtils.extractCountryCode(phone);
+      if (!countryCode) {
+        return {
+          success: false,
+          message: 'Format de téléphone invalide'
         };
       }
-
-      // Normaliser le numéro pour la recherche
-      const normalizedPhone = this.phoneFormatService.normalizeForStorage(phone);
 
       // Rechercher le livreur par téléphone avec nom du restaurant
       const { data: driver, error } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
-        .select('id, restaurant_id, first_name, last_name, phone_number, email, password, is_active, france_restaurants(name)')
-        .eq('phone_number', normalizedPhone)
+        .select('id, restaurant_id, first_name, last_name, phone_number, country_code, email, password, is_active, france_restaurants(name)')
+        .eq('phone_number', phone)
         .single();
 
-      console.log('🔍 [AuthFrance] Recherche livreur:', { 
-        normalizedPhone, 
-        driver, 
-        error 
+      console.log('🔍 [AuthFrance] Recherche livreur:', {
+        phone,
+        driver,
+        error
       });
 
       if (error || !driver) {
@@ -251,10 +261,11 @@ export class AuthFranceService {
         firstName: driver.first_name,
         lastName: driver.last_name,
         restaurantName: driver.france_restaurants?.[0]?.name,
-        phoneNumber: normalizedPhone,
+        phoneNumber: driver.phone_number,
         email: driver.email,
         restaurantId: driver.restaurant_id,
-        isActive: driver.is_active
+        isActive: driver.is_active,
+        countryCode: driver.country_code
       };
 
       this.setCurrentUser(user);
@@ -415,10 +426,10 @@ export class AuthFranceService {
       }
 
       if (session.user_type === 'restaurant') {
-        
+
         const { data: restaurant, error: restError } = await this.supabaseFranceService.client
           .from('france_restaurants')
-          .select('id, name, phone, whatsapp_number, is_active')
+          .select('id, name, phone, whatsapp_number, is_active, country_code')
           .eq('id', session.user_id)
           .single();
 
@@ -430,15 +441,16 @@ export class AuthFranceService {
             name: restaurant.name,
             phoneNumber: restaurant.whatsapp_number || restaurant.phone,
             restaurantId: restaurant.id,
-            isActive: restaurant.is_active
+            isActive: restaurant.is_active,
+            countryCode: restaurant.country_code
           };
         }
       } else if (session.user_type === 'driver') {
         console.log('🚴 [AuthFrance] Récupération données livreur...');
-        
+
         const { data: driver, error: driverError } = await this.supabaseFranceService.client
           .from('france_delivery_drivers')
-          .select('id, restaurant_id, first_name, last_name, phone_number, email, is_active, france_restaurants(name)')
+          .select('id, restaurant_id, first_name, last_name, phone_number, country_code, email, is_active, france_restaurants(name)')
           .eq('id', session.user_id)
           .single();
 
@@ -454,7 +466,8 @@ export class AuthFranceService {
             phoneNumber: driver.phone_number,
             email: driver.email,
             restaurantId: driver.restaurant_id,
-            isActive: driver.is_active
+            isActive: driver.is_active,
+            countryCode: driver.country_code
           };
         }
       }

@@ -4,6 +4,7 @@ import { DeliveryTokenService, DeliveryToken } from './delivery-token.service';
 import { GreenApiFranceService } from '../../features/restaurant-france/services/green-api-france.service';
 import { UniversalOrderDisplayService } from './universal-order-display.service';
 import { FuseauHoraireService } from './fuseau-horaire.service';
+import { WhatsAppNotificationFranceService } from './whatsapp-notification-france.service';
 
 export interface NotificationData {
   orderId: number;
@@ -35,7 +36,8 @@ export class DeliveryNotificationService {
     private deliveryTokenService: DeliveryTokenService,
     private greenApiService: GreenApiFranceService,
     private universalOrderDisplayService: UniversalOrderDisplayService,
-    private fuseauHoraireService: FuseauHoraireService
+    private fuseauHoraireService: FuseauHoraireService,
+    private whatsAppFranceService: WhatsAppNotificationFranceService
   ) {}
 
   /**
@@ -410,7 +412,7 @@ ${personalizedUrl}
       // Récupérer le numéro de téléphone du livreur
       const { data: driver, error } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
-        .select('phone_number, first_name, last_name')
+        .select('phone_number, first_name, last_name, country_code')
         .eq('id', driverId)
         .single();
 
@@ -424,15 +426,20 @@ ${personalizedUrl}
         return { success: false, error: 'Numéro de téléphone manquant' };
       }
 
-      // Envoyer via Green API
-      const result = await this.greenApiService.sendMessage(driver.phone_number, message);
-      
-      if (result.success) {
-        console.log(`✅ [DeliveryNotification] Message envoyé à ${driver.first_name} ${driver.last_name} (${driver.phone_number}) - ID: ${result.messageId}`);
+      // Envoyer via WhatsApp France Service
+      const result = await this.whatsAppFranceService.sendMessage(
+        driver.phone_number,
+        message,
+        undefined,
+        driver.country_code
+      );
+
+      if (result) {
+        console.log(`✅ [DeliveryNotification] Message envoyé à ${driver.first_name} ${driver.last_name} (${driver.phone_number})`);
         return { success: true };
       } else {
-        console.error(`❌ [DeliveryNotification] Échec envoi à ${driver.phone_number}:`, result.error);
-        return { success: false, error: result.error || 'Échec envoi WhatsApp' };
+        console.error(`❌ [DeliveryNotification] Échec envoi à ${driver.phone_number}`);
+        return { success: false, error: 'Échec envoi WhatsApp' };
       }
 
     } catch (error) {

@@ -6,6 +6,7 @@
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
+import { PhoneNumberUtils } from '../utils/PhoneNumberUtils.ts';
 
 /**
  * Obtenir l'heure actuelle dans le bon fuseau horaire PARIS
@@ -45,6 +46,7 @@ function getCurrentTime(timezone: string = 'Europe/Paris'): Date {
 export interface OrderData {
   restaurant_id: number;
   phone_number: string;
+  customer_country_code?: string | null;
   items: any;
   total_amount: number;
   delivery_mode: string;
@@ -402,7 +404,12 @@ export class OrderService {
       }
       
       const cleanPhone = phoneNumber.replace('@c.us', '');
-      
+
+      // Extraire le code pays du numéro
+      const customerCountryCode = PhoneNumberUtils.extractCountryCode(cleanPhone);
+
+      console.log(`📱 [OrderService] Numéro: ${cleanPhone}, Code pays: ${customerCountryCode}`);
+
       // Calculer le total
       const totalAmount = this.calculateCartTotal(cart);
       
@@ -417,6 +424,7 @@ export class OrderService {
       const orderData: OrderData = {
         restaurant_id: restaurantId,
         phone_number: cleanPhone,
+        customer_country_code: customerCountryCode,
         items: cart,
         total_amount: totalAmount,
         delivery_mode: deliveryMode,
