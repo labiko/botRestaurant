@@ -234,4 +234,105 @@ export class RestaurantPaymentConfigService {
       { value: 'orange_money', label: 'Orange Money', icon: 'logo-bitcoin' }
     ];
   }
+
+  /**
+   * Créer une commande de test pour générer un lien de paiement
+   */
+  async createTestOrder(restaurantId: number): Promise<number> {
+    // Créer une commande test dans france_orders
+    const { data: order, error } = await this.supabaseFranceService.client
+      .from('france_orders')
+      .insert({
+        restaurant_id: restaurantId,
+        order_number: `TEST-${Date.now()}`,
+        customer_name: 'Test Webhook',
+        phone_number: '0000000000',
+        delivery_mode: 'sur_place',
+        total_amount: 1.00,
+        payment_mode: 'maintenant',
+        online_payment_status: 'pending',
+        status: 'pending',
+        is_test_order: true, // Flag pour identifier les commandes test
+        items: [{
+          name: 'Test Stripe Webhook',
+          quantity: 1,
+          price: 1.00
+        }]
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+    return order.id;
+  }
+
+  /**
+   * Générer un lien de paiement test
+   */
+  async generateTestPaymentLink(restaurantId: number): Promise<{
+    success: boolean;
+    orderId?: number;
+    paymentUrl?: string;
+    error?: string;
+  }> {
+    try {
+      // 1. Créer une commande test
+      const orderId = await this.createTestOrder(restaurantId);
+
+      // 2. Appeler l'Edge Function pour générer le lien
+      const { data, error } = await this.supabaseFranceService.client.functions.invoke(
+        'payment-link-sender',
+        {
+          body: {
+            orderId: orderId,
+            senderType: 'system',
+            customMessage: '🧪 Ceci est un lien de paiement TEST (1€)'
+          }
+        }
+      );
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Erreur génération lien');
+      }
+
+      return {
+        success: true,
+        orderId: orderId,
+        paymentUrl: data.paymentUrl
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Vérifier si le webhook a traité la commande test
+   */
+  async checkWebhookStatus(orderId: number): Promise<{
+    webhookWorking: boolean;
+    paymentStatus: string;
+    details?: any;
+  }> {
+    const { data: order } = await this.supabaseFranceService.client
+      .from('france_orders')
+      .select('online_payment_status, payment_method')
+      .eq('id', orderId)
+      .single();
+
+    if (!order) {
+      return {
+        webhookWorking: false,
+        paymentStatus: 'unknown'
+      };
+    }
+
+    return {
+      webhookWorking: order.online_payment_status === 'paid',
+      paymentStatus: order.online_payment_status,
+      details: order
+    };
+  }
 }
