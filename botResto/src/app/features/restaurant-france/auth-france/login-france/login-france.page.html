@@ -126,13 +126,21 @@
       </div>
 
       <div class="form-actions">
-        <ion-button 
-          expand="block" 
-          type="submit" 
+        <ion-button
+          expand="block"
+          type="submit"
           [disabled]="!loginForm.valid || isLoading"
           class="login-button">
           <ion-spinner name="crescent" *ngIf="isLoading"></ion-spinner>
           <span *ngIf="!isLoading">Se connecter</span>
+        </ion-button>
+      </div>
+
+      <!-- Lien code oublié (livreurs uniquement) -->
+      <div class="forgot-password-link" *ngIf="selectedProfileType === 'driver'" style="text-align: center; margin-top: 16px;">
+        <ion-button fill="clear" size="small" (click)="onForgotPassword()">
+          <ion-icon name="help-circle-outline" slot="start"></ion-icon>
+          Code oublié ?
         </ion-button>
       </div>
 

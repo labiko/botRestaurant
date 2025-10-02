@@ -269,4 +269,59 @@ export class LoginFrancePage implements OnInit, OnDestroy {
     toast.present();
   }
 
+  /**
+   * Gestion du mot de passe oublié (livreurs uniquement)
+   */
+  async onForgotPassword() {
+    // Uniquement pour les livreurs
+    if (this.selectedProfileType !== 'driver') {
+      return;
+    }
+
+    const phoneNumber = this.loginForm.get('phone')?.value;
+    const countryCode = this.loginForm.get('country_code_selector')?.value;
+
+    if (!phoneNumber) {
+      await this.showToast('Veuillez saisir votre numéro de téléphone', 'warning');
+      return;
+    }
+
+    // Construire le numéro complet
+    let localNumber = phoneNumber.replace(/\s+/g, '');
+    if (localNumber.startsWith('0')) {
+      localNumber = localNumber.substring(1);
+    }
+    const finalPhone = `${countryCode}${localNumber}`;
+
+    const loading = await this.loadingController.create({
+      message: 'Envoi en cours...'
+    });
+    await loading.present();
+
+    try {
+      const result = await this.authFranceService.resendDriverAccessCode(finalPhone);
+
+      loading.dismiss();
+
+      if (result.success) {
+        await this.showToast(result.message || 'Code envoyé par WhatsApp', 'success');
+      } else {
+        await this.showToast(result.message || 'Erreur lors de l\'envoi', 'danger');
+      }
+    } catch (error) {
+      loading.dismiss();
+      await this.showToast('Erreur lors de l\'envoi', 'danger');
+    }
+  }
+
+  private async showToast(message: string, color: 'success' | 'warning' | 'danger') {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      color,
+      position: 'top'
+    });
+    await toast.present();
+  }
+
 }

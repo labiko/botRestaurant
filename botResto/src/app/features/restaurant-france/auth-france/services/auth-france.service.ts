@@ -4,6 +4,7 @@ import { SupabaseFranceService } from '../../../../core/services/supabase-france
 import { PhoneFormatService } from '../../../../core/services/phone-format.service';
 import { PhoneNumberUtilsService } from '../../../../core/services/phone-number-utils.service';
 import { DriverSessionMonitorService } from '../../../../core/services/driver-session-monitor.service';
+import { WhatsAppNotificationFranceService } from '../../../../core/services/whatsapp-notification-france.service';
 
 export interface FranceUser {
   id: number;
@@ -47,7 +48,8 @@ export class AuthFranceService {
     private supabaseFranceService: SupabaseFranceService,
     private phoneFormatService: PhoneFormatService,
     private phoneNumberUtils: PhoneNumberUtilsService,
-    private driverSessionMonitorService: DriverSessionMonitorService
+    private driverSessionMonitorService: DriverSessionMonitorService,
+    private whatsAppNotificationService: WhatsAppNotificationFranceService
   ) {
     this.checkExistingSession();
   }
@@ -570,5 +572,80 @@ export class AuthFranceService {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return `${Date.now()}_${result}`;
+  }
+
+  /**
+   * Renvoie le code d'accès d'un livreur par WhatsApp
+   */
+  async resendDriverAccessCode(phone: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      // Rechercher le livreur - Essayer d'abord avec le numéro tel quel
+      let { data: driver, error } = await this.supabaseFranceService.client
+        .from('france_delivery_drivers')
+        .select(`
+          id,
+          first_name,
+          last_name,
+          phone_number,
+          password,
+          country_code,
+          france_restaurants!restaurant_id(name)
+        `)
+        .eq('phone_number', phone)
+        .single();
+
+      // Si non trouvé et que le numéro commence par un code pays, essayer en format local
+      if (error && phone.length > 10) {
+        const countryCode = this.phoneNumberUtils.extractCountryCode(phone);
+        if (countryCode && phone.startsWith(countryCode)) {
+          const localNumber = '0' + phone.substring(countryCode.length);
+
+          const result = await this.supabaseFranceService.client
+            .from('france_delivery_drivers')
+            .select(`
+              id,
+              first_name,
+              last_name,
+              phone_number,
+              password,
+              country_code,
+              france_restaurants!restaurant_id(name)
+            `)
+            .eq('phone_number', localNumber)
+            .single();
+
+          driver = result.data;
+          error = result.error;
+        }
+      }
+
+      if (error || !driver) {
+        return { success: false, message: 'Aucun livreur trouvé avec ce numéro' };
+      }
+
+      const driverName = `${driver.first_name} ${driver.last_name}`;
+      const restaurantName = (driver.france_restaurants as any)?.name || 'Restaurant';
+      const accessCode = driver.password; // Code 6 chiffres
+
+      // Envoyer via WhatsApp (réutiliser sendDriverAccessCode)
+      const sent = await this.whatsAppNotificationService.sendDriverAccessCode(
+        driver.phone_number,
+        driverName,
+        accessCode,
+        restaurantName,
+        undefined,
+        driver.country_code
+      );
+
+      if (sent) {
+        return { success: true, message: 'Code envoyé par WhatsApp' };
+      } else {
+        return { success: false, message: 'Erreur lors de l\'envoi WhatsApp' };
+      }
+
+    } catch (error) {
+      console.error('❌ [AuthFrance] Erreur resendDriverAccessCode:', error);
+      return { success: false, message: 'Erreur lors de l\'envoi' };
+    }
   }
 }
