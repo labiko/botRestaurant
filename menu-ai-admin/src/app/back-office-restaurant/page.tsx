@@ -15,6 +15,8 @@ interface Restaurant {
   password_hash?: string;
   latitude?: number;
   longitude?: number;
+  country_code?: string;
+  timezone?: string;
 }
 
 interface Category {
@@ -165,7 +167,9 @@ export default function BackOfficeRestaurantPage() {
       address: restaurant.address,
       is_active: restaurant.is_active,
       latitude: restaurant.latitude,
-      longitude: restaurant.longitude
+      longitude: restaurant.longitude,
+      country_code: restaurant.country_code,
+      timezone: restaurant.timezone
     });
     setShowEditModal(true);
   };
@@ -1198,6 +1202,42 @@ export default function BackOfficeRestaurantPage() {
                   >
                     <option value="true">✅ Actif</option>
                     <option value="false">❌ Inactif</option>
+                  </select>
+                </div>
+
+                {/* Country Code */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    🌍 Code pays
+                  </label>
+                  <select
+                    value={editForm.country_code || 'FR'}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, country_code: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="FR">🇫🇷 France (FR)</option>
+                    <option value="GN">🇬🇳 Guinée (GN)</option>
+                    <option value="SN">🇸🇳 Sénégal (SN)</option>
+                    <option value="ML">🇲🇱 Mali (ML)</option>
+                    <option value="TG">🇹🇬 Togo (TG)</option>
+                  </select>
+                </div>
+
+                {/* Timezone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    🕒 Fuseau horaire
+                  </label>
+                  <select
+                    value={editForm.timezone || 'Europe/Paris'}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, timezone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="Europe/Paris">🇫🇷 Europe/Paris (UTC+1)</option>
+                    <option value="Africa/Conakry">🇬🇳 Africa/Conakry (UTC+0)</option>
+                    <option value="Africa/Dakar">🇸🇳 Africa/Dakar (UTC+0)</option>
+                    <option value="Africa/Bamako">🇲🇱 Africa/Bamako (UTC+0)</option>
+                    <option value="Africa/Lome">🇹🇬 Africa/Lome (UTC+0)</option>
                   </select>
                 </div>
 
