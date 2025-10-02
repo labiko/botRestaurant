@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { SupabaseFranceService } from './supabase-france.service';
 import { FuseauHoraireService } from './fuseau-horaire.service';
+import { FRANCE_CONFIG } from '../../config/environment-config';
 
 export interface PaymentConfig {
   id: number;
@@ -113,6 +114,14 @@ export class RestaurantPaymentConfigService {
         auto_send_on_order: config.auto_send_on_order,
         send_on_delivery: config.send_on_delivery
       };
+
+      // Auto-générer les URLs de callback si non fournies (tous providers)
+      if (!validFields.success_url || validFields.success_url.trim() === '') {
+        validFields.success_url = FRANCE_CONFIG.payment.successUrl;
+      }
+      if (!validFields.cancel_url || validFields.cancel_url.trim() === '') {
+        validFields.cancel_url = FRANCE_CONFIG.payment.cancelUrl;
+      }
 
       // Supprimer les champs undefined, null et chaînes vides
       Object.keys(validFields).forEach(key => {

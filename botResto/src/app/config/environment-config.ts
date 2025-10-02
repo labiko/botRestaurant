@@ -59,8 +59,8 @@ export const FRANCE_CONFIG = {
 
   // URLs de callback paiement (fichiers HTML statiques dans /public)
   payment: {
-    successUrl: `https://menu-ai-admin.vercel.app/payment-success`,
-    cancelUrl: `https://menu-ai-admin.vercel.app/payment-cancel`
+    successUrl: `https://menu-ai-admin.vercel.app/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `https://menu-ai-admin.vercel.app/payment-cancel.html?session_id={CHECKOUT_SESSION_ID}`
   },
 
   environmentName: ENVIRONMENTS[FINAL_ENVIRONMENT].environmentName,
