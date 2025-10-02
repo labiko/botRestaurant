@@ -6,6 +6,8 @@ import { takeUntil } from 'rxjs/operators';
 
 import { RestaurantConfigService, RestaurantConfig, BusinessHours, RestaurantBotConfig } from '../../../services/restaurant-config.service';
 import { AuthFranceService } from '../../../auth-france/services/auth-france.service';
+import { PhoneNumberUtilsService } from '../../../../../core/services/phone-number-utils.service';
+import { SupabaseFranceService } from '../../../../../core/services/supabase-france.service';
 
 @Component({
   selector: 'app-restaurant-config',
@@ -15,18 +17,19 @@ import { AuthFranceService } from '../../../auth-france/services/auth-france.ser
 })
 export class RestaurantConfigComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
-  
+
   restaurantForm!: FormGroup;
   botForm!: FormGroup;
-  
+
   // Expose Object.keys to template
   Object = Object;
-  
+
   restaurantConfig: RestaurantConfig | null = null;
   botConfig: RestaurantBotConfig | null = null;
-  
+
   isLoading = false;
   hideDeliveryInfo = false; // Flag pour masquer les infos de livraison
+  private currentCountryCode: string = '33'; // Country code du restaurant chargé depuis la base
   
   weekDays = [
     { key: 'lundi', label: 'Lundi' },
@@ -59,7 +62,9 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
     private alertController: AlertController,
     private loadingController: LoadingController,
     private toastController: ToastController,
-    private authFranceService: AuthFranceService
+    private authFranceService: AuthFranceService,
+    private phoneNumberUtils: PhoneNumberUtilsService,
+    private supabaseFranceService: SupabaseFranceService
   ) {
     // Récupérer l'ID du restaurant depuis la session
     const id = this.authFranceService.getCurrentRestaurantId();
@@ -147,15 +152,22 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
           next: (config) => {
             this.restaurantConfig = config;
             this.hideDeliveryInfo = config?.hide_delivery_info || false;
-            
+
             // Update form validators based on hideDeliveryInfo
             this.updateDeliveryFieldsValidators();
-            
-            this.restaurantForm.patchValue(config);
-            
-            // Disable phone fields
-            this.restaurantForm.get('phone')?.disable();
-            this.restaurantForm.get('whatsapp_number')?.disable();
+
+            // Stocker le country_code
+            this.currentCountryCode = config.country_code || '33';
+
+            // Extraire numéros locaux (enlever l'indicatif)
+            const phoneLocal = this.extractLocalNumber(config.phone || '', this.currentCountryCode);
+            const whatsappLocal = this.extractLocalNumber(config.whatsapp_number || '', this.currentCountryCode);
+
+            this.restaurantForm.patchValue({
+              ...config,
+              phone: phoneLocal,
+              whatsapp_number: whatsappLocal
+            });
             
             if (config.business_hours) {
               this.businessHours = { ...this.businessHours, ...config.business_hours };
@@ -229,13 +241,25 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
     await loading.present();
 
     try {
-      // Update restaurant basic info (without business_hours)
-      const formValue = this.restaurantForm.value;
-      const { ...restaurantUpdates } = formValue;
+      const phoneLocal = this.restaurantForm.get('phone')?.value;
+      const whatsappLocal = this.restaurantForm.get('whatsapp_number')?.value;
 
-      // Note: In real implementation, you'd need a method to update restaurant info
-      // For now, we'll just show success
-      await this.presentToast('Configuration restaurant sauvegardée', 'success');
+      // Formater avec l'indicatif du restaurant (déjà en base)
+      const phoneFinal = this.formatPhoneWithCountryCode(phoneLocal, this.currentCountryCode);
+      const whatsappFinal = this.formatPhoneWithCountryCode(whatsappLocal, this.currentCountryCode);
+
+      // Sauvegarder directement avec Supabase
+      const { error } = await this.supabaseFranceService.client
+        .from('france_restaurants')
+        .update({
+          phone: phoneFinal,
+          whatsapp_number: whatsappFinal
+        })
+        .eq('id', this.restaurantId);
+
+      if (error) throw error;
+
+      await this.presentToast('Numéros de téléphone sauvegardés', 'success');
 
     } catch (error) {
       console.error('Error saving restaurant config:', error);
@@ -648,5 +672,33 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
       console.error('Error saving business hours:', error);
       this.presentToast('Erreur lors de la sauvegarde', 'danger');
     }
+  }
+
+  /**
+   * Extrait le numéro local à partir d'un numéro international
+   */
+  private extractLocalNumber(fullNumber: string, countryCode: string): string {
+    if (!fullNumber) return '';
+
+    // Enlever l'indicatif pays
+    if (fullNumber.startsWith(countryCode)) {
+      return '0' + fullNumber.substring(countryCode.length);
+    }
+
+    return fullNumber;
+  }
+
+  /**
+   * Formate un numéro local avec l'indicatif pays
+   */
+  private formatPhoneWithCountryCode(localNumber: string, countryCode: string): string {
+    let cleaned = localNumber.replace(/\D/g, '');
+
+    // Enlever 0 initial si présent
+    if (cleaned.startsWith('0')) {
+      cleaned = cleaned.substring(1);
+    }
+
+    return `${countryCode}${cleaned}`;
   }
 }
