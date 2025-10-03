@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProductionSyncModal from '@/components/ProductionSyncModal';
 import RestaurantDeploymentSection from '@/components/RestaurantDeploymentSection';
+import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 
 interface ProductionDuplication {
   id: number;
@@ -30,6 +31,8 @@ function ProductionSyncPageContent() {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [generatedScript, setGeneratedScript] = useState('');
   const [showScriptModal, setShowScriptModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [restaurantToDelete, setRestaurantToDelete] = useState<{id: number, name: string} | null>(null);
 
   // États pour les notifications
   const [notification, setNotification] = useState<{
@@ -190,6 +193,58 @@ function ProductionSyncPageContent() {
         details: 'Erreur de connexion'
       });
       console.error('Erreur:', error);
+    }
+  };
+
+  const openDeleteModal = (duplication: ProductionDuplication) => {
+    setRestaurantToDelete({
+      id: duplication.target_restaurant_id,
+      name: duplication.target_restaurant?.name || 'Restaurant'
+    });
+    setShowDeleteModal(true);
+  };
+
+  const executeDeleteRestaurant = async (confirmationName: string) => {
+    if (!restaurantToDelete || confirmationName !== restaurantToDelete.name) {
+      setNotification({
+        type: 'error',
+        message: 'Le nom saisi ne correspond pas au restaurant'
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/delete-restaurant', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurantId: restaurantToDelete.id,
+          environment: 'PROD'
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setNotification({
+          type: 'success',
+          message: `Restaurant supprimé en PROD : ${restaurantToDelete.name}`
+        });
+        setShowDeleteModal(false);
+        setRestaurantToDelete(null);
+        loadProductionData();
+      } else {
+        setNotification({
+          type: 'error',
+          message: 'Erreur suppression',
+          details: data.error
+        });
+      }
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: 'Erreur suppression',
+        details: 'Erreur de connexion'
+      });
     }
   };
 
@@ -431,6 +486,15 @@ function ProductionSyncPageContent() {
 
                           {/* Actions toujours disponibles */}
                           <div className="flex space-x-2">
+                            {/* Bouton Nettoyer PROD - avant Sync */}
+                            <button
+                              onClick={() => openDeleteModal(dup)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Supprimer toutes les données en PRODUCTION"
+                            >
+                              🗑️ Nettoyer PROD
+                            </button>
+
                             {/* Bouton Synchroniser - TOUJOURS visible */}
                             <button
                               onClick={() => openSyncModal(dup)}
@@ -478,6 +542,18 @@ function ProductionSyncPageContent() {
               </table>
             </div>
           </div>
+        )}
+
+        {/* Modal de suppression PROD */}
+        {showDeleteModal && restaurantToDelete && (
+          <DeleteConfirmationModal
+            restaurant={restaurantToDelete}
+            onConfirm={executeDeleteRestaurant}
+            onCancel={() => {
+              setShowDeleteModal(false);
+              setRestaurantToDelete(null);
+            }}
+          />
         )}
 
         {/* Modal de synchronisation */}

@@ -37,6 +37,7 @@ export default function RestaurantDeletion({ onDeletionComplete }: RestaurantDel
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<'select' | 'preview' | 'confirm'>('select');
   const [result, setResult] = useState<any>(null);
+  const [targetEnv, setTargetEnv] = useState<'DEV' | 'PROD'>('DEV');
 
   // Charger la liste des restaurants
   useEffect(() => {
@@ -61,7 +62,7 @@ export default function RestaurantDeletion({ onDeletionComplete }: RestaurantDel
       const response = await fetch('/api/delete-restaurant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ restaurantId: restaurant.id })
+        body: JSON.stringify({ restaurantId: restaurant.id, environment: targetEnv })
       });
 
       const data = await response.json();
@@ -90,7 +91,7 @@ export default function RestaurantDeletion({ onDeletionComplete }: RestaurantDel
       const response = await fetch('/api/delete-restaurant', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ restaurantId: selectedRestaurant.id })
+        body: JSON.stringify({ restaurantId: selectedRestaurant.id, environment: targetEnv })
       });
 
       const data = await response.json();
@@ -161,25 +162,46 @@ export default function RestaurantDeletion({ onDeletionComplete }: RestaurantDel
           </div>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Sélectionner un restaurant à supprimer
-          </label>
-          <select
-            value={selectedRestaurant?.id || ''}
-            onChange={(e) => {
-              const restaurant = restaurants.find(r => r.id === parseInt(e.target.value));
-              setSelectedRestaurant(restaurant || null);
-            }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-          >
-            <option value="">-- Choisir un restaurant --</option>
-            {restaurants.map(restaurant => (
-              <option key={restaurant.id} value={restaurant.id}>
-                {restaurant.name} (ID: {restaurant.id})
-              </option>
-            ))}
-          </select>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Environnement cible
+            </label>
+            <select
+              value={targetEnv}
+              onChange={(e) => setTargetEnv(e.target.value as 'DEV' | 'PROD')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              <option value="DEV">🔵 DEV (Développement)</option>
+              <option value="PROD">🔴 PROD (Production)</option>
+            </select>
+            {targetEnv === 'PROD' && (
+              <div className="mt-2 bg-red-100 border border-red-300 rounded p-2 text-sm text-red-800">
+                ⚠️ <strong>ATTENTION :</strong> Vous allez supprimer des données en PRODUCTION !
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Sélectionner un restaurant à supprimer
+            </label>
+            <select
+              value={selectedRestaurant?.id || ''}
+              onChange={(e) => {
+                const restaurant = restaurants.find(r => r.id === parseInt(e.target.value));
+                setSelectedRestaurant(restaurant || null);
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              <option value="">-- Choisir un restaurant --</option>
+              {restaurants.map(restaurant => (
+                <option key={restaurant.id} value={restaurant.id}>
+                  {restaurant.name} (ID: {restaurant.id})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {selectedRestaurant && (

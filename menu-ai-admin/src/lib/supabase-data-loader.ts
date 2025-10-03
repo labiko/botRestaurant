@@ -36,11 +36,11 @@ export interface Restaurant {
 }
 
 export class SupabaseDataLoader {
-  private supabase: any;
+  public supabase: any;
 
-  constructor() {
+  constructor(targetEnvironment?: 'DEV' | 'PROD') {
     // Connexion à la base DEV ou PROD selon l'environnement
-    const environment = process.env.NEXT_PUBLIC_ENVIRONMENT || 'DEV';
+    const environment = targetEnvironment || process.env.NEXT_PUBLIC_ENVIRONMENT || 'DEV';
     const supabaseUrl = environment === 'PROD'
       ? process.env.NEXT_PUBLIC_SUPABASE_URL_PROD
       : process.env.NEXT_PUBLIC_SUPABASE_URL;

@@ -9,7 +9,7 @@ export async function DELETE(request: NextRequest) {
   try {
     console.log('🗑️ Démarrage suppression restaurant...');
 
-    const { restaurantId, restaurantName } = await request.json();
+    const { restaurantId, restaurantName, environment } = await request.json();
 
     if (!restaurantId && !restaurantName) {
       return NextResponse.json({
@@ -18,7 +18,7 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const dataLoader = new SupabaseDataLoader();
+    const dataLoader = new SupabaseDataLoader(environment);
 
     // Déterminer l'ID du restaurant
     let targetRestaurantId = restaurantId;
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('👁️ Demande aperçu suppression...');
 
-    const { restaurantId, restaurantName } = await request.json();
+    const { restaurantId, restaurantName, environment } = await request.json();
 
     if (!restaurantId && !restaurantName) {
       return NextResponse.json({
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const dataLoader = new SupabaseDataLoader();
+    const dataLoader = new SupabaseDataLoader(environment);
 
     // Déterminer l'ID du restaurant
     let targetRestaurantId = restaurantId;
