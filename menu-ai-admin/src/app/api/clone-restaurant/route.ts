@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { SupabaseDataLoader } from '@/lib/supabase-data-loader';
+import { getSupabaseForRequest } from '@/lib/api-helpers';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Charger les données du restaurant source (template)
     console.log('📥 [CloneRestaurant] Chargement template restaurant source...');
-    const dataLoader = new SupabaseDataLoader();
+    const dataLoader = getSupabaseForRequest(request);
     const sourceData = await dataLoader.getRestaurantData(sourceRestaurantId);
 
     if (!sourceData.restaurant) {

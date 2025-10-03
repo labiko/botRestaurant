@@ -11,6 +11,7 @@ import RestaurantDeletion from '@/components/RestaurantDeletion';
 import { Restaurant } from '@/lib/types';
 import { useRestaurant } from '@/contexts/RestaurantContext';
 import { TimezoneService } from '@/lib/timezone-service';
+import { useFetch } from '@/hooks/useFetch';
 
 interface AIResponse {
   success: boolean;
@@ -29,6 +30,7 @@ interface AIResponse {
 }
 
 function MenuAIAdminContent() {
+  const { fetch: fetchWithEnv } = useFetch();
   const searchParams = useSearchParams();
   const [command, setCommand] = useState('');
   const [loading, setLoading] = useState(false);
@@ -231,7 +233,7 @@ function MenuAIAdminContent() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/load-category', {
+      const response = await fetchWithEnv('/api/load-category', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -310,7 +312,7 @@ function MenuAIAdminContent() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/load-category', {
+      const response = await fetchWithEnv('/api/load-category', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -717,7 +719,7 @@ function MenuAIAdminContent() {
     setCloneResult(null);
 
     try {
-      const response = await fetch('/api/clone-restaurant', {
+      const response = await fetchWithEnv('/api/clone-restaurant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

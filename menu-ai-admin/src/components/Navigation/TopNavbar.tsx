@@ -67,7 +67,12 @@ export default function TopNavbar() {
             <div className="relative">
               <select
                 value={environment}
-                onChange={(e) => setEnvironment(e.target.value as 'DEV' | 'PROD')}
+                onChange={(e) => {
+                  const newEnv = e.target.value as 'DEV' | 'PROD';
+                  setEnvironment(newEnv);
+                  // Recharger automatiquement la page pour rafraîchir toutes les données
+                  window.location.reload();
+                }}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
                   environment === 'PROD'
                     ? 'bg-red-500 text-white hover:bg-red-600'

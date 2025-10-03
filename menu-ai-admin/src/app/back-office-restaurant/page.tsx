@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useFetch } from '@/hooks/useFetch';
 
 interface Restaurant {
   id: number;
@@ -62,6 +63,7 @@ interface Icon {
 }
 
 export default function BackOfficeRestaurantPage() {
+  const { fetch: fetchWithEnv } = useFetch();
   // État pour les tabs
   const [activeTab, setActiveTab] = useState('restaurants');
 
@@ -160,7 +162,7 @@ export default function BackOfficeRestaurantPage() {
   const loadRestaurants = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/restaurants/management');
+      const response = await fetchWithEnv('/api/restaurants/management');
       const data = await response.json();
 
       if (data.success) {
@@ -203,7 +205,7 @@ export default function BackOfficeRestaurantPage() {
   const resetPassword = async (restaurantId: number) => {
     console.log('🔍 [Reset Password] Fonction appelée, restaurant ID:', restaurantId);
     try {
-      const response = await fetch(`/api/restaurants/${restaurantId}/reset-password`, {
+      const response = await fetchWithEnv(`/api/restaurants/${restaurantId}/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -237,7 +239,7 @@ export default function BackOfficeRestaurantPage() {
     if (!editingRestaurant) return;
 
     try {
-      const response = await fetch(`/api/restaurants/${editingRestaurant.id}/update`, {
+      const response = await fetchWithEnv(`/api/restaurants/${editingRestaurant.id}/update`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -280,7 +282,7 @@ export default function BackOfficeRestaurantPage() {
     const restaurantName = restaurant?.name || `Restaurant #${restaurantId}`;
 
     try {
-      const response = await fetch(`/api/restaurants/${restaurantId}/status`, {
+      const response = await fetchWithEnv(`/api/restaurants/${restaurantId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: newStatus })
@@ -322,7 +324,7 @@ export default function BackOfficeRestaurantPage() {
   const loadCategoriesForRestaurant = async (restaurantId: number) => {
     setLoadingCategories(true);
     try {
-      const response = await fetch(`/api/categories?restaurant_id=${restaurantId}`);
+      const response = await fetchWithEnv(`/api/categories?restaurant_id=${restaurantId}`);
       const data = await response.json();
 
       if (data.success) {
@@ -377,7 +379,7 @@ export default function BackOfficeRestaurantPage() {
       const url = `/api/products?restaurant_id=${restaurantId}&category_id=${categoryId}`;
       console.log('🌐 [loadCategoryProducts] URL:', url);
 
-      const response = await fetch(url);
+      const response = await fetchWithEnv(url);
       const data = await response.json();
 
       console.log('📊 [loadCategoryProducts] Response:', data);
@@ -405,7 +407,7 @@ export default function BackOfficeRestaurantPage() {
   const saveCategoryIcon = async (categoryId: number, icon: string) => {
     console.log('🎯 [saveCategoryIcon] Début sauvegarde:', { categoryId, icon });
     try {
-      const response = await fetch('/api/categories', {
+      const response = await fetchWithEnv('/api/categories', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: categoryId, icon })
@@ -463,7 +465,7 @@ export default function BackOfficeRestaurantPage() {
     if (selectedProducts.length === 0) return;
 
     try {
-      const response = await fetch('/api/products/bulk', {
+      const response = await fetchWithEnv('/api/products/bulk', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -492,7 +494,7 @@ export default function BackOfficeRestaurantPage() {
 
   const saveProductIcon = async (productId: number, icon: string) => {
     try {
-      const response = await fetch('/api/products', {
+      const response = await fetchWithEnv('/api/products', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: productId, icon })
@@ -559,7 +561,7 @@ export default function BackOfficeRestaurantPage() {
     setDraggedProduct(null);
 
     try {
-      const response = await fetch('/api/products/reorder', {
+      const response = await fetchWithEnv('/api/products/reorder', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -586,7 +588,7 @@ export default function BackOfficeRestaurantPage() {
   const loadProductOptions = async (productId: number) => {
     setLoadingOptions(true);
     try {
-      const response = await fetch(`/api/product-options?product_id=${productId}`);
+      const response = await fetchWithEnv(`/api/product-options?product_id=${productId}`);
       const data = await response.json();
 
       if (data.success) {
@@ -615,7 +617,7 @@ export default function BackOfficeRestaurantPage() {
 
   const saveOptionIcon = async (optionId: number, icon: string) => {
     try {
-      const response = await fetch('/api/product-options', {
+      const response = await fetchWithEnv('/api/product-options', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: optionId, icon })
@@ -647,7 +649,7 @@ export default function BackOfficeRestaurantPage() {
     setVitrineSettings(null);
 
     try {
-      const response = await fetch(`/api/restaurants/${restaurantId}/vitrine`);
+      const response = await fetchWithEnv(`/api/restaurants/${restaurantId}/vitrine`);
       const data = await response.json();
 
       if (data.success && data.vitrine) {
@@ -680,7 +682,7 @@ export default function BackOfficeRestaurantPage() {
   const loadPizzaYoloTemplate = async (targetRestaurantId: number, pizzaYoloId: number) => {
     try {
       // Récupérer les paramètres vitrine de Pizza Yolo
-      const response = await fetch(`/api/restaurants/${pizzaYoloId}/vitrine`);
+      const response = await fetchWithEnv(`/api/restaurants/${pizzaYoloId}/vitrine`);
       const data = await response.json();
 
       const targetRestaurant = restaurants.find(r => r.id === targetRestaurantId);
@@ -742,14 +744,14 @@ export default function BackOfficeRestaurantPage() {
 
       if (vitrineExists && vitrineSettings.id) {
         // Cas 2: Mise à jour d'une vitrine existante
-        response = await fetch(`/api/vitrine/${vitrineSettings.id}`, {
+        response = await fetchWithEnv(`/api/vitrine/${vitrineSettings.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(vitrineSettings)
         });
       } else {
         // Cas 1: Création d'une nouvelle vitrine
-        response = await fetch('/api/vitrine', {
+        response = await fetchWithEnv('/api/vitrine', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(vitrineSettings)
@@ -847,7 +849,7 @@ export default function BackOfficeRestaurantPage() {
   const loadIcons = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/icons');
+      const response = await fetchWithEnv('/api/icons');
       const data = await response.json();
 
       if (data.success) {
@@ -869,7 +871,7 @@ export default function BackOfficeRestaurantPage() {
     }
 
     try {
-      const response = await fetch('/api/icons', {
+      const response = await fetchWithEnv('/api/icons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -899,7 +901,7 @@ export default function BackOfficeRestaurantPage() {
     if (!confirm('Supprimer cette icône du catalogue ?')) return;
 
     try {
-      const response = await fetch(`/api/icons/${id}`, {
+      const response = await fetchWithEnv(`/api/icons/${id}`, {
         method: 'DELETE'
       });
 

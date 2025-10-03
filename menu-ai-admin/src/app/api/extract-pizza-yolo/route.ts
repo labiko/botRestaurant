@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SupabaseDataLoader } from '@/lib/supabase-data-loader';
+import { getSupabaseForRequest } from '@/lib/api-helpers';
 import { TimezoneService } from '@/lib/timezone-service';
 
 /**
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🍕 Extraction complète Pizza Yolo 77...');
 
-    const dataLoader = new SupabaseDataLoader();
+    const dataLoader = getSupabaseForRequest(request);
 
     // 1. Récupérer Pizza Yolo 77
     const { data: restaurant, error: restaurantError } = await dataLoader.supabase

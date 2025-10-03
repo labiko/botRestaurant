@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SupabaseDataLoader } from '@/lib/supabase-data-loader';
+import { getSupabaseForRequest } from '@/lib/api-helpers';
 
 export async function GET(
   request: NextRequest,
@@ -17,7 +17,7 @@ export async function GET(
 
     console.log(`📋 Chargement détails duplication ${duplicationId}...`);
 
-    const dataLoader = new SupabaseDataLoader();
+    const dataLoader = getSupabaseForRequest(request);
 
     // Récupérer les informations de la duplication
     const { data: duplication, error: dupError } = await dataLoader.supabase

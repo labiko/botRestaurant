@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { WorkflowGeneratorV2, UniversalWorkflow, WorkflowStep, OptionItem } from '@/lib/workflow-generator-v2';
 import universalTemplate from '@/lib/universal-workflow-template.json';
 import WorkflowHelpModal from '@/components/WorkflowHelpModal';
+import { useFetch } from '@/hooks/useFetch';
 
 export default function WorkflowUniversalPage() {
+  const { fetch: fetchWithEnv } = useFetch();
   const [activeTab, setActiveTab] = useState<'workflow' | 'groups'>('workflow');
   const [showHelp, setShowHelp] = useState(false);
   const [productName, setProductName] = useState('MON MENU CUSTOM');
@@ -92,7 +94,7 @@ export default function WorkflowUniversalPage() {
   const loadRestaurants = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/restaurants');
+      const response = await fetchWithEnv('/api/restaurants');
       if (response.ok) {
         const data = await response.json();
         setRestaurants(data.restaurants || []);

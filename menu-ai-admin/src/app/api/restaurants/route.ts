@@ -2,14 +2,14 @@
 // ===================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { SupabaseDataLoader } from '@/lib/supabase-data-loader';
+import { getSupabaseForRequest } from '@/lib/api-helpers';
 import { TimezoneService } from '@/lib/timezone-service';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🏪 Chargement des restaurants...');
 
-    const dataLoader = new SupabaseDataLoader();
+    const dataLoader = getSupabaseForRequest(request);
 
     // Charger tous les restaurants depuis la base
     const restaurants = await dataLoader.getRestaurants();

@@ -2,7 +2,7 @@
 // ==============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { SupabaseDataLoader } from '@/lib/supabase-data-loader';
+import { getSupabaseForRequest } from '@/lib/api-helpers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const dataLoader = new SupabaseDataLoader();
+    const dataLoader = getSupabaseForRequest(request);
 
     // Recherche de la catégorie par nom
     const category = await dataLoader.findCategoryByName(categoryName, restaurantId);
