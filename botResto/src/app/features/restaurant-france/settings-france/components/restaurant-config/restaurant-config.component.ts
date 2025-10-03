@@ -8,6 +8,7 @@ import { RestaurantConfigService, RestaurantConfig, BusinessHours, RestaurantBot
 import { AuthFranceService } from '../../../auth-france/services/auth-france.service';
 import { PhoneNumberUtilsService } from '../../../../../core/services/phone-number-utils.service';
 import { SupabaseFranceService } from '../../../../../core/services/supabase-france.service';
+import { PrintService } from '../../../../../core/services/print.service';
 
 @Component({
   selector: 'app-restaurant-config',
@@ -30,6 +31,7 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
   isLoading = false;
   hideDeliveryInfo = false; // Flag pour masquer les infos de livraison
   private currentCountryCode: string = '33'; // Country code du restaurant chargé depuis la base
+  autoPrintEnabled = false; // Toggle pour l'impression automatique
   
   weekDays = [
     { key: 'lundi', label: 'Lundi' },
@@ -64,7 +66,8 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
     private toastController: ToastController,
     private authFranceService: AuthFranceService,
     private phoneNumberUtils: PhoneNumberUtilsService,
-    private supabaseFranceService: SupabaseFranceService
+    private supabaseFranceService: SupabaseFranceService,
+    private printService: PrintService
   ) {
     // Récupérer l'ID du restaurant depuis la session
     const id = this.authFranceService.getCurrentRestaurantId();
@@ -81,6 +84,8 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadRestaurantData();
+    // Charger l'état du toggle impression automatique
+    this.autoPrintEnabled = this.printService.getAutoPrintEnabled();
   }
 
   ngOnDestroy() {
@@ -700,5 +705,16 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
     }
 
     return `${countryCode}${cleaned}`;
+  }
+
+  // Méthode pour gérer le changement du toggle impression automatique
+  onToggleAutoPrint(): void {
+    this.printService.setAutoPrintEnabled(this.autoPrintEnabled);
+
+    const message = this.autoPrintEnabled
+      ? 'Impression automatique activée'
+      : 'Impression automatique désactivée';
+
+    this.presentToast(message, 'success');
   }
 }

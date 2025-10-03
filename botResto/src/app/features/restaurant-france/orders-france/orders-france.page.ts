@@ -13,6 +13,7 @@ import { FuseauHoraireService } from '../../../core/services/fuseau-horaire.serv
 import { DeliveryTrackingService } from '../../../core/services/delivery-tracking.service';
 import { AudioNotificationService } from '../../../core/services/audio-notification.service';
 import { PaymentLinkService } from '../../../core/services/payment-link.service';
+import { PrintService } from '../../../core/services/print.service';
 
 @Component({
   selector: 'app-orders-france',
@@ -58,7 +59,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     private supabaseFranceService: SupabaseFranceService,
     private deliveryTrackingService: DeliveryTrackingService,
     private audioNotificationService: AudioNotificationService,
-    private paymentLinkService: PaymentLinkService
+    private paymentLinkService: PaymentLinkService,
+    private printService: PrintService
   ) {
     // Récupérer l'ID du restaurant depuis la session
     const id = this.authService.getCurrentRestaurantId();
@@ -284,11 +286,36 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
     // Traitement normal pour les autres cas
     const success = await this.franceOrdersService.updateOrderStatus(order.id, action.nextStatus);
-    
+
     if (success) {
       // Recharger les commandes pour voir les changements
       await this.franceOrdersService.loadOrders(this.restaurantId);
-      
+
+      // NOUVEAU : Impression automatique si confirmation de commande
+      if (action.nextStatus === 'confirmee') {
+        // Préparer les données pour l'impression
+        const orderData = {
+          id: order.id,
+          order_number: order.order_number,
+          restaurant_name: 'Restaurant', // Utiliser un nom par défaut ou récupérer depuis authService
+          customer_name: order.customer_name || 'Client',
+          customer_phone: order.phone_number, // Utiliser phone_number qui est la propriété correcte
+          items: order.items || [],
+          total_amount: order.total_amount,
+          total: order.total_amount,
+          delivery_mode: order.delivery_mode,
+          delivery_address: order.delivery_address,
+          delivery_latitude: order.delivery_latitude,
+          delivery_longitude: order.delivery_longitude,
+          notes: order.notes,
+          additional_notes: order.additional_notes,
+          created_at: order.created_at
+        };
+
+        // Déclencher l'impression asynchrone (ne bloque pas l'UI)
+        this.printService.printOrderAsync(orderData);
+      }
+
       // NOUVEAU : Passage automatique vers l'onglet correspondant au nouveau statut
       this.switchToStatusTab(action.nextStatus);
     } else {

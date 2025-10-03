@@ -36,6 +36,38 @@
     </ion-card-content>
   </ion-card>
 
+  <!-- Automatic Printing Card -->
+  <ion-card class="automatic-printing-card">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="print" color="tertiary"></ion-icon>
+        Impression Automatique
+      </ion-card-title>
+      <ion-card-subtitle>
+        Imprimer automatiquement les tickets à la confirmation
+      </ion-card-subtitle>
+    </ion-card-header>
+
+    <ion-card-content>
+      <div class="print-toggle-container">
+        <div class="print-info">
+          <h3>{{ autoPrintEnabled ? 'ACTIVÉ' : 'DÉSACTIVÉ' }}</h3>
+          <p>{{ autoPrintEnabled ? 'Les tickets s\'imprimeront automatiquement' : 'Impression manuelle uniquement' }}</p>
+        </div>
+        <ion-toggle
+          [(ngModel)]="autoPrintEnabled"
+          (ionChange)="onToggleAutoPrint()"
+          [color]="autoPrintEnabled ? 'success' : 'medium'">
+        </ion-toggle>
+      </div>
+
+      <ion-note class="print-note" *ngIf="autoPrintEnabled">
+        <ion-icon name="information-circle" color="tertiary"></ion-icon>
+        Le ticket sera automatiquement imprimé dès que vous confirmez une commande.
+      </ion-note>
+    </ion-card-content>
+  </ion-card>
+
   <!-- Restaurant Information -->
   <ion-card class="main-content-card">
     <ion-card-header>

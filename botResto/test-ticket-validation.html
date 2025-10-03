@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Validation Ticket Restaurant</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #f0f0f0;
+            padding: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .ticket {
+            background: white;
+            padding: 20px;
+            border: 2px dashed #333;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            white-space: pre-wrap;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .print-button {
+            background: #2196F3;
+        }
+        .print-button:hover {
+            background: #0b7dda;
+        }
+        h1 {
+            font-family: Arial, sans-serif;
+            color: #333;
+            text-align: center;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🖨️ Test Validation Ticket Restaurant</h1>
+
+    <div class="info">
+        <strong>📋 Instructions :</strong><br>
+        1. Cliquez sur "Générer Ticket Simple" ou "Générer Ticket Complexe"<br>
+        2. Vérifiez le format du ticket<br>
+        3. Cliquez sur "Imprimer" pour tester l'impression (PDF)<br>
+        4. Le ticket dans le carré pointillé simule une imprimante 58mm
+    </div>
+
+    <div class="controls">
+        <button onclick="generateSimpleTicket()">Ticket Simple</button>
+        <button onclick="generateComplexTicket()">Ticket Complexe</button>
+        <button class="print-button" onclick="window.print()">🖨️ Imprimer</button>
+    </div>
+
+    <div class="ticket" id="ticket">
+============================
+     PIZZA YOLO 77
+============================
+Commande #DEMO-001
+03/10/2025 19:30:00
+
+CLIENT: Jean Dupont
+TEL: 0612345678
+
+COMMANDE:
+- Cliquez sur un bouton
+  pour générer un ticket
+
+----------------------------
+TOTAL: 0.00€
+Mode: Sur place
+============================
+    </div>
+
+    <script>
+        function generateSimpleTicket() {
+            const ticket = `============================
+     PIZZA YOLO 77
+============================
+Commande #2024-0156
+${new Date().toLocaleString('fr-FR')}
+
+CLIENT: Marie Martin
+TEL: 0623456789
+
+COMMANDE:
+- 2x Pizza Margherita: 24.00€
+- 1x Coca Cola 33cl: 2.50€
+
+----------------------------
+TOTAL: 26.50€
+Mode: Livraison
+Adresse: 15 Rue de la Paix
+============================`;
+
+            document.getElementById('ticket').textContent = ticket;
+        }
+
+        function generateComplexTicket() {
+            const ticket = `============================
+     PIZZA YOLO 77
+============================
+Commande #2024-0157
+${new Date().toLocaleString('fr-FR')}
+
+CLIENT: Paul Durand
+TEL: 0698765432
+
+COMMANDE:
+- 1x Pizza 4 Fromages: 14.00€ (XL)
+  → Base crème, Supplément bacon
+  → Mozzarella, Gorgonzola, Chèvre
+
+- 1x Menu Big Burger: 15.50€
+  → Sauce ketchup, mayonnaise
+  + Cheese Burger XL
+  + Frites maison
+  + Coca Cola 33cl
+
+- 2x Menu Enfant: 14.00€
+  • Mini pizza jambon
+  • Compote de pommes
+  • Jus d'orange
+
+- 1x Tiramisu: 4.50€
+
+----------------------------
+SOUS-TOTAL: 48.00€
+Frais livraison: 3.00€
+TOTAL: 51.00€
+Mode: Livraison
+Adresse: 45 Avenue Victor Hugo
+Étage: 3ème, Code: 4567
+----------------------------
+Notes: Sonner 2 fois
+Paiement: À la livraison
+============================`;
+
+            document.getElementById('ticket').textContent = ticket;
+        }
+
+        // Style d'impression
+        const printStyle = document.createElement('style');
+        printStyle.innerHTML = `
+            @media print {
+                body {
+                    margin: 0;
+                    padding: 0;
+                    background: white;
+                }
+                .controls, h1, .info {
+                    display: none;
+                }
+                .ticket {
+                    border: none;
+                    box-shadow: none;
+                    padding: 0;
+                    font-size: 10px;
+                    width: 58mm; /* Largeur imprimante thermique */
+                }
+            }
+        `;
+        document.head.appendChild(printStyle);
+
+        // Auto-générer un ticket au chargement
+        window.onload = () => generateSimpleTicket();
+    </script>
+</body>
+</html>
