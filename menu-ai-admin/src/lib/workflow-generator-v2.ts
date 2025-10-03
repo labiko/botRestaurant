@@ -31,6 +31,7 @@ export interface OptionItem {
   display_order: number;
   emoji?: string;
   description?: string;
+  composition?: string;
 }
 
 export class WorkflowGeneratorV2 {
@@ -116,7 +117,8 @@ SET
   display_order = ${option.display_order},
   group_order = ${globalGroupOrder},
   option_group = '${groupName.replace(/'/g, "''")}',
-  is_required = ${groupRequiredMap.get(groupName) || false}
+  is_required = ${groupRequiredMap.get(groupName) || false},
+  composition = ${option.composition ? `'${option.composition.replace(/'/g, "''")}'` : 'NULL'}
 WHERE product_id = ${productId}
   AND option_group = '${groupName.replace(/'/g, "''")}'
   AND display_order = ${option.display_order};
@@ -131,7 +133,8 @@ INSERT INTO france_product_options (
   option_group,
   is_required,
   is_active,
-  icon
+  icon,
+  composition
 )
 SELECT
   ${productId},
@@ -142,7 +145,8 @@ SELECT
   '${groupName.replace(/'/g, "''")}',
   ${groupRequiredMap.get(groupName) || false},
   true,
-  COALESCE(NULLIF('${option.emoji}', '🔥🔥🔥'), (SELECT icon FROM france_option_groups WHERE group_name = '${groupName.replace(/'/g, "''")}' LIMIT 1), '❓')
+  COALESCE(NULLIF('${option.emoji}', '🔥🔥🔥'), (SELECT icon FROM france_option_groups WHERE group_name = '${groupName.replace(/'/g, "''")}' LIMIT 1), '❓'),
+  ${option.composition ? `'${option.composition.replace(/'/g, "''")}'` : 'NULL'}
 WHERE NOT EXISTS (
   SELECT 1 FROM france_product_options
   WHERE product_id = ${productId}
@@ -295,7 +299,8 @@ WHERE product_id = ${productId};
   display_order,
   group_order,
   option_group,
-  icon
+  icon,
+  composition
 ) VALUES (
   ${productId},
   '${option.name.replace(/'/g, "''")}',
@@ -303,7 +308,8 @@ WHERE product_id = ${productId};
   ${option.display_order},
   ${globalGroupOrder},
   '${groupName.replace(/'/g, "''")}',
-  COALESCE(NULLIF('${option.emoji}', '🔥🔥🔥'), (SELECT icon FROM france_option_groups WHERE group_name = '${groupName.replace(/'/g, "''")}' LIMIT 1), '❓')
+  COALESCE(NULLIF('${option.emoji}', '🔥🔥🔥'), (SELECT icon FROM france_option_groups WHERE group_name = '${groupName.replace(/'/g, "''")}' LIMIT 1), '❓'),
+  ${option.composition ? `'${option.composition.replace(/'/g, "''")}'` : 'NULL'}
 );
 
 `;
@@ -510,7 +516,8 @@ INSERT INTO france_products (
   group_order,
   is_required,
   is_active,
-  icon
+  icon,
+  composition
 ) VALUES (
   (SELECT id FROM france_products WHERE name = '${productName.replace(/'/g, "''")}' AND restaurant_id = ${restaurantId}),
   '${groupName.replace(/'/g, "''")}',
@@ -520,7 +527,8 @@ INSERT INTO france_products (
   ${groupOrder},
   ${groupRequiredMap.get(groupName) || false},
   true,
-  COALESCE(NULLIF('${option.emoji}', '🔥🔥🔥'), (SELECT icon FROM france_option_groups WHERE group_name = '${groupName.replace(/'/g, "''")}' LIMIT 1), '❓')
+  COALESCE(NULLIF('${option.emoji}', '🔥🔥🔥'), (SELECT icon FROM france_option_groups WHERE group_name = '${groupName.replace(/'/g, "''")}' LIMIT 1), '❓'),
+  ${option.composition ? `'${option.composition.replace(/'/g, "''")}'` : 'NULL'}
 );
 
 `;

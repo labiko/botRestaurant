@@ -51,6 +51,16 @@ interface ProductOption {
   is_active: boolean;
 }
 
+interface Icon {
+  id: number;
+  emoji: string;
+  name: string;
+  category: string;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export default function BackOfficeRestaurantPage() {
   // État pour les tabs
   const [activeTab, setActiveTab] = useState('restaurants');
@@ -98,6 +108,16 @@ export default function BackOfficeRestaurantPage() {
   const [vitrineSettings, setVitrineSettings] = useState<any>(null);
   const [vitrineLoading, setVitrineLoading] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // États pour la gestion des icônes (catalogue)
+  const [icons, setIcons] = useState<Icon[]>([]);
+  const [showIconModal, setShowIconModal] = useState(false);
+  const [iconForm, setIconForm] = useState({
+    emoji: '',
+    name: '',
+    category: '',
+    tags: ''
+  });
   const [previewMode, setPreviewMode] = useState<'mobile' | 'tablet' | 'desktop'>('mobile');
   const [vitrineExists, setVitrineExists] = useState<boolean>(false);
   const [showCreateVitrineSection, setShowCreateVitrineSection] = useState(false);
@@ -823,9 +843,88 @@ export default function BackOfficeRestaurantPage() {
     }
   };
 
+  // Fonctions pour la gestion du catalogue d'icônes
+  const loadIcons = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/icons');
+      const data = await response.json();
+
+      if (data.success) {
+        setIcons(data.icons || []);
+      } else {
+        showNotification('error', 'Erreur', data.error || 'Impossible de charger les icônes');
+      }
+    } catch (error) {
+      showNotification('error', 'Erreur', 'Impossible de charger les icônes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createIcon = async () => {
+    if (!iconForm.emoji || !iconForm.name || !iconForm.category) {
+      showNotification('error', 'Champs requis', 'Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/icons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emoji: iconForm.emoji,
+          name: iconForm.name,
+          category: iconForm.category,
+          tags: iconForm.tags.split(',').map(t => t.trim()).filter(t => t)
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showNotification('success', 'Icône créée', 'L\'icône a été ajoutée au catalogue');
+        setShowIconModal(false);
+        setIconForm({ emoji: '', name: '', category: '', tags: '' });
+        loadIcons();
+      } else {
+        showNotification('error', 'Erreur', data.error || 'Impossible de créer l\'icône');
+      }
+    } catch (error) {
+      showNotification('error', 'Erreur', 'Impossible de créer l\'icône');
+    }
+  };
+
+  const deleteIcon = async (id: number) => {
+    if (!confirm('Supprimer cette icône du catalogue ?')) return;
+
+    try {
+      const response = await fetch(`/api/icons/${id}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showNotification('success', 'Icône supprimée', 'L\'icône a été retirée du catalogue');
+        loadIcons();
+      } else {
+        showNotification('error', 'Erreur', data.error || 'Impossible de supprimer l\'icône');
+      }
+    } catch (error) {
+      showNotification('error', 'Erreur', 'Impossible de supprimer l\'icône');
+    }
+  };
+
   useEffect(() => {
     loadRestaurants();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'catalogue') {
+      loadIcons();
+    }
+  }, [activeTab]);
 
   return (
     <div className="p-6">
@@ -855,6 +954,16 @@ export default function BackOfficeRestaurantPage() {
               }`}
             >
               🎨 Gestion Icônes
+            </button>
+            <button
+              onClick={() => setActiveTab('catalogue')}
+              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'catalogue'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🗂️ Catalogue Icônes
             </button>
             <button
               onClick={() => setActiveTab('vitrine')}
@@ -1894,6 +2003,87 @@ export default function BackOfficeRestaurantPage() {
         </div>
       )}
 
+      {/* Tab Catalogue Icônes */}
+      {activeTab === 'catalogue' && (
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">🗂️ Catalogue d'Icônes</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {icons.length} icônes disponibles
+                </p>
+              </div>
+              <button
+                onClick={() => setShowIconModal(true)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                ➕ Créer une icône
+              </button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="p-12 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+              <p className="text-gray-500 mt-4">Chargement...</p>
+            </div>
+          ) : icons.length === 0 ? (
+            <div className="p-12 text-center text-gray-500">
+              <p>Aucune icône dans le catalogue</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Icône</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Catégorie</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tags</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {icons.map((icon) => (
+                    <tr key={icon.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-2xl">
+                        {icon.emoji}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{icon.name}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+                          {icon.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {icon.tags.map((tag, i) => (
+                            <span key={i} className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => deleteIcon(icon.id)}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        >
+                          🗑️ Supprimer
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tab Gestion Vitrine */}
       {activeTab === 'vitrine' && (
         <div className="space-y-6">
@@ -2287,6 +2477,111 @@ export default function BackOfficeRestaurantPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal Création Icône */}
+      {showIconModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold">➕ Créer une icône</h2>
+                <button
+                  onClick={() => {
+                    setShowIconModal(false);
+                    setIconForm({ emoji: '', name: '', category: '', tags: '' });
+                  }}
+                  className="text-white hover:text-gray-200"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Emoji */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Emoji *
+                </label>
+                <input
+                  type="text"
+                  value={iconForm.emoji}
+                  onChange={(e) => setIconForm({ ...iconForm, emoji: e.target.value })}
+                  placeholder="🍕"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-2xl"
+                  maxLength={2}
+                />
+              </div>
+
+              {/* Nom */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom *
+                </label>
+                <input
+                  type="text"
+                  value={iconForm.name}
+                  onChange={(e) => setIconForm({ ...iconForm, name: e.target.value })}
+                  placeholder="Pizza"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+
+              {/* Catégorie */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Catégorie *
+                </label>
+                <select
+                  value={iconForm.category}
+                  onChange={(e) => setIconForm({ ...iconForm, category: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  <option value="">Sélectionner...</option>
+                  <option value="🍕 Nourriture">🍕 Nourriture</option>
+                  <option value="🥤 Boissons">🥤 Boissons</option>
+                  <option value="🍰 Desserts">🍰 Desserts</option>
+                  <option value="🎉 Événement">🎉 Événement</option>
+                  <option value="⚙️ Divers">⚙️ Divers</option>
+                </select>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tags (séparés par virgules)
+                </label>
+                <input
+                  type="text"
+                  value={iconForm.tags}
+                  onChange={(e) => setIconForm({ ...iconForm, tags: e.target.value })}
+                  placeholder="italien, restaurant, menu"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Ex: italien, restaurant, menu</p>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowIconModal(false);
+                  setIconForm({ emoji: '', name: '', category: '', tags: '' });
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={createIcon}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                Créer
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

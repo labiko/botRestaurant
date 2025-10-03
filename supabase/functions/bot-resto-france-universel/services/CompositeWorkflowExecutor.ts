@@ -513,6 +513,9 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     optionGroup.options.forEach((option, index)=>{
       const optionIcon = (option.icon && option.icon !== 'undefined') ? `${option.icon} ` : '';
       message += `${index + 1}. ${optionIcon}${option.option_name}`;
+      if (option.composition) {
+        message += `\n   🧾 ${option.composition}`;
+      }
       if (option.price_modifier && option.price_modifier !== 0) {
         const sign = option.price_modifier > 0 ? '+' : '';
         message += ` (${sign}${option.price_modifier}€)`;
@@ -950,6 +953,9 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       // PHASE 2: Support icônes pour options (si disponible dans option.icon)
       const optionIcon = (option.icon && option.icon !== 'undefined') ? `${option.icon} ` : '';
       message += `${index + 1}. ${optionIcon}${option.option_name}`;
+      if (option.composition) {
+        message += `\n   🧾 ${option.composition}`;
+      }
       if (option.price_adjustment && option.price_adjustment > 0) {
         message += ` (+${option.price_adjustment}€)`;
       }
@@ -1052,6 +1058,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
         name: option.option_name,
         option_name: option.option_name,
         price_modifier: option.price_modifier || 0,
+        composition: option.composition,
         is_available: true,
         icon: option.icon  // AJOUT: Récupération de l'icône depuis la BDD
       }));
@@ -1201,6 +1208,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
               name: opt.option_name,
               option_name: opt.option_name,
               price_modifier: opt.price_modifier || 0,
+              composition: opt.composition,
               is_available: true,
               display_order: opt.display_order,
               icon: opt.icon  // AJOUT: Support icônes pour workflow universal V2

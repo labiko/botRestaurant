@@ -919,6 +919,13 @@ export default function WorkflowUniversalPage() {
                         className="flex-1 px-2 py-1 border rounded text-sm"
                       />
                       <input
+                        type="text"
+                        placeholder="Composition"
+                        value={option.composition || ''}
+                        onChange={(e) => handleUpdateOption(groupName, optIndex, 'composition', e.target.value)}
+                        className="flex-1 px-2 py-1 border rounded text-sm text-gray-600"
+                      />
+                      <input
                         type="number"
                         step="0.1"
                         placeholder="Prix"
