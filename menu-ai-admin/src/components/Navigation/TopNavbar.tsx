@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRestaurant } from '@/contexts/RestaurantContext';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { useAuth } from '@/lib/auth-context';
 import { Restaurant } from '@/lib/types';
 
@@ -11,6 +12,7 @@ export default function TopNavbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { logout, user } = useAuth();
+  const { environment, setEnvironment } = useEnvironment();
   const {
     selectedRestaurant,
     setSelectedRestaurant,
@@ -59,8 +61,26 @@ export default function TopNavbar() {
             </div>
           </div>
 
-          {/* Sélecteur Restaurant */}
-          <div className="relative">
+          {/* Sélecteurs Environnement et Restaurant */}
+          <div className="flex items-center space-x-4">
+            {/* Sélecteur Environnement */}
+            <div className="relative">
+              <select
+                value={environment}
+                onChange={(e) => setEnvironment(e.target.value as 'DEV' | 'PROD')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
+                  environment === 'PROD'
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                <option value="DEV">🔵 DEV</option>
+                <option value="PROD">🔴 PROD</option>
+              </select>
+            </div>
+
+            {/* Sélecteur Restaurant */}
+            <div className="relative">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition-colors flex items-center space-x-2"

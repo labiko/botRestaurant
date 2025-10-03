@@ -5,6 +5,7 @@ import TopNavbar from "@/components/Navigation/TopNavbar";
 import Sidebar from "@/components/Navigation/Sidebar";
 import Breadcrumbs from "@/components/Navigation/Breadcrumbs";
 import { RestaurantProvider } from "@/contexts/RestaurantContext";
+import { EnvironmentProvider } from "@/contexts/EnvironmentContext";
 import { AuthProvider } from "@/lib/auth-context";
 import AuthGuard from "@/components/AuthGuard";
 
@@ -34,9 +35,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
       >
         <AuthProvider>
-          <AuthGuard>
-            {children}
-          </AuthGuard>
+          <RestaurantProvider>
+            <EnvironmentProvider>
+              <AuthGuard>
+                {children}
+              </AuthGuard>
+            </EnvironmentProvider>
+          </RestaurantProvider>
         </AuthProvider>
       </body>
     </html>
