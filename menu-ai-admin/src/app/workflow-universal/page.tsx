@@ -835,7 +835,7 @@ export default function WorkflowUniversalPage() {
                         <input
                           type="number"
                           min="1"
-                          value={step.max_selections}
+                          value={step.max_selections || 1}
                           onChange={(e) => handleUpdateStep(index, 'max_selections', parseInt(e.target.value))}
                           className="w-16 px-2 py-1 border rounded text-sm"
                         />
