@@ -122,6 +122,7 @@ export default function TopNavbar() {
               </div>
             )}
           </div>
+          </div>
 
           {/* Profil Utilisateur */}
           <div className="relative">
