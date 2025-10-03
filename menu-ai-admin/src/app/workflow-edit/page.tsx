@@ -679,13 +679,13 @@ export default function WorkflowEditPage() {
             {/* Contenu de l'onglet actif */}
             {realOptionGroups[activeTabIndex] && (
               <div className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-800">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-bold text-gray-800 truncate">
                       {realOptionGroups[activeTabIndex].group_name}
                     </h3>
-                    <div className="flex items-center gap-3 mt-2">
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-3 mt-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                           onClick={() => handleToggleRequired(activeTabIndex)}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -698,13 +698,13 @@ export default function WorkflowEditPage() {
                             }`}
                           />
                         </button>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-gray-600 whitespace-nowrap">
                           {realOptionGroups[activeTabIndex].is_required ? '🔒 Obligatoire' : '⭕ Facultatif'}
                         </span>
                       </div>
-                      <span className="text-sm text-gray-600">-</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm text-gray-600">Max</span>
+                      <span className="text-sm text-gray-600 hidden sm:inline">·</span>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <span className="text-sm text-gray-600 whitespace-nowrap">Max :</span>
                         <input
                           type="number"
                           min="1"
@@ -715,15 +715,15 @@ export default function WorkflowEditPage() {
                             updatedGroups[activeTabIndex].max_selections = newValue;
                             setRealOptionGroups(updatedGroups);
                           }}
-                          className="w-12 px-1 py-0.5 border rounded text-center"
+                          className="w-14 px-2 py-1 border border-gray-300 rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                         />
-                        <span className="text-sm text-gray-600">sélection(s)</span>
+                        <span className="text-sm text-gray-600 whitespace-nowrap">sélection(s)</span>
                       </div>
                     </div>
                   </div>
                   <button
                     onClick={() => handleAddOptionToGroup(activeTabIndex)}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 flex-shrink-0 whitespace-nowrap"
                   >
                     ➕ Ajouter option
                   </button>
@@ -739,19 +739,19 @@ export default function WorkflowEditPage() {
 
                     return (
                       <div key={option.id} className="border border-gray-200 rounded-lg p-3 bg-white hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           {/* Affichage formaté comme dans le plan */}
-                          <div className="flex items-center space-x-3 flex-1">
-                            <span className="text-lg">{emoji}</span>
-                            <div className="flex-1">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            <span className="text-lg flex-shrink-0">{emoji}</span>
+                            <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-2">
                                 <input
                                   type="text"
                                   value={option.option_name}
                                   onChange={(e) => handleUpdateRealOption(activeTabIndex, optionIndex, 'option_name', e.target.value)}
-                                  className="font-medium text-gray-800 bg-transparent border-none focus:outline-none focus:bg-white focus:border focus:border-green-500 rounded px-2 py-1"
+                                  className="font-medium text-gray-800 bg-transparent border-none focus:outline-none focus:bg-white focus:border focus:border-green-500 rounded px-2 py-1 flex-1 min-w-0"
                                 />
-                                <div className="flex items-center space-x-1">
+                                <div className="flex items-center space-x-1 flex-shrink-0">
                                   <input
                                     type="number"
                                     step="0.5"
@@ -759,7 +759,7 @@ export default function WorkflowEditPage() {
                                     onChange={(e) => handleUpdateRealOption(activeTabIndex, optionIndex, 'price_modifier', parseFloat(e.target.value) || 0)}
                                     className="w-16 text-sm text-green-600 bg-transparent border-none focus:outline-none focus:bg-white focus:border focus:border-green-500 rounded px-1"
                                   />
-                                  <span className="text-sm text-green-600 font-medium">{priceDisplay}</span>
+                                  <span className="text-sm text-green-600 font-medium whitespace-nowrap">{priceDisplay}</span>
                                 </div>
                               </div>
                             </div>

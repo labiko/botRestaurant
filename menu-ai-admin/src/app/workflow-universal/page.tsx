@@ -561,7 +561,7 @@ export default function WorkflowUniversalPage() {
   }, [showIconPicker, selectedOptionForIcon]);
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-[1600px] mx-auto p-6">
       <div className="mb-8">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -910,20 +910,20 @@ export default function WorkflowUniversalPage() {
                   </div>
 
                   {options.map((option, optIndex) => (
-                    <div key={optIndex} className="flex gap-2 mb-2">
+                    <div key={optIndex} className="flex flex-wrap gap-2 mb-2">
                       <input
                         type="text"
                         placeholder="Nom"
                         value={option.name}
                         onChange={(e) => handleUpdateOption(groupName, optIndex, 'name', e.target.value)}
-                        className="flex-1 px-2 py-1 border rounded text-sm"
+                        className="flex-1 min-w-[150px] px-3 py-2 border rounded text-sm"
                       />
                       <input
                         type="text"
                         placeholder="Composition"
                         value={option.composition || ''}
                         onChange={(e) => handleUpdateOption(groupName, optIndex, 'composition', e.target.value)}
-                        className="flex-1 px-2 py-1 border rounded text-sm text-gray-600"
+                        className="flex-1 min-w-[200px] px-3 py-2 border rounded text-sm text-gray-600"
                       />
                       <input
                         type="number"
@@ -935,16 +935,16 @@ export default function WorkflowUniversalPage() {
                           const numericValue = value === '' ? 0 : parseFloat(value);
                           handleUpdateOption(groupName, optIndex, 'price_modifier', isNaN(numericValue) ? 0 : numericValue);
                         }}
-                        className="w-20 px-2 py-1 border rounded text-sm"
+                        className="w-24 px-3 py-2 border rounded text-sm"
                       />
-                      <div className="relative">
+                      <div className="relative flex-shrink-0">
                         <input
                           type="text"
                           placeholder="Emoji"
                           value={option.emoji || ''}
                           onClick={() => setSelectedOptionForIcon({groupName, optionIndex: optIndex})}
                           onChange={(e) => handleUpdateOption(groupName, optIndex, 'emoji', e.target.value)}
-                          className="w-16 px-2 py-1 border rounded text-sm cursor-pointer"
+                          className="w-20 px-3 py-2 border rounded text-sm cursor-pointer text-center"
                           readOnly
                         />
 
@@ -1000,7 +1000,7 @@ export default function WorkflowUniversalPage() {
                       </div>
                       <button
                         onClick={() => handleRemoveOption(groupName, optIndex)}
-                        className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                        className="flex-shrink-0 px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
                         title="Supprimer cette option"
                       >
                         🗑️
