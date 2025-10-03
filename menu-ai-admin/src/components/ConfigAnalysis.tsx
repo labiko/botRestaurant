@@ -7,6 +7,7 @@ interface ConfigAnalysisProps {
 }
 
 export default function ConfigAnalysis({ onAnalysisComplete }: ConfigAnalysisProps) {
+  const { fetch: fetchWithEnv } = useFetch();
   const [analysis, setAnalysis] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +18,7 @@ export default function ConfigAnalysis({ onAnalysisComplete }: ConfigAnalysisPro
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/analyze-configs');
+      const response = await fetchWithEnv('/api/analyze-configs');
       const data = await response.json();
 
       if (data.success) {

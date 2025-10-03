@@ -2,6 +2,7 @@
 
 import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
 import SqlChangeAnalyzer, { type AnalysisResult } from './SqlChangeAnalyzer';
+import { useFetch } from '@/hooks/useFetch';
 
 interface SqlScript {
   id: string;
@@ -32,6 +33,7 @@ interface WorkflowSqlHistoryProps {
 }
 
 export default forwardRef<WorkflowSqlHistoryRef, WorkflowSqlHistoryProps>(function WorkflowSqlHistory({ productId, filterBySource, onScriptsRefresh }, ref) {
+  const { fetch: fetchWithEnv } = useFetch();
   const [scripts, setScripts] = useState<SqlScript[]>([]);
   const [showHistory, setShowHistory] = useState(true); // Afficher par défaut
   const [executing, setExecuting] = useState<string | null>(null);
@@ -54,7 +56,7 @@ export default forwardRef<WorkflowSqlHistoryRef, WorkflowSqlHistoryProps>(functi
 
     try {
       console.log('📡 [API] Chargement scripts pour productId:', productId);
-      const response = await fetch(`/api/workflow-scripts/${productId}`);
+      const response = await fetchWithEnv(`/api/workflow-scripts/${productId}`);
       const data = await response.json();
 
       if (data.success) {
@@ -76,7 +78,7 @@ export default forwardRef<WorkflowSqlHistoryRef, WorkflowSqlHistoryProps>(functi
 
     try {
       console.log('📡 [API] Chargement scripts pour source:', filterBySource);
-      const response = await fetch(`/api/scripts-history?source=${encodeURIComponent(filterBySource)}`);
+      const response = await fetchWithEnv(`/api/scripts-history?source=${encodeURIComponent(filterBySource)}`);
       const data = await response.json();
 
       if (data.success) {
@@ -226,7 +228,7 @@ export default forwardRef<WorkflowSqlHistoryRef, WorkflowSqlHistoryProps>(functi
       // Appel API pour sauvegarder
       console.log('🌐 [API] Démarrage fetch vers /api/workflow-scripts...');
 
-      const response = await fetch('/api/workflow-scripts', {
+      const response = await fetchWithEnv('/api/workflow-scripts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -317,7 +319,7 @@ export default forwardRef<WorkflowSqlHistoryRef, WorkflowSqlHistoryProps>(functi
       console.log(`🔄 Exécution SQL ${environment}:`, script.sql_script);
 
       // Appel API réel pour exécuter le script
-      const response = await fetch('/api/execute-sql', {
+      const response = await fetchWithEnv('/api/execute-sql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -330,7 +332,7 @@ export default forwardRef<WorkflowSqlHistoryRef, WorkflowSqlHistoryProps>(functi
 
       if (result.success) {
         // Mise à jour du statut d'exécution via API
-        const statusResponse = await fetch(`/api/workflow-scripts/${scriptId}/status`, {
+        const statusResponse = await fetchWithEnv(`/api/workflow-scripts/${scriptId}/status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

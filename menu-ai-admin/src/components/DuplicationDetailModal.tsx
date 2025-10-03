@@ -55,6 +55,7 @@ export default function DuplicationDetailModal({
   isOpen,
   onClose
 }: DuplicationDetailModalProps) {
+  const { fetch: fetchWithEnv } = useFetch();
   const [activeTab, setActiveTab] = useState<'categories' | 'options'>('categories');
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -76,7 +77,7 @@ export default function DuplicationDetailModal({
     setError(null);
 
     try {
-      const response = await fetch(`/api/duplication-details/${duplicationId}`);
+      const response = await fetchWithEnv(`/api/duplication-details/${duplicationId}`);
       const data = await response.json();
 
       if (data.success) {

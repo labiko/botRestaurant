@@ -44,6 +44,7 @@ export default function CategoryEditModal({
   onSave,
   selectedRestaurant
 }: CategoryEditModalProps) {
+  const { fetch: fetchWithEnv } = useFetch();
   const [products, setProducts] = useState<Product[]>([]);
   const [changes, setChanges] = useState<any[]>([]);
   const [nextId, setNextId] = useState(1000); // ID temporaire pour nouveaux produits
@@ -118,7 +119,7 @@ export default function CategoryEditModal({
     }
 
     try {
-      const response = await fetch('/api/restaurant-categories/update-name', {
+      const response = await fetchWithEnv('/api/restaurant-categories/update-name', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

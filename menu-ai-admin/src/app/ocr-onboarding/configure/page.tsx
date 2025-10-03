@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useFetch } from '@/hooks/useFetch';
 import { useRouter } from 'next/navigation';
 import { ProductAnalysisAIService } from '@/lib/ocr/services/product-analysis-ai.service';
 import { RestaurantTemplateClonerService } from '@/lib/ocr/services/restaurant-template-cloner.service';

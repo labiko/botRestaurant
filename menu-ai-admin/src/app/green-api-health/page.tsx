@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useFetch } from '@/hooks/useFetch';
 
 interface HealthLog {
   id: number;
@@ -42,6 +43,7 @@ interface ScheduledRebootConfig {
 }
 
 export default function GreenAPIHealthPage() {
+  const { fetch: fetchWithEnv } = useFetch();
   // Tab state
   const [activeTab, setActiveTab] = useState<'monitoring' | 'scheduled'>('monitoring');
 
@@ -78,7 +80,7 @@ export default function GreenAPIHealthPage() {
 
   async function loadData() {
     try {
-      const response = await fetch('/api/green-api-health');
+      const response = await fetchWithEnv('/api/green-api-health');
       if (!response.ok) throw new Error('Erreur chargement données');
 
       const data = await response.json();
@@ -95,7 +97,7 @@ export default function GreenAPIHealthPage() {
 
   async function loadRebootConfig() {
     try {
-      const response = await fetch('/api/green-api-health/scheduled-reboot');
+      const response = await fetchWithEnv('/api/green-api-health/scheduled-reboot');
       if (!response.ok) throw new Error('Erreur chargement config');
 
       const data = await response.json();
@@ -110,7 +112,7 @@ export default function GreenAPIHealthPage() {
       setSavingConfig(true);
       setConfigSuccess(null);
 
-      const response = await fetch('/api/green-api-health/scheduled-reboot', {
+      const response = await fetchWithEnv('/api/green-api-health/scheduled-reboot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -133,7 +135,7 @@ export default function GreenAPIHealthPage() {
   async function triggerManualCheck() {
     try {
       setLoading(true);
-      const response = await fetch('/api/green-api-health/manual-check', {
+      const response = await fetchWithEnv('/api/green-api-health/manual-check', {
         method: 'POST'
       });
 

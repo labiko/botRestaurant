@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useFetch } from '@/hooks/useFetch';
 import { useRouter } from 'next/navigation';
 
 export default function OCRUploadPage() {
@@ -20,7 +21,7 @@ export default function OCRUploadPage() {
 
   const loadAvailableProviders = async () => {
     try {
-      const response = await fetch('/api/ocr/providers');
+      const response = await fetchWithEnv('/api/ocr/providers');
       const data = await response.json();
       setAvailableProviders(data.providers || []);
 
@@ -52,7 +53,7 @@ export default function OCRUploadPage() {
       formData.append('image', selectedFile);
       formData.append('provider', selectedProvider);
 
-      const response = await fetch('/api/ocr/extract', {
+      const response = await fetchWithEnv('/api/ocr/extract', {
         method: 'POST',
         body: formData
       });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useFetch } from '@/hooks/useFetch';
 
 interface Restaurant {
   id: number;
@@ -30,6 +31,7 @@ interface RestaurantDeletionProps {
 }
 
 export default function RestaurantDeletion({ onDeletionComplete }: RestaurantDeletionProps) {
+  const { fetch: fetchWithEnv } = useFetch();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [preview, setPreview] = useState<DeletionPreview | null>(null);
@@ -46,7 +48,7 @@ export default function RestaurantDeletion({ onDeletionComplete }: RestaurantDel
 
   const loadRestaurants = async () => {
     try {
-      const response = await fetch('/api/restaurants');
+      const response = await fetchWithEnv('/api/restaurants');
       const data = await response.json();
       if (data.success) {
         setRestaurants(data.restaurants);
@@ -59,7 +61,7 @@ export default function RestaurantDeletion({ onDeletionComplete }: RestaurantDel
   const generatePreview = async (restaurant: Restaurant) => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/delete-restaurant', {
+      const response = await fetchWithEnv('/api/delete-restaurant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ restaurantId: restaurant.id, environment: targetEnv })
@@ -88,7 +90,7 @@ export default function RestaurantDeletion({ onDeletionComplete }: RestaurantDel
 
     try {
       setIsLoading(true);
-      const response = await fetch('/api/delete-restaurant', {
+      const response = await fetchWithEnv('/api/delete-restaurant', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ restaurantId: selectedRestaurant.id, environment: targetEnv })

@@ -3,8 +3,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useFetch } from '@/hooks/useFetch';
 
 export default function OCRDeployPage() {
+  const { fetch: fetchWithEnv } = useFetch();
   const router = useRouter();
 
   // États principaux
@@ -51,7 +53,7 @@ export default function OCRDeployPage() {
 
     try {
       // Exécution du SQL d'intégration complète
-      const response = await fetch('/api/ocr/execute-deployment', {
+      const response = await fetchWithEnv('/api/ocr/execute-deployment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -102,7 +104,7 @@ export default function OCRDeployPage() {
     }
 
     try {
-      const response = await fetch('/api/test-bot-workflow', {
+      const response = await fetchWithEnv('/api/test-bot-workflow', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

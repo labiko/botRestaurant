@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useFetch } from '@/hooks/useFetch';
 
 interface Restaurant {
   id: number;
@@ -13,6 +14,7 @@ interface Restaurant {
 }
 
 export default function RestaurantDeploymentSection() {
+  const { fetch: fetchWithEnv } = useFetch();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export default function RestaurantDeploymentSection() {
       setError(null);
 
       // Appel API vers PROD pour récupérer les restaurants avec deployment_status
-      const response = await fetch('/api/deployment/restaurants');
+      const response = await fetchWithEnv('/api/deployment/restaurants');
       const data = await response.json();
 
       if (data.success) {
@@ -64,7 +66,7 @@ export default function RestaurantDeploymentSection() {
 
   const updateDeploymentStatus = async (restaurantId: number, newStatus: string) => {
     try {
-      const response = await fetch('/api/deployment/status', {
+      const response = await fetchWithEnv('/api/deployment/status', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

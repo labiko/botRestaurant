@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useFetch } from '@/hooks/useFetch';
 
 interface Category {
   id: number;
@@ -25,6 +26,7 @@ export default function ProductionSyncModal({
   duplication,
   onSync
 }: ProductionSyncModalProps) {
+  const { fetch: fetchWithEnv } = useFetch();
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
   const [syncType, setSyncType] = useState<'complete' | 'category'>('complete');
@@ -42,7 +44,7 @@ export default function ProductionSyncModal({
     try {
       setLoading(true);
       // Récupérer les catégories du restaurant
-      const response = await fetch(`/api/restaurants/${duplication.target_restaurant_id}/categories`);
+      const response = await fetchWithEnv(`/api/restaurants/${duplication.target_restaurant_id}/categories`);
       const data = await response.json();
 
       if (data.success) {
