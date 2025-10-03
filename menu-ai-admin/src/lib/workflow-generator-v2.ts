@@ -97,7 +97,7 @@ WHERE id = ${productId};
     const groupRequiredMap = new Map<string, boolean>();
     steps.forEach(step => {
       step.option_groups.forEach(groupName => {
-        groupRequiredMap.set(groupName, false);
+        groupRequiredMap.set(groupName, step.required !== false);
       });
     });
 
@@ -480,7 +480,7 @@ INSERT INTO france_products (
     const groupRequiredMap = new Map<string, boolean>();
     steps.forEach(step => {
       step.option_groups.forEach(groupName => {
-        groupRequiredMap.set(groupName, false);
+        groupRequiredMap.set(groupName, step.required !== false);
       });
     });
 

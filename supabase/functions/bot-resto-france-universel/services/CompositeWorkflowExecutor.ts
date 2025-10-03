@@ -512,13 +512,10 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     // Lister les options avec numérotation simple compatible mobile
     optionGroup.options.forEach((option, index)=>{
       const optionIcon = (option.icon && option.icon !== 'undefined') ? `${option.icon} ` : '';
-      message += `${index + 1}. ${optionIcon}${option.option_name}`;
+      const price = option.price_modifier && option.price_modifier !== 0 ? ` (${option.price_modifier}€)` : '';
+      message += `${index + 1}. ${optionIcon}${option.option_name}${price}`;
       if (option.composition) {
-        message += `\n   🧾 ${option.composition}`;
-      }
-      if (option.price_modifier && option.price_modifier !== 0) {
-        const sign = option.price_modifier > 0 ? '+' : '';
-        message += ` (${sign}${option.price_modifier}€)`;
+        message += `\n   ${option.composition}`;
       }
       message += '\n';
     });
@@ -952,12 +949,10 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       // Ne pas nettoyer les caractères ⿡⿢⿣ - ils sont les vrais numéros !
       // PHASE 2: Support icônes pour options (si disponible dans option.icon)
       const optionIcon = (option.icon && option.icon !== 'undefined') ? `${option.icon} ` : '';
-      message += `${index + 1}. ${optionIcon}${option.option_name}`;
+      const price = option.price_adjustment && option.price_adjustment > 0 ? ` (+${option.price_adjustment}€)` : '';
+      message += `${index + 1}. ${optionIcon}${option.option_name}${price}`;
       if (option.composition) {
-        message += `\n   🧾 ${option.composition}`;
-      }
-      if (option.price_adjustment && option.price_adjustment > 0) {
-        message += ` (+${option.price_adjustment}€)`;
+        message += `\n   ${option.composition}`;
       }
       message += '\n';
     });

@@ -467,6 +467,12 @@ export default function WorkflowEditPage() {
     setRealOptionGroups(updatedGroups);
   };
 
+  const handleToggleRequired = (groupIndex: number) => {
+    const updatedGroups = [...realOptionGroups];
+    updatedGroups[groupIndex].is_required = !updatedGroups[groupIndex].is_required;
+    setRealOptionGroups(updatedGroups);
+  };
+
   const handleUpdateRealOption = (groupIndex: number, optionIndex: number, field: keyof RealOption, value: any) => {
     const updatedGroups = [...realOptionGroups];
     updatedGroups[groupIndex].options[optionIndex] = {
@@ -678,21 +684,42 @@ export default function WorkflowEditPage() {
                     <h3 className="text-lg font-bold text-gray-800">
                       {realOptionGroups[activeTabIndex].group_name}
                     </h3>
-                    <p className="text-sm text-gray-600">
-                      {realOptionGroups[activeTabIndex].is_required ? 'Obligatoire' : 'Optionnel'} -
-                      Max <input
-                        type="number"
-                        min="1"
-                        value={realOptionGroups[activeTabIndex].max_selections}
-                        onChange={(e) => {
-                          const newValue = parseInt(e.target.value) || 1;
-                          const updatedGroups = [...realOptionGroups];
-                          updatedGroups[activeTabIndex].max_selections = newValue;
-                          setRealOptionGroups(updatedGroups);
-                        }}
-                        className="w-12 px-1 py-0.5 border rounded text-center"
-                      /> sélection(s)
-                    </p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggleRequired(activeTabIndex)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            realOptionGroups[activeTabIndex].is_required ? 'bg-green-600' : 'bg-gray-300'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              realOptionGroups[activeTabIndex].is_required ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                        <span className="text-sm text-gray-600">
+                          {realOptionGroups[activeTabIndex].is_required ? '🔒 Obligatoire' : '⭕ Facultatif'}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-600">-</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-gray-600">Max</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={realOptionGroups[activeTabIndex].max_selections}
+                          onChange={(e) => {
+                            const newValue = parseInt(e.target.value) || 1;
+                            const updatedGroups = [...realOptionGroups];
+                            updatedGroups[activeTabIndex].max_selections = newValue;
+                            setRealOptionGroups(updatedGroups);
+                          }}
+                          className="w-12 px-1 py-0.5 border rounded text-center"
+                        />
+                        <span className="text-sm text-gray-600">sélection(s)</span>
+                      </div>
+                    </div>
                   </div>
                   <button
                     onClick={() => handleAddOptionToGroup(activeTabIndex)}
