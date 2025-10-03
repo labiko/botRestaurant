@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useFetch } from '@/hooks/useFetch';
 
 interface Restaurant {
   id: number;
@@ -41,6 +42,7 @@ interface Category {
 }
 
 export default function SelectCategoriesPage() {
+  const { fetch: fetchWithEnv } = useFetch();
   const router = useRouter();
   const [sourceRestaurant, setSourceRestaurant] = useState<Restaurant | null>(null);
   const [targetRestaurant, setTargetRestaurant] = useState<TargetRestaurant | null>(null);
@@ -83,7 +85,7 @@ export default function SelectCategoriesPage() {
   const loadCategories = async (restaurantId: number) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/restaurant-categories/${restaurantId}`);
+      const response = await fetchWithEnv(`/api/restaurant-categories/${restaurantId}`);
       const data = await response.json();
 
       if (data.success) {
@@ -140,7 +142,7 @@ export default function SelectCategoriesPage() {
     try {
       setDuplicating(true);
 
-      const response = await fetch('/api/duplicate-restaurant', {
+      const response = await fetchWithEnv('/api/duplicate-restaurant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

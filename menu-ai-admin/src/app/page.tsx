@@ -117,7 +117,7 @@ function MenuAIAdminContent() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/analyze-command', {
+      const response = await fetchWithEnv('/api/analyze-command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command, restaurantId: selectedRestaurant?.id || 1 })
@@ -156,7 +156,7 @@ function MenuAIAdminContent() {
 
         console.log('🔄 [DEBUG] Payload sauvegarde:', savePayload);
 
-        const saveResponse = await fetch('/api/scripts-history', {
+        const saveResponse = await fetchWithEnv('/api/scripts-history', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(savePayload)
@@ -179,7 +179,7 @@ function MenuAIAdminContent() {
       // 2. Exécution automatique en DEV (plan mis à jour)
       console.log('🔄 [DEBUG] Début exécution SQL...');
 
-      const response = await fetch('/api/execute-sql', {
+      const response = await fetchWithEnv('/api/execute-sql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -264,7 +264,7 @@ function MenuAIAdminContent() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/analyze-list', {
+      const response = await fetchWithEnv('/api/analyze-list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -371,7 +371,7 @@ function MenuAIAdminContent() {
   // Fonction : Charger l'historique des scripts
   const loadScriptsHistory = async () => {
     try {
-      const response = await fetch('/api/scripts-history');
+      const response = await fetchWithEnv('/api/scripts-history');
       const data = await response.json();
       if (data.success) {
         setScripts(data.scripts);
@@ -384,7 +384,7 @@ function MenuAIAdminContent() {
   // Fonction : Exécuter un script
   const executeScript = async (scriptId: number, environment: string) => {
     try {
-      const response = await fetch('/api/execute-script', {
+      const response = await fetchWithEnv('/api/execute-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scriptId, environment })
@@ -427,7 +427,7 @@ function MenuAIAdminContent() {
   // Fonction : Générer rollback
   const generateRollback = async (scriptId: number) => {
     try {
-      const response = await fetch('/api/generate-rollback', {
+      const response = await fetchWithEnv('/api/generate-rollback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scriptId })
@@ -447,7 +447,7 @@ function MenuAIAdminContent() {
 
     try {
       setLoadingCategories(true);
-      const response = await fetch(`/api/restaurant-categories/${restaurantId}`);
+      const response = await fetchWithEnv(`/api/restaurant-categories/${restaurantId}`);
       const data = await response.json();
 
       if (data.success) {
@@ -483,7 +483,7 @@ function MenuAIAdminContent() {
     });
 
     try {
-      const response = await fetch('/api/duplicate-category', {
+      const response = await fetchWithEnv('/api/duplicate-category', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -560,7 +560,7 @@ function MenuAIAdminContent() {
     });
 
     try {
-      const response = await fetch('/api/delete-category', {
+      const response = await fetchWithEnv('/api/delete-category', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -621,7 +621,7 @@ function MenuAIAdminContent() {
   // Fonction : Supprimer un script
   const deleteScript = async (scriptId: number) => {
     try {
-      const response = await fetch(`/api/delete-script?id=${scriptId}`, {
+      const response = await fetchWithEnv(`/api/delete-script?id=${scriptId}`, {
         method: 'DELETE'
       });
 
@@ -640,7 +640,7 @@ function MenuAIAdminContent() {
   const loadRestaurants = async () => {
     setLoadingRestaurants(true);
     try {
-      const response = await fetch('/api/restaurants');
+      const response = await fetchWithEnv('/api/restaurants');
       const data = await response.json();
 
       if (data.success) {

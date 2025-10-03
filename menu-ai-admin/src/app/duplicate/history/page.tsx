@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DuplicationDetailModal from '@/components/DuplicationDetailModal';
 import { TimezoneService } from '@/lib/timezone-service';
+import { useFetch } from '@/hooks/useFetch';
 
 interface DuplicationHistory {
   id: number;
@@ -24,6 +25,7 @@ interface DuplicationHistory {
 }
 
 export default function DuplicationHistoryPage() {
+  const { fetch: fetchWithEnv } = useFetch();
   const router = useRouter();
   const [duplications, setDuplications] = useState<DuplicationHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,7 @@ export default function DuplicationHistoryPage() {
   const loadHistory = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/duplication-reports');
+      const response = await fetchWithEnv('/api/duplication-reports');
       const data = await response.json();
 
       if (data.success) {

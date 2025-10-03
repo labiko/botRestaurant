@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { WorkflowGeneratorV2, UniversalWorkflow, WorkflowStep, OptionItem } from '@/lib/workflow-generator-v2';
 import WorkflowSqlHistory, { WorkflowSqlHistoryRef } from '@/components/WorkflowSqlHistory';
+import { useFetch } from '@/hooks/useFetch';
 
 // Interfaces pour les vraies données
 interface RealOption {
@@ -22,6 +23,7 @@ interface OptionGroup {
 }
 
 export default function WorkflowEditPage() {
+  const { fetch: fetchWithEnv } = useFetch();
   const [loading, setLoading] = useState(false);
   const [productName, setProductName] = useState('');
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
@@ -80,7 +82,7 @@ export default function WorkflowEditPage() {
   const loadRestaurants = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/restaurants');
+      const response = await fetchWithEnv('/api/restaurants');
       if (response.ok) {
         const data = await response.json();
         setRestaurants(data.restaurants || []);
@@ -100,7 +102,7 @@ export default function WorkflowEditPage() {
 
       // Charger les vraies données depuis l'API
       console.log('🔍 DEBUG_ICONS: Appel workflow-config API...');
-      const response = await fetch(`/api/products/${productId}/workflow-config`);
+      const response = await fetchWithEnv(`/api/products/${productId}/workflow-config`);
 
       if (!response.ok) {
         throw new Error(`Erreur API: ${response.status}`);
@@ -218,7 +220,7 @@ export default function WorkflowEditPage() {
       const apiUrl = `/api/products/${productId}/options-grouped`;
       console.log('🔍 DEBUG_ICONS: Appel API:', apiUrl);
       console.log('🔍 [WORKFLOW-EDIT] Appel API:', apiUrl);
-      const response = await fetch(apiUrl);
+      const response = await fetchWithEnv(apiUrl);
       console.log('🔍 DEBUG_ICONS: Réponse API reçue, status:', response.status);
 
       if (response.ok) {

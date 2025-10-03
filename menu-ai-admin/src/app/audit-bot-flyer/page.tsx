@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Upload, FileImage, CheckCircle, AlertTriangle, Copy, Play, TestTube } from 'lucide-react';
 import WorkflowSqlHistory from '@/components/WorkflowSqlHistory';
+import { useFetch } from '@/hooks/useFetch';
 
 interface Restaurant {
   id: string;
@@ -53,6 +54,7 @@ interface ComparisonResult {
 
 
 export default function AuditBotFlyer() {
+  const { fetch: fetchWithEnv } = useFetch();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>('');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -131,7 +133,7 @@ export default function AuditBotFlyer() {
 
   const loadRestaurants = async () => {
     try {
-      const response = await fetch(`/api/restaurants`);
+      const response = await fetchWithEnv(`/api/restaurants`);
       const data = await response.json();
       if (data.success) {
         setRestaurants(data.restaurants || []);
@@ -143,7 +145,7 @@ export default function AuditBotFlyer() {
 
   const loadCategories = async (restaurantId: string) => {
     try {
-      const response = await fetch(`/api/restaurants/${restaurantId}/categories`);
+      const response = await fetchWithEnv(`/api/restaurants/${restaurantId}/categories`);
       const data = await response.json();
       if (data.success) {
         setCategories(data.categories || []);
@@ -155,7 +157,7 @@ export default function AuditBotFlyer() {
 
   const loadProducts = async (restaurantId: string, categoryId: string) => {
     try {
-      const response = await fetch(`/api/products?restaurant_id=${restaurantId}&category_id=${categoryId}`);
+      const response = await fetchWithEnv(`/api/products?restaurant_id=${restaurantId}&category_id=${categoryId}`);
       const data = await response.json();
       if (data.success) {
         setProducts(data.products || []);
@@ -452,7 +454,7 @@ export default function AuditBotFlyer() {
             formData.append('image', imageFile);
             formData.append('provider', 'openai'); // OpenAI plus simple et efficace
 
-            const response = await fetch('/api/ocr/extract', {
+            const response = await fetchWithEnv('/api/ocr/extract', {
               method: 'POST',
               body: formData
             });
@@ -548,7 +550,7 @@ WHERE p.restaurant_id = '${selectedRestaurant}'
 COMMIT;`;
 
     try {
-      const response = await fetch('/api/scripts-history', {
+      const response = await fetchWithEnv('/api/scripts-history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -622,7 +624,7 @@ COMMIT;`;
       console.log('📝 Valeurs à sauvegarder:', editValues);
 
       // Appel API pour sauvegarder les modifications
-      const response = await fetch('/api/products/update', {
+      const response = await fetchWithEnv('/api/products/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -786,7 +788,7 @@ COMMIT;`;
     if (!restaurant || !category) return;
 
     try {
-      const response = await fetch('/api/scripts-history', {
+      const response = await fetchWithEnv('/api/scripts-history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

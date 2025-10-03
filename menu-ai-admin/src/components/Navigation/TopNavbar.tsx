@@ -6,8 +6,10 @@ import { useRestaurant } from '@/contexts/RestaurantContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { useAuth } from '@/lib/auth-context';
 import { Restaurant } from '@/lib/types';
+import { useFetch } from '@/hooks/useFetch';
 
 export default function TopNavbar() {
+  const { fetch: fetchWithEnv } = useFetch();
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -27,7 +29,7 @@ export default function TopNavbar() {
     async function loadRestaurants() {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/restaurants');
+        const response = await fetchWithEnv('/api/restaurants');
         const data = await response.json();
 
         if (data.success) {

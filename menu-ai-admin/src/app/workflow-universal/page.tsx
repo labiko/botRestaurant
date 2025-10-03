@@ -77,7 +77,7 @@ export default function WorkflowUniversalPage() {
   const loadAvailableIcons = async () => {
     try {
       console.log('🔄 Chargement des icônes...');
-      const response = await fetch('/api/icons');
+      const response = await fetchWithEnv('/api/icons');
       console.log('📡 Réponse API icons:', response.status);
       if (response.ok) {
         const data = await response.json();
@@ -111,7 +111,7 @@ export default function WorkflowUniversalPage() {
     try {
       setLoadingGroups(true);
       console.log('🔄 Chargement des groupes...');
-      const response = await fetch('/api/option-groups');
+      const response = await fetchWithEnv('/api/option-groups');
       console.log('📡 Réponse API option-groups:', response.status);
       if (response.ok) {
         const data = await response.json();
@@ -492,7 +492,7 @@ export default function WorkflowUniversalPage() {
 
       console.log('📤 Envoi des données:', requestData);
 
-      const response = await fetch('/api/option-groups', {
+      const response = await fetchWithEnv('/api/option-groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData)
@@ -527,7 +527,7 @@ export default function WorkflowUniversalPage() {
     }
 
     try {
-      const response = await fetch(`/api/option-groups/${id}`, {
+      const response = await fetchWithEnv(`/api/option-groups/${id}`, {
         method: 'DELETE'
       });
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { TimezoneService } from '@/lib/timezone-service';
+import { useFetch } from '@/hooks/useFetch';
 
 interface Restaurant {
   id: number;
@@ -31,6 +32,7 @@ interface TargetRestaurant {
 }
 
 export default function DuplicateRestaurantPage() {
+  const { fetch: fetchWithEnv } = useFetch();
   const router = useRouter();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedSource, setSelectedSource] = useState<Restaurant | null>(null);
@@ -54,7 +56,7 @@ export default function DuplicateRestaurantPage() {
   const loadRestaurants = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/restaurants');
+      const response = await fetchWithEnv('/api/restaurants');
       const data = await response.json();
 
       if (data.success) {
