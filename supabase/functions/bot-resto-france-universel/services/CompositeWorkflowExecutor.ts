@@ -517,7 +517,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       if (option.composition) {
         message += `\n   ${option.composition}`;
       }
-      message += '\n';
+      message += '\n━━━━━━━━━━━━━━━━━━━━━━\n';
     });
     message += '\n💡 Pour choisir votre ';
     message += optionGroup.groupName === 'viande' ? 'viande' : optionGroup.displayName.toLowerCase();
