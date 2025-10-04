@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+import { getSupabaseClientForRequest } from '@/lib/api-helpers';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('❌ Variables d\'environnement manquantes');
-      return NextResponse.json(
-        { success: false, error: 'Configuration manquante' },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = getSupabaseClientForRequest(request);
 
     // Récupérer toutes les icônes depuis france_icons
     const { data: icons, error } = await supabase
@@ -55,13 +44,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { success: false, error: 'Configuration manquante' },
-        { status: 500 }
-      );
-    }
-
     const body = await request.json();
     const { emoji, name, category, tags } = body;
 
@@ -72,7 +54,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = getSupabaseClientForRequest(request);
 
     const { data, error } = await supabase
       .from("france_icons")

@@ -153,6 +153,12 @@ export default function BackOfficeRestaurantPage() {
     }
   }, [notification]);
 
+  // Charger les icônes au démarrage
+  useEffect(() => {
+    console.log('🚀 [ICONS-DEBUG] useEffect - Chargement initial des icônes...');
+    loadIcons();
+  }, []);
+
   // Fonction helper pour afficher les notifications
   const showNotification = (type: 'success' | 'error' | 'info' | 'warning', message: string, details?: string) => {
     setNotification({ type, message, details });
@@ -847,19 +853,31 @@ export default function BackOfficeRestaurantPage() {
 
   // Fonctions pour la gestion du catalogue d'icônes
   const loadIcons = async () => {
+    console.log('🔄 [ICONS-DEBUG] Début chargement des icônes...');
     setLoading(true);
     try {
+      console.log('🔄 [ICONS-DEBUG] Appel API /api/icons...');
       const response = await fetchWithEnv('/api/icons');
+      console.log('📡 [ICONS-DEBUG] Réponse API reçue:', response.status, response.ok);
       const data = await response.json();
+      console.log('📋 [ICONS-DEBUG] Données reçues:', data);
 
       if (data.success) {
+        console.log('✅ [ICONS-DEBUG] Succès ! Nombre d\'icônes:', data.icons?.length || 0);
+        console.log('📊 [ICONS-DEBUG] Première icône:', data.icons?.[0]);
+        console.log('🔍 [ICONS-DEBUG] Recherche icône ID 52 (Menu Famille)...');
+        const menuFamille = data.icons?.find(icon => icon.id === 52);
+        console.log('👨‍👩‍👧‍👦 [ICONS-DEBUG] Icône Menu Famille trouvée:', menuFamille);
         setIcons(data.icons || []);
       } else {
+        console.error('❌ [ICONS-DEBUG] Échec API:', data.error);
         showNotification('error', 'Erreur', data.error || 'Impossible de charger les icônes');
       }
     } catch (error) {
+      console.error('💥 [ICONS-DEBUG] Erreur chargement:', error);
       showNotification('error', 'Erreur', 'Impossible de charger les icônes');
     } finally {
+      console.log('🏁 [ICONS-DEBUG] Fin chargement des icônes');
       setLoading(false);
     }
   };
@@ -1547,7 +1565,7 @@ export default function BackOfficeRestaurantPage() {
                     <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-purple-600 bg-purple-100">
                       <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
                       Chargement des catégories...
                     </div>
@@ -1727,7 +1745,7 @@ export default function BackOfficeRestaurantPage() {
                                   <div className="inline-flex items-center px-4 py-2 font-semibold text-sm text-purple-600">
                                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                     Chargement des produits...
                                   </div>
@@ -1795,24 +1813,18 @@ export default function BackOfficeRestaurantPage() {
                           {iconEditMode === 'product' ? '📦 Choisir l\'icône du produit' : '🏷️ Choisir l\'icône de la catégorie'}
                         </h4>
                         <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-3 p-4 bg-gray-50 rounded-xl">
-                        {[
-                          '🍽️', '🍕', '🍔', '🌯', '🥙', '🍗', '🥩', '🐟', '🦐', '🍝', '🍜', '🍛',
-                          '🥗', '🥬', '🥒', '🍅', '🧅', '🥔', '🍟', '🥤', '☕', '🧃', '🍰', '🍨',
-                          '🎂', '🍪', '🍩', '🧁', '🍎', '🍊', '🍌', '🍇', '🍓', '🥝', '🥥', '🍑',
-                          '🌶️', '🌽', '🥕', '🥦', '🥒', '🍆', '🥑', '🍠', '🥜', '🌰', '🍞', '🥐',
-                          '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🍳', '🥓', '🌭', '🥪', '🌮'
-                        ].map((icon, index) => (
+                        {icons.map((iconData, index) => (
                           <button
-                            key={`unified-icon-${index}`}
-                            onClick={() => saveIcon(icon)}
+                            key={`unified-icon-${iconData.id}`}
+                            onClick={() => saveIcon(iconData.emoji)}
                             className={`p-3 text-2xl rounded-lg border-2 transition-all hover:scale-110 ${
-                              (iconEditMode === 'product' && editingProduct ? editingProduct.icon : editingCategory.icon) === icon
+                              (iconEditMode === 'product' && editingProduct ? editingProduct.icon : editingCategory.icon) === iconData.emoji
                                 ? 'border-blue-500 bg-blue-100'
                                 : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                             }`}
-                            title={`Appliquer ${icon} à la catégorie`}
+                            title={`Appliquer ${iconData.emoji} ${iconData.name} à la catégorie`}
                           >
-                            {icon}
+                            {iconData.emoji}
                           </button>
                         ))}
                       </div>
@@ -1831,7 +1843,7 @@ export default function BackOfficeRestaurantPage() {
                       <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-green-600 bg-green-100">
                         <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         Chargement des options...
                       </div>
