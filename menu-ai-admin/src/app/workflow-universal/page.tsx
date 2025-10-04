@@ -8,7 +8,7 @@ import { useFetch } from '@/hooks/useFetch';
 
 export default function WorkflowUniversalPage() {
   const { fetch: fetchWithEnv } = useFetch();
-  const [activeTab, setActiveTab] = useState<'workflow' | 'groups'>('workflow');
+  const [activeTab, setActiveTab] = useState<'workflow' | 'groups' | 'pizzas'>('workflow');
   const [showHelp, setShowHelp] = useState(false);
   const [productName, setProductName] = useState('MON MENU CUSTOM');
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
@@ -65,6 +65,47 @@ export default function WorkflowUniversalPage() {
   // Nouveaux états pour les groupes prédéfinis
   const [availableGroups, setAvailableGroups] = useState<any[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
+
+  // États pour l'import des pizzas
+  const [pizzaConfig, setPizzaConfig] = useState({
+    priceSeniorOnSite: 9,
+    priceSeniorDelivery: 10,
+    priceMegaOnSite: 12,
+    priceMegaDelivery: 13,
+    presetName: 'standard'
+  });
+
+  const [pizzasImportData, setPizzasImportData] = useState({
+    categoryName: '',
+    categoryIcon: '🍕',
+    pizzasText: '',
+    parsedPizzas: [] as any[],
+    generatedSQL: ''
+  });
+
+  // Presets de configuration prix
+  const pricePresets = {
+    standard: {
+      name: "📊 Standard (+1€ partout)",
+      description: "Sénior 9€/10€ - Méga 12€/13€",
+      priceSeniorOnSite: 9,
+      priceSeniorDelivery: 10,
+      priceMegaOnSite: 12,
+      priceMegaDelivery: 13
+    },
+    ocv: {
+      name: "🍕 Type OCV (+1€/+2€)",
+      description: "Sénior 9€/10€ - Méga 12€/14€",
+      priceSeniorOnSite: 9,
+      priceSeniorDelivery: 10,
+      priceMegaOnSite: 12,
+      priceMegaDelivery: 14
+    },
+    custom: {
+      name: "⚙️ Personnalisé",
+      description: "Configuration manuelle"
+    }
+  };
 
   // Charger la liste des restaurants et groupes au démarrage
   useEffect(() => {
@@ -562,6 +603,147 @@ export default function WorkflowUniversalPage() {
     };
   }, [showIconPicker, selectedOptionForIcon]);
 
+  // Fonctions pour l'import des pizzas
+  const handleParsePizzas = () => {
+    const lines = pizzasImportData.pizzasText
+      .split('\n')
+      .filter(line => line.trim())
+      .map(line => line.trim());
+
+    const pizzas = [];
+
+    lines.forEach((line) => {
+      // Ignorer les lignes avec des prix (ex: "Sénior 9 € | Méga 12 €")
+      if (line.match(/Sénior.*€.*Méga.*€/i)) {
+        return; // Skip cette ligne
+      }
+
+      // Parser les pizzas (format: "Nom : Composition" OU "Nom – Composition")
+      const pizzaMatch = line.match(/^(.+?)\s*[:\-–]\s*(.+)$/);
+
+      if (pizzaMatch) {
+        const name = pizzaMatch[1].trim();
+        const composition = pizzaMatch[2].trim();
+
+        pizzas.push({
+          name,
+          composition,
+          slug: generateSlug(name)
+        });
+      }
+    });
+
+    setPizzasImportData({
+      ...pizzasImportData,
+      parsedPizzas: pizzas
+    });
+  };
+
+  const generateSlug = (name: string): string => {
+    return name.toLowerCase()
+      .replace(/[àáâãäå]/g, 'a')
+      .replace(/[èéêë]/g, 'e')
+      .replace(/[ìíîï]/g, 'i')
+      .replace(/[òóôõö]/g, 'o')
+      .replace(/[ùúûü]/g, 'u')
+      .replace(/[ç]/g, 'c')
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  };
+
+  const handleGeneratePizzaSQL = () => {
+    if (!selectedRestaurant || !pizzasImportData.categoryName.trim()) {
+      alert('Veuillez sélectionner un restaurant et saisir un nom de catégorie');
+      return;
+    }
+
+    const { categoryName, parsedPizzas } = pizzasImportData;
+    const categorySlug = generateSlug(categoryName);
+
+    let sql = `-- ========================================================================
+-- SCRIPT PIZZAS - ${selectedRestaurant.name}
+-- Configuration: ${pricePresets[pizzaConfig.presetName]?.name || 'Personnalisé'}
+-- Sénior: ${pizzaConfig.priceSeniorOnSite}€/${pizzaConfig.priceSeniorDelivery}€
+-- Méga: ${pizzaConfig.priceMegaOnSite}€/${pizzaConfig.priceMegaDelivery}€
+-- ${parsedPizzas.length} pizzas × 2 tailles = ${parsedPizzas.length * 2} produits
+-- Généré le: ${new Date().toLocaleDateString('fr-FR')} ${new Date().toLocaleTimeString('fr-FR')}
+-- ========================================================================
+
+BEGIN;
+
+DO $$
+DECLARE
+  v_restaurant_id INTEGER := ${selectedRestaurant.id};
+  v_category_id INTEGER;
+BEGIN
+
+  RAISE NOTICE '🍕 Restaurant ID: % - Config: ${pizzaConfig.presetName}', v_restaurant_id;
+
+  -- ================================================================
+  -- CATÉGORIE
+  -- ================================================================
+
+  INSERT INTO france_menu_categories (restaurant_id, name, slug, icon, display_order)
+  VALUES (v_restaurant_id, '${categoryName}', '${categorySlug}', '${pizzasImportData.categoryIcon}', 100)
+  RETURNING id INTO v_category_id;
+
+  RAISE NOTICE '✅ Catégorie créée - ID: %', v_category_id;
+
+  -- ================================================================
+  -- PIZZAS (${parsedPizzas.length} pizzas × 2 tailles = ${parsedPizzas.length * 2} produits)
+  -- ================================================================
+
+`;
+
+    parsedPizzas.forEach((pizza, index) => {
+      const displayOrder = index * 2 + 1;
+      sql += `  -- ${pizza.name}
+  INSERT INTO france_products (restaurant_id, category_id, name, composition, product_type, price_on_site_base, price_delivery_base, requires_steps, display_order)
+  VALUES
+    (v_restaurant_id, v_category_id, '🍕 ${pizza.name} Sénior', '${pizza.composition}', 'simple', ${pizzaConfig.priceSeniorOnSite}, ${pizzaConfig.priceSeniorDelivery}, false, ${displayOrder}),
+    (v_restaurant_id, v_category_id, '🍕 ${pizza.name} Méga', '${pizza.composition}', 'simple', ${pizzaConfig.priceMegaOnSite}, ${pizzaConfig.priceMegaDelivery}, false, ${displayOrder + 1});
+
+`;
+    });
+
+    sql += `  RAISE NOTICE '✅ ${parsedPizzas.length * 2} pizzas créées !';
+
+END $$;
+
+-- ================================================================
+-- VÉRIFICATIONS
+-- ================================================================
+
+SELECT
+  '✅ Produits créés' AS verification,
+  COUNT(*) AS total
+FROM france_products
+WHERE restaurant_id = ${selectedRestaurant.id}
+AND category_id = (
+  SELECT id FROM france_menu_categories
+  WHERE restaurant_id = ${selectedRestaurant.id}
+  AND name = '${categoryName}'
+);
+
+SELECT
+  c.name AS categorie,
+  COUNT(p.id) AS nb_pizzas
+FROM france_menu_categories c
+LEFT JOIN france_products p ON p.category_id = c.id
+WHERE c.restaurant_id = ${selectedRestaurant.id}
+AND c.name = '${categoryName}'
+GROUP BY c.name, c.display_order
+ORDER BY c.display_order;
+
+COMMIT;`;
+
+    setPizzasImportData({
+      ...pizzasImportData,
+      generatedSQL: sql
+    });
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto p-6">
       <div className="mb-8">
@@ -613,6 +795,16 @@ export default function WorkflowUniversalPage() {
               }`}
             >
               Gérer les groupes
+            </button>
+            <button
+              onClick={() => setActiveTab('pizzas')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'pizzas'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🍕 Import Pizzas
             </button>
           </nav>
         </div>
@@ -1078,7 +1270,7 @@ export default function WorkflowUniversalPage() {
           )}
         </div>
       </div>
-      ) : (
+      ) : activeTab === 'groups' ? (
         /* Onglet Gérer les groupes */
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold mb-6">➕ Ajouter un groupe</h2>
@@ -1208,7 +1400,346 @@ export default function WorkflowUniversalPage() {
             </table>
           </div>
         </div>
-      )}
+      ) : activeTab === 'pizzas' ? (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              🍕 Import Automatique des Pizzas
+            </h2>
+            <p className="text-gray-600">
+              Format : Nom – Composition (génère automatiquement 2 tailles par pizza)
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            {/* Colonne 1: Configuration */}
+            <div>
+              <div className="space-y-4">
+                {/* Sélection restaurant */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Restaurant
+                  </label>
+                  <select
+                    value={selectedRestaurant?.id || ''}
+                    onChange={(e) => {
+                      const rest = restaurants.find(r => r.id === parseInt(e.target.value));
+                      setSelectedRestaurant(rest);
+                    }}
+                    className="w-full p-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="">Sélectionner un restaurant</option>
+                    {restaurants.map(restaurant => (
+                      <option key={restaurant.id} value={restaurant.id}>
+                        {restaurant.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Nom de catégorie */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom de la catégorie
+                  </label>
+                  <input
+                    type="text"
+                    value={pizzasImportData.categoryName}
+                    onChange={(e) => setPizzasImportData({
+                      ...pizzasImportData,
+                      categoryName: e.target.value
+                    })}
+                    placeholder="Ex: Pizzas Base Tomate"
+                    className="w-full p-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+
+                {/* Icône de catégorie */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Icône de la catégorie
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={pizzasImportData.categoryIcon}
+                      onChange={(e) => setPizzasImportData({
+                        ...pizzasImportData,
+                        categoryIcon: e.target.value
+                      })}
+                      placeholder="🍅"
+                      className="w-20 p-2 border border-gray-300 rounded-lg text-center text-xl"
+                    />
+                    <div className="flex gap-1">
+                      {['🍅', '🥛', '🌶️', '🍕', '🥪', '🍔'].map(icon => (
+                        <button
+                          key={icon}
+                          onClick={() => setPizzasImportData({
+                            ...pizzasImportData,
+                            categoryIcon: icon
+                          })}
+                          className={`p-2 text-xl rounded border transition-all hover:bg-gray-100 ${
+                            pizzasImportData.categoryIcon === icon
+                              ? 'border-purple-500 bg-purple-100'
+                              : 'border-gray-300'
+                          }`}
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    L'icône apparaîtra dans la colonne "icon" de la catégorie
+                  </div>
+                </div>
+
+                {/* Configuration prix avec presets */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">💰 Configuration Prix</h4>
+
+                  {/* Sélecteur de preset */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Configuration rapide
+                    </label>
+                    <div className="space-y-2">
+                      {Object.entries(pricePresets).map(([key, preset]) => (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            if (key !== 'custom') {
+                              setPizzaConfig({
+                                ...preset,
+                                presetName: key
+                              });
+                            } else {
+                              setPizzaConfig({
+                                ...pizzaConfig,
+                                presetName: 'custom'
+                              });
+                            }
+                          }}
+                          className={`w-full text-left p-3 rounded-lg border transition-all ${
+                            pizzaConfig.presetName === key
+                              ? 'border-purple-500 bg-purple-100 text-purple-800'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="font-medium">{preset.name}</div>
+                              <div className="text-sm text-gray-600">{preset.description}</div>
+                            </div>
+                            {pizzaConfig.presetName === key && (
+                              <span className="text-purple-600">✓</span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Configuration détaillée */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        🏪 Sur Place
+                      </label>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600 w-16">Sénior:</span>
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={pizzaConfig.priceSeniorOnSite}
+                            onChange={(e) => setPizzaConfig({
+                              ...pizzaConfig,
+                              priceSeniorOnSite: parseFloat(e.target.value),
+                              presetName: 'custom'
+                            })}
+                            className="w-20 p-1 border rounded text-center"
+                          />
+                          <span className="text-sm">€</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600 w-16">Méga:</span>
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={pizzaConfig.priceMegaOnSite}
+                            onChange={(e) => setPizzaConfig({
+                              ...pizzaConfig,
+                              priceMegaOnSite: parseFloat(e.target.value),
+                              presetName: 'custom'
+                            })}
+                            className="w-20 p-1 border rounded text-center"
+                          />
+                          <span className="text-sm">€</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        🚚 Livraison
+                      </label>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600 w-16">Sénior:</span>
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={pizzaConfig.priceSeniorDelivery}
+                            onChange={(e) => setPizzaConfig({
+                              ...pizzaConfig,
+                              priceSeniorDelivery: parseFloat(e.target.value),
+                              presetName: 'custom'
+                            })}
+                            className="w-20 p-1 border rounded text-center"
+                          />
+                          <span className="text-sm">€</span>
+                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
+                            +{(pizzaConfig.priceSeniorDelivery - pizzaConfig.priceSeniorOnSite).toFixed(1)}€
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600 w-16">Méga:</span>
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={pizzaConfig.priceMegaDelivery}
+                            onChange={(e) => setPizzaConfig({
+                              ...pizzaConfig,
+                              priceMegaDelivery: parseFloat(e.target.value),
+                              presetName: 'custom'
+                            })}
+                            className="w-20 p-1 border rounded text-center"
+                          />
+                          <span className="text-sm">€</span>
+                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
+                            +{(pizzaConfig.priceMegaDelivery - pizzaConfig.priceMegaOnSite).toFixed(1)}€
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Indication du preset actuel */}
+                  <div className="mt-3 text-center">
+                    <span className="text-sm text-gray-600">
+                      Configuration actuelle:
+                      <span className="font-medium text-gray-900 ml-1">
+                        {pricePresets[pizzaConfig.presetName]?.name || "⚙️ Personnalisé"}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Zone de texte */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Liste des pizzas
+                  </label>
+                  <div className="text-xs text-gray-500 mb-2">
+                    Formats supportés : <code>Nom : Composition</code> ou <code>Nom – Composition</code>
+                  </div>
+                  <textarea
+                    value={pizzasImportData.pizzasText}
+                    onChange={(e) => setPizzasImportData({
+                      ...pizzasImportData,
+                      pizzasText: e.target.value
+                    })}
+                    placeholder={`Marguerita : Fromage, origan
+Reine : Fromage, jambon, champignons
+Campione : Fromage, viande hachée, champignons
+Pacifique : Fromage, thon, olives, oignons
+Calzone : Fromage, viande hachée ou jambon
+Orientale : Merguez, œuf, poivrons, olives`}
+                    className="w-full h-64 p-3 border border-gray-300 rounded-lg font-mono text-sm"
+                  />
+                </div>
+
+                {/* Boutons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleParsePizzas}
+                    disabled={!pizzasImportData.pizzasText.trim()}
+                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    🔍 Analyser ({pizzasImportData.pizzasText.split('\n').filter(l => l.trim()).length} lignes)
+                  </button>
+
+                  {pizzasImportData.parsedPizzas.length > 0 && (
+                    <button
+                      onClick={handleGeneratePizzaSQL}
+                      className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
+                    >
+                      📄 Générer SQL
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Colonne 2: Aperçu */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Aperçu ({pizzasImportData.parsedPizzas.length * 2} produits)
+              </label>
+
+              <div className="border border-gray-300 rounded-lg p-4 h-96 overflow-y-auto bg-gray-50">
+                {pizzasImportData.parsedPizzas.length === 0 ? (
+                  <div className="text-center text-gray-500 mt-8">
+                    <p>Cliquez sur "Analyser" pour voir l'aperçu</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {pizzasImportData.parsedPizzas.map((pizza, idx) => (
+                      <div key={idx} className="border border-gray-200 rounded-lg p-3 bg-white">
+                        <div className="font-medium text-gray-900 mb-2">
+                          🍕 {pizza.name}
+                        </div>
+                        <div className="text-sm text-gray-600 mb-2">
+                          {pizza.composition}
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                            Sénior {pizzaConfig.priceSeniorOnSite}€/{pizzaConfig.priceSeniorDelivery}€
+                          </span>
+                          <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
+                            Méga {pizzaConfig.priceMegaOnSite}€/{pizzaConfig.priceMegaDelivery}€
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* SQL généré */}
+          {pizzasImportData.generatedSQL && (
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                SQL Généré (Compatible script OCV)
+              </label>
+              <div className="relative">
+                <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-64 text-sm">
+                  {pizzasImportData.generatedSQL}
+                </pre>
+                <button
+                  onClick={() => navigator.clipboard.writeText(pizzasImportData.generatedSQL)}
+                  className="absolute top-2 right-2 bg-gray-700 text-white px-2 py-1 rounded text-xs hover:bg-gray-600"
+                >
+                  📋 Copier
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
