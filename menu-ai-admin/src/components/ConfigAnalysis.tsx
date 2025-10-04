@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useFetch } from '@/hooks/useFetch';
 
 interface ConfigAnalysisProps {
   onAnalysisComplete?: (analysis: any) => void;
