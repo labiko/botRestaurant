@@ -8,7 +8,7 @@ import { useFetch } from '@/hooks/useFetch';
 
 export default function WorkflowUniversalPage() {
   const { fetch: fetchWithEnv } = useFetch();
-  const [activeTab, setActiveTab] = useState<'workflow' | 'groups' | 'pizzas'>('workflow');
+  const [activeTab, setActiveTab] = useState<'workflow' | 'groups' | 'pizzas' | 'workflow-import'>('workflow');
   const [showHelp, setShowHelp] = useState(false);
   const [productName, setProductName] = useState('MON MENU CUSTOM');
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
@@ -74,6 +74,52 @@ export default function WorkflowUniversalPage() {
     priceMegaDelivery: 13,
     presetName: 'standard'
   });
+
+  // États séparés pour Workflow Import
+  const [workflowImportData, setWorkflowImportData] = useState({
+    productName: 'MON MENU CUSTOM',
+    selectedRestaurant: null,
+    newCategoryName: '',
+    onSitePrice: 0,
+    deliveryPrice: 0,
+    steps: [
+      {
+        step: 1,
+        type: 'options_selection',
+        prompt: 'Choisissez votre plat principal',
+        option_groups: ['Plats principaux'],
+        required: true,
+        max_selections: 1
+      },
+      {
+        step: 2,
+        type: 'options_selection',
+        prompt: 'Ajoutez des suppléments (optionnel)',
+        option_groups: ['Suppléments'],
+        required: false,
+        max_selections: 3
+      }
+    ],
+    optionGroups: {
+      'Plats principaux': [
+        { name: 'Pizza Margherita', price_modifier: 0, display_order: 1, emoji: '🍕' },
+        { name: 'Burger Classic', price_modifier: 2, display_order: 2, emoji: '🍔' },
+        { name: 'Salade César', price_modifier: -1, display_order: 3, emoji: '🥗' }
+      ],
+      'Suppléments': [
+        { name: 'Fromage extra', price_modifier: 1, display_order: 1, emoji: '🧀' },
+        { name: 'Bacon', price_modifier: 2, display_order: 2, emoji: '🥓' },
+        { name: 'Sauce spéciale', price_modifier: 0.5, display_order: 3, emoji: '🍯' }
+      ]
+    }
+  });
+
+  // États pour les textes d'import
+  const [importTexts, setImportTexts] = useState<Record<string, string>>({});
+
+  // État pour le sélecteur d'icônes (Workflow Import)
+  const [selectedOptionForIconImport, setSelectedOptionForIconImport] = useState<{groupName: string, optionIndex: number} | null>(null);
+
 
   const [pizzasImportData, setPizzasImportData] = useState({
     categoryName: '',
@@ -652,6 +698,158 @@ export default function WorkflowUniversalPage() {
       .replace(/^-|-$/g, '');
   };
 
+  // Fonctions pour Workflow Import - VERSION SIMPLIFIÉE POUR FIXER LES PRIX
+  const parseImportText = (text: string) => {
+    const lines = text.split('\n').filter(line => line.trim());
+    const options = [];
+
+    // PREMIÈRE PASSE: Extraire tous les prix disponibles
+    const allPrices = [];
+    lines.forEach(line => {
+      // Chercher prix doubles
+      const doublePriceMatch = line.match(/Sur place\s*:\s*([\d,]+)\s*€\s*\|\s*Livraison\s*:\s*([\d,]+)\s*€/);
+      if (doublePriceMatch) {
+        const priceOnSite = parseFloat(doublePriceMatch[1].replace(',', '.'));
+        const priceDelivery = parseFloat(doublePriceMatch[2].replace(',', '.'));
+        allPrices.push(Math.max(priceOnSite, priceDelivery));
+      }
+
+      // Chercher prix simples
+      const simplePriceMatch = line.match(/[–-]\s*([\d,]+)\s*€/);
+      if (simplePriceMatch) {
+        allPrices.push(parseFloat(simplePriceMatch[1].replace(',', '.')));
+      }
+    });
+
+    console.log('🔍 Prix détectés:', allPrices);
+
+    // DEUXIÈME PASSE: Créer les produits
+    let priceIndex = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      // Ignorer les lignes de prix et headers
+      if (line.includes('€') || line.startsWith('?')) continue;
+
+      // Si la ligne contient des virgules, c'est probablement une composition
+      if (line.includes(',')) continue;
+
+      // C'est un nom de produit
+      const option = {
+        name: line,
+        composition: '',
+        price_modifier: allPrices[priceIndex] || 0,
+        emoji: '🍔'
+      };
+
+      // Chercher la composition dans les lignes suivantes
+      for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+        const nextLine = lines[j].trim();
+        if (nextLine && nextLine.includes(',') && !nextLine.includes('€')) {
+          option.composition = nextLine;
+          break;
+        }
+      }
+
+      console.log(`✅ Produit créé: "${option.name}" - ${option.price_modifier}€`);
+      options.push(option);
+      priceIndex++;
+    }
+
+    console.log(`📊 Parser V3 (SIMPLIFIÉ) détecté: ${options.length} produits avec prix`);
+    return options;
+  };
+
+  const getEmojiByCategory = (category: string) => {
+    const cat = category.toLowerCase();
+    if (cat.includes('viande')) return '🥩';
+    if (cat.includes('sauce')) return '🥫';
+    if (cat.includes('supplément')) return '🧀';
+    if (cat.includes('condiment')) return '🥬';
+    return '🍔'; // Produits principaux par défaut
+  };
+
+  const handleImportGroup = (groupName: string, importText: string) => {
+    try {
+      const parsedOptions = parseImportText(importText);
+
+      if (parsedOptions.length > 0) {
+        console.log(`📊 Import "${groupName}": ${parsedOptions.length} options détectées`);
+
+        // AJUSTEMENT DYNAMIQUE DES OPTIONS
+        const currentOptions = workflowImportData.optionGroups[groupName] || [];
+        const targetCount = parsedOptions.length;
+        const currentCount = currentOptions.length;
+
+        console.log(`📈 Ajustement: ${currentCount} → ${targetCount} options`);
+
+        // CRÉER/AJUSTER LES CHAMPS AUTOMATIQUEMENT
+        const adjustedOptions = [];
+
+        for (let i = 0; i < targetCount; i++) {
+          const importedOption = parsedOptions[i];
+
+          adjustedOptions.push({
+            name: importedOption.name || `Option ${i + 1}`,
+            composition: importedOption.composition || '',
+            price_modifier: parseFloat(importedOption.price_modifier) || 0,
+            emoji: importedOption.emoji || '⭐',
+            display_order: i + 1
+          });
+        }
+
+        // METTRE À JOUR LE GROUPE AVEC TOUTES LES OPTIONS
+        setWorkflowImportData(prev => ({
+          ...prev,
+          optionGroups: {
+            ...prev.optionGroups,
+            [groupName]: adjustedOptions
+          }
+        }));
+
+        // FEEDBACK UTILISATEUR
+        const added = Math.max(0, targetCount - currentCount);
+        const updated = Math.min(currentCount, targetCount);
+
+        let details = [];
+        if (updated > 0) details.push(`${updated} options mises à jour`);
+        if (added > 0) details.push(`${added} options ajoutées`);
+        details.push(`Total: ${targetCount} options`);
+      }
+    } catch (error) {
+      console.error('Erreur d\'import:', error);
+    }
+  };
+
+  // Compter les lignes d'import détectées
+  const countImportLines = (text: string) => {
+    if (!text) return 0;
+    return text.split('\n').filter(line => line.trim()).length;
+  };
+
+  // Vider le texte d'import
+  const clearImportText = (groupName: string) => {
+    setImportTexts({
+      ...importTexts,
+      [groupName]: ''
+    });
+  };
+
+  // Mettre à jour une option après import
+  const handleUpdateImportOption = (groupName: string, optionIndex: number, field: string, value: any) => {
+    setWorkflowImportData(prev => ({
+      ...prev,
+      optionGroups: {
+        ...prev.optionGroups,
+        [groupName]: prev.optionGroups[groupName].map((option, idx) =>
+          idx === optionIndex ? { ...option, [field]: value } : option
+        )
+      }
+    }));
+  };
+
+
   const handleGeneratePizzaSQL = () => {
     if (!selectedRestaurant || !pizzasImportData.categoryName.trim()) {
       alert('Veuillez sélectionner un restaurant et saisir un nom de catégorie');
@@ -805,6 +1003,16 @@ COMMIT;`;
               }`}
             >
               🍕 Import Pizzas
+            </button>
+            <button
+              onClick={() => setActiveTab('workflow-import')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'workflow-import'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🔄 Workflow Import
             </button>
           </nav>
         </div>
@@ -1400,6 +1608,585 @@ COMMIT;`;
             </table>
           </div>
         </div>
+      ) : activeTab === 'workflow-import' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Configuration */}
+        <div className="space-y-6">
+          {/* Templates pré-configurés */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">⚡ Templates Pré-configurés</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sélectionnez un template d'exemple
+                </label>
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      loadExampleTemplate(e.target.value);
+                      e.target.value = ''; // Reset select
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Choisir un template...</option>
+                  <option value="simple">🍽️ Menu Simple (2 étapes obligatoires)</option>
+                  <option value="complex">🍱 Menu Complexe (mix obligatoire/optionnel)</option>
+                  <option value="pizza_complete">🍕 FORMULE PIZZA COMPLÈTE (6 étapes - Exemple d'entraînement)</option>
+                </select>
+              </div>
+
+              <div className="bg-green-50 p-3 rounded-lg">
+                <p className="text-sm text-green-800">
+                  <strong>🔄 WORKFLOW IMPORT</strong> : Interface identique avec système d'import automatique.
+                  Collez la sortie ChatGPT dans chaque groupe pour pré-remplir automatiquement.
+                </p>
+              </div>
+
+              <div className="bg-gray-50 p-3 rounded text-xs">
+                <h4 className="font-semibold mb-1">Contenu de la FORMULE PIZZA COMPLÈTE :</h4>
+                <ul className="space-y-1">
+                  <li>• Étape 1: Entrée (optionnelle) - 4 options</li>
+                  <li>• Étape 2: Taille pizza (obligatoire) - 4 tailles</li>
+                  <li>• Étape 3: Base pizza (obligatoire) - 4 bases</li>
+                  <li>• Étape 4: Garnitures (optionnelle, max 5) - 8 garnitures</li>
+                  <li>• Étape 5: Boisson (obligatoire) - 5 boissons</li>
+                  <li>• Étape 6: Dessert (optionnelle) - 4 desserts</li>
+                  <li>• Prix base: 18€ → Prix livraison: 19€</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Informations de base */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">📝 Informations Produit</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom du produit
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nom du produit"
+                  value={workflowImportData.productName}
+                  onChange={(e) => setWorkflowImportData({...workflowImportData, productName: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Restaurant
+                </label>
+                <select
+                  value={workflowImportData.selectedRestaurant?.id || ''}
+                  onChange={(e) => {
+                    const restaurant = restaurants.find(r => r.id === parseInt(e.target.value));
+                    setWorkflowImportData({...workflowImportData, selectedRestaurant: restaurant});
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={loading}
+                >
+                  <option value="">
+                    {loading ? 'Chargement...' : 'Sélectionnez un restaurant'}
+                  </option>
+                  {restaurants.map(restaurant => (
+                    <option key={restaurant.id} value={restaurant.id}>
+                      {restaurant.name} - {restaurant.address}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom de la nouvelle catégorie à créer
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Formules, Menus, Pizzas..."
+                  value={workflowImportData.newCategoryName}
+                  onChange={(e) => setWorkflowImportData({...workflowImportData, newCategoryName: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Une nouvelle catégorie sera créée avec ce nom
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prix sur site (€)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Prix sur site"
+                    value={workflowImportData.onSitePrice}
+                    onChange={(e) => setWorkflowImportData({...workflowImportData, onSitePrice: parseFloat(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prix livraison (€)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Prix livraison"
+                    value={workflowImportData.deliveryPrice}
+                    onChange={(e) => setWorkflowImportData({...workflowImportData, deliveryPrice: parseFloat(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  💡 <strong>Conseil</strong> : Le prix de livraison est généralement de +1€ par rapport au prix sur site
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Configuration des steps */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">🔧 Configuration des Étapes</h2>
+              <button
+                onClick={() => {
+                  const newStep = {
+                    step: workflowImportData.steps.length + 1,
+                    type: 'options_selection',
+                    prompt: 'Nouvelle question',
+                    option_groups: ['Nouveau groupe'],
+                    required: true,
+                    max_selections: 1
+                  };
+                  setWorkflowImportData({
+                    ...workflowImportData,
+                    steps: [...workflowImportData.steps, newStep]
+                  });
+                }}
+                className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+              >
+                + Ajouter étape
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {workflowImportData.steps.map((step, index) => (
+                <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-semibold">Étape {step.step}</h3>
+                    <button
+                      onClick={() => {
+                        const updatedSteps = workflowImportData.steps.filter((_, i) => i !== index);
+                        updatedSteps.forEach((step, i) => {
+                          step.step = i + 1;
+                        });
+                        setWorkflowImportData({...workflowImportData, steps: updatedSteps});
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      placeholder="Question à poser"
+                      value={step.prompt}
+                      onChange={(e) => {
+                        const updatedSteps = [...workflowImportData.steps];
+                        updatedSteps[index] = { ...updatedSteps[index], prompt: e.target.value };
+                        setWorkflowImportData({...workflowImportData, steps: updatedSteps});
+                      }}
+                      className="w-full px-2 py-1 border rounded text-sm"
+                    />
+
+                    {/* Dropdown avec groupes prédéfinis */}
+                    <div className="relative">
+                      <select
+                        value={step.option_groups[0]}
+                        onChange={(e) => {
+                          const updatedSteps = [...workflowImportData.steps];
+                          updatedSteps[index] = { ...updatedSteps[index], option_groups: [e.target.value] };
+                          setWorkflowImportData({...workflowImportData, steps: updatedSteps});
+
+                          // Ajouter le groupe s'il n'existe pas
+                          if (!workflowImportData.optionGroups[e.target.value]) {
+                            setWorkflowImportData(prev => ({
+                              ...prev,
+                              optionGroups: {
+                                ...prev.optionGroups,
+                                [e.target.value]: [
+                                  { name: `Option 1`, price_modifier: 0, display_order: 1, emoji: '⭐' }
+                                ]
+                              }
+                            }));
+                          }
+                        }}
+                        disabled={loadingGroups}
+                        className="w-full px-2 py-1 border rounded text-sm bg-white"
+                      >
+                        <option value="">
+                          {loadingGroups ? 'Chargement...' : 'Sélectionnez un groupe'}
+                        </option>
+                        {availableGroups.map((group) => (
+                          <option key={group.id} value={group.group_name}>
+                            {group.icon} {group.group_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={step.required}
+                          onChange={(e) => {
+                            const updatedSteps = [...workflowImportData.steps];
+                            updatedSteps[index] = { ...updatedSteps[index], required: e.target.checked };
+                            setWorkflowImportData({...workflowImportData, steps: updatedSteps});
+                          }}
+                          className="mr-2"
+                        />
+                        <span className="text-sm">Obligatoire</span>
+                      </label>
+
+                      <div className="flex items-center">
+                        <span className="text-sm mr-2">Max choix:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={step.max_selections || 1}
+                          onChange={(e) => {
+                            const updatedSteps = [...workflowImportData.steps];
+                            updatedSteps[index] = { ...updatedSteps[index], max_selections: parseInt(e.target.value) };
+                            setWorkflowImportData({...workflowImportData, steps: updatedSteps});
+                          }}
+                          className="w-16 px-2 py-1 border rounded text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {!step.required && (
+                      <div className="p-2 bg-yellow-100 rounded text-xs">
+                        ⚠️ Le bot affichera : "0️⃣ Passer cette étape"
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Options pour chaque groupe AVEC IMPORT */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">📋 Options par Groupe avec Import Auto</h2>
+            <div className="space-y-4">
+              {Object.entries(workflowImportData.optionGroups).map(([groupName, options]) => (
+                <div key={groupName} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <input
+                      type="text"
+                      value={groupName}
+                      onChange={(e) => {
+                        const newGroupName = e.target.value;
+                        if (newGroupName !== groupName) {
+                          const updatedGroups = {};
+                          Object.entries(workflowImportData.optionGroups).forEach(([key, value]) => {
+                            if (key === groupName) {
+                              updatedGroups[newGroupName] = value;
+                            } else {
+                              updatedGroups[key] = value;
+                            }
+                          });
+                          setWorkflowImportData({...workflowImportData, optionGroups: updatedGroups});
+                        }
+                      }}
+                      className="font-semibold bg-transparent border-b border-gray-300 focus:border-blue-500 focus:outline-none"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          const group = workflowImportData.optionGroups[groupName] || [];
+                          const newOption = {
+                            name: `Option ${group.length + 1}`,
+                            price_modifier: 0,
+                            display_order: group.length + 1,
+                            emoji: '⭐'
+                          };
+                          setWorkflowImportData({
+                            ...workflowImportData,
+                            optionGroups: {
+                              ...workflowImportData.optionGroups,
+                              [groupName]: [...group, newOption]
+                            }
+                          });
+                        }}
+                        className="px-2 py-1 bg-blue-600 text-white text-xs rounded"
+                      >
+                        + Option
+                      </button>
+                      <button
+                        onClick={() => {
+                          const updatedGroups = { ...workflowImportData.optionGroups };
+                          delete updatedGroups[groupName];
+                          setWorkflowImportData({...workflowImportData, optionGroups: updatedGroups});
+                        }}
+                        className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                        title="Supprimer le groupe"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ZONE D'IMPORT */}
+                  <div className="mb-4 p-3 bg-green-50 rounded">
+                    <label className="block text-sm font-medium mb-2">
+                      📥 Import automatique ({options.length} options actuelles)
+                    </label>
+                    <textarea
+                      value={importTexts[groupName] || ''}
+                      onChange={(e) => setImportTexts({
+                        ...importTexts,
+                        [groupName]: e.target.value
+                      })}
+                      placeholder="Collez ici la sortie ChatGPT..."
+                      className="w-full h-24 p-2 border rounded font-mono text-sm"
+                    />
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => handleImportGroup(groupName, importTexts[groupName])}
+                        disabled={!importTexts[groupName]?.trim()}
+                        className="px-3 py-1 bg-green-600 text-white rounded text-sm disabled:opacity-50"
+                      >
+                        🤖 Importer & Ajuster ({countImportLines(importTexts[groupName])} détectées)
+                      </button>
+                      <button
+                        onClick={() => clearImportText(groupName)}
+                        className="px-3 py-1 border rounded text-sm"
+                      >
+                        🗑️ Vider
+                      </button>
+                    </div>
+                  </div>
+
+                  {options.map((option, optIndex) => (
+                    <div key={optIndex} className="flex flex-wrap gap-2 mb-2">
+                      <input
+                        type="text"
+                        placeholder="Nom"
+                        value={option.name}
+                        onChange={(e) => handleUpdateImportOption(groupName, optIndex, 'name', e.target.value)}
+                        className="flex-1 min-w-[150px] px-3 py-2 border rounded text-sm"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Composition"
+                        value={option.composition || ''}
+                        onChange={(e) => handleUpdateImportOption(groupName, optIndex, 'composition', e.target.value)}
+                        className="flex-1 min-w-[200px] px-3 py-2 border rounded text-sm text-gray-600"
+                      />
+                      <input
+                        type="number"
+                        step="0.1"
+                        placeholder="Prix"
+                        value={option.price_modifier || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const numericValue = value === '' ? 0 : parseFloat(value);
+                          handleUpdateImportOption(groupName, optIndex, 'price_modifier', isNaN(numericValue) ? 0 : numericValue);
+                        }}
+                        className="w-24 px-3 py-2 border rounded text-sm"
+                      />
+                      <div className="relative flex-shrink-0">
+                        <input
+                          type="text"
+                          placeholder="Emoji"
+                          value={option.emoji || ''}
+                          onClick={() => setSelectedOptionForIconImport({groupName, optionIndex: optIndex})}
+                          onChange={(e) => handleUpdateImportOption(groupName, optIndex, 'emoji', e.target.value)}
+                          className="w-20 px-3 py-2 border rounded text-sm cursor-pointer text-center"
+                          readOnly
+                          title="Cliquez pour choisir une icône"
+                        />
+
+                        {/* Sélecteur d'icônes pour cette option */}
+                        {selectedOptionForIconImport?.groupName === groupName && selectedOptionForIconImport?.optionIndex === optIndex && (
+                          <div className="absolute top-full mt-2 left-0 z-50 w-80 max-h-96 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg">
+                            <div className="sticky top-0 bg-white p-2 border-b">
+                              <input
+                                type="text"
+                                placeholder="Rechercher une icône..."
+                                value={iconSearchTerm}
+                                onChange={(e) => setIconSearchTerm(e.target.value)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded"
+                              />
+                            </div>
+                            <div className="grid grid-cols-6 gap-2 p-2">
+                              {availableIcons
+                                .filter(icon =>
+                                  icon.name.toLowerCase().includes(iconSearchTerm.toLowerCase()) ||
+                                  icon.tags.some((tag: string) => tag.toLowerCase().includes(iconSearchTerm.toLowerCase()))
+                                )
+                                .map((icon, iconIndex) => (
+                                  <button
+                                    key={iconIndex}
+                                    onClick={() => {
+                                      handleUpdateImportOption(groupName, optIndex, 'emoji', icon.emoji);
+                                      setSelectedOptionForIconImport(null);
+                                    }}
+                                    className="p-2 text-2xl hover:bg-gray-100 rounded border border-gray-200 transition-colors"
+                                    title={icon.name}
+                                  >
+                                    {icon.emoji}
+                                  </button>
+                                ))}
+                            </div>
+                            <div className="sticky bottom-0 bg-white p-2 border-t">
+                              <button
+                                onClick={() => setSelectedOptionForIconImport(null)}
+                                className="w-full px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
+                              >
+                                Fermer
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          const updatedOptions = workflowImportData.optionGroups[groupName].filter((_, i) => i !== optIndex);
+                          updatedOptions.forEach((option, index) => {
+                            option.display_order = index + 1;
+                          });
+                          setWorkflowImportData({
+                            ...workflowImportData,
+                            optionGroups: {
+                              ...workflowImportData.optionGroups,
+                              [groupName]: updatedOptions
+                            }
+                          });
+                        }}
+                        className="flex-shrink-0 px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                        title="Supprimer cette option"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              if (!workflowImportData.selectedRestaurant) {
+                alert('Veuillez sélectionner un restaurant');
+                return;
+              }
+              if (!workflowImportData.newCategoryName.trim()) {
+                alert('Veuillez saisir un nom de catégorie');
+                return;
+              }
+
+              const workflow = {
+                productName: workflowImportData.productName,
+                restaurantId: workflowImportData.selectedRestaurant.id,
+                categoryName: workflowImportData.newCategoryName.trim(),
+                onSitePrice: workflowImportData.onSitePrice,
+                deliveryPrice: workflowImportData.deliveryPrice,
+                steps: workflowImportData.steps,
+                optionGroups: workflowImportData.optionGroups
+              };
+
+              // Valider le workflow
+              const validation = WorkflowGeneratorV2.validateForBot(workflow);
+              setValidationResult(validation);
+
+              if (validation.valid) {
+                // Générer le SQL
+                const sql = WorkflowGeneratorV2.generateCompleteSQL(workflow);
+                setGeneratedSQL(sql);
+
+                // Générer la simulation bot
+                const simulation = WorkflowGeneratorV2.simulateBotFlow(workflow);
+                setBotSimulation(simulation);
+              }
+            }}
+            className="w-full px-6 py-3 bg-green-600 text-white text-lg font-semibold rounded-lg hover:bg-green-700"
+          >
+            🚀 Générer SQL & Simulation
+          </button>
+        </div>
+
+        {/* Résultats */}
+        <div className="space-y-6">
+          {/* Validation */}
+          {validationResult && (
+            <div className={`bg-white rounded-lg shadow-md p-6 ${validationResult.valid ? 'border-green-500' : 'border-red-500'} border-2`}>
+              <h2 className="text-xl font-semibold mb-4">
+                {validationResult.valid ? '✅ Validation Réussie' : '❌ Erreurs de Validation'}
+              </h2>
+              {validationResult.errors.length > 0 && (
+                <div className="space-y-1 mb-4">
+                  {validationResult.errors.map((error: string, i: number) => (
+                    <p key={i} className="text-red-600 text-sm">{error}</p>
+                  ))}
+                </div>
+              )}
+              {validationResult.warnings.length > 0 && (
+                <div className="space-y-1">
+                  {validationResult.warnings.map((warning: string, i: number) => (
+                    <p key={i} className="text-yellow-600 text-sm">{warning}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Simulation Bot */}
+          {botSimulation && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold mb-4">🤖 Simulation Bot WhatsApp</h2>
+              <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm max-h-96 overflow-y-auto">
+                <pre className="whitespace-pre-wrap">{botSimulation}</pre>
+              </div>
+            </div>
+          )}
+
+          {/* SQL Généré */}
+          {generatedSQL && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">📄 SQL Généré</h2>
+                <button
+                  onClick={() => navigator.clipboard.writeText(generatedSQL)}
+                  className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                >
+                  📋 Copier
+                </button>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
+                <pre className="text-xs text-gray-800 whitespace-pre-wrap font-mono">
+                  {generatedSQL}
+                </pre>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
       ) : activeTab === 'pizzas' ? (
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="mb-6">
@@ -1740,6 +2527,8 @@ Orientale : Merguez, œuf, poivrons, olives`}
           )}
         </div>
       ) : null}
+
+
     </div>
   );
 }
