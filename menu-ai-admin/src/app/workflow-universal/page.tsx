@@ -700,64 +700,93 @@ export default function WorkflowUniversalPage() {
 
   // Fonctions pour Workflow Import - VERSION SIMPLIFIÉE POUR FIXER LES PRIX
   const parseImportText = (text: string) => {
+    if (!text.trim()) return [];
+
     const lines = text.split('\n').filter(line => line.trim());
     const options = [];
 
-    // PREMIÈRE PASSE: Extraire tous les prix disponibles
-    const allPrices = [];
-    lines.forEach(line => {
-      // Chercher prix doubles
-      const doublePriceMatch = line.match(/Sur place\s*:\s*([\d,]+)\s*€\s*\|\s*Livraison\s*:\s*([\d,]+)\s*€/);
-      if (doublePriceMatch) {
-        const priceOnSite = parseFloat(doublePriceMatch[1].replace(',', '.'));
-        const priceDelivery = parseFloat(doublePriceMatch[2].replace(',', '.'));
-        allPrices.push(Math.max(priceOnSite, priceDelivery));
+    console.log('🔍 PARSER V4 (FORMAT SIMPLE) - Analyse du texte...');
+
+    // Parser pour format "Nom – Prix €" ou "Nom - Prix €"
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine) continue;
+
+      // Format 1: "Nom – Prix €" (tiret long)
+      const formatSimple1 = trimmedLine.match(/^(.+?)\s*–\s*([\d,]+)\s*€$/);
+      if (formatSimple1) {
+        const name = formatSimple1[1].trim();
+        const price = parseFloat(formatSimple1[2].replace(',', '.'));
+
+        options.push({
+          name: name,
+          composition: '',
+          price_modifier: price,
+          emoji: '🍽️'
+        });
+
+        console.log(`✅ Format simple détecté: "${name}" - ${price}€`);
+        continue;
       }
 
-      // Chercher prix simples
-      const simplePriceMatch = line.match(/[–-]\s*([\d,]+)\s*€/);
-      if (simplePriceMatch) {
-        allPrices.push(parseFloat(simplePriceMatch[1].replace(',', '.')));
-      }
-    });
+      // Format 2: "Nom - Prix €" (tiret court)
+      const formatSimple2 = trimmedLine.match(/^(.+?)\s*-\s*([\d,]+)\s*€$/);
+      if (formatSimple2) {
+        const name = formatSimple2[1].trim();
+        const price = parseFloat(formatSimple2[2].replace(',', '.'));
 
-    console.log('🔍 Prix détectés:', allPrices);
+        options.push({
+          name: name,
+          composition: '',
+          price_modifier: price,
+          emoji: '🍽️'
+        });
 
-    // DEUXIÈME PASSE: Créer les produits
-    let priceIndex = 0;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-
-      // Ignorer les lignes de prix et headers
-      if (line.includes('€') || line.startsWith('?')) continue;
-
-      // Si la ligne contient des virgules, c'est probablement une composition
-      if (line.includes(',')) continue;
-
-      // C'est un nom de produit
-      const option = {
-        name: line,
-        composition: '',
-        price_modifier: allPrices[priceIndex] || 0,
-        emoji: '🍔'
-      };
-
-      // Chercher la composition dans les lignes suivantes
-      for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
-        const nextLine = lines[j].trim();
-        if (nextLine && nextLine.includes(',') && !nextLine.includes('€')) {
-          option.composition = nextLine;
-          break;
-        }
+        console.log(`✅ Format simple détecté: "${name}" - ${price}€`);
+        continue;
       }
 
-      console.log(`✅ Produit créé: "${option.name}" - ${option.price_modifier}€`);
-      options.push(option);
-      priceIndex++;
+      // Format 3: "Nom : Composition - Prix €" (format avec composition)
+      const formatCompose = trimmedLine.match(/^(.+?)\s*[:–-]\s*(.+?)\s*[-–]\s*([\d,]+)\s*€$/);
+      if (formatCompose) {
+        const name = formatCompose[1].trim();
+        const composition = formatCompose[2].trim();
+        const price = parseFloat(formatCompose[3].replace(',', '.'));
+
+        options.push({
+          name: name,
+          composition: composition,
+          price_modifier: price,
+          emoji: '🍽️'
+        });
+
+        console.log(`✅ Format composé détecté: "${name}" - ${composition} - ${price}€`);
+        continue;
+      }
+
+      // Format 4: Prix doubles (Sur place: X€ | Livraison: Y€)
+      const formatDouble = trimmedLine.match(/^(.+?)\s*[-–:]\s*Sur place\s*:\s*([\d,]+)\s*€\s*\|\s*Livraison\s*:\s*([\d,]+)\s*€$/);
+      if (formatDouble) {
+        const name = formatDouble[1].trim();
+        const priceOnSite = parseFloat(formatDouble[2].replace(',', '.'));
+        const priceDelivery = parseFloat(formatDouble[3].replace(',', '.'));
+        const maxPrice = Math.max(priceOnSite, priceDelivery);
+
+        options.push({
+          name: name,
+          composition: '',
+          price_modifier: maxPrice,
+          emoji: '🍽️'
+        });
+
+        console.log(`✅ Format double prix détecté: "${name}" - ${maxPrice}€ (max de ${priceOnSite}€/${priceDelivery}€)`);
+        continue;
+      }
+
+      console.log(`⚠️ Ligne ignorée (format non reconnu): "${trimmedLine}"`);
     }
 
-    console.log(`📊 Parser V3 (SIMPLIFIÉ) détecté: ${options.length} produits avec prix`);
+    console.log(`📊 Parser V4 (FORMAT SIMPLE) détecté: ${options.length} produits`);
     return options;
   };
 
