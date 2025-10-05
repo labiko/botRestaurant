@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 
 export default function OCRUploadPage() {
   const router = useRouter();
+  const { fetch: fetchWithEnv } = useFetch();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState('openai');

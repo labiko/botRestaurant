@@ -712,8 +712,26 @@ export default function WorkflowUniversalPage() {
       const trimmedLine = line.trim();
       if (!trimmedLine) continue;
 
-      // Format 1: "Nom – Prix €" (tiret long)
-      const formatSimple1 = trimmedLine.match(/^(.+?)\s*–\s*([\d,]+)\s*€$/);
+      // Format 1A: "Nom – Prix € (Composition)" (tiret long avec composition)
+      const formatWithComp1 = trimmedLine.match(/^(.+?)\s*–\s*([\d,]+(?:\.\d+)?)\s*€\s*\(([^)]+)\)$/);
+      if (formatWithComp1) {
+        const name = formatWithComp1[1].trim();
+        const price = parseFloat(formatWithComp1[2].replace(',', '.'));
+        const composition = formatWithComp1[3].trim();
+
+        options.push({
+          name: name,
+          composition: composition,
+          price_modifier: price,
+          emoji: '🍽️'
+        });
+
+        console.log(`✅ Format avec composition détecté: "${name}" - ${price}€ - (${composition})`);
+        continue;
+      }
+
+      // Format 1B: "Nom – Prix €" (tiret long simple)
+      const formatSimple1 = trimmedLine.match(/^(.+?)\s*–\s*([\d,]+(?:\.\d+)?)\s*€$/);
       if (formatSimple1) {
         const name = formatSimple1[1].trim();
         const price = parseFloat(formatSimple1[2].replace(',', '.'));
@@ -729,8 +747,26 @@ export default function WorkflowUniversalPage() {
         continue;
       }
 
-      // Format 2: "Nom - Prix €" (tiret court)
-      const formatSimple2 = trimmedLine.match(/^(.+?)\s*-\s*([\d,]+)\s*€$/);
+      // Format 2A: "Nom - Prix € (Composition)" (tiret court avec composition)
+      const formatWithComp2 = trimmedLine.match(/^(.+?)\s*-\s*([\d,]+(?:\.\d+)?)\s*€\s*\(([^)]+)\)$/);
+      if (formatWithComp2) {
+        const name = formatWithComp2[1].trim();
+        const price = parseFloat(formatWithComp2[2].replace(',', '.'));
+        const composition = formatWithComp2[3].trim();
+
+        options.push({
+          name: name,
+          composition: composition,
+          price_modifier: price,
+          emoji: '🍽️'
+        });
+
+        console.log(`✅ Format avec composition détecté: "${name}" - ${price}€ - (${composition})`);
+        continue;
+      }
+
+      // Format 2B: "Nom - Prix €" (tiret court simple)
+      const formatSimple2 = trimmedLine.match(/^(.+?)\s*-\s*([\d,]+(?:\.\d+)?)\s*€$/);
       if (formatSimple2) {
         const name = formatSimple2[1].trim();
         const price = parseFloat(formatSimple2[2].replace(',', '.'));

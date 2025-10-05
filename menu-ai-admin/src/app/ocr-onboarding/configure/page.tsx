@@ -11,6 +11,7 @@ import { ExtractedProduct } from '@/lib/ocr/interfaces/ocr-provider.interface';
 
 export default function OCRConfigurePage() {
   const router = useRouter();
+  const { fetch: fetchWithEnv } = useFetch();
 
   // États principaux
   const [ocrResults, setOcrResults] = useState<any>(null);
@@ -65,7 +66,7 @@ export default function OCRConfigurePage() {
 
   const loadPizzaYoloTemplate = async () => {
     try {
-      const response = await fetch('/api/ocr/get-pizza-yolo-template');
+      const response = await fetchWithEnv('/api/ocr/get-pizza-yolo-template');
       const result = await response.json();
 
       if (result.success && result.data) {
