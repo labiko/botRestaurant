@@ -166,6 +166,38 @@ export class UniversalBot implements IMessageHandler {
   }
 
   /**
+   * 💰 Formate un prix selon la devise du restaurant configuré avec séparateurs
+   */
+  private formatPrice(amount: number): string {
+    if (!this.restaurantConfig?.currency) return `${amount}€`;
+
+    switch (this.restaurantConfig.currency) {
+      case 'EUR':
+        return `${amount}€`;
+      case 'GNF':
+        return `${amount.toLocaleString('fr-FR')} GNF`;
+      case 'XOF':
+        return `${amount.toLocaleString('fr-FR')} FCFA`;
+      default:
+        return `${amount}€`;
+    }
+  }
+
+  /**
+   * 💰 Récupère le symbole de devise du restaurant configuré (pour compatibilité)
+   */
+  private getCurrencySymbol(): string {
+    if (!this.restaurantConfig?.currency) return '€';
+
+    switch (this.restaurantConfig.currency) {
+      case 'EUR': return '€';
+      case 'GNF': return ' GNF';
+      case 'XOF': return ' FCFA';
+      default: return '€';
+    }
+  }
+
+  /**
    * 🔧 OPTIMISATION: Méthode pour obtenir le client Supabase unique
    * Évite la création de multiples clients et imports répétés
    */
