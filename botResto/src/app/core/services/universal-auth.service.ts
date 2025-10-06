@@ -1,8 +1,25 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
+import { AppConfigService } from './app-config.service';
+import { FRANCE_CONFIG } from '../../config/environment-config';
+
+export interface Country {
+  id?: number;
+  code: string;
+  name: string;
+  flag: string;
+  phone_prefix: string;
+  remove_leading_zero: boolean;
+  phone_format: string;
+  is_active: boolean;
+  display_order: number;
+  created_at?: string;
+}
 
 /**
  * Service centralisé pour la gestion de l'authentification
- * Gère la normalisation des numéros de téléphone pour 3 pays : FR, GN, CI
+ * Gère la normalisation des numéros de téléphone de manière dynamique
  * Utilisé par les restaurants ET les livreurs
  */
 @Injectable({
@@ -10,42 +27,62 @@ import { Injectable } from '@angular/core';
 })
 export class UniversalAuthService {
 
-  // Configuration simple par pays
-  private readonly COUNTRY_RULES = {
-    'FR': {
-      prefix: '33',
-      removeLeadingZero: true,
-      format: /^0[1-9]\d{8}$/,
-      name: 'France',
-      flag: '🇫🇷'
-    },
-    'GN': {
-      prefix: '224',
-      removeLeadingZero: false,
-      format: /^6\d{8}$/,
-      name: 'Guinée',
-      flag: '🇬🇳'
-    },
-    'CI': {
-      prefix: '225',
-      removeLeadingZero: true,
-      format: /^0[4-7]\d{7}$/,
-      name: 'Côte d\'Ivoire',
-      flag: '🇨🇮'
-    }
-  };
+  private countriesSubject = new BehaviorSubject<Country[]>([]);
+  public countries$ = this.countriesSubject.asObservable();
+  private countriesCache: Country[] = [];
 
-  constructor() {}
+  constructor(
+    private http: HttpClient,
+    private appConfig: AppConfigService
+  ) {
+    this.loadCountries();
+  }
+
+  /**
+   * Charge les pays depuis l'API
+   */
+  private async loadCountries(): Promise<void> {
+    try {
+      // Utiliser le système de configuration existant
+      const baseUrl = this.appConfig.getBaseUrl();
+      const environment = FRANCE_CONFIG.environmentName;
+      const url = `${baseUrl}/api/countries?environment=${environment}`;
+
+      console.log('🌍 [UniversalAuth] Chargement pays depuis:', url);
+      const response = await firstValueFrom(this.http.get<{success: boolean, countries: Country[]}>(url));
+
+      if (response.success) {
+        this.countriesCache = response.countries.filter(c => c.is_active);
+        this.countriesSubject.next(this.countriesCache);
+      }
+    } catch (error) {
+      console.error('Erreur chargement pays:', error);
+      // Fallback sur pays par défaut en cas d'erreur
+      this.countriesCache = [
+        {
+          code: 'FR',
+          name: 'France',
+          flag: '🇫🇷',
+          phone_prefix: '33',
+          remove_leading_zero: true,
+          phone_format: '^0[1-9]\\d{8}$',
+          is_active: true,
+          display_order: 1
+        }
+      ];
+      this.countriesSubject.next(this.countriesCache);
+    }
+  }
 
   /**
    * Formate un numéro local vers le format international
    * @param localNumber Numéro local saisi par l'utilisateur
-   * @param countryCode Code pays ('FR', 'GN', 'CI')
+   * @param countryCode Code pays
    * @returns Numéro au format international
    */
   formatToInternational(localNumber: string, countryCode: string): string {
-    const rule = this.COUNTRY_RULES[countryCode as keyof typeof this.COUNTRY_RULES];
-    if (!rule) {
+    const country = this.countriesCache.find(c => c.code === countryCode);
+    if (!country) {
       throw new Error(`Pays non supporté: ${countryCode}`);
     }
 
@@ -53,57 +90,95 @@ export class UniversalAuthService {
     let cleaned = localNumber.replace(/\s/g, '');
 
     // Enlever le 0 initial si la règle l'exige
-    if (rule.removeLeadingZero && cleaned.startsWith('0')) {
+    if (country.remove_leading_zero && cleaned.startsWith('0')) {
       cleaned = cleaned.substring(1);
     }
 
     // Retourner le format international
-    return rule.prefix + cleaned;
+    return country.phone_prefix + cleaned;
   }
 
   /**
    * Obtenir la liste des pays supportés
+   * @returns Observable de la liste des pays
+   */
+  getSupportedCountries(): Observable<Country[]> {
+    return this.countries$;
+  }
+
+  /**
+   * Obtenir la liste des pays supportés de manière synchrone
    * @returns Liste des pays avec leurs informations
    */
-  getSupportedCountries(): Array<{code: string, name: string, flag: string, prefix: string}> {
-    return Object.entries(this.COUNTRY_RULES).map(([code, rule]) => ({
-      code,
-      name: rule.name,
-      flag: rule.flag,
-      prefix: rule.prefix
+  getSupportedCountriesSync(): Array<{code: string, name: string, flag: string, prefix: string}> {
+    return this.countriesCache.map(country => ({
+      code: country.code,
+      name: country.name,
+      flag: country.flag,
+      prefix: country.phone_prefix
     }));
+  }
+
+  /**
+   * Rafraîchir la liste des pays
+   */
+  async refreshCountries(): Promise<void> {
+    await this.loadCountries();
+  }
+
+  /**
+   * Convertir un préfixe téléphonique vers le code pays
+   * @param phonePrefix Préfixe téléphonique (ex: '33', '224')
+   * @returns Code pays (ex: 'FR', 'GN') ou null si non trouvé
+   */
+  getCountryCodeFromPrefix(phonePrefix: string): string | null {
+    const country = this.countriesCache.find(c => c.phone_prefix === phonePrefix);
+    return country ? country.code : null;
+  }
+
+  /**
+   * Obtenir les informations complètes d'un pays par son préfixe
+   * @param phonePrefix Préfixe téléphonique
+   * @returns Objet Country ou null
+   */
+  getCountryByPrefix(phonePrefix: string): Country | null {
+    return this.countriesCache.find(c => c.phone_prefix === phonePrefix) || null;
+  }
+
+  /**
+   * Obtenir les informations complètes d'un pays par son code
+   * @param countryCode Code pays (ex: 'FR', 'GN')
+   * @returns Objet Country ou null
+   */
+  getCountryByCode(countryCode: string): Country | null {
+    return this.countriesCache.find(c => c.code === countryCode) || null;
   }
 
   /**
    * Détecte le pays à partir du numéro de téléphone
    * @param phone Numéro de téléphone à analyser
-   * @returns Code pays ('FR', 'GN', 'CI') ou null si non détecté
+   * @returns Code pays ou null si non détecté
    */
   detectCountryFromPhone(phone: string): string | null {
     // Nettoyer le numéro (espaces, tirets, parenthèses)
     const cleaned = phone.replace(/[\s\-\(\)]/g, '');
 
-    // Détection par préfixe international
-    if (cleaned.startsWith('33')) return 'FR';
-    if (cleaned.startsWith('224')) return 'GN';
-    if (cleaned.startsWith('225')) return 'CI';
-
-    // Détection par format local France
-    if (cleaned.startsWith('0') && cleaned.length === 10) {
-      const secondDigit = cleaned[1];
-      if (['1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(secondDigit)) {
-        return 'FR';
+    // Détection par préfixe international dynamique
+    for (const country of this.countriesCache) {
+      if (cleaned.startsWith(country.phone_prefix)) {
+        return country.code;
       }
     }
 
-    // Détection par format local Guinée
-    if (cleaned.startsWith('6') && cleaned.length === 9) return 'GN';
-
-    // Détection par format local Côte d'Ivoire
-    if (cleaned.startsWith('0') && cleaned.length >= 8 && cleaned.length <= 10) {
-      const secondDigit = cleaned[1];
-      if (['1', '2', '3', '4', '5', '6', '7'].includes(secondDigit)) {
-        return 'CI';
+    // Détection par format local (patterns regex)
+    for (const country of this.countriesCache) {
+      try {
+        const regex = new RegExp(country.phone_format);
+        if (regex.test(cleaned)) {
+          return country.code;
+        }
+      } catch (e) {
+        console.warn(`Pattern invalide pour ${country.code}: ${country.phone_format}`);
       }
     }
 
@@ -113,7 +188,7 @@ export class UniversalAuthService {
   /**
    * Génère tous les formats possibles pour un numéro de téléphone
    * @param phone Numéro de téléphone
-   * @param country Code pays optionnel ('FR', 'GN', 'CI')
+   * @param country Code pays optionnel
    * @returns Tableau des formats possibles
    */
   generatePhoneFormats(phone: string, country?: string): string[] {
@@ -126,48 +201,35 @@ export class UniversalAuthService {
     // Détecter le pays si non fourni
     const detectedCountry = country || this.detectCountryFromPhone(cleaned);
 
-    // Générer les formats selon le pays
-    if (detectedCountry === 'FR') {
-      if (cleaned.startsWith('33')) {
-        // Format international → local
-        formats.push('0' + cleaned.substring(2)); // 33612345678 → 0612345678
-      } else if (cleaned.startsWith('0')) {
-        // Format local → international
-        formats.push('33' + cleaned.substring(1)); // 0612345678 → 33612345678
-      } else if (cleaned.length === 9) {
-        // Sans préfixe → ajouter les deux
-        formats.push('0' + cleaned); // 612345678 → 0612345678
-        formats.push('33' + cleaned); // 612345678 → 33612345678
-      }
+    if (!detectedCountry) {
+      return formats;
     }
 
-    if (detectedCountry === 'GN') {
-      if (cleaned.startsWith('224')) {
-        // Format international → local
-        formats.push(cleaned.substring(3)); // 224613001718 → 613001718
-      } else if (cleaned.length === 9 && cleaned.startsWith('6')) {
-        // Format local → international
-        formats.push('224' + cleaned); // 613001718 → 224613001718
-      } else if (cleaned.startsWith('0') && cleaned.length === 10) {
-        // Avec 0 optionnel
-        formats.push(cleaned.substring(1)); // 0613001718 → 613001718
-        formats.push('224' + cleaned.substring(1)); // 0613001718 → 224613001718
-      }
+    const countryConfig = this.countriesCache.find(c => c.code === detectedCountry);
+    if (!countryConfig) {
+      return formats;
     }
 
-    if (detectedCountry === 'CI') {
-      if (cleaned.startsWith('225')) {
-        // Format international → local
-        const localNumber = cleaned.substring(3);
-        formats.push('0' + localNumber); // 2250701234567 → 0701234567
-        formats.push(localNumber); // 2250701234567 → 701234567
-      } else if (cleaned.startsWith('0')) {
-        // Format local → international
-        formats.push('225' + cleaned.substring(1)); // 0701234567 → 2250701234567
-      } else if (cleaned.length >= 7 && cleaned.length <= 9) {
-        // Sans préfixe → ajouter les deux
-        formats.push('0' + cleaned); // 701234567 → 0701234567
-        formats.push('225' + cleaned); // 701234567 → 225701234567
+    const prefix = countryConfig.phone_prefix;
+    const removeLeadingZero = countryConfig.remove_leading_zero;
+
+    // Générer les formats selon la configuration du pays
+    if (cleaned.startsWith(prefix)) {
+      // Format international → local
+      const localNumber = cleaned.substring(prefix.length);
+      if (removeLeadingZero) {
+        formats.push('0' + localNumber);
+      }
+      formats.push(localNumber);
+    } else if (cleaned.startsWith('0') && removeLeadingZero) {
+      // Format local avec 0 → international
+      formats.push(prefix + cleaned.substring(1));
+      formats.push(cleaned.substring(1));
+    } else if (!cleaned.startsWith('0')) {
+      // Format sans préfixe → ajouter les variantes
+      formats.push(prefix + cleaned);
+      if (removeLeadingZero) {
+        formats.push('0' + cleaned);
       }
     }
 

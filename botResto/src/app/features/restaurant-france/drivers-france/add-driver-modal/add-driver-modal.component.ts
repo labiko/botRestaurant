@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ModalController, ToastController } from '@ionic/angular';
 import { WhatsAppNotificationFranceService } from '../../../../core/services/whatsapp-notification-france.service';
 import { AuthFranceService } from '../../auth-france/services/auth-france.service';
-import { UniversalAuthService } from '../../../../core/services/universal-auth.service';
+import { UniversalAuthService, Country } from '../../../../core/services/universal-auth.service';
+import { Subscription } from 'rxjs';
 
 // Configuration des pays supportés pour le formulaire livreur
 interface CountryConfig {
@@ -28,10 +29,11 @@ export interface DriverFormData {
   styleUrls: ['./add-driver-modal.component.scss'],
   standalone: false
 })
-export class AddDriverModalComponent implements OnInit {
+export class AddDriverModalComponent implements OnInit, OnDestroy {
   driverForm!: FormGroup; // Utiliser ! pour dire à TypeScript que ce sera initialisé
   isLoading = false;
   availableCountries: CountryConfig[] = [];
+  private countriesSubscription?: Subscription;
 
   constructor(
     private formBuilder: FormBuilder,
@@ -47,21 +49,39 @@ export class AddDriverModalComponent implements OnInit {
   ngOnInit() {
     console.log('🚀 [AddDriverModal] ngOnInit appelé');
     try {
-      // Charger les pays disponibles depuis UniversalAuthService
-      const supportedCountries = this.universalAuthService.getSupportedCountries();
-      this.availableCountries = supportedCountries.map(country => ({
-        code: country.prefix, // Utiliser le prefix pour le select
-        name: country.name,
-        flag: country.flag
-      }));
+      // Charger les pays disponibles depuis l'API
+      this.countriesSubscription = this.universalAuthService.getSupportedCountries().subscribe(countries => {
+        this.availableCountries = countries.map(country => ({
+          code: country.phone_prefix, // Utiliser le prefix pour le select
+          name: country.name,
+          flag: country.flag
+        }));
 
-      // Initialiser le formulaire dans ngOnInit pour éviter les problèmes de détection de changements
-      this.driverForm = this.createForm();
-      console.log('📋 [AddDriverModal] Form créé avec succès:', this.driverForm.value);
-      console.log('📋 [AddDriverModal] Form status:', this.driverForm.status);
-      console.log('📋 [AddDriverModal] Form valid:', this.driverForm.valid);
+        // Initialiser le formulaire après chargement des pays
+        if (!this.driverForm) {
+          this.driverForm = this.createForm();
+          console.log('📋 [AddDriverModal] Form créé avec succès:', this.driverForm.value);
+        }
+
+        // Définir le pays par défaut (France) si disponible
+        if (this.availableCountries.length > 0 && this.driverForm) {
+          const franceCountry = this.availableCountries.find(c => c.code === '33');
+          if (franceCountry) {
+            this.driverForm.patchValue({ country_code_selector: '33' });
+          } else {
+            this.driverForm.patchValue({ country_code_selector: this.availableCountries[0].code });
+          }
+        }
+      });
     } catch (error) {
       console.error('❌ [AddDriverModal] Erreur création formulaire:', error);
+    }
+  }
+
+  ngOnDestroy() {
+    // Nettoyer la souscription aux pays
+    if (this.countriesSubscription) {
+      this.countriesSubscription.unsubscribe();
     }
   }
 
@@ -104,10 +124,8 @@ export class AddDriverModalComponent implements OnInit {
         const localNumber = this.driverForm.value.phone_number;
         const selectedPrefix = this.driverForm.value.country_code_selector;
 
-        // Convertir prefix vers code pays
-        const countryCode = selectedPrefix === '33' ? 'FR' :
-                           selectedPrefix === '224' ? 'GN' :
-                           selectedPrefix === '225' ? 'CI' : null;
+        // Convertir prefix vers code pays dynamiquement
+        const countryCode = this.universalAuthService.getCountryCodeFromPrefix(selectedPrefix);
 
         if (!countryCode) {
           throw new Error('Pays non supporté');
@@ -202,10 +220,8 @@ export class AddDriverModalComponent implements OnInit {
     }
 
     try {
-      // Convertir prefix vers code pays
-      const countryCode = selectedPrefix === '33' ? 'FR' :
-                         selectedPrefix === '224' ? 'GN' :
-                         selectedPrefix === '225' ? 'CI' : null;
+      // Convertir prefix vers code pays dynamiquement
+      const countryCode = this.universalAuthService.getCountryCodeFromPrefix(selectedPrefix);
 
       if (countryCode) {
         const internationalNumber = this.universalAuthService.formatToInternational(localNumber, countryCode);

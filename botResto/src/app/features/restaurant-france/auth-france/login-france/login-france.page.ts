@@ -3,7 +3,9 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LoadingController, ToastController } from '@ionic/angular';
 import { AuthFranceService } from '../services/auth-france.service';
-import { UniversalAuthService } from '../../../../core/services/universal-auth.service';
+import { UniversalAuthService, Country } from '../../../../core/services/universal-auth.service';
+import { Location } from '@angular/common';
+import { Subscription } from 'rxjs';
 
 // Configuration des pays supportés
 interface CountryConfig {
@@ -11,7 +13,6 @@ interface CountryConfig {
   name: string;
   flag: string;
 }
-import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-login-france',
@@ -27,6 +28,7 @@ export class LoginFrancePage implements OnInit, OnDestroy {
   isLoading = false;
   errorMessage = '';
   availableCountries: CountryConfig[] = [];
+  private countriesSubscription?: Subscription;
 
   constructor(
     private formBuilder: FormBuilder,
@@ -49,13 +51,24 @@ export class LoginFrancePage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Charger les pays disponibles depuis UniversalAuthService
-    const supportedCountries = this.universalAuthService.getSupportedCountries();
-    this.availableCountries = supportedCountries.map(country => ({
-      code: country.prefix, // Utiliser le prefix pour le select
-      name: country.name,
-      flag: country.flag
-    }));
+    // Charger les pays disponibles depuis l'API
+    this.countriesSubscription = this.universalAuthService.getSupportedCountries().subscribe(countries => {
+      this.availableCountries = countries.map(country => ({
+        code: country.phone_prefix, // Utiliser le prefix pour le select
+        name: country.name,
+        flag: country.flag
+      }));
+
+      // Définir le pays par défaut (France) si disponible
+      if (this.availableCountries.length > 0 && !this.loginForm.get('country_code_selector')?.value) {
+        const franceCountry = this.availableCountries.find(c => c.code === '33');
+        if (franceCountry) {
+          this.loginForm.patchValue({ country_code_selector: '33' });
+        } else {
+          this.loginForm.patchValue({ country_code_selector: this.availableCountries[0].code });
+        }
+      }
+    });
 
     // Bloquer complètement la navigation arrière
     this.preventBackNavigation();
@@ -91,6 +104,11 @@ export class LoginFrancePage implements OnInit, OnDestroy {
   ngOnDestroy() {
     // Nettoyer l'écouteur d'événement
     window.removeEventListener('popstate', this.onPopState);
+
+    // Nettoyer la souscription aux pays
+    if (this.countriesSubscription) {
+      this.countriesSubscription.unsubscribe();
+    }
   }
 
   /**
@@ -138,10 +156,8 @@ export class LoginFrancePage implements OnInit, OnDestroy {
       const localNumber = this.loginForm.value.phone.trim();
       const selectedPrefix = this.loginForm.value.country_code_selector;
 
-      // Convertir prefix vers code pays
-      const countryCode = selectedPrefix === '33' ? 'FR' :
-                         selectedPrefix === '224' ? 'GN' :
-                         selectedPrefix === '225' ? 'CI' : null;
+      // Convertir prefix vers code pays dynamiquement
+      const countryCode = this.universalAuthService.getCountryCodeFromPrefix(selectedPrefix);
 
       if (!countryCode) {
         throw new Error('Pays non supporté');
