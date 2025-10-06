@@ -114,6 +114,7 @@ CREATE TABLE public.france_composite_items (
   component_name character varying NOT NULL,
   quantity integer NOT NULL,
   unit character varying DEFAULT 'pièces'::character varying,
+  composition text,
   CONSTRAINT france_composite_items_pkey PRIMARY KEY (id),
   CONSTRAINT france_composite_items_composite_product_id_fkey FOREIGN KEY (composite_product_id) REFERENCES public.france_products(id)
 );
@@ -297,6 +298,7 @@ CREATE TABLE public.france_product_options (
   next_group_order integer,
   conditional_next_group jsonb,
   icon character varying DEFAULT NULL::character varying,
+  composition text,
   CONSTRAINT france_product_options_pkey PRIMARY KEY (id),
   CONSTRAINT france_product_options_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.france_products(id)
 );
@@ -402,6 +404,7 @@ CREATE TABLE public.france_restaurants (
   audio_enabled_since timestamp without time zone,
   deployment_status character varying DEFAULT 'production'::character varying CHECK (deployment_status::text = ANY (ARRAY['development'::character varying, 'testing'::character varying, 'production'::character varying]::text[])),
   delivery_address_mode character varying DEFAULT 'address'::character varying CHECK (delivery_address_mode::text = ANY (ARRAY['address'::character varying, 'geolocation'::character varying]::text[])),
+  currency character varying DEFAULT 'EUR'::character varying CHECK (currency::text = ANY (ARRAY['EUR'::character varying, 'GNF'::character varying, 'XOF'::character varying]::text[])),
   CONSTRAINT france_restaurants_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.france_sessions (
@@ -665,6 +668,19 @@ CREATE TABLE public.step_executor_mappings (
   is_active boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT step_executor_mappings_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.supported_countries (
+  id integer NOT NULL DEFAULT nextval('supported_countries_id_seq'::regclass),
+  code character varying NOT NULL UNIQUE,
+  name character varying NOT NULL,
+  flag character varying NOT NULL,
+  phone_prefix character varying NOT NULL,
+  remove_leading_zero boolean DEFAULT false,
+  phone_format character varying,
+  is_active boolean DEFAULT true,
+  display_order integer DEFAULT 0,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT supported_countries_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.system_support_contacts (
   id bigint NOT NULL DEFAULT nextval('system_support_contacts_id_seq'::regclass),

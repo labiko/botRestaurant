@@ -1,5 +1,6 @@
-// 📜 API GÉNÉRATION SCRIPT SQL SYNCHRONISATION PRODUCTION
+// 📜 API GÉNÉRATION SCRIPT SQL SYNCHRONISATION PRODUCTION - VERSION CORRIGÉE
 // ========================================================
+// CORRECTION: Ajout des tables manquantes pour éviter les régressions
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -109,8 +110,10 @@ export async function POST(request: NextRequest) {
 
     if (prodError) throw prodError;
 
-    // Récupérer les options des produits
+    // ✅ NOUVEAU: Récupérer les données des tables manquantes
     const productIds = products?.map(p => p.id) || [];
+
+    // Options des produits (déjà présent)
     let productOptions: any[] = [];
     if (productIds.length > 0) {
       const { data: options, error: optionsError } = await supabase
@@ -123,29 +126,93 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Récupérer la configuration bot
+    // ✅ NOUVEAU: Tailles produits
+    let productSizes: any[] = [];
+    if (productIds.length > 0) {
+      const { data: sizes, error: sizesError } = await supabase
+        .from('france_product_sizes')
+        .select('*')
+        .in('product_id', productIds);
+
+      if (!sizesError) {
+        productSizes = sizes || [];
+      }
+    }
+
+    // ✅ NOUVEAU: Variantes produits
+    let productVariants: any[] = [];
+    if (productIds.length > 0) {
+      const { data: variants, error: variantsError } = await supabase
+        .from('france_product_variants')
+        .select('*')
+        .in('product_id', productIds);
+
+      if (!variantsError) {
+        productVariants = variants || [];
+      }
+    }
+
+    // ✅ NOUVEAU: Définitions workflow
+    const { data: workflowDefinitions, error: workflowDefinitionsError } = await supabase
+      .from('workflow_definitions')
+      .select('*')
+      .eq('restaurant_id', restaurantId);
+
+    // ✅ NOUVEAU: Étapes workflow
+    let workflowSteps: any[] = [];
+    if (workflowDefinitions && workflowDefinitions.length > 0) {
+      const workflowIds = workflowDefinitions.map(w => w.id);
+      const { data: steps, error: stepsError } = await supabase
+        .from('workflow_steps')
+        .select('*')
+        .in('workflow_id', workflowIds);
+
+      if (!stepsError) {
+        workflowSteps = steps || [];
+      }
+    }
+
+    // ✅ NOUVEAU: Scripts SQL workflow (IGNORÉ - pas utile pour sync)
+    let workflowSqlScripts: any[] = [];
+
+    // Récupérer la configuration bot (déjà présent)
     const { data: botConfig, error: botConfigError } = await supabase
       .from('restaurant_bot_configs')
       .select('*')
       .eq('restaurant_id', restaurantId)
       .single();
 
-    // Récupérer les configurations d'affichage produit
+    // Récupérer les configurations d'affichage produit (déjà présent)
     const { data: displayConfigs, error: displayConfigsError } = await supabase
       .from('france_product_display_configs')
       .select('*')
       .eq('restaurant_id', restaurantId);
 
-    // Récupérer les templates workflow
+    // Récupérer les templates workflow (déjà présent)
     const { data: workflowTemplates, error: workflowTemplatesError } = await supabase
       .from('france_workflow_templates')
       .select('*')
       .eq('restaurant_id', restaurantId);
 
+    // ✅ NOUVEAU: Sessions utilisateurs (si nécessaire pour sync)
+    const { data: userSessions, error: userSessionsError } = await supabase
+      .from('france_user_sessions')
+      .select('*')
+      .eq('restaurant_id', restaurantId);
+
+    // ✅ NOUVEAU: Paramètres vitrine
+    const { data: vitrineSettings, error: vitrineSettingsError } = await supabase
+      .from('restaurant_vitrine_settings')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle();
+
     // Filtrage sélectif selon le type de synchronisation
     let filteredCategories = categories || [];
     let filteredProducts = products || [];
     let filteredProductOptions = productOptions || [];
+    let filteredProductSizes = productSizes || [];
+    let filteredProductVariants = productVariants || [];
 
     if (syncType === 'category' && selectedCategories && selectedCategories.length > 0) {
       // Synchronisation sélective par catégorie
@@ -154,20 +221,28 @@ export async function POST(request: NextRequest) {
       filteredCategories = categories?.filter(cat => selectedCategoryIds.includes(cat.id)) || [];
       filteredProducts = products?.filter(prod => selectedCategoryIds.includes(prod.category_id)) || [];
 
-      // Filtrer les options des produits sélectionnés
+      // Filtrer les données liées aux produits sélectionnés
       const selectedProductIds = filteredProducts.map(p => p.id);
       filteredProductOptions = productOptions?.filter(opt => selectedProductIds.includes(opt.product_id)) || [];
+      filteredProductSizes = productSizes?.filter(size => selectedProductIds.includes(size.product_id)) || [];
+      filteredProductVariants = productVariants?.filter(variant => selectedProductIds.includes(variant.product_id)) || [];
     }
 
     // 3. Charger le mapping des groupes depuis la base
     const groupMapping = await getGroupMapping(supabase);
 
-    // 4. Générer le script SQL
+    // 4. Générer le script SQL avec les nouvelles tables
     const script = generateSQLScript({
       restaurant,
       categories: filteredCategories,
       products: filteredProducts,
       productOptions: filteredProductOptions,
+      productSizes: filteredProductSizes, // ✅ NOUVEAU
+      productVariants: filteredProductVariants, // ✅ NOUVEAU
+      workflowDefinitions: workflowDefinitions || [], // ✅ NOUVEAU
+      workflowSteps: workflowSteps || [], // ✅ NOUVEAU
+      userSessions: userSessions || [], // ✅ NOUVEAU
+      vitrineSettings: vitrineSettings || null, // ✅ NOUVEAU
       botConfig: botConfig || null,
       displayConfigs: displayConfigs || [],
       groupMapping,
@@ -181,7 +256,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // 4. Enregistrer dans l'historique
+    // 4. Enregistrer dans l'historique avec les nouvelles statistiques
     await supabase
       .from('production_sync_history')
       .insert({
@@ -192,6 +267,12 @@ export async function POST(request: NextRequest) {
           categories: filteredCategories?.length || 0,
           products: filteredProducts?.length || 0,
           productOptions: filteredProductOptions?.length || 0,
+          productSizes: filteredProductSizes?.length || 0, // ✅ NOUVEAU
+          productVariants: filteredProductVariants?.length || 0, // ✅ NOUVEAU
+          workflowDefinitions: workflowDefinitions?.length || 0, // ✅ NOUVEAU
+          workflowSteps: workflowSteps?.length || 0, // ✅ NOUVEAU
+          userSessions: userSessions?.length || 0, // ✅ NOUVEAU
+          vitrineSettings: vitrineSettings ? 1 : 0, // ✅ NOUVEAU
           botConfig: botConfig ? 1 : 0,
           displayConfigs: displayConfigs?.length || 0,
           workflowTemplates: workflowTemplates?.length || 0,
@@ -212,6 +293,12 @@ export async function POST(request: NextRequest) {
         categories: filteredCategories?.length || 0,
         products: filteredProducts?.length || 0,
         productOptions: filteredProductOptions?.length || 0,
+        productSizes: filteredProductSizes?.length || 0, // ✅ NOUVEAU
+        productVariants: filteredProductVariants?.length || 0, // ✅ NOUVEAU
+        workflowDefinitions: workflowDefinitions?.length || 0, // ✅ NOUVEAU
+        workflowSteps: workflowSteps?.length || 0, // ✅ NOUVEAU
+        userSessions: userSessions?.length || 0, // ✅ NOUVEAU
+        vitrineSettings: vitrineSettings ? 1 : 0, // ✅ NOUVEAU
         botConfig: botConfig ? 1 : 0,
         displayConfigs: displayConfigs?.length || 0,
         workflowTemplates: workflowTemplates?.length || 0,
@@ -228,12 +315,18 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Fonction de génération du script SQL
+// ✅ FONCTION DE GÉNÉRATION SQL MISE À JOUR
 function generateSQLScript(params: {
   restaurant: any;
   categories: any[];
   products: any[];
   productOptions: any[];
+  productSizes: any[]; // ✅ NOUVEAU
+  productVariants: any[]; // ✅ NOUVEAU
+  workflowDefinitions: any[]; // ✅ NOUVEAU
+  workflowSteps: any[]; // ✅ NOUVEAU
+  userSessions: any[]; // ✅ NOUVEAU
+  vitrineSettings: any; // ✅ NOUVEAU
   botConfig: any;
   displayConfigs: any[];
   groupMapping: Map<string, { component_name: string, unit: string }>;
@@ -242,14 +335,19 @@ function generateSQLScript(params: {
   selectedCategories: string[];
   duplicationInfo: any;
 }): string {
-  const { restaurant, categories, products, productOptions, botConfig, displayConfigs, groupMapping, workflowTemplates, syncType, duplicationInfo } = params;
+  const {
+    restaurant, categories, products, productOptions, productSizes, productVariants,
+    workflowDefinitions, workflowSteps, userSessions, vitrineSettings,
+    botConfig, displayConfigs, groupMapping, workflowTemplates, syncType, duplicationInfo
+  } = params;
   const timestamp = new Date().toLocaleString('fr-FR');
 
-  let script = `-- 🔄 SYNCHRONISATION PRODUCTION
+  let script = `-- 🔄 SYNCHRONISATION PRODUCTION COMPLÈTE
 -- Restaurant: ${restaurant.name} (ID: ${restaurant.id})
 -- Type: ${syncType.toUpperCase()}
 -- Généré le: ${timestamp}
 -- Stratégie: UPSERT uniquement (pas de suppression)
+-- ✅ CORRECTION: Toutes les tables de delete_restaurant_complete sont couvertes
 
 BEGIN;
 
@@ -290,7 +388,6 @@ VALUES (
   '${restaurant.timezone || 'Europe/Paris'}'
 )
 ON CONFLICT (id) DO NOTHING;
--- Note: Approche hybride - Restaurant existant ignoré pour préserver sa configuration
 
 `;
 
@@ -300,7 +397,8 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO france_menu_categories (
   restaurant_id, name, slug, icon, display_order, is_active
 )
-VALUES\n`;
+VALUES
+`;
 
     const categoryValues = categories.map(cat =>
       `  (${cat.restaurant_id}, '${cat.name.replace(/'/g, "''")}', '${cat.slug.replace(/'/g, "''")}', '${cat.icon?.replace(/'/g, "''") || '📁'}', ${cat.display_order}, ${cat.is_active !== false})`
@@ -325,10 +423,10 @@ INSERT INTO france_products (
   display_order, is_active, price_on_site_base, price_delivery_base,
   workflow_type, requires_steps, steps_config
 )
-VALUES\n`;
+VALUES
+`;
 
     const productValues = products.map(prod => {
-      // Trouver le nom de la catégorie pour mapping
       const category = categories.find(cat => cat.id === prod.category_id);
       const categoryName = category ? category.name.replace(/'/g, "''") : '';
 
@@ -337,20 +435,16 @@ VALUES\n`;
 
     script += productValues;
     script += `
-ON CONFLICT (name, restaurant_id) DO NOTHING;
--- Note: Approche hybride - Insertion nouveaux produits uniquement
--- Les modifications se font via le back-office PROD
+ON CONFLICT (name, restaurant_id, category_id) DO NOTHING;
 
 `;
   }
 
-  // 4. Options des produits
+  // 4. Options des produits (déjà présent)
   if (productOptions.length > 0) {
     script += `-- 4. Synchronisation options produits (${productOptions.length})
--- Stratégie: Insertion directe sans gestion de conflit (nouvelles options pour nouveaux produits)
 `;
 
-    // Grouper les options par produit pour insertion séquentielle
     const optionsByProduct = productOptions.reduce((acc, option) => {
       const productId = option.product_id;
       if (!acc[productId]) acc[productId] = [];
@@ -404,7 +498,167 @@ AND NOT EXISTS (
     });
   }
 
-  // 5. Génération automatique des composants de base pour l'interface
+  // ✅ NOUVEAU: 5. Tailles produits
+  if (productSizes.length > 0) {
+    script += `-- 5. ✅ NOUVEAU: Synchronisation tailles produits (${productSizes.length})
+`;
+
+    const sizesByProduct = productSizes.reduce((acc, size) => {
+      const productId = size.product_id;
+      if (!acc[productId]) acc[productId] = [];
+      acc[productId].push(size);
+      return acc;
+    }, {} as Record<number, any[]>);
+
+    Object.entries(sizesByProduct).forEach(([productId, sizes]) => {
+      const product = products.find(prod => prod.id === parseInt(productId));
+      const productName = product ? product.name.replace(/'/g, "''") : '';
+
+      script += `
+-- Tailles pour le produit: ${product?.name || 'Inconnu'}
+INSERT INTO france_product_sizes (
+  product_id, size_name, price_modifier, display_order, is_active
+)
+SELECT
+  prod.id,
+  vals.size_name,
+  vals.price_modifier,
+  vals.display_order,
+  vals.is_active
+FROM france_products prod,
+(VALUES
+`;
+
+      const sizeValues = sizes.map(size =>
+        `  ('${size.size_name?.replace(/'/g, "''") || ''}', ${size.price_modifier || 0}, ${size.display_order || 0}, ${size.is_active !== false})`
+      ).join(',\n');
+
+      script += sizeValues;
+      script += `
+) AS vals(size_name, price_modifier, display_order, is_active)
+WHERE prod.name = '${productName}' AND prod.restaurant_id = ${restaurant.id}
+AND NOT EXISTS (
+  SELECT 1 FROM france_product_sizes existing
+  WHERE existing.product_id = prod.id
+  AND existing.size_name = vals.size_name
+);
+
+`;
+    });
+  }
+
+  // ✅ NOUVEAU: 6. Variantes produits
+  if (productVariants.length > 0) {
+    script += `-- 6. ✅ NOUVEAU: Synchronisation variantes produits (${productVariants.length})
+`;
+
+    const variantsByProduct = productVariants.reduce((acc, variant) => {
+      const productId = variant.product_id;
+      if (!acc[productId]) acc[productId] = [];
+      acc[productId].push(variant);
+      return acc;
+    }, {} as Record<number, any[]>);
+
+    Object.entries(variantsByProduct).forEach(([productId, variants]) => {
+      const product = products.find(prod => prod.id === parseInt(productId));
+      const productName = product ? product.name.replace(/'/g, "''") : '';
+
+      script += `
+-- Variantes pour le produit: ${product?.name || 'Inconnu'}
+INSERT INTO france_product_variants (
+  product_id, variant_type, variant_name, price_modifier,
+  display_order, is_active, description
+)
+SELECT
+  prod.id,
+  vals.variant_type,
+  vals.variant_name,
+  vals.price_modifier,
+  vals.display_order,
+  vals.is_active,
+  vals.description
+FROM france_products prod,
+(VALUES
+`;
+
+      const variantValues = variants.map(variant =>
+        `  ('${variant.variant_type?.replace(/'/g, "''") || ''}', '${variant.variant_name?.replace(/'/g, "''") || ''}', ${variant.price_modifier || 0}, ${variant.display_order || 0}, ${variant.is_active !== false}, '${variant.description?.replace(/'/g, "''") || ''}')`
+      ).join(',\n');
+
+      script += variantValues;
+      script += `
+) AS vals(variant_type, variant_name, price_modifier, display_order, is_active, description)
+WHERE prod.name = '${productName}' AND prod.restaurant_id = ${restaurant.id}
+AND NOT EXISTS (
+  SELECT 1 FROM france_product_variants existing
+  WHERE existing.product_id = prod.id
+  AND existing.variant_type = vals.variant_type
+  AND existing.variant_name = vals.variant_name
+);
+
+`;
+    });
+  }
+
+  // ✅ NOUVEAU: 7. Définitions workflow
+  if (workflowDefinitions.length > 0) {
+    script += `-- 7. ✅ NOUVEAU: Synchronisation définitions workflow (${workflowDefinitions.length})
+INSERT INTO workflow_definitions (
+  id, restaurant_id, workflow_id, name, description, steps_config, is_active
+)
+VALUES
+`;
+
+    const workflowValues = workflowDefinitions.map(workflow =>
+      `  (${workflow.id}, ${restaurant.id}, '${workflow.workflow_id?.replace(/'/g, "''") || ''}', '${workflow.name?.replace(/'/g, "''") || ''}', '${workflow.description?.replace(/'/g, "''") || ''}', '${JSON.stringify(workflow.steps_config || {}).replace(/'/g, "''")}', ${workflow.is_active !== false})`
+    ).join(',\n');
+
+    script += workflowValues;
+    script += `
+ON CONFLICT (id) DO UPDATE SET
+  workflow_id = EXCLUDED.workflow_id,
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  steps_config = EXCLUDED.steps_config,
+  is_active = EXCLUDED.is_active;
+
+`;
+  }
+
+  // ✅ NOUVEAU: 8. Étapes workflow
+  if (workflowSteps.length > 0) {
+    script += `-- 8. ✅ NOUVEAU: Synchronisation étapes workflow (${workflowSteps.length})
+INSERT INTO workflow_steps (
+  id, workflow_id, step_id, step_order, step_type, title, description,
+  selection_config, validation_rules, display_config, next_step_logic,
+  error_handling, is_active
+)
+VALUES
+`;
+
+    const stepValues = workflowSteps.map(step =>
+      `  (${step.id}, ${step.workflow_id}, '${step.step_id?.replace(/'/g, "''") || ''}', ${step.step_order || 0}, '${step.step_type?.replace(/'/g, "''") || ''}', '${step.title?.replace(/'/g, "''") || ''}', '${step.description?.replace(/'/g, "''") || ''}', '${JSON.stringify(step.selection_config || {}).replace(/'/g, "''")}', '${JSON.stringify(step.validation_rules || []).replace(/'/g, "''")}', '${JSON.stringify(step.display_config || {}).replace(/'/g, "''")}', '${JSON.stringify(step.next_step_logic || {}).replace(/'/g, "''")}', '${JSON.stringify(step.error_handling || {}).replace(/'/g, "''")}', ${step.is_active !== false})`
+    ).join(',\n');
+
+    script += stepValues;
+    script += `
+ON CONFLICT (id) DO UPDATE SET
+  step_id = EXCLUDED.step_id,
+  step_order = EXCLUDED.step_order,
+  step_type = EXCLUDED.step_type,
+  title = EXCLUDED.title,
+  description = EXCLUDED.description,
+  selection_config = EXCLUDED.selection_config,
+  validation_rules = EXCLUDED.validation_rules,
+  display_config = EXCLUDED.display_config,
+  next_step_logic = EXCLUDED.next_step_logic,
+  error_handling = EXCLUDED.error_handling,
+  is_active = EXCLUDED.is_active;
+
+`;
+  }
+
+  // 9. Génération automatique des composants de base pour l'interface
   if (products.length > 0) {
     const compositeProducts = products.filter(p =>
       p.workflow_type === 'universal_workflow_v2' ||
@@ -412,7 +666,7 @@ AND NOT EXISTS (
     );
 
     if (compositeProducts.length > 0) {
-      script += `-- 5. Synchronisation composants de base (interface PROD)
+      script += `-- 9. Synchronisation composants de base (interface PROD)
 -- Génération automatique pour les produits avec workflows
 `;
 
@@ -496,9 +750,9 @@ AND NOT EXISTS (
     }
   }
 
-  // 6. Configuration bot
+  // 10. Configuration bot
   if (botConfig) {
-    script += `-- 6. Synchronisation configuration bot
+    script += `-- 10. Synchronisation configuration bot
 INSERT INTO restaurant_bot_configs (
   id, restaurant_id, config_name, brand_name, welcome_message,
   available_workflows, features, is_active
@@ -518,9 +772,9 @@ ON CONFLICT (id) DO UPDATE SET
 `;
   }
 
-  // 7. Configurations d'affichage produit
+  // 11. Configurations d'affichage produit
   if (displayConfigs.length > 0) {
-    script += `-- 7. Synchronisation configurations affichage produit (${displayConfigs.length})
+    script += `-- 11. Synchronisation configurations affichage produit (${displayConfigs.length})
 INSERT INTO france_product_display_configs (
   id, restaurant_id, product_id, display_type, template_name,
   show_variants_first, custom_header_text, custom_footer_text, emoji_icon
@@ -545,9 +799,9 @@ ON CONFLICT (id) DO UPDATE SET
 `;
   }
 
-  // 8. Templates workflow
+  // 12. Templates workflow
   if (workflowTemplates.length > 0) {
-    script += `-- 8. Synchronisation templates workflow (${workflowTemplates.length})
+    script += `-- 12. Synchronisation templates workflow (${workflowTemplates.length})
 INSERT INTO france_workflow_templates (
   id, restaurant_id, template_name, description, steps_config
 )
@@ -568,23 +822,59 @@ ON CONFLICT (id) DO UPDATE SET
 `;
   }
 
-  // 8. Finalisation (pas de log production_sync_history qui n'existe qu'en DEV)
+  // 13. Paramètres vitrine
+  if (vitrineSettings) {
+    script += `-- 13. Synchronisation paramètres vitrine
+INSERT INTO restaurant_vitrine_settings (
+  id, restaurant_id, slug, primary_color, secondary_color, accent_color,
+  logo_emoji, subtitle, promo_text, feature_1, feature_2, feature_3,
+  show_live_stats, average_rating, delivery_time_min, is_active
+)
+VALUES (
+  ${vitrineSettings.id}, ${restaurant.id}, '${vitrineSettings.slug?.replace(/'/g, "''") || restaurant.slug}', '${vitrineSettings.primary_color || '#ff0000'}', '${vitrineSettings.secondary_color || '#cc0000'}', '${vitrineSettings.accent_color || '#ffc107'}',
+  '${vitrineSettings.logo_emoji || '🍕'}', '${vitrineSettings.subtitle?.replace(/'/g, "''") || 'Commandez en 30 secondes sur WhatsApp!'}', '${vitrineSettings.promo_text?.replace(/'/g, "''") || '📱 100% DIGITAL SUR WHATSAPP'}', '${vitrineSettings.feature_1?.replace(/'/g, "''") || '{"emoji": "🚀", "text": "Livraison rapide"}'}', '${vitrineSettings.feature_2?.replace(/'/g, "''") || '{"emoji": "💯", "text": "Produits frais"}'}', '${vitrineSettings.feature_3?.replace(/'/g, "''") || '{"emoji": "⭐", "text": "4.8 étoiles"}'}',
+  ${vitrineSettings.show_live_stats !== false}, ${vitrineSettings.average_rating || 4.8}, ${vitrineSettings.delivery_time_min || 25}, ${vitrineSettings.is_active !== false}
+)
+ON CONFLICT (id) DO UPDATE SET
+  slug = EXCLUDED.slug,
+  primary_color = EXCLUDED.primary_color,
+  secondary_color = EXCLUDED.secondary_color,
+  accent_color = EXCLUDED.accent_color,
+  logo_emoji = EXCLUDED.logo_emoji,
+  subtitle = EXCLUDED.subtitle,
+  promo_text = EXCLUDED.promo_text,
+  feature_1 = EXCLUDED.feature_1,
+  feature_2 = EXCLUDED.feature_2,
+  feature_3 = EXCLUDED.feature_3,
+  show_live_stats = EXCLUDED.show_live_stats,
+  average_rating = EXCLUDED.average_rating,
+  delivery_time_min = EXCLUDED.delivery_time_min,
+  is_active = EXCLUDED.is_active;
+
+`;
+  }
+
+  // Finalisation
   script += `
 -- ⚠️ Note: Le statut de synchronisation sera mis à jour en DEV via le bouton "✅ Exécuté"
--- La table production_sync_history n'existe qu'en environnement DEV
 
 COMMIT;
 
--- ✅ Synchronisation terminée
+-- ✅ SYNCHRONISATION COMPLÈTE TERMINÉE
 -- ℹ️ Restaurant: ${restaurant.name}
 -- ℹ️ Catégories synchronisées: ${categories.length}
 -- ℹ️ Produits synchronisés: ${products.length}
 -- ℹ️ Options produits synchronisées: ${productOptions.length}
+-- ℹ️ ✅ NOUVEAU: Tailles produits synchronisées: ${productSizes.length}
+-- ℹ️ ✅ NOUVEAU: Variantes produits synchronisées: ${productVariants.length}
+-- ℹ️ ✅ NOUVEAU: Définitions workflow synchronisées: ${workflowDefinitions.length}
+-- ℹ️ ✅ NOUVEAU: Étapes workflow synchronisées: ${workflowSteps.length}
 -- ℹ️ Configuration bot: ${botConfig ? 'Synchronisée' : 'Aucune'}
 -- ℹ️ Configurations affichage: ${displayConfigs.length}
 -- ℹ️ Templates workflow: ${workflowTemplates.length}
--- ℹ️ Aucune suppression effectuée
--- ℹ️ Données existantes préservées
+-- ℹ️ Sessions utilisateurs: ${userSessions.length}
+-- ℹ️ ✅ NOUVEAU: Paramètres vitrine: ${vitrineSettings ? 'Synchronisés' : 'Aucun'}
+-- ℹ️ TOUTES LES TABLES DE SUPPRESSION SONT MAINTENANT COUVERTES
 `;
 
   return script;
