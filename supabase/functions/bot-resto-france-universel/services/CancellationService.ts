@@ -421,11 +421,27 @@ export class CancellationService {
   }
 
   /**
+   * Formate un prix selon la devise du restaurant
+   */
+  private formatPrice(amount: number, currency: string = 'EUR'): string {
+    switch (currency) {
+      case 'EUR':
+        return `${amount.toFixed(2)}€`;
+      case 'GNF':
+        return `${amount.toLocaleString('fr-FR')} GNF`;
+      case 'XOF':
+        return `${amount.toLocaleString('fr-FR')} FCFA`;
+      default:
+        return `${amount.toFixed(2)}€`;
+    }
+  }
+
+  /**
    * Formater le message de confirmation pour le client
    * FORMAT UNIVERSEL - Même structure pour tous les restaurants
    */
-  formatConfirmationMessage(order: CancellableOrder): string {
-    return `🚫 *Annuler commande #${order.order_number}* (${order.total_amount.toFixed(2)}€) ?
+  formatConfirmationMessage(order: CancellableOrder, currency: string = 'EUR'): string {
+    return `🚫 *Annuler commande #${order.order_number}* (${this.formatPrice(order.total_amount, currency)}) ?
 
 ✅ *OUI* pour confirmer l'annulation
 ❌ *NON* pour garder votre commande`;
@@ -464,12 +480,12 @@ Vos commandes récentes ont toutes été traitées avec succès.
   /**
    * Message pour le livreur
    */
-  private formatDriverCancellationMessage(order: CancellableOrder): string {
+  private formatDriverCancellationMessage(order: CancellableOrder, currency: string = 'EUR'): string {
     return `🚫 **COMMANDE ANNULÉE PAR CLIENT**
 
 📋 N°${order.order_number}
 🏠 ${order.delivery_address || 'Adresse non spécifiée'}
-💰 ${order.total_amount.toFixed(2)}€
+💰 ${this.formatPrice(order.total_amount, currency)}
 
 ⚠️ **Plus de livraison nécessaire**
 Commande supprimée de vos tâches.

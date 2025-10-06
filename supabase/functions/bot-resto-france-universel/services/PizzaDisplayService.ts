@@ -14,6 +14,7 @@ export class PizzaDisplayService {
   private displayConfig: any = null;
   private restaurantSettings: any = null;
   private sessionManager: SessionManager;
+  private restaurantCurrency: string = 'EUR'; // Par défaut EUR
   
   constructor(
     private messageSender: IMessageSender,
@@ -21,6 +22,22 @@ export class PizzaDisplayService {
     private supabaseKey: string
   ) {
     this.sessionManager = new SessionManager(supabaseUrl, supabaseKey);
+  }
+
+  /**
+   * 💰 Formate un prix selon la devise du restaurant
+   */
+  private formatPrice(amount: number): string {
+    switch (this.restaurantCurrency) {
+      case 'EUR':
+        return `${amount}€`;
+      case 'GNF':
+        return `${amount.toLocaleString('fr-FR')} GNF`;
+      case 'XOF':
+        return `${amount.toLocaleString('fr-FR')} FCFA`;
+      default:
+        return `${amount}€`;
+    }
   }
 
   /**
@@ -48,6 +65,22 @@ export class PizzaDisplayService {
         }
       } catch (viewError) {
         console.log(`⚠️ [PizzaDisplay] Vue v_restaurant_pizza_display_config n'existe pas`);
+      }
+
+      // 💰 Charger la devise du restaurant
+      try {
+        const { data: restaurant } = await supabase
+          .from('france_restaurants')
+          .select('currency')
+          .eq('id', restaurantId)
+          .single();
+
+        if (restaurant?.currency) {
+          this.restaurantCurrency = restaurant.currency;
+          console.log(`💰 [PizzaDisplay] Devise chargée: ${this.restaurantCurrency}`);
+        }
+      } catch (currencyError) {
+        console.log(`⚠️ [PizzaDisplay] Erreur chargement devise:`, currencyError);
       }
       
       // Essayer la table france_workflow_templates (si elle existe)
@@ -235,7 +268,7 @@ export class PizzaDisplayService {
             });
 
 
-            message1 += `   🔸 ${size.size_name} (${price} EUR) - Tapez ${globalIndex}\n`;
+            message1 += `   🔸 ${size.size_name} (${this.formatPrice(price)}) - Tapez ${globalIndex}\n`;
             globalIndex++;
           }
         }
@@ -299,7 +332,7 @@ export class PizzaDisplayService {
               });
 
   
-              message2 += `   🔸 ${size.size_name} (${price} EUR) - Tapez ${globalIndex}\n`;
+              message2 += `   🔸 ${size.size_name} (${this.formatPrice(price)}) - Tapez ${globalIndex}\n`;
               globalIndex++;
             }
           }
@@ -375,7 +408,7 @@ export class PizzaDisplayService {
           type: 'menu_pizza' // DISCRIMINANT UNIVERSEL
         });
         
-        message += `   🔸 MENU (${price} EUR) - Tapez ${globalIndex}\n`;
+        message += `   🔸 MENU (${this.formatPrice(price)}) - Tapez ${globalIndex}\n`;
         globalIndex++;
         
         message += '\n';

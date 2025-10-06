@@ -33,12 +33,52 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
   supabaseUrl;
   supabaseKey;
   sessionManager;
+  restaurantCurrency = 'EUR'; // Par défaut EUR
   constructor(messageSender, supabaseUrl, supabaseKey){
     this.messageSender = messageSender;
     this.supabaseUrl = supabaseUrl;
     this.supabaseKey = supabaseKey;
     // Initialiser SessionManager pour éviter les accès directs DB
     this.sessionManager = new SessionManager(supabaseUrl, supabaseKey);
+  }
+
+  /**
+   * 💰 Formate un prix selon la devise du restaurant
+   */
+  formatPrice(amount) {
+    switch (this.restaurantCurrency) {
+      case 'EUR':
+        return `${amount}€`;
+      case 'GNF':
+        return `${amount.toLocaleString('fr-FR')} GNF`;
+      case 'XOF':
+        return `${amount.toLocaleString('fr-FR')} FCFA`;
+      default:
+        return `${amount}€`;
+    }
+  }
+
+  /**
+   * 💰 Charger la devise du restaurant
+   */
+  async loadRestaurantCurrency(restaurantId) {
+    try {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+      const supabase = createClient(this.supabaseUrl, this.supabaseKey);
+
+      const { data: restaurant } = await supabase
+        .from('france_restaurants')
+        .select('currency')
+        .eq('id', restaurantId)
+        .single();
+
+      if (restaurant?.currency) {
+        this.restaurantCurrency = restaurant.currency;
+        console.log(`💰 [CompositeWorkflow] Devise chargée: ${this.restaurantCurrency}`);
+      }
+    } catch (error) {
+      console.log(`⚠️ [CompositeWorkflow] Erreur chargement devise:`, error);
+    }
   }
   /**
    * Workflow spécifique pour les menus pizza
@@ -243,11 +283,12 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     // 4. Lister les variantes selon la configuration
     // Utiliser l'icône du produit pour les variantes au lieu de 🔸
     const variantIcon = product.icon || '🔸';
-    const format = config.variant_selection?.format || `${variantIcon} {variant_name} ({price} EUR) - Tapez {index}`;
+    const format = config.variant_selection?.format || `${variantIcon} {variant_name} ({price}) - Tapez {index}`;
     finalVariants.forEach((variant, index)=>{
       // Utiliser le prix selon le mode de livraison
       const price = deliveryMode === 'livraison' ? variant.price_delivery || variant.price_on_site : variant.price_on_site || variant.base_price;
-      let variantLine = format.replace('{variant_name}', variant.variant_name).replace('{price}', price).replace('{index}', (index + 1).toString());
+      const formattedPrice = this.formatPrice(price);
+      let variantLine = format.replace('{variant_name}', variant.variant_name).replace('{price}', formattedPrice).replace('{index}', (index + 1).toString());
       message += `   ${variantLine}`;
       if (config.variant_selection?.show_drink_note && variant.has_drink_included) {
         message += ' (+ boisson)';
@@ -512,7 +553,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     // Lister les options avec numérotation simple compatible mobile
     optionGroup.options.forEach((option, index)=>{
       const optionIcon = (option.icon && option.icon !== 'undefined') ? `${option.icon} ` : '';
-      const price = option.price_modifier && option.price_modifier !== 0 ? ` (${option.price_modifier}€)` : '';
+      const price = option.price_modifier && option.price_modifier !== 0 ? ` (${this.formatPrice(option.price_modifier, this.restaurantCurrency)})` : '';
       message += `${index + 1}. ${optionIcon}${option.option_name}${price}`;
       if (option.composition) {
         message += `\n   ${option.composition}`;
@@ -557,7 +598,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     let recap = `✅ *${productName} configuré avec succès !*\n\n`;
     // Calculer le prix total avec price_modifier pour Workflow Universal V2
     const calculatedPrice = this.calculateUniversalWorkflowPrice(workflowData);
-    recap += `🍽 *${workflowData.productName} (${calculatedPrice.toFixed(2)} EUR)*\n`;
+    recap += `🍽 *${workflowData.productName} (${this.formatPrice(calculatedPrice)})*\n`;
     for (const [groupName, selections] of Object.entries(workflowData.selections)){
       const items = selections.map((s)=>s.option_name).join(', ');
       const displayName = this.getGroupDisplayName(groupName);
@@ -830,7 +871,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
         recap += `${emoji} ${this.getGroupDisplayName(groupName)}: ${items}\n`;
       }
     }
-    recap += `\n💰 Prix unitaire: ${workflowData.productPrice}€\n`;
+    recap += `\n💰 Prix unitaire: ${this.formatPrice(workflowData.productPrice, this.restaurantCurrency)}\n`;
     recap += `\n📝 Ex: 1 pour 1 produit, 1,1 pour 2 fois le même produit`;
     await this.messageSender.sendMessage(phoneNumber, recap);
     // Ajouter directement au panier avec quantité 1
@@ -949,7 +990,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       // Ne pas nettoyer les caractères ⿡⿢⿣ - ils sont les vrais numéros !
       // PHASE 2: Support icônes pour options (si disponible dans option.icon)
       const optionIcon = (option.icon && option.icon !== 'undefined') ? `${option.icon} ` : '';
-      const price = option.price_adjustment && option.price_adjustment > 0 ? ` (+${option.price_adjustment}€)` : '';
+      const price = option.price_adjustment && option.price_adjustment > 0 ? ` (+${this.formatPrice(option.price_adjustment, this.restaurantCurrency)})` : '';
       message += `${index + 1}. ${optionIcon}${option.option_name}${price}`;
       if (option.composition) {
         message += `\n   ${option.composition}`;
@@ -1364,12 +1405,12 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     console.log(`🔍 DEBUG_MENU: session.session_data existe: ${!!session.session_data}`);
     console.log(`🔍 DEBUG_MENU: session.session_data:`, session.session_data);
     const menuPrice = session.session_data?.menuPizzaWorkflow?.menuConfig?.price || 'N/A';
-    message += `Prix du menu: ${menuPrice}€\n\n`;
+    message += `Prix du menu: ${this.formatPrice(menuPrice, this.restaurantCurrency)}\n\n`;
     message += `PIZZAS DISPONIBLES (Taille ${normalizedSize}):\n`;
     pizzas?.forEach((pizza, index)=>{
       const variant = variants?.find((v)=>v.product_id === pizza.id);
       const price = variant?.price_on_site || 0;
-      message += `${index + 1}. ${pizza.name} - ${price}€\n`;
+      message += `${index + 1}. ${pizza.name} - ${this.formatPrice(price, this.restaurantCurrency)}\n`;
     });
     message += `\n📝 ${component.instruction}`;
     // Mettre à jour la session pour attendre la réponse
@@ -1435,7 +1476,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     if (selections.sides) {
       recap += `• Accompagnement: ${selections.sides.name}\n`;
     }
-    recap += `\nPrix total du menu: ${workflow.menuConfig.price}€\n`;
+    recap += `\nPrix total du menu: ${this.formatPrice(workflow.menuConfig.price, this.restaurantCurrency)}\n`;
     recap += `\nConfirmer l'ajout au panier?\n`;
     recap += `1. ✅ Oui, ajouter au panier\n`;
     recap += `2. ❌ Non, recommencer`;
@@ -1643,18 +1684,18 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       // Afficher tous les items du panier
       Object.values(cart).forEach((item, index)=>{
         if (item.type === 'menu_pizza') {
-          pizzaConfirmMessage += `${index + 1}. ${item.name} - ${item.price}€\n`;
+          pizzaConfirmMessage += `${index + 1}. ${item.name} - ${this.formatPrice(item.price, this.restaurantCurrency)}\n`;
           if (item.details && item.details.pizzas) {
             item.details.pizzas.forEach((pizza, pIndex)=>{
               pizzaConfirmMessage += `   • Pizza ${pIndex + 1}: ${pizza.name}\n`;
             });
           }
         } else {
-          pizzaConfirmMessage += `${index + 1}. ${item.name} - ${item.price}€\n`;
+          pizzaConfirmMessage += `${index + 1}. ${item.name} - ${this.formatPrice(item.price, this.restaurantCurrency)}\n`;
         }
       });
       pizzaConfirmMessage += '\n━━━━━━━━━━━━━━━━━━━━\n';
-      pizzaConfirmMessage += `💎 TOTAL: ${totalPrice}€\n`;
+      pizzaConfirmMessage += `💎 TOTAL: ${this.formatPrice(totalPrice, this.restaurantCurrency)}\n`;
       pizzaConfirmMessage += `📦 ${Object.keys(cart).length} produit${Object.keys(cart).length > 1 ? 's' : ''}\n\n`;
       pizzaConfirmMessage += 'ACTIONS RAPIDES:\n';
       pizzaConfirmMessage += '⚡ 99 = Passer commande\n';

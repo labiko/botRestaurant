@@ -104,13 +104,45 @@ export class AuthFranceService {
         };
       }
 
-      // Rechercher le restaurant par téléphone
-      const { data: restaurant, error } = await this.supabaseFranceService.client
+      // 🔍 RECHERCHE INTELLIGENTE MULTIPLE - Essayer plusieurs formats
+      console.log(`🔍 [AuthFrance] Recherche restaurant avec numéro: ${phone}`);
+
+      // Format 1: Rechercher le format international complet (ex: 33164880909)
+      let { data: restaurant, error } = await this.supabaseFranceService.client
         .from('france_restaurants')
         .select('id, name, phone, whatsapp_number, password_hash, is_active, country_code')
         .or(`phone.eq.${phone},whatsapp_number.eq.${phone}`)
-        .single();
+        .maybeSingle(); // maybeSingle pour éviter l'erreur si pas trouvé
 
+      // Format 2: Si pas trouvé, essayer le format français local (ex: 0164880909)
+      if (!restaurant && phone.startsWith('33')) {
+        const localPhone = '0' + phone.substring(2); // 33164880909 → 0164880909
+        console.log(`🔍 [AuthFrance] Essai format français local: ${localPhone}`);
+
+        const result2 = await this.supabaseFranceService.client
+          .from('france_restaurants')
+          .select('id, name, phone, whatsapp_number, password_hash, is_active, country_code')
+          .or(`phone.eq.${localPhone},whatsapp_number.eq.${localPhone}`)
+          .maybeSingle();
+
+        restaurant = result2.data;
+        error = result2.error;
+      }
+
+      // Format 3: Si toujours pas trouvé et format local, essayer international
+      if (!restaurant && phone.startsWith('0')) {
+        const intlPhone = '33' + phone.substring(1); // 0164880909 → 33164880909
+        console.log(`🔍 [AuthFrance] Essai format international: ${intlPhone}`);
+
+        const result3 = await this.supabaseFranceService.client
+          .from('france_restaurants')
+          .select('id, name, phone, whatsapp_number, password_hash, is_active, country_code')
+          .or(`phone.eq.${intlPhone},whatsapp_number.eq.${intlPhone}`)
+          .maybeSingle();
+
+        restaurant = result3.data;
+        error = result3.error;
+      }
 
       if (error) {
         console.error('❌ [AuthFrance] Erreur SQL:', {
@@ -121,7 +153,7 @@ export class AuthFranceService {
         });
       }
 
-      if (error || !restaurant) {
+      if (!restaurant) {
         console.error('Restaurant non trouvé:', error);
         return { success: false, message: 'Restaurant non trouvé' };
       }

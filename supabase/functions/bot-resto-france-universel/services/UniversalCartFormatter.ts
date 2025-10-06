@@ -58,12 +58,29 @@ export class UniversalCartFormatter {
   };
 
   /**
+   * Formate un prix selon la devise du restaurant
+   */
+  private formatPrice(amount: number, currency: string = 'EUR'): string {
+    switch (currency) {
+      case 'EUR':
+        return `${amount}€`;
+      case 'GNF':
+        return `${amount.toLocaleString('fr-FR')} GNF`;
+      case 'XOF':
+        return `${amount.toLocaleString('fr-FR')} FCFA`;
+      default:
+        return `${amount}€`;
+    }
+  }
+
+  /**
    * Formater le message complet d'ajout au panier
    */
   formatAdditionMessage(
     product: any,
     cart: any[],
-    quantity: number = 1
+    quantity: number = 1,
+    currency: string = 'EUR'
   ): string {
     let message = '';
 
@@ -73,13 +90,13 @@ export class UniversalCartFormatter {
     message += `✅ ${productName} ajouté !\n\n`;
     
     // Section 2: Détail du produit ajouté
-    message += this.formatProductDetail(product, quantity);
+    message += this.formatProductDetail(product, quantity, currency);
     
     // Section 3: Séparateur
     message += '\n━━━━━━━━━━━━━━━━━━━━\n';
     
     // Section 4: Panier complet
-    message += this.formatCartSummary(cart);
+    message += this.formatCartSummary(cart, currency);
     
     // Section 5: Séparateur
     message += '\n━━━━━━━━━━━━━━━━━━━━\n';
@@ -87,7 +104,7 @@ export class UniversalCartFormatter {
     // Section 6: Total et compteur
     const total = this.calculateTotal(cart);
     const itemCount = this.countItems(cart);
-    message += `💎 TOTAL: ${total} EUR\n`;
+    message += `💎 TOTAL: ${this.formatPrice(total, currency)}\n`;
     message += `📦 ${itemCount} produit${itemCount > 1 ? 's' : ''}\n\n`;
     
     // Section 7: Actions rapides
@@ -99,7 +116,7 @@ export class UniversalCartFormatter {
   /**
    * Formater le détail d'un produit avec ses composants
    */
-  private formatProductDetail(product: any, quantity: number): string {
+  private formatProductDetail(product: any, quantity: number, currency: string = 'EUR'): string {
     let detail = '';
     
     // Obtenir l'émoji du produit (priorité à la colonne icon)
@@ -120,7 +137,7 @@ export class UniversalCartFormatter {
     }
     
     // Prix
-    detail += `   💰 ${product.price} EUR\n`;
+    detail += `   💰 ${this.formatPrice(product.price, currency)}\n`;
     
     return detail;
   }
@@ -179,7 +196,7 @@ export class UniversalCartFormatter {
   /**
    * Formater le résumé du panier
    */
-  private formatCartSummary(cart: any[]): string {
+  private formatCartSummary(cart: any[], currency: string = 'EUR'): string {
     let summary = '🛒 MON PANIER\n\n';
 
     cart.forEach((item, index) => {
@@ -199,7 +216,7 @@ export class UniversalCartFormatter {
 
       // Ligne principale du produit avec catégorie si disponible
       const categoryDisplay = item.categoryName ? ` (${item.categoryName})` : '';
-      summary += `${itemNumber}. ${categoryEmoji} ${item.productName}${categoryDisplay} - ${finalPrice}€\n`;
+      summary += `${itemNumber}. ${categoryEmoji} ${item.productName}${categoryDisplay} - ${this.formatPrice(finalPrice, currency)}\n`;
 
       // Configuration détaillée pour menus pizza
       if (item.configuration || item.details) {

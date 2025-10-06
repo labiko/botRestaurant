@@ -1884,8 +1884,8 @@ export class UniversalBot implements IMessageHandler {
           const maxPrice = Math.max(...filteredPrices);
           
           console.log(`💰 [ShowProducts] Prix calculés pour ${product.name}:`, { minPrice, maxPrice, deliveryMode, filteredPrices });
-          
-          priceText = minPrice === maxPrice ? `${minPrice}€` : `${minPrice}€ - ${maxPrice}€`;
+
+          priceText = minPrice === maxPrice ? this.formatPrice(minPrice) : `${this.formatPrice(minPrice)} - ${this.formatPrice(maxPrice)}`;
           activePrice = minPrice;
 
           // Récupérer les vrais prix depuis la première taille (pas les prix filtrés)
@@ -1906,8 +1906,8 @@ export class UniversalBot implements IMessageHandler {
             
             const minPrice = Math.min(...prices);
             const maxPrice = Math.max(...prices);
-            
-            priceText = minPrice === maxPrice ? `${minPrice}€` : `${minPrice}€ - ${maxPrice}€`;
+
+            priceText = minPrice === maxPrice ? this.formatPrice(minPrice) : `${this.formatPrice(minPrice)} - ${this.formatPrice(maxPrice)}`;
             activePrice = minPrice;
             priceOnSite = minPrice; // Approximation pour le stockage
             priceDelivery = minPrice;
@@ -1918,14 +1918,14 @@ export class UniversalBot implements IMessageHandler {
           priceOnSite = product.base_price;
           priceDelivery = product.base_price + 1;
           activePrice = deliveryMode === 'livraison' ? priceDelivery : priceOnSite;
-          priceText = `${activePrice}€`;
+          priceText = this.formatPrice(activePrice);
         } else if (product.price_on_site_base) {
           // Produit avec prix sur place/livraison séparés - AFFICHER UNIQUEMENT le prix du mode
           console.log(`📦 [ShowProducts] ${product.name} utilise price_on_site_base: ${product.price_on_site_base}€ / delivery: ${product.price_delivery_base}€`);
           priceOnSite = product.price_on_site_base;
           priceDelivery = product.price_delivery_base || product.price_on_site_base + 1;
           activePrice = deliveryMode === 'livraison' ? priceDelivery : priceOnSite;
-          priceText = `${activePrice}€`;
+          priceText = this.formatPrice(activePrice);
         } else {
           console.log(`❌ [ShowProducts] ${product.name} n'a AUCUN prix configuré! Données produit:`, JSON.stringify(product, null, 2));
         }
@@ -2263,7 +2263,9 @@ export class UniversalBot implements IMessageHandler {
       const confirmationMessage = this.orderService.buildOrderConfirmationMessage(
         order,
         restaurantName,
-        deliveryMode
+        deliveryMode,
+        null,
+        this.restaurantConfig?.currency || 'EUR'
       );
 
       await this.messageSender.sendMessage(phoneNumber, confirmationMessage);
@@ -2578,7 +2580,8 @@ export class UniversalBot implements IMessageHandler {
         order,
         restaurantName,
         'livraison',
-        address
+        address,
+        this.restaurantConfig?.currency || 'EUR'
       );
       
       await this.messageSender.sendMessage(phoneNumber, confirmationMessage);
@@ -2806,7 +2809,8 @@ export class UniversalBot implements IMessageHandler {
     const confirmMessage = formatter.formatAdditionMessage(
       selectedProduct,
       cart,
-      quantity
+      quantity,
+      this.restaurantConfig?.currency || 'EUR'
     );
     
     await this.messageSender.sendMessage(phoneNumber, confirmMessage);
@@ -3115,7 +3119,8 @@ export class UniversalBot implements IMessageHandler {
           order,
           restaurantName,
           'a_emporter',
-          null
+          null,
+          this.restaurantConfig?.currency || 'EUR'
         );
         
         await this.messageSender.sendMessage(phoneNumber, confirmationMessage);
@@ -3187,8 +3192,8 @@ export class UniversalBot implements IMessageHandler {
       
       // Message de confirmation
       await this.messageSender.sendMessage(phoneNumber, 
-        `✅ Ajouté au panier !\n🍕 ${pizzaOption.pizzaName} ${pizzaOption.sizeName}\n💰 ${pizzaOption.price} EUR\n\n` +
-        `📊 Total panier: ${newTotal} EUR\n\n` +
+        `✅ Ajouté au panier !\n🍕 ${pizzaOption.pizzaName} ${pizzaOption.sizeName}\n💰 ${this.formatPrice(pizzaOption.price)}\n\n` +
+        `📊 Total panier: ${this.formatPrice(newTotal)}\n\n` +
         `*Que souhaitez-vous faire ?*\n` +
         `🗑️ 00 = Vider panier\n` +
         `⚡ 99 = Passer commande\n` +
@@ -3238,8 +3243,8 @@ export class UniversalBot implements IMessageHandler {
       productBlock += `🧾 ${product.composition.toUpperCase()}\n`;
     }
     
-    // Prix et action
-    productBlock += `💰 ${activePrice} EUR - Tapez ${index + 1}\n\n`;
+    // Prix et action - Utiliser la devise du restaurant
+    productBlock += `💰 ${this.formatPrice(activePrice)} - Tapez ${index + 1}\n\n`;
     
     return productBlock;
   }

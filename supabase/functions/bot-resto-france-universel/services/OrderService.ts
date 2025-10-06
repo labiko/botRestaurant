@@ -174,6 +174,22 @@ export class OrderService {
   }
 
   /**
+   * Formate un prix selon la devise du restaurant
+   */
+  private formatPrice(amount: number, currency: string = 'EUR'): string {
+    switch (currency) {
+      case 'EUR':
+        return `${amount}€`;
+      case 'GNF':
+        return `${amount.toLocaleString('fr-FR')} GNF`;
+      case 'XOF':
+        return `${amount.toLocaleString('fr-FR')} FCFA`;
+      default:
+        return `${amount}€`;
+    }
+  }
+
+  /**
    * Construire le message de confirmation de commande
    * FORMAT UNIVERSEL - Même structure pour tous les restaurants
    */
@@ -181,7 +197,8 @@ export class OrderService {
     order: any,
     restaurantName: string,
     deliveryMode: string,
-    deliveryAddress?: any
+    deliveryAddress?: any,
+    currency: string = 'EUR'
   ): string {
     let message = `✅ *Votre commande est confirmée !*\n\n`;
     message += `🍕 *${restaurantName}*\n`;
@@ -205,7 +222,7 @@ export class OrderService {
       }
     }
     
-    message += `\n💎 *Total: ${order.total_amount} EUR*\n`;
+    message += `\n💎 *Total: ${this.formatPrice(order.total_amount, currency)}*\n`;
     
     // Informations selon le mode de livraison
     message += this.formatDeliveryInfo(deliveryMode, order, deliveryAddress);
