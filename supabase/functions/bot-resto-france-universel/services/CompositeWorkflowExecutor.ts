@@ -593,6 +593,11 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
   /**
    * Finalisation workflow universel
    */ async completeUniversalWorkflow(phoneNumber, session, workflowData) {
+    // Charger la devise du restaurant avant l'affichage des prix
+    if (session.selectedRestaurantId) {
+      await this.loadRestaurantCurrency(session.selectedRestaurantId);
+    }
+
     // Récapitulatif avec format standard universel
     const productName = workflowData.productName.split(' ')[0]; // Ex: "TACOS" depuis "TACOS MENU M"
     let recap = `✅ *${productName} configuré avec succès !*\n\n`;
