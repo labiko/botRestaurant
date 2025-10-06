@@ -359,9 +359,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     return this.franceOrdersService.getStatusText(status);
   }
 
-  formatPrice(amount: number): string {
-    return this.franceOrdersService.formatPrice(amount);
-  }
 
   formatTime(dateString: string): string {
     return this.franceOrdersService.formatTime(dateString);
