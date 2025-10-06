@@ -3,7 +3,14 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ModalController, ToastController } from '@ionic/angular';
 import { WhatsAppNotificationFranceService } from '../../../../core/services/whatsapp-notification-france.service';
 import { AuthFranceService } from '../../auth-france/services/auth-france.service';
-import { PhoneNumberUtilsService, CountryCodeConfig } from '../../../../core/services/phone-number-utils.service';
+import { UniversalAuthService } from '../../../../core/services/universal-auth.service';
+
+// Configuration des pays supportés pour le formulaire livreur
+interface CountryConfig {
+  code: string;
+  name: string;
+  flag: string;
+}
 
 export interface DriverFormData {
   first_name: string;
@@ -24,7 +31,7 @@ export interface DriverFormData {
 export class AddDriverModalComponent implements OnInit {
   driverForm!: FormGroup; // Utiliser ! pour dire à TypeScript que ce sera initialisé
   isLoading = false;
-  availableCountries: CountryCodeConfig[] = [];
+  availableCountries: CountryConfig[] = [];
 
   constructor(
     private formBuilder: FormBuilder,
@@ -32,7 +39,7 @@ export class AddDriverModalComponent implements OnInit {
     private toastController: ToastController,
     private whatsAppService: WhatsAppNotificationFranceService,
     private authFranceService: AuthFranceService,
-    private phoneNumberUtils: PhoneNumberUtilsService
+    private universalAuthService: UniversalAuthService
   ) {
     console.log('🔧 [AddDriverModal] Constructor appelé');
   }
@@ -40,8 +47,12 @@ export class AddDriverModalComponent implements OnInit {
   ngOnInit() {
     console.log('🚀 [AddDriverModal] ngOnInit appelé');
     try {
-      // Charger les pays disponibles
-      this.availableCountries = this.phoneNumberUtils.getAllCountryCodes();
+      // Charger les pays disponibles depuis UniversalAuthService
+      this.availableCountries = [
+        { code: '33', name: 'France', flag: '🇫🇷' },
+        { code: '224', name: 'Guinée', flag: '🇬🇳' },
+        { code: '225', name: 'Côte d\'Ivoire', flag: '🇨🇮' }
+      ];
 
       // Initialiser le formulaire dans ngOnInit pour éviter les problèmes de détection de changements
       this.driverForm = this.createForm();
@@ -88,16 +99,20 @@ export class AddDriverModalComponent implements OnInit {
         // Générer le code d'accès automatiquement
         const accessCode = this.whatsAppService.generateAccessCode();
 
-        // Construire le numéro final : indicatif + numéro local
+        // Construire le numéro final avec UniversalAuthService
+        const rawPhoneNumber = this.driverForm.value.phone_number;
         const selectedCode = this.driverForm.value.country_code_selector;
-        let localNumber = this.driverForm.value.phone_number.replace(/\s+/g, '');
 
-        // Enlever le 0 initial si présent (numéros locaux français: 0612345678 → 612345678)
-        if (localNumber.startsWith('0')) {
-          localNumber = localNumber.substring(1);
-        }
+        // Convertir le code pays sélectionné vers le format UniversalAuthService
+        const countryCode = selectedCode === '33' ? 'FR' :
+                           selectedCode === '224' ? 'GN' :
+                           selectedCode === '225' ? 'CI' : null;
 
-        const finalPhoneNumber = `${selectedCode}${localNumber}`;
+        // Générer tous les formats possibles
+        const phoneFormats = this.universalAuthService.generatePhoneFormats(rawPhoneNumber, countryCode || undefined);
+
+        // Utiliser le format international (commence par l'indicatif pays)
+        const finalPhoneNumber = phoneFormats.find(format => format.startsWith(selectedCode)) || `${selectedCode}${rawPhoneNumber}`;
 
         const formData: DriverFormData = {
           first_name: this.driverForm.value.first_name.trim(),
@@ -160,41 +175,61 @@ export class AddDriverModalComponent implements OnInit {
   }
 
   /**
-   * Nettoyage et validation du numéro local
+   * Nettoyage et validation du numéro avec UniversalAuthService
    */
   onPhoneInput(event: any) {
-    let value = event.target.value.replace(/\D/g, ''); // Supprimer non-chiffres
+    const rawValue = event.target.value;
 
-    // Limiter à 15 chiffres max
-    if (value.length > 15) {
-      value = value.substring(0, 15);
+    // Normaliser le numéro avec UniversalAuthService
+    const normalized = this.universalAuthService.normalizePhoneNumber(rawValue);
+
+    // Détecter automatiquement le pays si possible
+    const detectedCountry = this.universalAuthService.detectCountryFromPhone(normalized);
+    if (detectedCountry) {
+      // Mettre à jour automatiquement le sélecteur de pays
+      const countryCode = detectedCountry === 'FR' ? '33' :
+                         detectedCountry === 'GN' ? '224' :
+                         detectedCountry === 'CI' ? '225' : null;
+
+      if (countryCode) {
+        this.driverForm.patchValue({
+          country_code_selector: countryCode
+        }, { emitEvent: false });
+      }
     }
 
-    this.driverForm.patchValue({ phone_number: value }, { emitEvent: false });
+    // Limiter à 15 chiffres max
+    const truncated = normalized.length > 15 ? normalized.substring(0, 15) : normalized;
+    this.driverForm.patchValue({ phone_number: truncated }, { emitEvent: false });
   }
 
   /**
-   * Obtenir le numéro final avec indicatif
+   * Obtenir le numéro final avec UniversalAuthService
    */
   getFinalPhoneNumber(): string {
+    const phoneValue = this.driverForm.get('phone_number')?.value || '';
     const selectedCode = this.driverForm.get('country_code_selector')?.value;
-    let localNumber = this.driverForm.get('phone_number')?.value || '';
 
-    if (!selectedCode || !localNumber) {
+    if (!phoneValue) {
       return '';
     }
 
-    // Enlever le 0 initial si présent
-    if (localNumber.startsWith('0')) {
-      localNumber = localNumber.substring(1);
+    // Générer tous les formats possibles avec UniversalAuthService
+    const countryCode = selectedCode === '33' ? 'FR' :
+                       selectedCode === '224' ? 'GN' :
+                       selectedCode === '225' ? 'CI' : null;
+
+    if (countryCode) {
+      const formats = this.universalAuthService.generatePhoneFormats(phoneValue, countryCode);
+      // Retourner le format international le plus approprié
+      const internationalFormat = formats.find(f => f.startsWith(selectedCode));
+      if (internationalFormat) {
+        const selectedCountry = this.availableCountries.find(c => c.code === selectedCode);
+        return `${selectedCountry?.flag || ''} +${internationalFormat}`;
+      }
     }
 
-    const selectedCountry = this.availableCountries.find(c => c.code === selectedCode);
-    if (!selectedCountry) {
-      return '';
-    }
-
-    return `${selectedCountry.flag} ${selectedCode}${localNumber}`;
+    return `+${selectedCode}${phoneValue}`;
   }
 
   /**
