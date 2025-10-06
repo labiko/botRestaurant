@@ -117,6 +117,16 @@ Le bot universel est la version de production active qui gère tous les pays. Ne
 - **TOUJOURS donner le SQL à l'utilisateur** pour qu'il l'exécute lui-même
 - **JAMAIS de psql avec des commandes d'écriture** - Lecture seule exclusivement
 
+## 🔄 RÈGLE SYNCHRONISATION DEV → PROD
+
+**⚠️ CHAMPS À EXCLURE DES SCRIPTS DE SYNCHRONISATION** :
+Lors de la génération de scripts SQL pour synchroniser `france_restaurants` DEV → PROD, **TOUJOURS EXCLURE** ces champs :
+- ❌ `phone` - Géré manuellement par restaurant
+- ❌ `whatsapp_number` - Géré manuellement par restaurant
+- ❌ `password_hash` - Géré par système d'authentification
+
+**Raison** : Ces champs sont spécifiques à chaque environnement et ne doivent jamais être écrasés automatiquement.
+
 **✅ Autorisé :**
 - `SELECT` pour consulter les données
 - `DESCRIBE` ou `SHOW` pour la structure

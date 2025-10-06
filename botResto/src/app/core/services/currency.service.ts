@@ -68,9 +68,15 @@ export class CurrencyService {
    */
   setCurrency(currencyCode: string): void {
     if (AVAILABLE_CURRENCIES[currencyCode]) {
+      // Ne log que si la devise change vraiment
+      const isChanging = this.currentCurrency.code !== currencyCode;
+
       this.currentCurrency = AVAILABLE_CURRENCIES[currencyCode];
       localStorage.setItem(this.CURRENCY_KEY, currencyCode);
-      console.log(`💱 Currency changed to: ${currencyCode}`);
+
+      if (isChanging) {
+        console.log(`💱 Currency changed to: ${currencyCode}`);
+      }
     } else {
       console.error(`❌ Unknown currency code: ${currencyCode}`);
     }

@@ -1023,7 +1023,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
         .from('restaurant_payment_configs')
         .select('provider, is_active, auto_send_on_order')
         .eq('restaurant_id', this.restaurantId)
-        .single();
+        .maybeSingle();
 
       if (!error && data) {
         // Vérifier l'état de la configuration

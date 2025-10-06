@@ -357,8 +357,9 @@ BEGIN;
 
 `;
 
-  // 1. Restaurant (TOUJOURS synchronisé)
-  script += `-- 1. Synchronisation restaurant
+  // 1. Restaurant (création uniquement si n'existe pas)
+  script += `-- 1. Synchronisation restaurant (CRÉATION UNIQUEMENT)
+-- ⚠️ Si le restaurant existe déjà en PROD, il n'est PAS modifié
 INSERT INTO france_restaurants (
   id, name, slug, address, city, phone, whatsapp_number,
   delivery_zone_km, delivery_fee, is_active, business_hours,
@@ -384,16 +385,16 @@ VALUES (
     "samedi": {"isOpen": true, "opening": "07:00", "closing": "23:50"},
     "dimanche": {"isOpen": true, "opening": "07:00", "closing": "23:50"}
   }).replace(/'/g, "''")}',
-  '${restaurant.password_hash || '810790'}',
+  '${restaurant.password_hash || ''}',
   '${restaurant.timezone || 'Europe/Paris'}'
 )
 ON CONFLICT (id) DO NOTHING;
 
 `;
 
-  // 2. Catégories
+  // 2. Catégories (création uniquement)
   if (categories.length > 0) {
-    script += `-- 2. Synchronisation catégories (${categories.length})
+    script += `-- 2. Synchronisation catégories (${categories.length}) - CRÉATION UNIQUEMENT
 INSERT INTO france_menu_categories (
   restaurant_id, name, slug, icon, display_order, is_active
 )
@@ -406,11 +407,7 @@ VALUES
 
     script += categoryValues;
     script += `
-ON CONFLICT (restaurant_id, slug) DO UPDATE SET
-  name = EXCLUDED.name,
-  icon = EXCLUDED.icon,
-  display_order = EXCLUDED.display_order,
-  is_active = EXCLUDED.is_active;
+ON CONFLICT (restaurant_id, slug) DO NOTHING;
 
 `;
   }
@@ -421,7 +418,7 @@ ON CONFLICT (restaurant_id, slug) DO UPDATE SET
 INSERT INTO france_products (
   restaurant_id, category_id, name, description, product_type,
   display_order, is_active, price_on_site_base, price_delivery_base,
-  workflow_type, requires_steps, steps_config
+  workflow_type, requires_steps, steps_config, icon
 )
 VALUES
 `;
@@ -430,7 +427,7 @@ VALUES
       const category = categories.find(cat => cat.id === prod.category_id);
       const categoryName = category ? category.name.replace(/'/g, "''") : '';
 
-      return `  (${prod.restaurant_id}, (SELECT id FROM france_menu_categories WHERE name = '${categoryName}' AND restaurant_id = ${prod.restaurant_id} LIMIT 1), '${prod.name.replace(/'/g, "''")}', '${prod.description?.replace(/'/g, "''") || ''}', '${prod.product_type || 'simple'}', ${prod.display_order}, ${prod.is_active !== false}, ${prod.price_on_site_base || 0}, ${prod.price_delivery_base || 0}, '${prod.workflow_type?.replace(/'/g, "''") || ''}', ${prod.requires_steps || false}, '${JSON.stringify(prod.steps_config || {}).replace(/'/g, "''")}')`;
+      return `  (${prod.restaurant_id}, (SELECT id FROM france_menu_categories WHERE name = '${categoryName}' AND restaurant_id = ${prod.restaurant_id} LIMIT 1), '${prod.name.replace(/'/g, "''")}', '${prod.description?.replace(/'/g, "''") || ''}', '${prod.product_type || 'simple'}', ${prod.display_order}, ${prod.is_active !== false}, ${prod.price_on_site_base || 0}, ${prod.price_delivery_base || 0}, '${prod.workflow_type?.replace(/'/g, "''") || ''}', ${prod.requires_steps || false}, '${JSON.stringify(prod.steps_config || {}).replace(/'/g, "''")}', '${prod.icon?.replace(/'/g, "''") || ''}')`;
     }).join(',\n');
 
     script += productValues;
@@ -461,7 +458,7 @@ ON CONFLICT (name, restaurant_id, category_id) DO NOTHING;
 INSERT INTO france_product_options (
   product_id, option_group, option_name, price_modifier,
   is_required, max_selections, display_order, is_active,
-  group_order, next_group_order, conditional_next_group
+  group_order, next_group_order, conditional_next_group, icon
 )
 SELECT
   prod.id,
@@ -474,18 +471,19 @@ SELECT
   vals.is_active,
   vals.group_order,
   vals.next_group_order,
-  vals.conditional_next_group
+  vals.conditional_next_group,
+  vals.icon
 FROM france_products prod,
 (VALUES
 `;
 
       const optionValues = options.map(option =>
-        `  ('${option.option_group?.replace(/'/g, "''") || ''}', '${option.option_name?.replace(/'/g, "''") || ''}', ${option.price_modifier || 0}, ${option.is_required || false}, ${option.max_selections || 1}, ${option.display_order || 0}, ${option.is_active !== false}, ${option.group_order || 0}, ${option.next_group_order ? option.next_group_order : 'null::integer'}, ${option.conditional_next_group ? `'${JSON.stringify(option.conditional_next_group).replace(/'/g, "''")}'::jsonb` : 'null::jsonb'})`
+        `  ('${option.option_group?.replace(/'/g, "''") || ''}', '${option.option_name?.replace(/'/g, "''") || ''}', ${option.price_modifier || 0}, ${option.is_required || false}, ${option.max_selections || 1}, ${option.display_order || 0}, ${option.is_active !== false}, ${option.group_order || 0}, ${option.next_group_order ? option.next_group_order : 'null::integer'}, ${option.conditional_next_group ? `'${JSON.stringify(option.conditional_next_group).replace(/'/g, "''")}'::jsonb` : 'null::jsonb'}, '${option.icon?.replace(/'/g, "''") || ''}')`
       ).join(',\n');
 
       script += optionValues;
       script += `
-) AS vals(option_group, option_name, price_modifier, is_required, max_selections, display_order, is_active, group_order, next_group_order, conditional_next_group)
+) AS vals(option_group, option_name, price_modifier, is_required, max_selections, display_order, is_active, group_order, next_group_order, conditional_next_group, icon)
 WHERE prod.name = '${productName}' AND prod.restaurant_id = ${restaurant.id}
 AND NOT EXISTS (
   SELECT 1 FROM france_product_options existing
@@ -600,9 +598,9 @@ AND NOT EXISTS (
     });
   }
 
-  // ✅ NOUVEAU: 7. Définitions workflow
+  // ✅ NOUVEAU: 7. Définitions workflow (création uniquement)
   if (workflowDefinitions.length > 0) {
-    script += `-- 7. ✅ NOUVEAU: Synchronisation définitions workflow (${workflowDefinitions.length})
+    script += `-- 7. Synchronisation définitions workflow (${workflowDefinitions.length}) - CRÉATION UNIQUEMENT
 INSERT INTO workflow_definitions (
   id, restaurant_id, workflow_id, name, description, steps_config, is_active
 )
@@ -615,19 +613,14 @@ VALUES
 
     script += workflowValues;
     script += `
-ON CONFLICT (id) DO UPDATE SET
-  workflow_id = EXCLUDED.workflow_id,
-  name = EXCLUDED.name,
-  description = EXCLUDED.description,
-  steps_config = EXCLUDED.steps_config,
-  is_active = EXCLUDED.is_active;
+ON CONFLICT (id) DO NOTHING;
 
 `;
   }
 
-  // ✅ NOUVEAU: 8. Étapes workflow
+  // ✅ NOUVEAU: 8. Étapes workflow (création uniquement)
   if (workflowSteps.length > 0) {
-    script += `-- 8. ✅ NOUVEAU: Synchronisation étapes workflow (${workflowSteps.length})
+    script += `-- 8. Synchronisation étapes workflow (${workflowSteps.length}) - CRÉATION UNIQUEMENT
 INSERT INTO workflow_steps (
   id, workflow_id, step_id, step_order, step_type, title, description,
   selection_config, validation_rules, display_config, next_step_logic,
@@ -642,18 +635,7 @@ VALUES
 
     script += stepValues;
     script += `
-ON CONFLICT (id) DO UPDATE SET
-  step_id = EXCLUDED.step_id,
-  step_order = EXCLUDED.step_order,
-  step_type = EXCLUDED.step_type,
-  title = EXCLUDED.title,
-  description = EXCLUDED.description,
-  selection_config = EXCLUDED.selection_config,
-  validation_rules = EXCLUDED.validation_rules,
-  display_config = EXCLUDED.display_config,
-  next_step_logic = EXCLUDED.next_step_logic,
-  error_handling = EXCLUDED.error_handling,
-  is_active = EXCLUDED.is_active;
+ON CONFLICT (id) DO NOTHING;
 
 `;
   }
@@ -750,9 +732,9 @@ AND NOT EXISTS (
     }
   }
 
-  // 10. Configuration bot
+  // 10. Configuration bot (création uniquement)
   if (botConfig) {
-    script += `-- 10. Synchronisation configuration bot
+    script += `-- 10. Synchronisation configuration bot - CRÉATION UNIQUEMENT
 INSERT INTO restaurant_bot_configs (
   id, restaurant_id, config_name, brand_name, welcome_message,
   available_workflows, features, is_active
@@ -761,20 +743,14 @@ VALUES (
   ${botConfig.id}, ${restaurant.id}, '${botConfig.config_name?.replace(/'/g, "''") || 'main'}', '${botConfig.brand_name?.replace(/'/g, "''") || ''}', '${botConfig.welcome_message?.replace(/'/g, "''") || ''}',
   '${JSON.stringify(botConfig.available_workflows || []).replace(/'/g, "''")}', '${JSON.stringify(botConfig.features || {}).replace(/'/g, "''")}', ${botConfig.is_active !== false}
 )
-ON CONFLICT (id) DO UPDATE SET
-  config_name = EXCLUDED.config_name,
-  brand_name = EXCLUDED.brand_name,
-  welcome_message = EXCLUDED.welcome_message,
-  available_workflows = EXCLUDED.available_workflows,
-  features = EXCLUDED.features,
-  is_active = EXCLUDED.is_active;
+ON CONFLICT (id) DO NOTHING;
 
 `;
   }
 
-  // 11. Configurations d'affichage produit
+  // 11. Configurations d'affichage produit (création uniquement)
   if (displayConfigs.length > 0) {
-    script += `-- 11. Synchronisation configurations affichage produit (${displayConfigs.length})
+    script += `-- 11. Synchronisation configurations affichage produit (${displayConfigs.length}) - CRÉATION UNIQUEMENT
 INSERT INTO france_product_display_configs (
   id, restaurant_id, product_id, display_type, template_name,
   show_variants_first, custom_header_text, custom_footer_text, emoji_icon
@@ -788,20 +764,14 @@ VALUES
 
     script += displayValues;
     script += `
-ON CONFLICT (id) DO UPDATE SET
-  display_type = EXCLUDED.display_type,
-  template_name = EXCLUDED.template_name,
-  show_variants_first = EXCLUDED.show_variants_first,
-  custom_header_text = EXCLUDED.custom_header_text,
-  custom_footer_text = EXCLUDED.custom_footer_text,
-  emoji_icon = EXCLUDED.emoji_icon;
+ON CONFLICT (id) DO NOTHING;
 
 `;
   }
 
-  // 12. Templates workflow
+  // 12. Templates workflow (création uniquement)
   if (workflowTemplates.length > 0) {
-    script += `-- 12. Synchronisation templates workflow (${workflowTemplates.length})
+    script += `-- 12. Synchronisation templates workflow (${workflowTemplates.length}) - CRÉATION UNIQUEMENT
 INSERT INTO france_workflow_templates (
   id, restaurant_id, template_name, description, steps_config
 )
@@ -814,17 +784,14 @@ VALUES
 
     script += templateValues;
     script += `
-ON CONFLICT (id) DO UPDATE SET
-  template_name = EXCLUDED.template_name,
-  description = EXCLUDED.description,
-  steps_config = EXCLUDED.steps_config;
+ON CONFLICT (id) DO NOTHING;
 
 `;
   }
 
-  // 13. Paramètres vitrine
+  // 13. Paramètres vitrine (création uniquement)
   if (vitrineSettings) {
-    script += `-- 13. Synchronisation paramètres vitrine
+    script += `-- 13. Synchronisation paramètres vitrine - CRÉATION UNIQUEMENT
 INSERT INTO restaurant_vitrine_settings (
   id, restaurant_id, slug, primary_color, secondary_color, accent_color,
   logo_emoji, subtitle, promo_text, feature_1, feature_2, feature_3,
@@ -835,21 +802,7 @@ VALUES (
   '${vitrineSettings.logo_emoji || '🍕'}', '${vitrineSettings.subtitle?.replace(/'/g, "''") || 'Commandez en 30 secondes sur WhatsApp!'}', '${vitrineSettings.promo_text?.replace(/'/g, "''") || '📱 100% DIGITAL SUR WHATSAPP'}', '${vitrineSettings.feature_1?.replace(/'/g, "''") || '{"emoji": "🚀", "text": "Livraison rapide"}'}', '${vitrineSettings.feature_2?.replace(/'/g, "''") || '{"emoji": "💯", "text": "Produits frais"}'}', '${vitrineSettings.feature_3?.replace(/'/g, "''") || '{"emoji": "⭐", "text": "4.8 étoiles"}'}',
   ${vitrineSettings.show_live_stats !== false}, ${vitrineSettings.average_rating || 4.8}, ${vitrineSettings.delivery_time_min || 25}, ${vitrineSettings.is_active !== false}
 )
-ON CONFLICT (id) DO UPDATE SET
-  slug = EXCLUDED.slug,
-  primary_color = EXCLUDED.primary_color,
-  secondary_color = EXCLUDED.secondary_color,
-  accent_color = EXCLUDED.accent_color,
-  logo_emoji = EXCLUDED.logo_emoji,
-  subtitle = EXCLUDED.subtitle,
-  promo_text = EXCLUDED.promo_text,
-  feature_1 = EXCLUDED.feature_1,
-  feature_2 = EXCLUDED.feature_2,
-  feature_3 = EXCLUDED.feature_3,
-  show_live_stats = EXCLUDED.show_live_stats,
-  average_rating = EXCLUDED.average_rating,
-  delivery_time_min = EXCLUDED.delivery_time_min,
-  is_active = EXCLUDED.is_active;
+ON CONFLICT (id) DO NOTHING;
 
 `;
   }
