@@ -48,11 +48,12 @@ export class AddDriverModalComponent implements OnInit {
     console.log('🚀 [AddDriverModal] ngOnInit appelé');
     try {
       // Charger les pays disponibles depuis UniversalAuthService
-      this.availableCountries = [
-        { code: '33', name: 'France', flag: '🇫🇷' },
-        { code: '224', name: 'Guinée', flag: '🇬🇳' },
-        { code: '225', name: 'Côte d\'Ivoire', flag: '🇨🇮' }
-      ];
+      const supportedCountries = this.universalAuthService.getSupportedCountries();
+      this.availableCountries = supportedCountries.map(country => ({
+        code: country.prefix, // Utiliser le prefix pour le select
+        name: country.name,
+        flag: country.flag
+      }));
 
       // Initialiser le formulaire dans ngOnInit pour éviter les problèmes de détection de changements
       this.driverForm = this.createForm();
@@ -99,20 +100,21 @@ export class AddDriverModalComponent implements OnInit {
         // Générer le code d'accès automatiquement
         const accessCode = this.whatsAppService.generateAccessCode();
 
-        // Construire le numéro final avec UniversalAuthService
-        const rawPhoneNumber = this.driverForm.value.phone_number;
-        const selectedCode = this.driverForm.value.country_code_selector;
+        // Logique simple : format local + indicatif
+        const localNumber = this.driverForm.value.phone_number;
+        const selectedPrefix = this.driverForm.value.country_code_selector;
 
-        // Convertir le code pays sélectionné vers le format UniversalAuthService
-        const countryCode = selectedCode === '33' ? 'FR' :
-                           selectedCode === '224' ? 'GN' :
-                           selectedCode === '225' ? 'CI' : null;
+        // Convertir prefix vers code pays
+        const countryCode = selectedPrefix === '33' ? 'FR' :
+                           selectedPrefix === '224' ? 'GN' :
+                           selectedPrefix === '225' ? 'CI' : null;
 
-        // Générer tous les formats possibles
-        const phoneFormats = this.universalAuthService.generatePhoneFormats(rawPhoneNumber, countryCode || undefined);
+        if (!countryCode) {
+          throw new Error('Pays non supporté');
+        }
 
-        // Utiliser le format international (commence par l'indicatif pays)
-        const finalPhoneNumber = phoneFormats.find(format => format.startsWith(selectedCode)) || `${selectedCode}${rawPhoneNumber}`;
+        // Formatage simple vers international
+        const finalPhoneNumber = this.universalAuthService.formatToInternational(localNumber, countryCode);
 
         const formData: DriverFormData = {
           first_name: this.driverForm.value.first_name.trim(),
@@ -132,7 +134,7 @@ export class AddDriverModalComponent implements OnInit {
         const restaurantName = currentUser?.name || currentUser?.restaurantName || 'Restaurant';
 
         // Le code pays est celui sélectionné dans le select
-        const driverCountryCode = selectedCode;
+        const driverCountryCode = countryCode;
 
         console.log('📱 [AddDriverModal] Envoi du code WhatsApp...');
         const whatsAppSent = await this.whatsAppService.sendDriverAccessCode(
@@ -175,61 +177,46 @@ export class AddDriverModalComponent implements OnInit {
   }
 
   /**
-   * Nettoyage et validation du numéro avec UniversalAuthService
+   * Nettoyage simple du numéro saisi
    */
   onPhoneInput(event: any) {
     const rawValue = event.target.value;
 
-    // Normaliser le numéro avec UniversalAuthService
-    const normalized = this.universalAuthService.normalizePhoneNumber(rawValue);
-
-    // Détecter automatiquement le pays si possible
-    const detectedCountry = this.universalAuthService.detectCountryFromPhone(normalized);
-    if (detectedCountry) {
-      // Mettre à jour automatiquement le sélecteur de pays
-      const countryCode = detectedCountry === 'FR' ? '33' :
-                         detectedCountry === 'GN' ? '224' :
-                         detectedCountry === 'CI' ? '225' : null;
-
-      if (countryCode) {
-        this.driverForm.patchValue({
-          country_code_selector: countryCode
-        }, { emitEvent: false });
-      }
-    }
+    // Nettoyer les espaces uniquement
+    const cleaned = rawValue.replace(/\s/g, '');
 
     // Limiter à 15 chiffres max
-    const truncated = normalized.length > 15 ? normalized.substring(0, 15) : normalized;
+    const truncated = cleaned.length > 15 ? cleaned.substring(0, 15) : cleaned;
     this.driverForm.patchValue({ phone_number: truncated }, { emitEvent: false });
   }
 
   /**
-   * Obtenir le numéro final avec UniversalAuthService
+   * Obtenir le numéro final formaté pour affichage
    */
   getFinalPhoneNumber(): string {
-    const phoneValue = this.driverForm.get('phone_number')?.value || '';
-    const selectedCode = this.driverForm.get('country_code_selector')?.value;
+    const localNumber = this.driverForm.get('phone_number')?.value || '';
+    const selectedPrefix = this.driverForm.get('country_code_selector')?.value;
 
-    if (!phoneValue) {
+    if (!localNumber) {
       return '';
     }
 
-    // Générer tous les formats possibles avec UniversalAuthService
-    const countryCode = selectedCode === '33' ? 'FR' :
-                       selectedCode === '224' ? 'GN' :
-                       selectedCode === '225' ? 'CI' : null;
+    try {
+      // Convertir prefix vers code pays
+      const countryCode = selectedPrefix === '33' ? 'FR' :
+                         selectedPrefix === '224' ? 'GN' :
+                         selectedPrefix === '225' ? 'CI' : null;
 
-    if (countryCode) {
-      const formats = this.universalAuthService.generatePhoneFormats(phoneValue, countryCode);
-      // Retourner le format international le plus approprié
-      const internationalFormat = formats.find(f => f.startsWith(selectedCode));
-      if (internationalFormat) {
-        const selectedCountry = this.availableCountries.find(c => c.code === selectedCode);
-        return `${selectedCountry?.flag || ''} +${internationalFormat}`;
+      if (countryCode) {
+        const internationalNumber = this.universalAuthService.formatToInternational(localNumber, countryCode);
+        const selectedCountry = this.availableCountries.find(c => c.code === selectedPrefix);
+        return `${selectedCountry?.flag || ''} +${internationalNumber}`;
       }
+    } catch (error) {
+      // En cas d'erreur, afficher tel quel
     }
 
-    return `+${selectedCode}${phoneValue}`;
+    return `+${selectedPrefix}${localNumber}`;
   }
 
   /**

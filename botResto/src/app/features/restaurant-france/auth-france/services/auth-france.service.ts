@@ -97,20 +97,13 @@ export class AuthFranceService {
   async loginRestaurant(phone: string, password: string): Promise<AuthResult> {
     try {
 
-      // Utiliser le service centralisé pour normaliser et générer les formats
-      const normalizedPhone = this.universalAuth.normalizePhoneNumber(phone);
-      const phoneFormats = this.universalAuth.generatePhoneFormats(normalizedPhone);
+      console.log(`🔍 [AuthFrance] Recherche restaurant avec numéro:`, phone);
 
-      console.log(`🔍 [AuthFrance] Recherche restaurant avec formats:`, phoneFormats);
-
-      // Construire la condition OR pour tous les formats
-      const orCondition = this.universalAuth.buildOrCondition(phoneFormats);
-
-      // Recherche en base avec tous les formats possibles
+      // Recherche directe en base (numéro déjà au format international)
       const { data: restaurant, error } = await this.supabaseFranceService.client
         .from('france_restaurants')
         .select('id, name, phone, whatsapp_number, password_hash, is_active, country_code')
-        .or(orCondition)
+        .or(`phone.eq.${phone},whatsapp_number.eq.${phone}`)
         .maybeSingle();
 
       if (error) {
@@ -123,7 +116,7 @@ export class AuthFranceService {
       }
 
       if (!restaurant) {
-        console.error('Restaurant non trouvé pour les formats:', phoneFormats);
+        console.error('Restaurant non trouvé pour le numéro:', phone);
         return { success: false, message: 'Restaurant non trouvé' };
       }
 

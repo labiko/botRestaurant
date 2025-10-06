@@ -63,6 +63,29 @@ interface Icon {
   updated_at: string;
 }
 
+interface Country {
+  id: number;
+  code: string;
+  name: string;
+  flag: string;
+  phone_prefix: string;
+  remove_leading_zero: boolean;
+  phone_format: string;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+}
+
+// Patterns de regex prédéfinis pour les pays (formats officiels vérifiés 2025)
+const COMMON_PHONE_PATTERNS = {
+  'FR': { pattern: '^0[1-9]\\d{8}$', example: '0612345678', description: 'France - 10 chiffres (01-05 fixe, 06-07 mobile)' },
+  'GN': { pattern: '^[36]\\d{8}$', example: '613001718', description: 'Guinée - 9 chiffres (3 fixe, 6 mobile)' },
+  'CI': { pattern: '^(01|05|07)\\d{8}$', example: '0712345678', description: 'Côte d\'Ivoire - 10 chiffres (01 Moov, 05 MTN, 07 Orange)' },
+  'SN': { pattern: '^(33|7[067])\\d{7}$', example: '77123456', description: 'Sénégal - 9 chiffres (33 fixe, 70 Expresso, 76 Tigo, 77 Orange)' },
+  'ML': { pattern: '^[679]\\d{7}$', example: '67123456', description: 'Mali - 8 chiffres (67 Orange, 9X Malitel)' },
+  'BF': { pattern: '^7\\d{7}$', example: '75123456', description: 'Burkina Faso - 8 chiffres (75 Orange, 70-74 Moov, 78-79 Telecel)' }
+};
+
 export default function BackOfficeRestaurantPage() {
   const { fetch: fetchWithEnv } = useFetch();
   // État pour les tabs
@@ -124,6 +147,14 @@ export default function BackOfficeRestaurantPage() {
   const [previewMode, setPreviewMode] = useState<'mobile' | 'tablet' | 'desktop'>('mobile');
   const [vitrineExists, setVitrineExists] = useState<boolean>(false);
   const [showCreateVitrineSection, setShowCreateVitrineSection] = useState(false);
+
+  // États pour la gestion des pays
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState(false);
+  const [editingCountry, setEditingCountry] = useState<Country | null>(null);
+  const [showCountryModal, setShowCountryModal] = useState(false);
+  const [countryForm, setCountryForm] = useState<Partial<Country>>({});
+  const [useCustomPattern, setUseCustomPattern] = useState(false);
 
   // Fonction de formatage de date avec correction du fuseau horaire
   const formatDateTime = (dateString: string): string => {
@@ -946,7 +977,149 @@ export default function BackOfficeRestaurantPage() {
     if (activeTab === 'catalogue') {
       loadIcons();
     }
+    if (activeTab === 'countries') {
+      loadCountries();
+    }
   }, [activeTab]);
+
+  // ===== FONCTIONS GESTION PAYS =====
+
+  // Charger la liste des pays
+  const loadCountries = async () => {
+    setLoadingCountries(true);
+    try {
+      const response = await fetchWithEnv('/api/countries');
+      const data = await response.json();
+
+      if (data.success) {
+        setCountries(data.countries);
+      } else {
+        showNotification('error', 'Erreur', 'Impossible de charger les pays');
+      }
+    } catch (error) {
+      showNotification('error', 'Erreur', 'Erreur de connexion');
+    } finally {
+      setLoadingCountries(false);
+    }
+  };
+
+  // Fonction helper pour détecter si un pattern est prédéfini
+  const detectPredefinedPattern = (pattern: string) => {
+    const found = Object.entries(COMMON_PHONE_PATTERNS).find(
+      ([code, info]) => info.pattern === pattern
+    );
+    return found ? found[0] : null;
+  };
+
+  // Ouvrir modal d'ajout de pays
+  const openAddCountryModal = () => {
+    setEditingCountry(null);
+    setCountryForm({
+      code: '',
+      name: '',
+      flag: '',
+      phone_prefix: '',
+      remove_leading_zero: false,
+      phone_format: '',
+      is_active: true,
+      display_order: 0
+    });
+    setUseCustomPattern(false);
+    setShowCountryModal(true);
+  };
+
+  // Ouvrir modal d'édition de pays
+  const openEditCountryModal = (country: Country) => {
+    setEditingCountry(country);
+    setCountryForm({ ...country });
+
+    // Détecter si le pattern actuel est prédéfini ou custom
+    const predefinedCode = detectPredefinedPattern(country.phone_format);
+    setUseCustomPattern(!predefinedCode);
+
+    setShowCountryModal(true);
+  };
+
+  // Sauvegarder un pays
+  const saveCountry = async () => {
+    try {
+      const url = editingCountry
+        ? `/api/countries/${editingCountry.id}`
+        : '/api/countries';
+
+      const method = editingCountry ? 'PUT' : 'POST';
+
+      const response = await fetchWithEnv(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(countryForm)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showNotification('success',
+          editingCountry ? 'Pays modifié' : 'Pays ajouté',
+          'Le pays a été sauvegardé avec succès'
+        );
+        setShowCountryModal(false);
+        loadCountries();
+      } else {
+        showNotification('error', 'Erreur', data.error || 'Impossible de sauvegarder');
+      }
+    } catch (error) {
+      showNotification('error', 'Erreur', 'Erreur de connexion');
+    }
+  };
+
+  // Basculer le statut actif d'un pays
+  const toggleCountryStatus = async (country: Country) => {
+    try {
+      const response = await fetchWithEnv(`/api/countries/${country.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...country, is_active: !country.is_active })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showNotification('success',
+          'Statut modifié',
+          `Le pays ${country.name} est maintenant ${!country.is_active ? 'actif' : 'inactif'}`
+        );
+        loadCountries();
+      } else {
+        showNotification('error', 'Erreur', 'Impossible de modifier le statut');
+      }
+    } catch (error) {
+      showNotification('error', 'Erreur', 'Erreur de connexion');
+    }
+  };
+
+  // Supprimer un pays
+  const deleteCountry = async (country: Country) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le pays ${country.name} ?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetchWithEnv(`/api/countries/${country.id}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showNotification('success', 'Pays supprimé', 'Le pays a été supprimé avec succès');
+        loadCountries();
+      } else {
+        showNotification('error', 'Erreur', data.error || 'Impossible de supprimer');
+      }
+    } catch (error) {
+      showNotification('error', 'Erreur', 'Erreur de connexion');
+    }
+  };
 
   return (
     <div className="p-6">
@@ -996,6 +1169,16 @@ export default function BackOfficeRestaurantPage() {
               }`}
             >
               🌐 Gestion Vitrine
+            </button>
+            <button
+              onClick={() => setActiveTab('countries')}
+              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'countries'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🌍 Gestion Pays
             </button>
           </nav>
         </div>
@@ -2512,6 +2695,346 @@ export default function BackOfficeRestaurantPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Tab Gestion Pays */}
+      {activeTab === 'countries' && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">🌍 Gestion des Pays</h2>
+              <button
+                onClick={openAddCountryModal}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+              >
+                ➕ Ajouter un pays
+              </button>
+            </div>
+            <p className="text-gray-600">Gérer les pays supportés par l'application</p>
+          </div>
+
+          {/* Liste des pays */}
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            {loadingCountries ? (
+              <div className="text-center py-12">
+                <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-600 bg-blue-100">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Chargement des pays...
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Pays
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Code
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Préfixe
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Format
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Statut
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {countries.map((country) => (
+                      <tr key={country.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className="text-2xl mr-3">{country.flag}</span>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {country.name}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                Ordre: {country.display_order}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {country.code}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          +{country.phone_prefix}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div>
+                            <div>Format: {country.phone_format}</div>
+                            <div className="text-xs">
+                              {country.remove_leading_zero ? '🔄 Supprimer 0 initial' : '➡️ Garder tel quel'}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={() => toggleCountryStatus(country)}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              country.is_active
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {country.is_active ? '✅ Actif' : '❌ Inactif'}
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => openEditCountryModal(country)}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              ✏️ Modifier
+                            </button>
+                            <button
+                              onClick={() => deleteCountry(country)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              🗑️ Supprimer
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {countries.length === 0 && !loadingCountries && (
+                  <div className="text-center py-12">
+                    <div className="text-gray-500">
+                      <p className="text-lg mb-2">🌍 Aucun pays configuré</p>
+                      <p className="text-sm">Ajoutez votre premier pays pour commencer</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ajout/Édition Pays */}
+      {showCountryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-green-600 text-white">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold">
+                  {editingCountry ? '✏️ Modifier le pays' : '➕ Ajouter un pays'}
+                </h2>
+                <button
+                  onClick={() => setShowCountryModal(false)}
+                  className="text-white hover:text-gray-200"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Code pays */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Code pays * (ex: FR, GN, CI)
+                  </label>
+                  <input
+                    type="text"
+                    value={countryForm.code || ''}
+                    onChange={(e) => setCountryForm({ ...countryForm, code: e.target.value.toUpperCase() })}
+                    maxLength={2}
+                    placeholder="FR"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                {/* Nom */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom du pays *
+                  </label>
+                  <input
+                    type="text"
+                    value={countryForm.name || ''}
+                    onChange={(e) => setCountryForm({ ...countryForm, name: e.target.value })}
+                    placeholder="France"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                {/* Flag */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Drapeau * (emoji)
+                  </label>
+                  <input
+                    type="text"
+                    value={countryForm.flag || ''}
+                    onChange={(e) => setCountryForm({ ...countryForm, flag: e.target.value })}
+                    placeholder="🇫🇷"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                {/* Préfixe téléphonique */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Préfixe téléphonique * (ex: 33, 224)
+                  </label>
+                  <input
+                    type="text"
+                    value={countryForm.phone_prefix || ''}
+                    onChange={(e) => setCountryForm({ ...countryForm, phone_prefix: e.target.value })}
+                    placeholder="33"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Format téléphone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Format de validation du téléphone *
+                </label>
+
+                {/* Toggle Pattern prédéfini / Custom */}
+                <div className="mb-3">
+                  <div className="flex items-center space-x-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        checked={!useCustomPattern}
+                        onChange={() => setUseCustomPattern(false)}
+                        className="rounded border-gray-300 text-blue-600"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Pattern prédéfini</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        checked={useCustomPattern}
+                        onChange={() => setUseCustomPattern(true)}
+                        className="rounded border-gray-300 text-blue-600"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Saisie manuelle</span>
+                    </label>
+                  </div>
+                </div>
+
+                {!useCustomPattern ? (
+                  // Select avec patterns prédéfinis
+                  <div>
+                    <select
+                      value={detectPredefinedPattern(countryForm.phone_format || '') || ''}
+                      onChange={(e) => {
+                        const selectedCode = e.target.value;
+                        if (selectedCode && COMMON_PHONE_PATTERNS[selectedCode]) {
+                          setCountryForm({
+                            ...countryForm,
+                            phone_format: COMMON_PHONE_PATTERNS[selectedCode].pattern
+                          });
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Sélectionner un pattern...</option>
+                      {Object.entries(COMMON_PHONE_PATTERNS).map(([code, info]) => (
+                        <option key={code} value={code}>
+                          {info.description} - Ex: {info.example}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Affichage du regex sélectionné */}
+                    {countryForm.phone_format && (
+                      <div className="mt-2 p-2 bg-gray-50 rounded border">
+                        <span className="text-xs text-gray-600">Regex généré:</span>
+                        <code className="block text-sm font-mono text-gray-800 mt-1">
+                          {countryForm.phone_format}
+                        </code>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Saisie manuelle
+                  <div>
+                    <input
+                      type="text"
+                      value={countryForm.phone_format || ''}
+                      onChange={(e) => setCountryForm({ ...countryForm, phone_format: e.target.value })}
+                      placeholder="^0[1-9]\d{8}$"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 Utilisez une expression régulière valide (ex: ^0[1-9]\d{8}$ pour la France)
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Options */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ordre d'affichage
+                  </label>
+                  <input
+                    type="number"
+                    value={countryForm.display_order || 0}
+                    onChange={(e) => setCountryForm({ ...countryForm, display_order: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={countryForm.remove_leading_zero || false}
+                      onChange={(e) => setCountryForm({ ...countryForm, remove_leading_zero: e.target.checked })}
+                      className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">
+                      Supprimer le 0 initial
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowCountryModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={saveCountry}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                {editingCountry ? 'Modifier' : 'Créer'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

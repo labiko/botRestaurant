@@ -10,35 +10,69 @@ import { Injectable } from '@angular/core';
 })
 export class UniversalAuthService {
 
-  // Configuration commune pour tous les pays
-  private readonly COUNTRY_CONFIGS = {
+  // Configuration simple par pays
+  private readonly COUNTRY_RULES = {
     'FR': {
-      code: '33',
-      localPrefix: '0',
-      minLength: 9,
-      maxLength: 10,
-      mobileStarts: ['6', '7'],
-      fixedStarts: ['1', '2', '3', '4', '5', '8', '9']
+      prefix: '33',
+      removeLeadingZero: true,
+      format: /^0[1-9]\d{8}$/,
+      name: 'France',
+      flag: '🇫🇷'
     },
     'GN': {
-      code: '224',
-      localPrefix: '',
-      minLength: 9,
-      maxLength: 9,
-      mobileStarts: ['6'],
-      fixedStarts: ['3']
+      prefix: '224',
+      removeLeadingZero: false,
+      format: /^6\d{8}$/,
+      name: 'Guinée',
+      flag: '🇬🇳'
     },
     'CI': {
-      code: '225',
-      localPrefix: '0',
-      minLength: 8,
-      maxLength: 10,
-      mobileStarts: ['0', '4', '5', '6', '7'],
-      fixedStarts: ['2', '3']
+      prefix: '225',
+      removeLeadingZero: true,
+      format: /^0[4-7]\d{7}$/,
+      name: 'Côte d\'Ivoire',
+      flag: '🇨🇮'
     }
   };
 
   constructor() {}
+
+  /**
+   * Formate un numéro local vers le format international
+   * @param localNumber Numéro local saisi par l'utilisateur
+   * @param countryCode Code pays ('FR', 'GN', 'CI')
+   * @returns Numéro au format international
+   */
+  formatToInternational(localNumber: string, countryCode: string): string {
+    const rule = this.COUNTRY_RULES[countryCode as keyof typeof this.COUNTRY_RULES];
+    if (!rule) {
+      throw new Error(`Pays non supporté: ${countryCode}`);
+    }
+
+    // Nettoyer les espaces
+    let cleaned = localNumber.replace(/\s/g, '');
+
+    // Enlever le 0 initial si la règle l'exige
+    if (rule.removeLeadingZero && cleaned.startsWith('0')) {
+      cleaned = cleaned.substring(1);
+    }
+
+    // Retourner le format international
+    return rule.prefix + cleaned;
+  }
+
+  /**
+   * Obtenir la liste des pays supportés
+   * @returns Liste des pays avec leurs informations
+   */
+  getSupportedCountries(): Array<{code: string, name: string, flag: string, prefix: string}> {
+    return Object.entries(this.COUNTRY_RULES).map(([code, rule]) => ({
+      code,
+      name: rule.name,
+      flag: rule.flag,
+      prefix: rule.prefix
+    }));
+  }
 
   /**
    * Détecte le pays à partir du numéro de téléphone

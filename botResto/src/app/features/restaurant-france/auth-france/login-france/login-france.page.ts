@@ -50,11 +50,12 @@ export class LoginFrancePage implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Charger les pays disponibles depuis UniversalAuthService
-    this.availableCountries = [
-      { code: '33', name: 'France', flag: '🇫🇷' },
-      { code: '224', name: 'Guinée', flag: '🇬🇳' },
-      { code: '225', name: 'Côte d\'Ivoire', flag: '🇨🇮' }
-    ];
+    const supportedCountries = this.universalAuthService.getSupportedCountries();
+    this.availableCountries = supportedCountries.map(country => ({
+      code: country.prefix, // Utiliser le prefix pour le select
+      name: country.name,
+      flag: country.flag
+    }));
 
     // Bloquer complètement la navigation arrière
     this.preventBackNavigation();
@@ -133,13 +134,26 @@ export class LoginFrancePage implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     try {
-      // Envoyer le numéro brut - AuthFranceService utilise déjà UniversalAuthService
-      const rawPhoneNumber = this.loginForm.value.phone.trim();
+      // Logique simple : format local + indicatif
+      const localNumber = this.loginForm.value.phone.trim();
+      const selectedPrefix = this.loginForm.value.country_code_selector;
 
-      console.log('🔐 [Login] Numéro brut envoyé:', rawPhoneNumber);
+      // Convertir prefix vers code pays
+      const countryCode = selectedPrefix === '33' ? 'FR' :
+                         selectedPrefix === '224' ? 'GN' :
+                         selectedPrefix === '225' ? 'CI' : null;
+
+      if (!countryCode) {
+        throw new Error('Pays non supporté');
+      }
+
+      // Formatage simple vers international
+      const internationalNumber = this.universalAuthService.formatToInternational(localNumber, countryCode);
+
+      console.log('🔐 [Login] Local:', localNumber, '→ International:', internationalNumber);
 
       const credentials = {
-        phone: rawPhoneNumber, // Le service AuthFrance génèrera les formats avec UniversalAuthService
+        phone: internationalNumber, // Numéro au format international
         password: this.loginForm.value.password,
         userType: this.selectedProfileType
       };
