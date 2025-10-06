@@ -3,8 +3,14 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LoadingController, ToastController } from '@ionic/angular';
 import { AuthFranceService } from '../services/auth-france.service';
-import { PhoneFormatService } from '../../../../core/services/phone-format.service';
-import { PhoneNumberUtilsService, CountryCodeConfig } from '../../../../core/services/phone-number-utils.service';
+import { UniversalAuthService } from '../../../../core/services/universal-auth.service';
+
+// Configuration des pays supportés
+interface CountryConfig {
+  code: string;
+  name: string;
+  flag: string;
+}
 import { Location } from '@angular/common';
 
 @Component({
@@ -20,13 +26,12 @@ export class LoginFrancePage implements OnInit, OnDestroy {
   showPassword = false;
   isLoading = false;
   errorMessage = '';
-  availableCountries: CountryCodeConfig[] = [];
+  availableCountries: CountryConfig[] = [];
 
   constructor(
     private formBuilder: FormBuilder,
     private authFranceService: AuthFranceService,
-    private phoneFormatService: PhoneFormatService,
-    private phoneNumberUtils: PhoneNumberUtilsService,
+    private universalAuthService: UniversalAuthService,
     private router: Router,
     private loadingController: LoadingController,
     private toastController: ToastController,
@@ -44,8 +49,12 @@ export class LoginFrancePage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Charger les pays disponibles
-    this.availableCountries = this.phoneNumberUtils.getAllCountryCodes();
+    // Charger les pays disponibles depuis UniversalAuthService
+    this.availableCountries = [
+      { code: '33', name: 'France', flag: '🇫🇷' },
+      { code: '224', name: 'Guinée', flag: '🇬🇳' },
+      { code: '225', name: 'Côte d\'Ivoire', flag: '🇨🇮' }
+    ];
 
     // Bloquer complètement la navigation arrière
     this.preventBackNavigation();
@@ -124,19 +133,13 @@ export class LoginFrancePage implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     try {
-      // Combiner indicatif + numéro local pour tous les types
-      const selectedCode = this.loginForm.value.country_code_selector;
-      let localNumber = this.loginForm.value.phone.trim().replace(/\s+/g, '');
+      // Envoyer le numéro brut - AuthFranceService utilise déjà UniversalAuthService
+      const rawPhoneNumber = this.loginForm.value.phone.trim();
 
-      // Enlever le 0 initial si présent
-      if (localNumber.startsWith('0')) {
-        localNumber = localNumber.substring(1);
-      }
-
-      const finalPhoneNumber = `${selectedCode}${localNumber}`;
+      console.log('🔐 [Login] Numéro brut envoyé:', rawPhoneNumber);
 
       const credentials = {
-        phone: finalPhoneNumber,
+        phone: rawPhoneNumber, // Le service AuthFrance génèrera les formats avec UniversalAuthService
         password: this.loginForm.value.password,
         userType: this.selectedProfileType
       };
