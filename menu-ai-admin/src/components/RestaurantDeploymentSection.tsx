@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useFetch } from '@/hooks/useFetch';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 interface Restaurant {
   id: number;
@@ -15,6 +16,7 @@ interface Restaurant {
 
 export default function RestaurantDeploymentSection() {
   const { fetch: fetchWithEnv } = useFetch();
+  const { currentEnvironment } = useEnvironment();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,10 +171,10 @@ export default function RestaurantDeploymentSection() {
             <span className="text-2xl">🚀</span>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
-                Gestion Déploiement Restaurants (PROD)
+                Gestion Déploiement Restaurants ({currentEnvironment === 'dev' ? 'DEV' : 'PROD'})
               </h2>
               <p className="text-sm text-gray-600">
-                Contrôler la visibilité des restaurants dans la liste "resto" - Environnement PRODUCTION
+                Contrôler la visibilité des restaurants dans la liste "resto" - Environnement {currentEnvironment === 'dev' ? 'DÉVELOPPEMENT' : 'PRODUCTION'}
               </p>
             </div>
           </div>

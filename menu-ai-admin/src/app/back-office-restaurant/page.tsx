@@ -18,6 +18,7 @@ interface Restaurant {
   longitude?: number;
   country_code?: string;
   timezone?: string;
+  currency?: string;
 }
 
 interface Category {
@@ -197,7 +198,8 @@ export default function BackOfficeRestaurantPage() {
       latitude: restaurant.latitude,
       longitude: restaurant.longitude,
       country_code: restaurant.country_code,
-      timezone: restaurant.timezone
+      timezone: restaurant.timezone,
+      currency: restaurant.currency
     });
     setShowEditModal(true);
   };
@@ -1350,6 +1352,25 @@ export default function BackOfficeRestaurantPage() {
                     <option value="ML">🇲🇱 Mali (ML)</option>
                     <option value="TG">🇹🇬 Togo (TG)</option>
                   </select>
+                </div>
+
+                {/* Currency */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    💰 Devise
+                  </label>
+                  <select
+                    value={editForm.currency || 'EUR'}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, currency: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="EUR">€ Euro (EUR)</option>
+                    <option value="GNF">🇬🇳 Franc Guinéen (GNF)</option>
+                    <option value="XOF">🇸🇳 Franc CFA (XOF)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Devise utilisée pour l'affichage des prix dans le bot WhatsApp
+                  </p>
                 </div>
 
                 {/* Timezone */}
