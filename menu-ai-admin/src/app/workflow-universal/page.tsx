@@ -819,7 +819,20 @@ export default function WorkflowUniversalPage() {
         continue;
       }
 
-      console.log(`⚠️ Ligne ignorée (format non reconnu): "${trimmedLine}"`);
+      // Format 5: Nom simple (sans prix) - pour les options/ingrédients
+      if (trimmedLine.length > 2) {
+        options.push({
+          name: trimmedLine,
+          composition: '',
+          price_modifier: 0, // Prix par défaut pour noms simples
+          emoji: '🍽️'
+        });
+
+        console.log(`✅ Format nom simple détecté: "${trimmedLine}" - 0€ (par défaut)`);
+        continue;
+      }
+
+      console.log(`⚠️ Ligne ignorée (trop courte): "${trimmedLine}"`);
     }
 
     console.log(`📊 Parser V4 (FORMAT SIMPLE) détecté: ${options.length} produits`);

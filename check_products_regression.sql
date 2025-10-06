@@ -1,0 +1,1 @@
+SELECT name, slug, restaurant_id FROM france_products WHERE name ILIKE '%viande%' OR name ILIKE '%cordon%' OR name ILIKE '%nuggets%' OR name ILIKE '%merguez%' OR name ILIKE '%tenders%' OR name ILIKE '%grec%' OR name ILIKE '%tandoori%' OR name ILIKE '%curry%' ORDER BY restaurant_id, name;
