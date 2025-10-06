@@ -96,6 +96,8 @@ export class AuthFranceService {
    */
   async loginRestaurant(phone: string, password: string): Promise<AuthResult> {
     try {
+      // Nettoyer le mot de passe dès le début pour éviter les incohérences
+      const cleanPassword = password ? password.trim() : '';
 
       console.log(`🔍 [AuthFrance] Recherche restaurant avec numéro:`, phone);
 
@@ -127,7 +129,7 @@ export class AuthFranceService {
       // CAS SPÉCIAL : Premier mot de passe (password_hash vide ou null)
       if (!restaurant.password_hash || restaurant.password_hash.trim() === '') {
         // Si aucun mot de passe saisi : demander création
-        if (!password || password.trim() === '') {
+        if (!cleanPassword) {
           return {
             success: false,
             message: 'Première connexion : créez votre mot de passe'
@@ -135,7 +137,7 @@ export class AuthFranceService {
         }
 
         // Créer et enregistrer le nouveau mot de passe
-        const created = await this.createFirstPassword(restaurant.id, password.trim());
+        const created = await this.createFirstPassword(restaurant.id, cleanPassword);
         if (!created) {
           return {
             success: false,
@@ -144,13 +146,13 @@ export class AuthFranceService {
         }
 
         // Mettre à jour l'objet restaurant pour la suite
-        restaurant.password_hash = password.trim();
+        restaurant.password_hash = cleanPassword;
         console.log('🔐 [AuthFrance] Premier mot de passe créé pour restaurant:', restaurant.id);
       }
 
       // Vérifier le mot de passe (LOGIQUE NORMALE EXISTANTE - AUCUN CHANGEMENT)
-      const passwordValid = restaurant.password_hash === password ||
-                           await this.verifyPassword(password, restaurant.password_hash);
+      const passwordValid = restaurant.password_hash === cleanPassword ||
+                           await this.verifyPassword(cleanPassword, restaurant.password_hash);
 
 
       if (!passwordValid) {

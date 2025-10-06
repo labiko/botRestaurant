@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Configuration PRODUCTION
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL_PROD || process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD || process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { getSupabaseClientForRequest, getEnvironmentFromRequest } from '@/lib/api-helpers';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    console.log('🔍 [Reset Password] Début requête, params:', params);
+    const environment = getEnvironmentFromRequest(request);
+    console.log(`🔍 [Reset Password] Début requête, environnement: ${environment}, params:`, params);
     const restaurantId = parseInt(params.id);
 
     console.log('🔍 [Reset Password] Restaurant ID:', restaurantId);
-    console.log('🔍 [Reset Password] Variables env:', {
-      SUPABASE_URL_PROD: supabaseUrl ? 'Définie' : 'MANQUANTE',
-      SUPABASE_KEY_PROD: supabaseKey ? 'Définie' : 'MANQUANTE'
-    });
 
     if (isNaN(restaurantId)) {
       return NextResponse.json({
@@ -26,7 +19,7 @@ export async function POST(
       }, { status: 400 });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = getSupabaseClientForRequest(request);
 
     console.log('🔍 [Reset Password] Tentative update restaurant ID:', restaurantId);
 

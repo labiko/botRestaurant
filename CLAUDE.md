@@ -371,6 +371,28 @@ Avant chaque déploiement:
 - **Schéma complet**: `C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant\setup_database_updated.sql`
 - **Structure base de données**: `C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant\botResto\database_fr_structure.sql`
 
+## 🔧 COMMANDES EXTRACTION BASE DE DONNÉES
+
+**⚠️ COMMANDES VALIDÉES**: Utiliser ces commandes pour extraire les structures de base de données :
+
+### **Extraction structure DEV** :
+```bash
+"/c/Program Files/PostgreSQL/17/bin/pg_dump" --schema-only "postgresql://postgres:p4zN25F7Gfw9Py@db.lphvdoyhwaelmwdfkfuh.supabase.co:5432/postgres" > structure_dev_extracted.sql
+```
+
+### **Extraction structure PROD** :
+```bash
+"/c/Program Files/PostgreSQL/17/bin/pg_dump" --schema-only "postgresql://postgres:p4zN25F7Gfw9Py@db.vywbhlnzvfqtiurwmrac.supabase.co:5432/postgres" > structure_prod_extracted.sql
+```
+
+### **Format de connexion** :
+- **Format** : `postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres`
+- **Mot de passe** : `p4zN25F7Gfw9Py`
+- **DEV Project Ref** : `lphvdoyhwaelmwdfkfuh`
+- **PROD Project Ref** : `vywbhlnzvfqtiurwmrac`
+
+**Note** : Ne pas utiliser le format pooler (`aws-0-eu-central-1.pooler.supabase.com:6543`) qui ne fonctionne pas.
+
 ## Fichier bot WhatsApp
 
 - **Code principal**: `C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant\supabase\functions\webhook-whatsapp\index.ts`

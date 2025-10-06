@@ -23,6 +23,37 @@ export async function PUT(
       }, { status: 400 });
     }
 
+    // Récupérer les infos du pays depuis supported_countries pour formater les numéros
+    let country = null;
+    if (data.country_code) {
+      const { data: countryData } = await supabase
+        .from('supported_countries')
+        .select('phone_prefix, remove_leading_zero')
+        .eq('code', data.country_code)
+        .single();
+      country = countryData;
+    }
+
+    // Fonction helper pour convertir au format international
+    const formatToInternational = (localNumber: string): string => {
+      if (!country || !localNumber) return localNumber;
+
+      let cleaned = localNumber.replace(/\s/g, '').trim();
+
+      // Si le numéro commence déjà par le préfixe international, le retourner tel quel
+      if (cleaned.startsWith(country.phone_prefix)) {
+        return cleaned;
+      }
+
+      // Enlever le 0 initial si la règle l'exige
+      if (country.remove_leading_zero && cleaned.startsWith('0')) {
+        cleaned = cleaned.substring(1);
+      }
+
+      // Retourner le format international
+      return country.phone_prefix + cleaned;
+    };
+
     // Préparer les données à mettre à jour
     const updateData: any = {
       updated_at: new Date().toISOString()
@@ -30,8 +61,16 @@ export async function PUT(
 
     // Champs optionnels à mettre à jour
     if (data.name !== undefined) updateData.name = data.name;
-    if (data.phone !== undefined) updateData.phone = data.phone;
-    if (data.whatsapp_number !== undefined) updateData.whatsapp_number = data.whatsapp_number;
+
+    // Convertir les numéros au format international avant enregistrement
+    if (data.phone !== undefined) {
+      updateData.phone = formatToInternational(data.phone);
+      console.log(`📞 [API Update] Téléphone converti: ${data.phone} → ${updateData.phone}`);
+    }
+    if (data.whatsapp_number !== undefined) {
+      updateData.whatsapp_number = formatToInternational(data.whatsapp_number);
+      console.log(`📱 [API Update] WhatsApp converti: ${data.whatsapp_number} → ${updateData.whatsapp_number}`);
+    }
     if (data.city !== undefined) updateData.city = data.city;
     if (data.address !== undefined) updateData.address = data.address;
     // Note: email n'existe pas dans la structure de base
