@@ -1,8 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
-import { AppConfigService } from './app-config.service';
-import { FRANCE_CONFIG } from '../../config/environment-config';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { SupabaseFranceService } from './supabase-france.service';
 
 export interface Country {
   id?: number;
@@ -32,45 +30,38 @@ export class UniversalAuthService {
   private countriesCache: Country[] = [];
 
   constructor(
-    private http: HttpClient,
-    private appConfig: AppConfigService
+    private supabaseFranceService: SupabaseFranceService
   ) {
     this.loadCountries();
   }
 
   /**
-   * Charge les pays depuis l'API
+   * Charge les pays depuis la table Supabase supported_countries
    */
   private async loadCountries(): Promise<void> {
     try {
-      // Utiliser le système de configuration existant
-      const baseUrl = this.appConfig.getBaseUrl();
-      const environment = FRANCE_CONFIG.environmentName;
-      const url = `${baseUrl}/api/countries?environment=${environment}`;
+      console.log('🌍 [UniversalAuth] Chargement pays depuis supported_countries...');
 
-      console.log('🌍 [UniversalAuth] Chargement pays depuis:', url);
-      const response = await firstValueFrom(this.http.get<{success: boolean, countries: Country[]}>(url));
+      const { data: countries, error } = await this.supabaseFranceService.client
+        .from('supported_countries')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
 
-      if (response.success) {
-        this.countriesCache = response.countries.filter(c => c.is_active);
+      if (error) {
+        console.error('❌ [UniversalAuth] Erreur chargement pays:', error);
+        return;
+      }
+
+      if (countries && countries.length > 0) {
+        console.log(`✅ [UniversalAuth] ${countries.length} pays chargés:`, countries.map(c => c.name).join(', '));
+        this.countriesCache = countries;
         this.countriesSubject.next(this.countriesCache);
+      } else {
+        console.warn('⚠️ [UniversalAuth] Aucun pays trouvé en base');
       }
     } catch (error) {
-      console.error('Erreur chargement pays:', error);
-      // Fallback sur pays par défaut en cas d'erreur
-      this.countriesCache = [
-        {
-          code: 'FR',
-          name: 'France',
-          flag: '🇫🇷',
-          phone_prefix: '33',
-          remove_leading_zero: true,
-          phone_format: '^0[1-9]\\d{8}$',
-          is_active: true,
-          display_order: 1
-        }
-      ];
-      this.countriesSubject.next(this.countriesCache);
+      console.error('❌ [UniversalAuth] Erreur lors du chargement des pays:', error);
     }
   }
 
