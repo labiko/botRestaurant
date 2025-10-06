@@ -60,7 +60,8 @@ export const FRANCE_CONFIG = {
   // URLs de callback paiement (fichiers HTML statiques dans /public)
   payment: {
     successUrl: `https://menu-ai-admin.vercel.app/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `https://menu-ai-admin.vercel.app/payment-cancel.html?session_id={CHECKOUT_SESSION_ID}`
+    cancelUrl: `https://menu-ai-admin.vercel.app/payment-cancel.html?session_id={CHECKOUT_SESSION_ID}`,
+    webhookUrl: `${ENVIRONMENTS[FINAL_ENVIRONMENT].supabaseFranceUrl}/functions/v1/payment-webhook-handler`
   },
 
   environmentName: ENVIRONMENTS[FINAL_ENVIRONMENT].environmentName,

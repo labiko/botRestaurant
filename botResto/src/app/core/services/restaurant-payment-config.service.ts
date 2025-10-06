@@ -122,6 +122,9 @@ export class RestaurantPaymentConfigService {
       if (!validFields.cancel_url || validFields.cancel_url.trim() === '') {
         validFields.cancel_url = FRANCE_CONFIG.payment.cancelUrl;
       }
+      if (!validFields.webhook_url || validFields.webhook_url.trim() === '') {
+        validFields.webhook_url = FRANCE_CONFIG.payment.webhookUrl;
+      }
 
       // Supprimer les champs undefined, null et chaînes vides
       Object.keys(validFields).forEach(key => {
