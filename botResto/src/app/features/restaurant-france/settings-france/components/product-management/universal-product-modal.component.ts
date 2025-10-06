@@ -364,11 +364,11 @@ export class UniversalProductModalComponent implements OnInit {
 
       // Déterminer le group_order basé sur l'ordre des groupes existants
       const existingGroupOrders = new Set(
-        Object.values(this.groupedOptions).flat().map((opt: ProductOption) => opt.group_order || 0)
+        Object.values(this.groupedOptions).flat().map(opt => opt.group_order || 0)
       );
       const groupOrder = this.groupedOptions[groupKey].length > 0
         ? this.groupedOptions[groupKey][0].group_order
-        : Math.max(...Array.from(existingGroupOrders), 0) + 1;
+        : Math.max(...existingGroupOrders, 0) + 1;
 
       const optionData = {
         product_id: this.product.id,
