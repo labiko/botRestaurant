@@ -6,6 +6,7 @@ import { PhoneNumberUtilsService } from '../../../../core/services/phone-number-
 import { DriverSessionMonitorService } from '../../../../core/services/driver-session-monitor.service';
 import { WhatsAppNotificationFranceService } from '../../../../core/services/whatsapp-notification-france.service';
 import { UniversalAuthService } from '../../../../core/services/universal-auth.service';
+import * as bcrypt from 'bcryptjs';
 
 export interface FranceUser {
   id: number;
@@ -136,7 +137,7 @@ export class AuthFranceService {
           };
         }
 
-        // Créer et enregistrer le nouveau mot de passe
+        // Créer et enregistrer le nouveau mot de passe (hashé)
         const created = await this.createFirstPassword(restaurant.id, cleanPassword);
         if (!created) {
           return {
@@ -145,14 +146,41 @@ export class AuthFranceService {
           };
         }
 
-        // Mettre à jour l'objet restaurant pour la suite
-        restaurant.password_hash = cleanPassword;
+        // Le mot de passe a été créé avec succès, continuer avec la connexion
         console.log('🔐 [AuthFrance] Premier mot de passe créé pour restaurant:', restaurant.id);
+
+        // Connexion immédiate après création (pas besoin de vérifier, on vient de créer)
+        const sessionResult = await this.createSession({
+          user_id: restaurant.id,
+          user_type: 'restaurant',
+          session_token: this.generateSessionToken()
+        });
+
+        if (!sessionResult.success) {
+          return { success: false, message: 'Erreur création session' };
+        }
+
+        const user: FranceUser = {
+          id: restaurant.id,
+          type: 'restaurant',
+          name: restaurant.name,
+          phoneNumber: phone,
+          restaurantId: restaurant.id,
+          isActive: restaurant.is_active,
+          countryCode: restaurant.country_code
+        };
+
+        this.setCurrentUser(user);
+
+        return {
+          success: true,
+          user,
+          redirectUrl: '/restaurant-france/dashboard-france'
+        };
       }
 
-      // Vérifier le mot de passe (LOGIQUE NORMALE EXISTANTE - AUCUN CHANGEMENT)
-      const passwordValid = restaurant.password_hash === cleanPassword ||
-                           await this.verifyPassword(cleanPassword, restaurant.password_hash);
+      // Vérifier le mot de passe avec bcrypt
+      const passwordValid = await this.verifyPassword(cleanPassword, restaurant.password_hash);
 
 
       if (!passwordValid) {
@@ -479,19 +507,27 @@ export class AuthFranceService {
   }
 
   /**
-   * Créer le premier mot de passe d'un restaurant
+   * Créer le premier mot de passe d'un restaurant (hashé avec bcrypt)
    */
   private async createFirstPassword(restaurantId: number, password: string): Promise<boolean> {
     try {
+      // Hasher le mot de passe avec bcrypt
+      const hashedPassword = await bcrypt.hash(password, 10);
+
       const { error } = await this.supabaseFranceService.client
         .from('france_restaurants')
         .update({
-          password_hash: password,
+          password_hash: hashedPassword,
           updated_at: new Date().toISOString()
         })
         .eq('id', restaurantId);
 
-      return !error;
+      if (error) {
+        console.error('❌ [AuthFrance] Erreur update password_hash:', error);
+        return false;
+      }
+
+      return true;
     } catch (error) {
       console.error('❌ [AuthFrance] Erreur création premier mot de passe:', error);
       return false;
@@ -499,14 +535,13 @@ export class AuthFranceService {
   }
 
   /**
-   * Vérifier mot de passe (obsolète - gardé pour compatibilité restaurants)
+   * Vérifier mot de passe avec bcrypt
    */
   private async verifyPassword(password: string, hash: string): Promise<boolean> {
     try {
-      // Comparaison simple pour les restaurants
-      return password === hash;
+      return await bcrypt.compare(password, hash);
     } catch (error) {
-      console.error('Erreur vérification mot de passe:', error);
+      console.error('❌ [AuthFrance] Erreur vérification mot de passe:', error);
       return false;
     }
   }

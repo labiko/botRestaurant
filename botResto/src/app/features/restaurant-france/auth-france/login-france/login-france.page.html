@@ -89,7 +89,6 @@
             <ion-input
               formControlName="phone"
               type="tel"
-              [placeholder]="getPhoneFormatHelp()"
               clearInput="true"
               class="phone-number-input">
             </ion-input>
@@ -106,10 +105,9 @@
             <ion-label position="floating" class="modern-label">
               {{ selectedProfileType === 'restaurant' ? 'Mot de passe' : 'Code à 6 chiffres' }}
             </ion-label>
-            <ion-input 
-              formControlName="password" 
+            <ion-input
+              formControlName="password"
               [type]="showPassword ? 'text' : 'password'"
-              [placeholder]="getPasswordHelp()"
               [maxlength]="selectedProfileType === 'driver' ? 6 : null"
               clearInput="true"
               class="password-field">

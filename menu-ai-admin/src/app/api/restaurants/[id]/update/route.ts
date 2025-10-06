@@ -81,11 +81,8 @@ export async function PUT(
     if (data.timezone !== undefined) updateData.timezone = data.timezone;
     if (data.currency !== undefined) updateData.currency = data.currency;
 
-    // Gestion simple du mot de passe - enregistrer tel quel
-    if (data.password && data.password.trim() !== '') {
-      updateData.password_hash = data.password.trim();
-      console.log('🔐 [API Update] Mot de passe enregistré tel quel');
-    }
+    // Le mot de passe n'est jamais modifié via cette API
+    // Utiliser le bouton Reset pour vider le password_hash
 
     // Vérifier que le restaurant existe avant la mise à jour
     const { data: existingRestaurant, error: checkError } = await supabase
