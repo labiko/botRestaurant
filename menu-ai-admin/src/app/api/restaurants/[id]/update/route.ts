@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Configuration PRODUCTION - Connexion directe à la base PROD
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL_PROD || process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD || process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { getSupabaseClientForRequest } from '@/lib/api-helpers';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Utiliser le service centralisé comme les autres APIs
+    const supabase = getSupabaseClientForRequest(request);
+
     const data = await request.json();
     const restaurantId = parseInt(params.id);
 
@@ -23,8 +22,6 @@ export async function PUT(
         error: 'ID restaurant invalide'
       }, { status: 400 });
     }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Préparer les données à mettre à jour
     const updateData: any = {
@@ -41,6 +38,9 @@ export async function PUT(
     if (data.is_active !== undefined) updateData.is_active = data.is_active;
     if (data.latitude !== undefined) updateData.latitude = data.latitude;
     if (data.longitude !== undefined) updateData.longitude = data.longitude;
+    if (data.country_code !== undefined) updateData.country_code = data.country_code;
+    if (data.timezone !== undefined) updateData.timezone = data.timezone;
+    if (data.currency !== undefined) updateData.currency = data.currency;
 
     // Gestion simple du mot de passe - enregistrer tel quel
     if (data.password && data.password.trim() !== '') {
@@ -80,6 +80,9 @@ export async function PUT(
         is_active,
         latitude,
         longitude,
+        country_code,
+        timezone,
+        currency,
         updated_at
       `)
       .single();
@@ -110,7 +113,6 @@ export async function PUT(
       restaurant: updatedRestaurant,
       message: responseMessage,
       timestamp: new Date().toISOString(),
-      source: 'PRODUCTION',
       fieldsUpdated: Object.keys(updateData).filter(key => key !== 'updated_at')
     });
 

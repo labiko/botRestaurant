@@ -1,17 +1,14 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseClientForRequest } from '@/lib/api-helpers';
 
-// Configuration PRODUCTION - Connexion directe à la base PROD
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL_PROD || process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD || process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Utiliser le service centralisé comme les autres APIs
+    const supabase = getSupabaseClientForRequest(request);
 
     const { data: restaurants, error } = await supabase
       .from('france_restaurants')
-      .select('id, name, is_active, created_at, updated_at, city, phone, whatsapp_number, address, password_hash, latitude, longitude')
+      .select('id, name, is_active, created_at, updated_at, city, phone, whatsapp_number, address, password_hash, latitude, longitude, country_code, timezone, currency')
       .order('name');
 
     if (error) {
@@ -24,8 +21,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      restaurants: restaurants || [],
-      source: 'PRODUCTION' // Indicateur de la source des données
+      restaurants: restaurants || []
     });
   } catch (error) {
     console.error('❌ [API Management] Exception:', error);

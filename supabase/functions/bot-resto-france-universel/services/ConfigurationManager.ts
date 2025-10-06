@@ -434,11 +434,31 @@ export class ConfigurationManager implements IRestaurantConfigManager {
    */
   private async getDefaultConfig(restaurantId: number): Promise<RestaurantConfig> {
     console.log(`🔧 [ConfigManager] Utilisation config par défaut pour restaurant: ${restaurantId}`);
-    
+
+    // 💰 Récupérer la vraie devise depuis france_restaurants
+    let restaurantCurrency = 'EUR';
+    let restaurantName = 'Restaurant Bot';
+
+    try {
+      const { data: restaurant } = await this.supabase
+        .from('france_restaurants')
+        .select('currency, name')
+        .eq('id', restaurantId)
+        .single();
+
+      if (restaurant) {
+        restaurantCurrency = restaurant.currency || 'EUR';
+        restaurantName = restaurant.name || 'Restaurant Bot';
+        console.log(`💰 [ConfigManager] Devise récupérée: ${restaurantCurrency} pour ${restaurantName}`);
+      }
+    } catch (error) {
+      console.error(`❌ [ConfigManager] Erreur récupération devise:`, error);
+    }
+
     return {
       id: 0,
       restaurantId,
-      brandName: 'Restaurant Bot',
+      brandName: restaurantName,
       welcomeMessage: 'Bienvenue ! Choisissez votre commande.',
       availableWorkflows: ['MENU_1_WORKFLOW', 'MENU_2_WORKFLOW', 'MENU_3_WORKFLOW', 'MENU_4_WORKFLOW'],
       defaultWorkflow: 'menu_browsing',
@@ -449,7 +469,7 @@ export class ConfigurationManager implements IRestaurantConfigManager {
         locationDetection: true
       },
       languages: ['fr'],
-      currency: 'EUR',
+      currency: restaurantCurrency,
       timezone: 'Europe/Paris'
     };
   }

@@ -92,6 +92,7 @@ export class UniversalBot implements IMessageHandler {
   private pizzaDisplayService: PizzaDisplayService;
   private restaurantDiscoveryService: RestaurantDiscoveryService;
   private currentRestaurantContext: RestaurantContext | null = null;
+  private restaurantConfig: RestaurantConfig | null = null;
   private supabaseUrl: string;
   private supabaseKey: string;
 
@@ -169,6 +170,8 @@ export class UniversalBot implements IMessageHandler {
    * 💰 Formate un prix selon la devise du restaurant configuré avec séparateurs
    */
   private formatPrice(amount: number): string {
+    console.log(`💰 [FormatPrice] Montant: ${amount}, Config: ${this.restaurantConfig?.currency || 'undefined'}`);
+
     if (!this.restaurantConfig?.currency) return `${amount}€`;
 
     switch (this.restaurantConfig.currency) {
@@ -831,6 +834,16 @@ export class UniversalBot implements IMessageHandler {
       
       if (restaurant) {
         this.setRestaurantContext(restaurant);
+
+        // 💰 Charger la configuration restaurant pour la devise
+        console.log(`💰 [Currency] Chargement config restaurant ${restaurantId} pour devise...`);
+        try {
+          this.restaurantConfig = await this.configManager.getConfig(restaurantId);
+          console.log(`✅ [Currency] Config chargée - Devise: ${this.restaurantConfig.currency}`);
+        } catch (configError) {
+          console.error(`❌ [Currency] Erreur chargement config:`, configError);
+          this.restaurantConfig = null;
+        }
       }
     } catch (error) {
       console.error(`❌ [Context] Erreur chargement restaurant ${restaurantId}:`, error);
