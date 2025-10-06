@@ -45,8 +45,11 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
   /**
    * 💰 Formate un prix selon la devise du restaurant
    */
-  formatPrice(amount) {
-    switch (this.restaurantCurrency) {
+  formatPrice(amount, currency = null) {
+    // Utiliser la devise passée en paramètre ou celle du restaurant
+    const currencyToUse = currency || this.restaurantCurrency;
+
+    switch (currencyToUse) {
       case 'EUR':
         return `${amount}€`;
       case 'GNF':
@@ -66,7 +69,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);
 
-      const { data: restaurant } = await supabase
+      const { data: restaurant, error } = await supabase
         .from('france_restaurants')
         .select('currency')
         .eq('id', restaurantId)
@@ -74,10 +77,9 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
 
       if (restaurant?.currency) {
         this.restaurantCurrency = restaurant.currency;
-        console.log(`💰 [CompositeWorkflow] Devise chargée: ${this.restaurantCurrency}`);
       }
     } catch (error) {
-      console.log(`⚠️ [CompositeWorkflow] Erreur chargement devise:`, error);
+      console.error('Erreur chargement devise:', error);
     }
   }
   /**
@@ -593,9 +595,10 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
   /**
    * Finalisation workflow universel
    */ async completeUniversalWorkflow(phoneNumber, session, workflowData) {
+
     // Charger la devise du restaurant avant l'affichage des prix
-    if (session.selectedRestaurantId) {
-      await this.loadRestaurantCurrency(session.selectedRestaurantId);
+    if (session.restaurantId) {
+      await this.loadRestaurantCurrency(session.restaurantId);
     }
 
     // Récapitulatif avec format standard universel
@@ -603,7 +606,10 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     let recap = `✅ *${productName} configuré avec succès !*\n\n`;
     // Calculer le prix total avec price_modifier pour Workflow Universal V2
     const calculatedPrice = this.calculateUniversalWorkflowPrice(workflowData);
-    recap += `🍽 *${workflowData.productName} (${this.formatPrice(calculatedPrice, this.restaurantCurrency)})*\n`;
+
+    const formattedPrice = this.formatPrice(calculatedPrice, this.restaurantCurrency);
+
+    recap += `🍽 *${workflowData.productName} (${formattedPrice})*\n`;
     for (const [groupName, selections] of Object.entries(workflowData.selections)){
       const items = selections.map((s)=>s.option_name).join(', ');
       const displayName = this.getGroupDisplayName(groupName);
