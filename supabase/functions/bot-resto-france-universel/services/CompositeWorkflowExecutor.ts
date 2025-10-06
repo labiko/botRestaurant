@@ -598,7 +598,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     let recap = `✅ *${productName} configuré avec succès !*\n\n`;
     // Calculer le prix total avec price_modifier pour Workflow Universal V2
     const calculatedPrice = this.calculateUniversalWorkflowPrice(workflowData);
-    recap += `🍽 *${workflowData.productName} (${this.formatPrice(calculatedPrice)})*\n`;
+    recap += `🍽 *${workflowData.productName} (${this.formatPrice(calculatedPrice, this.restaurantCurrency)})*\n`;
     for (const [groupName, selections] of Object.entries(workflowData.selections)){
       const items = selections.map((s)=>s.option_name).join(', ');
       const displayName = this.getGroupDisplayName(groupName);
