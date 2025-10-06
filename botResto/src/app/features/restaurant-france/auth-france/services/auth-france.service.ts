@@ -5,6 +5,7 @@ import { PhoneFormatService } from '../../../../core/services/phone-format.servi
 import { PhoneNumberUtilsService } from '../../../../core/services/phone-number-utils.service';
 import { DriverSessionMonitorService } from '../../../../core/services/driver-session-monitor.service';
 import { WhatsAppNotificationFranceService } from '../../../../core/services/whatsapp-notification-france.service';
+import { UniversalAuthService } from '../../../../core/services/universal-auth.service';
 
 export interface FranceUser {
   id: number;
@@ -49,7 +50,8 @@ export class AuthFranceService {
     private phoneFormatService: PhoneFormatService,
     private phoneNumberUtils: PhoneNumberUtilsService,
     private driverSessionMonitorService: DriverSessionMonitorService,
-    private whatsAppNotificationService: WhatsAppNotificationFranceService
+    private whatsAppNotificationService: WhatsAppNotificationFranceService,
+    private universalAuth: UniversalAuthService
   ) {
     this.checkExistingSession();
   }
@@ -95,54 +97,21 @@ export class AuthFranceService {
   async loginRestaurant(phone: string, password: string): Promise<AuthResult> {
     try {
 
-      // Valider que le numéro contient un country_code
-      const countryCode = this.phoneNumberUtils.extractCountryCode(phone);
-      if (!countryCode) {
-        return {
-          success: false,
-          message: 'Format de téléphone invalide'
-        };
-      }
+      // Utiliser le service centralisé pour normaliser et générer les formats
+      const normalizedPhone = this.universalAuth.normalizePhoneNumber(phone);
+      const phoneFormats = this.universalAuth.generatePhoneFormats(normalizedPhone);
 
-      // 🔍 RECHERCHE INTELLIGENTE MULTIPLE - Essayer plusieurs formats
-      console.log(`🔍 [AuthFrance] Recherche restaurant avec numéro: ${phone}`);
+      console.log(`🔍 [AuthFrance] Recherche restaurant avec formats:`, phoneFormats);
 
-      // Format 1: Rechercher le format international complet (ex: 33164880909)
-      let { data: restaurant, error } = await this.supabaseFranceService.client
+      // Construire la condition OR pour tous les formats
+      const orCondition = this.universalAuth.buildOrCondition(phoneFormats);
+
+      // Recherche en base avec tous les formats possibles
+      const { data: restaurant, error } = await this.supabaseFranceService.client
         .from('france_restaurants')
         .select('id, name, phone, whatsapp_number, password_hash, is_active, country_code')
-        .or(`phone.eq.${phone},whatsapp_number.eq.${phone}`)
-        .maybeSingle(); // maybeSingle pour éviter l'erreur si pas trouvé
-
-      // Format 2: Si pas trouvé, essayer le format français local (ex: 0164880909)
-      if (!restaurant && phone.startsWith('33')) {
-        const localPhone = '0' + phone.substring(2); // 33164880909 → 0164880909
-        console.log(`🔍 [AuthFrance] Essai format français local: ${localPhone}`);
-
-        const result2 = await this.supabaseFranceService.client
-          .from('france_restaurants')
-          .select('id, name, phone, whatsapp_number, password_hash, is_active, country_code')
-          .or(`phone.eq.${localPhone},whatsapp_number.eq.${localPhone}`)
-          .maybeSingle();
-
-        restaurant = result2.data;
-        error = result2.error;
-      }
-
-      // Format 3: Si toujours pas trouvé et format local, essayer international
-      if (!restaurant && phone.startsWith('0')) {
-        const intlPhone = '33' + phone.substring(1); // 0164880909 → 33164880909
-        console.log(`🔍 [AuthFrance] Essai format international: ${intlPhone}`);
-
-        const result3 = await this.supabaseFranceService.client
-          .from('france_restaurants')
-          .select('id, name, phone, whatsapp_number, password_hash, is_active, country_code')
-          .or(`phone.eq.${intlPhone},whatsapp_number.eq.${intlPhone}`)
-          .maybeSingle();
-
-        restaurant = result3.data;
-        error = result3.error;
-      }
+        .or(orCondition)
+        .maybeSingle();
 
       if (error) {
         console.error('❌ [AuthFrance] Erreur SQL:', {
@@ -154,7 +123,7 @@ export class AuthFranceService {
       }
 
       if (!restaurant) {
-        console.error('Restaurant non trouvé:', error);
+        console.error('Restaurant non trouvé pour les formats:', phoneFormats);
         return { success: false, message: 'Restaurant non trouvé' };
       }
 
@@ -236,21 +205,21 @@ export class AuthFranceService {
   async loginDriver(phone: string, password: string): Promise<AuthResult> {
     try {
 
-      // Valider que le numéro contient un country_code
-      const countryCode = this.phoneNumberUtils.extractCountryCode(phone);
-      if (!countryCode) {
-        return {
-          success: false,
-          message: 'Format de téléphone invalide'
-        };
-      }
+      // Utiliser le service centralisé pour normaliser et générer les formats
+      const normalizedPhone = this.universalAuth.normalizePhoneNumber(phone);
+      const phoneFormats = this.universalAuth.generatePhoneFormats(normalizedPhone);
+
+      console.log(`🔍 [AuthFrance] Recherche livreur avec formats:`, phoneFormats);
+
+      // Construire la condition OR pour tous les formats (uniquement sur phone_number pour les livreurs)
+      const orCondition = this.universalAuth.buildOrCondition(phoneFormats, ['phone_number']);
 
       // Rechercher le livreur par téléphone avec nom du restaurant
       const { data: driver, error } = await this.supabaseFranceService.client
         .from('france_delivery_drivers')
         .select('id, restaurant_id, first_name, last_name, phone_number, country_code, email, password, is_active, france_restaurants(name)')
-        .eq('phone_number', phone)
-        .single();
+        .or(orCondition)
+        .maybeSingle();
 
       console.log('🔍 [AuthFrance] Recherche livreur:', {
         phone,
