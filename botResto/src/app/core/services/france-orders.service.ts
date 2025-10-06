@@ -9,6 +9,8 @@ import { AutoRefreshService } from './auto-refresh.service';
 import { FuseauHoraireService } from './fuseau-horaire.service';
 import { AudioNotificationService } from './audio-notification.service';
 import { PaymentLinkService } from './payment-link.service';
+import { CurrencyService } from './currency.service';
+import { RestaurantConfigService } from '../../features/restaurant-france/services/restaurant-config.service';
 import { REFRESH_CONFIG } from '../config/refresh.config';
 
 // Interface pour les paramètres de notification WhatsApp
@@ -129,7 +131,9 @@ export class FranceOrdersService {
     private autoRefreshService: AutoRefreshService,
     private fuseauHoraireService: FuseauHoraireService,
     private audioNotificationService: AudioNotificationService,
-    private paymentLinkService: PaymentLinkService
+    private paymentLinkService: PaymentLinkService,
+    private currencyService: CurrencyService,
+    private restaurantConfigService: RestaurantConfigService
   ) { }
 
   async loadOrders(restaurantId: number): Promise<void> {
@@ -555,7 +559,7 @@ export class FranceOrdersService {
     const processedOrder = this.processOrder(orderData);
     
     // Formater les articles depuis les données traitées
-    const itemsText = this.formatItemsForWhatsApp(processedOrder.items || []);
+    const itemsText = this.formatItemsForWhatsApp(processedOrder.items || [], orderData.restaurant_id);
     
     // Formater le mode de paiement
     const paymentModeText = this.formatPaymentModeForWhatsApp(orderData.payment_mode);
@@ -567,7 +571,7 @@ export class FranceOrdersService {
       orderNumber: orderData.order_number || `${orderData.id}`,
       restaurantName: orderData.france_restaurants?.name || 'Restaurant',
       restaurantPhone: orderData.france_restaurants?.phone || orderData.france_restaurants?.whatsapp_number || '',
-      total: this.formatPrice(orderData.total_amount || 0),
+      total: this.formatPrice(orderData.total_amount || 0, orderData.restaurant_id),
       deliveryMode: deliveryModeText,
       paymentMode: paymentModeText,
       orderItems: itemsText,
@@ -585,7 +589,7 @@ export class FranceOrdersService {
   /**
    * Formate les articles pour l'affichage WhatsApp - FORMAT UNIVERSEL
    */
-  private formatItemsForWhatsApp(items: any[]): string {
+  private formatItemsForWhatsApp(items: any[], restaurantId?: number): string {
     
     if (!Array.isArray(items) || items.length === 0) {
       return '• Aucun article détaillé disponible';
@@ -603,8 +607,8 @@ export class FranceOrdersService {
       }
       
       // Ajouter le prix
-      itemText += ` - ${this.formatPrice(formattedItem.totalPrice)}`;
-      
+      itemText += ` - ${this.formatPrice(formattedItem.totalPrice, restaurantId)}`;
+
       // Ajouter les configurations en lignes séparées avec emojis
       const configDetails: string[] = [];
       
@@ -700,8 +704,13 @@ export class FranceOrdersService {
     return statusTexts[status] || status;
   }
 
-  formatPrice(amount: number): string {
-    return `${amount.toFixed(2)}€`;
+  formatPrice(amount: number, restaurantId?: number): string {
+    // Si restaurantId est fourni, utiliser la devise du restaurant
+    if (restaurantId) {
+      return this.restaurantConfigService.formatPrice(amount);
+    }
+    // Sinon, utiliser la devise par défaut (EUR)
+    return this.currencyService.formatPrice(amount);
   }
 
   formatTime(dateString: string): string {
