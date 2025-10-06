@@ -76,9 +76,9 @@ export class RestaurantPaymentConfigService {
 
         // Mapping spécifique UNIQUEMENT pour LengoPay (ne pas casser Stripe)
         if (data.provider === 'lengopay') {
-          // Pour LengoPay UNIQUEMENT : extraire depuis config JSON
-          mappedConfig.license_key = data.config?.license_key || data.api_key_secret;
-          mappedConfig.website_id = data.config?.website_id;
+          // Pour LengoPay : priorité à api_key_secret, sinon config.license_key
+          mappedConfig.license_key = data.api_key_secret || data.config?.license_key;
+          mappedConfig.website_id = data.config?.website_id || data.merchant_id;
           mappedConfig.telephone_marchand = data.config?.telephone_marchand || '';
 
           // Validation api_url : doit commencer par https://
@@ -88,6 +88,13 @@ export class RestaurantPaymentConfigService {
           } else {
             mappedConfig.api_url = 'https://sandbox.lengopay.com/api/v1/payments';
           }
+
+          // FORCER la devise GNF pour Lengopay (EUR non supporté par l'API)
+          if (mappedConfig.config) {
+            mappedConfig.config = { ...mappedConfig.config, currency: 'GNF' };
+          }
+
+          console.log('🔧 [PaymentConfig] Lengopay mapping - license_key source:', data.api_key_secret ? 'api_key_secret' : 'config.license_key', ', devise forcée: GNF');
         }
 
         console.log('🔍 [Service] Config mappée:', mappedConfig);
@@ -121,6 +128,19 @@ export class RestaurantPaymentConfigService {
         auto_send_on_order: config.auto_send_on_order,
         send_on_delivery: config.send_on_delivery
       };
+
+      // Logique spéciale pour Lengopay : s'assurer que license_key est dans api_key_secret
+      if (config.provider === 'lengopay' && config.config?.license_key) {
+        validFields.api_key_secret = config.config.license_key;
+        validFields.merchant_id = config.config.website_id || config.merchant_id;
+
+        // FORCER la devise GNF pour Lengopay (EUR non supporté)
+        if (validFields.config) {
+          validFields.config = { ...validFields.config, currency: 'GNF' };
+        }
+
+        console.log('🔧 [PaymentConfig] Lengopay - license_key copiée vers api_key_secret, devise forcée GNF');
+      }
 
       // Auto-générer les URLs de callback si non fournies (tous providers)
       if (!validFields.success_url || validFields.success_url.trim() === '') {
