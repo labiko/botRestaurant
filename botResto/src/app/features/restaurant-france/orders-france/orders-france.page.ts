@@ -14,6 +14,8 @@ import { DeliveryTrackingService } from '../../../core/services/delivery-trackin
 import { AudioNotificationService } from '../../../core/services/audio-notification.service';
 import { PaymentLinkService } from '../../../core/services/payment-link.service';
 import { PrintService } from '../../../core/services/print.service';
+import { CurrencyService } from '../../../core/services/currency.service';
+import { RestaurantConfigService } from '../services/restaurant-config.service';
 
 @Component({
   selector: 'app-orders-france',
@@ -60,7 +62,9 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     private deliveryTrackingService: DeliveryTrackingService,
     private audioNotificationService: AudioNotificationService,
     private paymentLinkService: PaymentLinkService,
-    private printService: PrintService
+    private printService: PrintService,
+    private currencyService: CurrencyService,
+    private restaurantConfigService: RestaurantConfigService
   ) {
     // Récupérer l'ID du restaurant depuis la session
     const id = this.authService.getCurrentRestaurantId();
@@ -75,6 +79,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     this.initializeOrders();
     this.startAutoRefresh();
     this.checkPaymentConfig();
+    this.loadRestaurantCurrency();
 
     // Configurer le restaurant pour les notifications audio
     this.audioNotificationService.setCurrentRestaurant(this.restaurantId);
@@ -1129,6 +1134,33 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       });
       await toast.present();
     }
+  }
+
+  // Propriété pour stocker la devise du restaurant
+  private restaurantCurrency: string = 'EUR';
+
+  /**
+   * Charge la devise du restaurant depuis la base de données
+   */
+  private loadRestaurantCurrency(): void {
+    this.restaurantConfigService.getRestaurantConfig(this.restaurantId)
+      .subscribe({
+        next: (config) => {
+          this.restaurantCurrency = config.currency || 'EUR';
+          console.log(`💱 [OrdersFrance] Devise restaurant chargée: ${this.restaurantCurrency}`);
+        },
+        error: (error) => {
+          console.error('❌ [OrdersFrance] Erreur chargement devise:', error);
+          this.restaurantCurrency = 'EUR'; // Fallback
+        }
+      });
+  }
+
+  /**
+   * Formate un prix selon la devise du restaurant
+   */
+  formatPrice(amount: number): string {
+    return this.restaurantConfigService.formatPrice(amount, this.restaurantCurrency);
   }
 
 }

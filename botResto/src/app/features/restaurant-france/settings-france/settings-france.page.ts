@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RestaurantConfigService } from '../services/restaurant-config.service';
 import { AuthFranceService } from '../auth-france/services/auth-france.service';
+import { CurrencyService } from '../../../core/services/currency.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -19,7 +20,8 @@ export class SettingsFrancePage implements OnInit, OnDestroy {
 
   constructor(
     private restaurantConfigService: RestaurantConfigService,
-    private authFranceService: AuthFranceService
+    private authFranceService: AuthFranceService,
+    public currencyService: CurrencyService
   ) {
     // Récupérer l'ID du restaurant depuis la session
     const id = this.authFranceService.getCurrentRestaurantId();

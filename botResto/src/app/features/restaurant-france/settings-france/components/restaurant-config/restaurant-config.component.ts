@@ -9,6 +9,7 @@ import { AuthFranceService } from '../../../auth-france/services/auth-france.ser
 import { PhoneNumberUtilsService } from '../../../../../core/services/phone-number-utils.service';
 import { SupabaseFranceService } from '../../../../../core/services/supabase-france.service';
 import { PrintService } from '../../../../../core/services/print.service';
+import { CurrencyService, AVAILABLE_CURRENCIES } from '../../../../../core/services/currency.service';
 
 @Component({
   selector: 'app-restaurant-config',
@@ -24,6 +25,8 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
 
   // Expose Object.keys to template
   Object = Object;
+  // Expose available currencies to template
+  availableCurrencies = Object.values(AVAILABLE_CURRENCIES);
 
   restaurantConfig: RestaurantConfig | null = null;
   botConfig: RestaurantBotConfig | null = null;
@@ -67,7 +70,8 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
     private authFranceService: AuthFranceService,
     private phoneNumberUtils: PhoneNumberUtilsService,
     private supabaseFranceService: SupabaseFranceService,
-    private printService: PrintService
+    private printService: PrintService,
+    public currencyService: CurrencyService
   ) {
     // Récupérer l'ID du restaurant depuis la session
     const id = this.authFranceService.getCurrentRestaurantId();
@@ -106,7 +110,8 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
       delivery_fee: [2.50],
       is_active: [true],
       is_exceptionally_closed: [false],
-      timezone: ['Europe/Paris', [Validators.required]]
+      timezone: ['Europe/Paris', [Validators.required]],
+      currency: ['EUR']
     });
 
     this.botForm = this.fb.group({

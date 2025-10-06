@@ -3,6 +3,7 @@ import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseFranceService } from '../../../core/services/supabase-france.service';
+import { CurrencyService } from '../../../core/services/currency.service';
 
 export interface RestaurantConfig {
   id: number;
@@ -24,6 +25,7 @@ export interface RestaurantConfig {
   password_hash: string;
   hide_delivery_info?: boolean;
   delivery_address_mode?: 'address' | 'geolocation'; // NOUVEAU
+  currency?: string; // 'EUR' | 'GNF' | 'XOF'
 }
 
 export interface BusinessHours {
@@ -60,7 +62,10 @@ export interface RestaurantFeatures {
 export class RestaurantConfigService {
   private supabase: SupabaseClient;
 
-  constructor(private supabaseFranceService: SupabaseFranceService) {
+  constructor(
+    private supabaseFranceService: SupabaseFranceService,
+    private currencyService: CurrencyService
+  ) {
     this.supabase = this.supabaseFranceService.client;
   }
 
@@ -251,12 +256,23 @@ export class RestaurantConfigService {
         const businessHours = config.business_hours as BusinessHours;
         const dayHours = businessHours[currentDay];
         
-        return !!(dayHours?.isOpen && 
-               dayHours.opening && 
+        return !!(dayHours?.isOpen &&
+               dayHours.opening &&
                dayHours.closing &&
-               currentTime >= dayHours.opening && 
+               currentTime >= dayHours.opening &&
                currentTime <= dayHours.closing);
       })
     );
+  }
+
+  /**
+   * Formate un prix selon la devise du restaurant
+   */
+  formatPrice(amount: number, currency?: string): string {
+    if (currency) {
+      // Utiliser la devise spécifiée
+      this.currencyService.setCurrency(currency);
+    }
+    return this.currencyService.formatPrice(amount);
   }
 }
