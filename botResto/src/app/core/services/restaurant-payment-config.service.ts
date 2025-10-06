@@ -78,9 +78,16 @@ export class RestaurantPaymentConfigService {
         if (data.provider === 'lengopay') {
           // Pour LengoPay UNIQUEMENT : extraire depuis config JSON
           mappedConfig.license_key = data.config?.license_key || data.api_key_secret;
-          mappedConfig.website_id = data.config?.website_id || data.merchant_id;
+          mappedConfig.website_id = data.config?.website_id;
           mappedConfig.telephone_marchand = data.config?.telephone_marchand || '';
-          mappedConfig.api_url = data.config?.api_url || 'https://sandbox.lengopay.com/api/v1/payments';
+
+          // Validation api_url : doit commencer par https://
+          const configApiUrl = data.config?.api_url;
+          if (configApiUrl && configApiUrl.startsWith('https://')) {
+            mappedConfig.api_url = configApiUrl;
+          } else {
+            mappedConfig.api_url = 'https://sandbox.lengopay.com/api/v1/payments';
+          }
         }
 
         console.log('🔍 [Service] Config mappée:', mappedConfig);
