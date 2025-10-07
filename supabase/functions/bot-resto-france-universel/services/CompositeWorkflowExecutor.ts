@@ -565,13 +565,13 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     message += '\n💡 Pour choisir votre ';
     message += optionGroup.groupName === 'viande' ? 'viande' : optionGroup.displayName.toLowerCase();
     message += ': tapez les numéros\n';
-    if (optionGroup.groupName === 'sauces' || optionGroup.displayName.toLowerCase() === 'sauces') {
-      // Exemple spécial pour sauces (sélection multiple)
-      const sauce1 = optionGroup.options[0]?.option_name || 'Option1';
-      const sauce2 = optionGroup.options[1]?.option_name || 'Option2';
-      message += `Ex: 1,2 = ${sauce1},${sauce2}\n\n`;
+    if (optionGroup.maxSelections > 1) {
+      // Choix multiple autorisé
+      const option1 = optionGroup.options[0]?.option_name || 'Option1';
+      const option2 = optionGroup.options[1]?.option_name || 'Option2';
+      message += `Ex: 1,2 = ${option1},${option2}\n\n`;
     } else {
-      // Exemple standard pour autres catégories (sélection simple)
+      // Choix simple uniquement
       message += `Ex: 1 = ${optionGroup.options[0]?.option_name}\n\n`;
     }
     // message += '00 - Finaliser cette étape\n';
