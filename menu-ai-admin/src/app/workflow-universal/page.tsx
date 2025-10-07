@@ -698,26 +698,67 @@ export default function WorkflowUniversalPage() {
       .replace(/^-|-$/g, '');
   };
 
-  // Fonctions pour Workflow Import - VERSION SIMPLIFIÉE POUR FIXER LES PRIX
+  // Fonctions pour Workflow Import - VERSION V5 AVEC SUPPORT MULTI-LIGNES
   const parseImportText = (text: string) => {
     if (!text.trim()) return [];
 
-    const lines = text.split('\n').filter(line => line.trim());
+    const lines = text.split('\n').map(line => line.trim());
     const options = [];
 
-    console.log('🔍 PARSER V4 (FORMAT SIMPLE) - Analyse du texte...');
+    console.log('🔍 PARSER V5 (MULTI-LIGNES) - Analyse du texte...');
 
-    // Parser pour format "Nom – Prix €" ou "Nom - Prix €"
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      if (!trimmedLine) continue;
+    // Helper: vérifier si une ligne contient un prix
+    const containsPrice = (line: string) => {
+      return /[\d,]+(?:\.\d+)?\s*€/.test(line);
+    };
 
-      // Format 1A: "Nom – Prix € (Composition)" (tiret long avec composition)
-      const formatWithComp1 = trimmedLine.match(/^(.+?)\s*–\s*([\d,]+(?:\.\d+)?)\s*€\s*\(([^)]+)\)$/);
-      if (formatWithComp1) {
-        const name = formatWithComp1[1].trim();
-        const price = parseFloat(formatWithComp1[2].replace(',', '.'));
-        const composition = formatWithComp1[3].trim();
+    // Parser avec support multi-lignes
+    for (let i = 0; i < lines.length; i++) {
+      const trimmedLine = lines[i];
+      if (!trimmedLine) continue; // Ignorer les lignes vides
+
+      // 🆕 FORMAT MULTI-LIGNES: "Nom — Prix €" suivi de "Composition" sur la ligne suivante
+      // Support tous les types de tirets: - (hyphen), – (en dash), — (em dash)
+      const formatMultiLine = trimmedLine.match(/^(.+?)\s*[\-–—]\s*([\d,]+(?:\.\d+)?)\s*€$/);
+
+      if (formatMultiLine) {
+        const name = formatMultiLine[1].trim();
+        const priceStr = formatMultiLine[2].replace(',', '.');
+        const price = parseFloat(priceStr);
+        let composition = '';
+
+        console.log(`🔍 Ligne détectée: "${name}" - Prix brut: "${formatMultiLine[2]}" - Prix parsé: ${price}`);
+
+        // Vérifier si la ligne suivante est une composition (pas de prix, pas vide)
+        if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1].trim();
+          if (nextLine && !containsPrice(nextLine)) {
+            composition = nextLine;
+            i++; // Sauter la ligne de composition
+            console.log(`✅ Format MULTI-LIGNES détecté: "${name}" - ${price}€ - Composition: "${composition}"`);
+          } else {
+            console.log(`✅ Format simple détecté: "${name}" - ${price}€ (pas de composition sur ligne suivante)`);
+          }
+        } else {
+          console.log(`✅ Format simple détecté: "${name}" - ${price}€ (dernière ligne)`);
+        }
+
+        options.push({
+          name: name,
+          composition: composition,
+          price_modifier: price,
+          emoji: '🍽️'
+        });
+        continue;
+      }
+
+      // Format avec composition entre parenthèses: "Nom — Prix € (Composition)"
+      // Support tous les types de tirets: - (hyphen), – (en dash), — (em dash)
+      const formatWithComp = trimmedLine.match(/^(.+?)\s*[\-–—]\s*([\d,]+(?:\.\d+)?)\s*€\s*\(([^)]+)\)$/);
+      if (formatWithComp) {
+        const name = formatWithComp[1].trim();
+        const price = parseFloat(formatWithComp[2].replace(',', '.'));
+        const composition = formatWithComp[3].trim();
 
         options.push({
           name: name,
@@ -726,64 +767,13 @@ export default function WorkflowUniversalPage() {
           emoji: '🍽️'
         });
 
-        console.log(`✅ Format avec composition détecté: "${name}" - ${price}€ - (${composition})`);
+        console.log(`✅ Format avec composition (parenthèses) détecté: "${name}" - ${price}€ - (${composition})`);
         continue;
       }
 
-      // Format 1B: "Nom – Prix €" (tiret long simple)
-      const formatSimple1 = trimmedLine.match(/^(.+?)\s*–\s*([\d,]+(?:\.\d+)?)\s*€$/);
-      if (formatSimple1) {
-        const name = formatSimple1[1].trim();
-        const price = parseFloat(formatSimple1[2].replace(',', '.'));
-
-        options.push({
-          name: name,
-          composition: '',
-          price_modifier: price,
-          emoji: '🍽️'
-        });
-
-        console.log(`✅ Format simple détecté: "${name}" - ${price}€`);
-        continue;
-      }
-
-      // Format 2A: "Nom - Prix € (Composition)" (tiret court avec composition)
-      const formatWithComp2 = trimmedLine.match(/^(.+?)\s*-\s*([\d,]+(?:\.\d+)?)\s*€\s*\(([^)]+)\)$/);
-      if (formatWithComp2) {
-        const name = formatWithComp2[1].trim();
-        const price = parseFloat(formatWithComp2[2].replace(',', '.'));
-        const composition = formatWithComp2[3].trim();
-
-        options.push({
-          name: name,
-          composition: composition,
-          price_modifier: price,
-          emoji: '🍽️'
-        });
-
-        console.log(`✅ Format avec composition détecté: "${name}" - ${price}€ - (${composition})`);
-        continue;
-      }
-
-      // Format 2B: "Nom - Prix €" (tiret court simple)
-      const formatSimple2 = trimmedLine.match(/^(.+?)\s*-\s*([\d,]+(?:\.\d+)?)\s*€$/);
-      if (formatSimple2) {
-        const name = formatSimple2[1].trim();
-        const price = parseFloat(formatSimple2[2].replace(',', '.'));
-
-        options.push({
-          name: name,
-          composition: '',
-          price_modifier: price,
-          emoji: '🍽️'
-        });
-
-        console.log(`✅ Format simple détecté: "${name}" - ${price}€`);
-        continue;
-      }
-
-      // Format 3: "Nom : Composition - Prix €" (format avec composition)
-      const formatCompose = trimmedLine.match(/^(.+?)\s*[:–-]\s*(.+?)\s*[-–]\s*([\d,]+)\s*€$/);
+      // Format composé: "Nom : Composition — Prix €"
+      // Support tous les types de tirets et séparateurs
+      const formatCompose = trimmedLine.match(/^(.+?)\s*[:\-–—]\s*(.+?)\s*[\-–—]\s*([\d,]+)\s*€$/);
       if (formatCompose) {
         const name = formatCompose[1].trim();
         const composition = formatCompose[2].trim();
@@ -800,8 +790,9 @@ export default function WorkflowUniversalPage() {
         continue;
       }
 
-      // Format 4: Prix doubles (Sur place: X€ | Livraison: Y€)
-      const formatDouble = trimmedLine.match(/^(.+?)\s*[-–:]\s*Sur place\s*:\s*([\d,]+)\s*€\s*\|\s*Livraison\s*:\s*([\d,]+)\s*€$/);
+      // Format double prix: "Nom — Sur place: X€ | Livraison: Y€"
+      // Support tous les types de tirets
+      const formatDouble = trimmedLine.match(/^(.+?)\s*[:\-–—]\s*Sur place\s*:\s*([\d,]+)\s*€\s*\|\s*Livraison\s*:\s*([\d,]+)\s*€$/);
       if (formatDouble) {
         const name = formatDouble[1].trim();
         const priceOnSite = parseFloat(formatDouble[2].replace(',', '.'));
@@ -820,7 +811,7 @@ export default function WorkflowUniversalPage() {
       }
 
       // Format 5: Nom simple (sans prix) - pour les options/ingrédients
-      if (trimmedLine.length > 2) {
+      if (trimmedLine.length > 2 && !containsPrice(trimmedLine)) {
         options.push({
           name: trimmedLine,
           composition: '',
@@ -832,10 +823,10 @@ export default function WorkflowUniversalPage() {
         continue;
       }
 
-      console.log(`⚠️ Ligne ignorée (trop courte): "${trimmedLine}"`);
+      console.log(`⚠️ Ligne ignorée: "${trimmedLine}"`);
     }
 
-    console.log(`📊 Parser V4 (FORMAT SIMPLE) détecté: ${options.length} produits`);
+    console.log(`📊 Parser V5 (MULTI-LIGNES) détecté: ${options.length} produits`);
     return options;
   };
 

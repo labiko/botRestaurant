@@ -156,6 +156,16 @@ export default function BackOfficeRestaurantPage() {
   const [countryForm, setCountryForm] = useState<Partial<Country>>({});
   const [useCustomPattern, setUseCustomPattern] = useState(false);
 
+  // États pour la gestion des boissons workflows
+  const [boissonsStep, setBoissonsStep] = useState<1 | 2 | 3>(1);
+  const [selectedBoissonsRestaurant, setSelectedBoissonsRestaurant] = useState<number | null>(null);
+  const [boissonsProducts, setBoissonsProducts] = useState<any[]>([]);
+  const [selectedBoissonsProducts, setSelectedBoissonsProducts] = useState<number[]>([]);
+  const [loadingBoissonsProducts, setLoadingBoissonsProducts] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [generatedSQL, setGeneratedSQL] = useState<{ verification: string; execution: string } | null>(null);
+
   // Fonction de formatage de date avec correction du fuseau horaire
   const formatDateTime = (dateString: string): string => {
     const date = new Date(dateString);
@@ -948,6 +958,67 @@ export default function BackOfficeRestaurantPage() {
     }
   };
 
+  // Fonctions pour la gestion des boissons workflows
+  const loadBoissonsProducts = async (restaurantId: number) => {
+    setLoadingBoissonsProducts(true);
+    try {
+      const response = await fetchWithEnv(`/api/boissons-workflows/list-products?restaurant_id=${restaurantId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setBoissonsProducts(data.products || []);
+        if (data.products.length === 0) {
+          showNotification('info', 'Aucun produit', 'Aucun produit avec step "Boissons" trouvé pour ce restaurant');
+        }
+      } else {
+        showNotification('error', 'Erreur', data.error || 'Impossible de charger les produits');
+        setBoissonsProducts([]);
+      }
+    } catch (error) {
+      console.error('Erreur chargement produits boissons:', error);
+      showNotification('error', 'Erreur', 'Impossible de charger les produits');
+      setBoissonsProducts([]);
+    } finally {
+      setLoadingBoissonsProducts(false);
+    }
+  };
+
+  const generateBoissonsSQL = async () => {
+    if (!selectedBoissonsRestaurant || selectedBoissonsProducts.length === 0) {
+      showNotification('error', 'Données manquantes', 'Restaurant et produits requis');
+      return;
+    }
+
+    setLoadingPreview(true);
+    try {
+      const response = await fetchWithEnv('/api/boissons-workflows/generate-sql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurant_id: selectedBoissonsRestaurant,
+          product_ids: selectedBoissonsProducts
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setGeneratedSQL({
+          verification: data.verification,
+          execution: data.execution
+        });
+        showNotification('success', 'Scripts générés', `${data.boissons_count} boissons pour ${data.products_count} produit(s)`);
+      } else {
+        showNotification('error', 'Erreur', data.error || 'Impossible de générer les scripts SQL');
+      }
+    } catch (error) {
+      console.error('Erreur génération SQL:', error);
+      showNotification('error', 'Erreur', 'Impossible de générer les scripts SQL');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
   const deleteIcon = async (id: number) => {
     if (!confirm('Supprimer cette icône du catalogue ?')) return;
 
@@ -1179,6 +1250,16 @@ export default function BackOfficeRestaurantPage() {
               }`}
             >
               🌍 Gestion Pays
+            </button>
+            <button
+              onClick={() => setActiveTab('boissons-workflows')}
+              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'boissons-workflows'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🥤 Gestion Boissons Workflows
             </button>
           </nav>
         </div>
@@ -2687,6 +2768,300 @@ export default function BackOfficeRestaurantPage() {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Chargement des paramètres vitrine...
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab Gestion Boissons Workflows */}
+      {activeTab === 'boissons-workflows' && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold mb-4">🥤 Gestion Boissons Workflows</h2>
+            <p className="text-gray-600">
+              Remplacer automatiquement les boissons des workflows par les boissons standardisées (33cl)
+            </p>
+          </div>
+
+          {/* Indicateur d'étapes */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className="flex items-center flex-1">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
+                    boissonsStep === step
+                      ? 'border-blue-500 bg-blue-500 text-white'
+                      : boissonsStep > step
+                      ? 'border-green-500 bg-green-500 text-white'
+                      : 'border-gray-300 bg-white text-gray-400'
+                  }`}>
+                    {boissonsStep > step ? '✓' : step}
+                  </div>
+                  <div className={`ml-3 ${boissonsStep === step ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+                    {step === 1 && 'Restaurant'}
+                    {step === 2 && 'Produits'}
+                    {step === 3 && 'SQL & Vérification'}
+                  </div>
+                  {step < 3 && (
+                    <div className={`flex-1 h-1 mx-4 ${boissonsStep > step ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Étape 1 : Sélection du restaurant */}
+          {boissonsStep === 1 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold mb-4">Étape 1 : Sélectionner un restaurant</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Restaurant
+                  </label>
+                  <select
+                    value={selectedBoissonsRestaurant || ''}
+                    onChange={(e) => setSelectedBoissonsRestaurant(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">-- Sélectionner un restaurant --</option>
+                    {restaurants.map((restaurant) => (
+                      <option key={restaurant.id} value={restaurant.id}>
+                        {restaurant.name} ({restaurant.city})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => {
+                      if (!selectedBoissonsRestaurant) {
+                        showNotification('warning', 'Restaurant requis', 'Veuillez sélectionner un restaurant');
+                        return;
+                      }
+                      setBoissonsStep(2);
+                      loadBoissonsProducts(selectedBoissonsRestaurant);
+                    }}
+                    disabled={!selectedBoissonsRestaurant}
+                    className={`px-6 py-2 rounded-lg font-medium ${
+                      selectedBoissonsRestaurant
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    Suivant →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Étape 2 : Sélection des produits */}
+          {boissonsStep === 2 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold mb-4">Étape 2 : Sélectionner les produits</h3>
+
+              {loadingBoissonsProducts ? (
+                <div className="text-center py-12">
+                  <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-600 bg-blue-100">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Chargement des produits...
+                  </div>
+                </div>
+              ) : boissonsProducts.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-6xl mb-4">🔍</div>
+                  <p>Aucun produit avec step "Boissons" trouvé pour ce restaurant.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600">
+                      Sélectionnez les produits dont vous souhaitez remplacer les boissons par les boissons standardisées (33cl)
+                    </p>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <input
+                              type="checkbox"
+                              checked={selectedBoissonsProducts.length === boissonsProducts.length}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedBoissonsProducts(boissonsProducts.map(p => p.id));
+                                } else {
+                                  setSelectedBoissonsProducts([]);
+                                }
+                              }}
+                              className="rounded border-gray-300"
+                            />
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Produit
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Catégorie
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Options Boissons
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {boissonsProducts.map((product) => (
+                          <tr key={product.id} className={selectedBoissonsProducts.includes(product.id) ? 'bg-blue-50' : ''}>
+                            <td className="px-6 py-4">
+                              <input
+                                type="checkbox"
+                                checked={selectedBoissonsProducts.includes(product.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedBoissonsProducts([...selectedBoissonsProducts, product.id]);
+                                  } else {
+                                    setSelectedBoissonsProducts(selectedBoissonsProducts.filter(id => id !== product.id));
+                                  }
+                                }}
+                                className="rounded border-gray-300"
+                              />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">{product.category_name}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">{product.boissons_count} option(s)</div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex justify-between mt-6">
+                    <button
+                      onClick={() => setBoissonsStep(1)}
+                      className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      ← Retour
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (selectedBoissonsProducts.length === 0) {
+                          showNotification('warning', 'Produits requis', 'Veuillez sélectionner au moins un produit');
+                          return;
+                        }
+                        setBoissonsStep(3);
+                        await generateBoissonsSQL();
+                      }}
+                      disabled={selectedBoissonsProducts.length === 0}
+                      className={`px-6 py-2 rounded-lg font-medium ${
+                        selectedBoissonsProducts.length > 0
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      Suivant →
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Étape 3 : Prévisualisation et génération SQL */}
+          {boissonsStep === 3 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold mb-4">Étape 3 : Scripts SQL</h3>
+
+              <div className="space-y-6">
+                {/* Script de vérification */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-md font-medium text-gray-900">1️⃣ Script de vérification</h4>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(generatedSQL?.verification || '');
+                          showNotification('success', 'Copié', 'Script de vérification copié dans le presse-papiers');
+                        } catch (error) {
+                          showNotification('error', 'Erreur', 'Impossible de copier dans le presse-papiers');
+                        }
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                    >
+                      📋 Copier
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Exécutez ce script en premier pour visualiser les boissons actuelles qui seront remplacées
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm overflow-x-auto max-h-64 overflow-y-auto border border-gray-200">
+                    <pre className="whitespace-pre-wrap text-xs">
+                      {generatedSQL?.verification || '-- Génération en cours...'}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Script d'exécution */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-md font-medium text-gray-900">2️⃣ Script d'exécution</h4>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(generatedSQL?.execution || '');
+                          showNotification('success', 'Copié', 'Script d\'exécution copié dans le presse-papiers');
+                        } catch (error) {
+                          showNotification('error', 'Erreur', 'Impossible de copier dans le presse-papiers');
+                        }
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      📋 Copier
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    ⚠️ Exécutez ce script uniquement après avoir vérifié les résultats du script de vérification
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm overflow-x-auto max-h-64 overflow-y-auto border border-gray-200">
+                    <pre className="whitespace-pre-wrap text-xs">
+                      {generatedSQL?.execution || '-- Génération en cours...'}
+                    </pre>
+                  </div>
+                </div>
+
+                <div className="flex justify-between mt-6">
+                  <button
+                    onClick={() => setBoissonsStep(2)}
+                    className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    ← Retour
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Reset tout
+                      setBoissonsStep(1);
+                      setSelectedBoissonsRestaurant(null);
+                      setBoissonsProducts([]);
+                      setSelectedBoissonsProducts([]);
+                      setGeneratedSQL(null);
+                      showNotification('success', 'Réinitialisé', 'Vous pouvez recommencer le processus');
+                    }}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    ✓ Terminer
+                  </button>
+                </div>
               </div>
             </div>
           )}
