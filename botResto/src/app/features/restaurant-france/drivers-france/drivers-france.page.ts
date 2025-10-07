@@ -7,6 +7,8 @@ import { AuthFranceService, FranceUser } from '../auth-france/services/auth-fran
 import { DriversFranceService, FranceDriver, CreateDriverRequest } from '../../../core/services/drivers-france.service';
 import { AddDriverModalComponent, DriverFormData } from './add-driver-modal/add-driver-modal.component';
 import { DriverStatusManagementService, StatusChangeResult } from '../../../core/services/driver-status-management.service';
+import { WhatsAppNotificationFranceService } from '../../../core/services/whatsapp-notification-france.service';
+import { PhoneNumberUtilsService } from '../../../core/services/phone-number-utils.service';
 
 @Component({
   selector: 'app-drivers-france',
@@ -26,6 +28,8 @@ export class DriversFrancePage implements OnInit, OnDestroy {
     private authFranceService: AuthFranceService,
     private driversFranceService: DriversFranceService,
     private driverStatusManagementService: DriverStatusManagementService,
+    private whatsAppService: WhatsAppNotificationFranceService,
+    private phoneNumberUtils: PhoneNumberUtilsService,
     private router: Router,
     private alertController: AlertController,
     private modalController: ModalController,
@@ -144,7 +148,44 @@ export class DriversFrancePage implements OnInit, OnDestroy {
     );
 
     if (success) {
-      await this.showToast('🎉 Livreur créé avec succès !', 'success');
+      // ✅ ARCHITECTURE CORRIGÉE : Envoi WhatsApp APRÈS création en base réussie
+      console.log('✅ [DriversFrance] Livreur créé en base, envoi WhatsApp...');
+
+      try {
+        const driverName = `${data.first_name} ${data.last_name}`;
+        const restaurantName = this.currentUser.name || this.currentUser.restaurantName || 'Restaurant';
+
+        // ✅ FIX BUG: Extraire l'indicatif téléphonique depuis le numéro (ex: "33" depuis "33667326357")
+        const phonePrefix = this.phoneNumberUtils.extractCountryCode(data.phone_number);
+
+        console.log('🐛 CREATION_LIVREUR === ENVOI WHATSAPP APRÈS INSERT ===');
+        console.log('🐛 CREATION_LIVREUR - phone_number:', data.phone_number);
+        console.log('🐛 CREATION_LIVREUR - phonePrefix extrait:', phonePrefix);
+        console.log('🐛 CREATION_LIVREUR - access_code:', data.access_code);
+        console.log('🐛 CREATION_LIVREUR - driverName:', driverName);
+        console.log('🐛 CREATION_LIVREUR - restaurantName:', restaurantName);
+
+        const whatsAppSent = await this.whatsAppService.sendDriverAccessCode(
+          data.phone_number,
+          driverName,
+          data.access_code,
+          restaurantName,
+          this.currentUser.phoneNumber,
+          phonePrefix ?? undefined // ✅ Indicatif téléphonique ("33") et non code ISO ("FR")
+        );
+
+        if (whatsAppSent) {
+          console.log('✅ [DriversFrance] Code WhatsApp envoyé avec succès');
+          await this.showToast('🎉 Livreur créé et notifié par WhatsApp !', 'success');
+        } else {
+          console.warn('⚠️ [DriversFrance] Échec envoi WhatsApp');
+          await this.showToast('✅ Livreur créé (échec envoi WhatsApp)', 'warning');
+        }
+      } catch (error) {
+        console.error('❌ [DriversFrance] Erreur envoi WhatsApp:', error);
+        await this.showToast('✅ Livreur créé (erreur envoi WhatsApp)', 'warning');
+      }
+
       await this.loadDrivers(); // Recharger la liste
     } else {
       await this.showToast('❌ Erreur lors de la création du livreur', 'danger');

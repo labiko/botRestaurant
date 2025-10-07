@@ -101,21 +101,35 @@ Merci pour votre commande !
    */
   async sendMessage(clientPhone: string, message: string, orderNumber?: string, countryCode?: string): Promise<boolean> {
     try {
+      // 🐛 DEBUG LOGS - Mot-clé: CREATION_LIVREUR
+      console.log('🐛 CREATION_LIVREUR === DÉBUT sendMessage ===');
+      console.log('🐛 CREATION_LIVREUR - Paramètres reçus:');
+      console.log('  - clientPhone (brut):', clientPhone);
+      console.log('  - countryCode:', countryCode);
+      console.log('  - orderNumber:', orderNumber || 'N/A');
+
       const cleanPhone = this.cleanPhoneNumber(clientPhone, countryCode);
+      console.log('🐛 CREATION_LIVREUR - Après cleanPhoneNumber:', cleanPhone);
+
       const chatId = `${cleanPhone}@c.us`;
+      console.log('🐛 CREATION_LIVREUR - ChatId construit:', chatId);
+
       const url = `${this.baseUrl}/waInstance${this.GREEN_API_INSTANCE_ID_FRANCE}/sendMessage/${this.GREEN_API_TOKEN_FRANCE}`;
-      
+
       console.log(`🇫🇷 [WhatsAppFrance] Sending message:`);
       console.log(`   URL: ${url}`);
       console.log(`   ChatId: ${chatId}`);
       console.log(`   Order: ${orderNumber || 'N/A'}`);
       console.log(`   Message preview: ${message.substring(0, 100)}...`);
-      
+
       const payload = {
         chatId: chatId,
         message: message
       };
-      
+
+      console.log('🐛 CREATION_LIVREUR - Payload complet:', JSON.stringify(payload, null, 2));
+      console.log('🐛 CREATION_LIVREUR - Envoi requête HTTP POST...');
+
       const response = await this.http.post<any>(
         url,
         payload,
@@ -126,17 +140,28 @@ Merci pour votre commande !
         }
       ).toPromise();
 
+      console.log('🐛 CREATION_LIVREUR - Réponse API Green API:', JSON.stringify(response, null, 2));
       console.log(`📨 [WhatsAppFrance] API response:`, response);
 
       if (response?.idMessage) {
         console.log(`✅ [WhatsAppFrance] Message sent successfully. ID: ${response.idMessage}`);
+        console.log('🐛 CREATION_LIVREUR === FIN sendMessage (SUCCÈS) ===');
         return true;
       } else {
         console.error('❌ [WhatsAppFrance] Invalid API response:', response);
+        console.log('🐛 CREATION_LIVREUR === FIN sendMessage (ÉCHEC - Pas de idMessage) ===');
         return false;
       }
     } catch (error: any) {
+      console.error('🐛 CREATION_LIVREUR - EXCEPTION dans sendMessage:', error);
+      console.error('🐛 CREATION_LIVREUR - Error details:', {
+        message: error?.message,
+        status: error?.status,
+        statusText: error?.statusText,
+        error: error?.error
+      });
       console.error('❌ [WhatsAppFrance] Error sending message:', error);
+      console.log('🐛 CREATION_LIVREUR === FIN sendMessage (EXCEPTION) ===');
       return false;
     }
   }
@@ -183,30 +208,51 @@ Merci pour votre commande !
    * Nettoie et formate les numéros de téléphone internationaux
    */
   private cleanPhoneNumber(phone: string, countryCode?: string): string {
+    // 🐛 DEBUG LOGS - Mot-clé: CREATION_LIVREUR
+    console.log('🐛 CREATION_LIVREUR === DÉBUT cleanPhoneNumber ===');
+    console.log('🐛 CREATION_LIVREUR - phone (entrée):', phone);
+    console.log('🐛 CREATION_LIVREUR - countryCode (entrée):', countryCode);
+
     let cleaned = phone.replace(/[^\d+]/g, '');
+    console.log('🐛 CREATION_LIVREUR - Après suppression caractères spéciaux:', cleaned);
 
     console.log(`📞 [WhatsApp] Original: ${phone}, Code pays: ${countryCode}`);
 
     // Enlever le + si présent
     if (cleaned.startsWith('+')) {
       cleaned = cleaned.substring(1);
+      console.log('🐛 CREATION_LIVREUR - Après suppression "+" initial:', cleaned);
     }
 
     // Si code pays fourni, vérifier qu'il est présent
     if (countryCode) {
+      console.log('🐛 CREATION_LIVREUR - Code pays fourni, vérification...');
+      console.log('🐛 CREATION_LIVREUR - cleaned.startsWith(countryCode)?', cleaned.startsWith(countryCode));
+
       if (!cleaned.startsWith(countryCode)) {
+        console.log('🐛 CREATION_LIVREUR - Code pays manquant, ajout du prefix...');
+
         // Enlever le 0 initial si présent
         if (cleaned.startsWith('0')) {
           cleaned = cleaned.substring(1);
+          console.log('🐛 CREATION_LIVREUR - Après suppression "0" initial:', cleaned);
         }
+
         cleaned = countryCode + cleaned;
+        console.log('🐛 CREATION_LIVREUR - Après ajout du code pays:', cleaned);
+      } else {
+        console.log('🐛 CREATION_LIVREUR - Code pays déjà présent, pas de modification');
       }
+
       console.log(`✅ [WhatsApp] Formatted with code ${countryCode}: ${cleaned}`);
+      console.log('🐛 CREATION_LIVREUR === FIN cleanPhoneNumber (avec code pays) ===');
       return cleaned;
     }
 
     // Sinon, le numéro est déjà au format international complet
+    console.log('🐛 CREATION_LIVREUR - Aucun code pays fourni, considéré comme international');
     console.log(`✅ [WhatsApp] International number: ${cleaned}`);
+    console.log('🐛 CREATION_LIVREUR === FIN cleanPhoneNumber (sans code pays) ===');
     return cleaned;
   }
 
@@ -407,11 +453,21 @@ ${restaurantName} 💫`;
     driverCountryCode?: string
   ): Promise<boolean> {
     try {
+      // 🐛 DEBUG LOGS - Mot-clé: CREATION_LIVREUR
+      console.log('🐛 CREATION_LIVREUR === DÉBUT sendDriverAccessCode ===');
+      console.log('🐛 CREATION_LIVREUR - Paramètres reçus:');
+      console.log('  - driverPhone:', driverPhone);
+      console.log('  - driverName:', driverName);
+      console.log('  - accessCode:', accessCode);
+      console.log('  - restaurantName:', restaurantName);
+      console.log('  - restaurantPhone:', restaurantPhone);
+      console.log('  - driverCountryCode:', driverCountryCode);
+
       console.log(`🔐 [WhatsAppFrance] Sending access code to driver: ${driverName} (${driverPhone})`);
-      
+
       // Séparer prénom du nom complet pour un message plus personnel
       const firstName = driverName.split(' ')[0];
-      
+
       const message = `🌟 **BIENVENUE DANS L'ÉQUIPE ${restaurantName.toUpperCase()} !**
 
 Salut ${firstName} ! 👋
@@ -437,7 +493,14 @@ Prêt pour les premières commandes ? 🍕🏍️
 
 Bonne route partenaire ! 💪`;
 
+      console.log('🐛 CREATION_LIVREUR - Message construit, longueur:', message.length);
+      console.log('🐛 CREATION_LIVREUR - Appel sendMessage avec:');
+      console.log('  - phone:', driverPhone);
+      console.log('  - countryCode:', driverCountryCode);
+
       const result = await this.sendMessage(driverPhone, message, undefined, driverCountryCode);
+
+      console.log('🐛 CREATION_LIVREUR - Résultat sendMessage:', result);
 
       if (result) {
         console.log(`✅ [WhatsAppFrance] Access code sent successfully to ${driverName}`);
@@ -445,9 +508,11 @@ Bonne route partenaire ! 💪`;
         console.error(`❌ [WhatsAppFrance] Failed to send access code to ${driverName}`);
       }
 
+      console.log('🐛 CREATION_LIVREUR === FIN sendDriverAccessCode ===');
       return result;
-      
+
     } catch (error) {
+      console.error('🐛 CREATION_LIVREUR - EXCEPTION dans sendDriverAccessCode:', error);
       console.error(`❌ [WhatsAppFrance] Error sending driver access code:`, error);
       return false;
     }

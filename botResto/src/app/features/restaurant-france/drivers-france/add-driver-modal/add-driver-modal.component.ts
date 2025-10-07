@@ -124,15 +124,23 @@ export class AddDriverModalComponent implements OnInit, OnDestroy {
         const localNumber = this.driverForm.value.phone_number;
         const selectedPrefix = this.driverForm.value.country_code_selector;
 
+        // 🐛 DEBUG LOGS - Mot-clé: CREATION_LIVREUR
+        console.log('🐛 CREATION_LIVREUR --- Conversion numéro ---');
+        console.log('🐛 CREATION_LIVREUR - localNumber (saisi):', localNumber);
+        console.log('🐛 CREATION_LIVREUR - selectedPrefix (select):', selectedPrefix);
+
         // Convertir prefix vers code pays dynamiquement
         const countryCode = this.universalAuthService.getCountryCodeFromPrefix(selectedPrefix);
+        console.log('🐛 CREATION_LIVREUR - countryCode (après conversion):', countryCode);
 
         if (!countryCode) {
+          console.error('🐛 CREATION_LIVREUR - ERREUR: Pays non supporté pour prefix', selectedPrefix);
           throw new Error('Pays non supporté');
         }
 
         // Formatage simple vers international
         const finalPhoneNumber = this.universalAuthService.formatToInternational(localNumber, countryCode);
+        console.log('🐛 CREATION_LIVREUR - finalPhoneNumber (après formatage):', finalPhoneNumber);
 
         const formData: DriverFormData = {
           first_name: this.driverForm.value.first_name.trim(),
@@ -145,32 +153,10 @@ export class AddDriverModalComponent implements OnInit, OnDestroy {
         };
 
         console.log('📞 [AddDriverModal] Numéro final construit:', finalPhoneNumber);
+        console.log('📋 [AddDriverModal] Données préparées pour création en base');
 
-        // Envoyer le code par WhatsApp
-        const driverName = `${formData.first_name} ${formData.last_name}`;
-        const currentUser = this.authFranceService.getCurrentUser();
-        const restaurantName = currentUser?.name || currentUser?.restaurantName || 'Restaurant';
-
-        // Le code pays est celui sélectionné dans le select
-        const driverCountryCode = countryCode;
-
-        console.log('📱 [AddDriverModal] Envoi du code WhatsApp...');
-        const whatsAppSent = await this.whatsAppService.sendDriverAccessCode(
-          formData.phone_number,
-          driverName,
-          accessCode,
-          restaurantName,
-          currentUser?.phoneNumber, // Ajouter le numéro du restaurant
-          driverCountryCode // Code pays du livreur
-        );
-
-        if (!whatsAppSent) {
-          console.warn('⚠️ [AddDriverModal] Échec WhatsApp mais création continue');
-          await this.showToast('Livreur créé mais erreur d\'envoi WhatsApp', 'warning');
-        } else {
-          console.log('✅ [AddDriverModal] Code WhatsApp envoyé avec succès');
-        }
-
+        // ✅ ARCHITECTURE CORRIGÉE : Retourner les données sans envoyer WhatsApp
+        // L'envoi WhatsApp sera fait APRÈS la création en base dans drivers-france.page.ts
         await this.modalController.dismiss(formData, 'save');
         
       } catch (error) {

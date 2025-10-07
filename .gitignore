@@ -1,0 +1,82 @@
+# ===================================
+# 🔒 FICHIERS SENSIBLES ET SECRETS
+# ===================================
+
+# Dumps SQL (contiennent souvent des clés API, tokens, données sensibles)
+dump_*.sql
+*_dump.sql
+exp_*.sql
+
+# Fichiers de migration/synchronisation SQL (peuvent contenir des données sensibles)
+migrate_*.sql
+synchronize_*.sql
+replace_*.sql
+update_*.sql
+extract_*.sql
+
+# Structure complète de base de données (peut contenir des infos sensibles)
+structure_*.sql
+
+# Scripts SQL générés automatiquement à la racine
+/generate_*.sql
+/FINAL_*.sql
+/SIMPLE_*.sql
+
+# Instructions de migration
+MIGRATION_INSTRUCTIONS.md
+
+# Fichiers de différences
+structure_differences.txt
+
+# ===================================
+# FICHIERS DE CONFIGURATION
+# ===================================
+
+# Variables d'environnement (contiennent tokens, clés API)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Credentials
+credentials.json
+secrets.json
+
+# ===================================
+# NODE_MODULES ET DÉPENDANCES
+# ===================================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# ===================================
+# FICHIERS TEMPORAIRES ET CACHES
+# ===================================
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===================================
+# BUILD ET DISTRIBUTION
+# ===================================
+
+dist/
+build/
+*.zip
+*.tar.gz
