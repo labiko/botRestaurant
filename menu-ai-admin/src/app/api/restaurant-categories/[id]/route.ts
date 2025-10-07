@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Configuration Supabase selon l'environnement (DEV par défaut)
-const environment = process.env.NEXT_PUBLIC_ENVIRONMENT || 'DEV';
-const supabaseUrl = environment === 'PROD'
-  ? process.env.NEXT_PUBLIC_SUPABASE_URL_PROD
-  : process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabase = createClient(supabaseUrl!, supabaseKey!);
+import { getSupabaseClientForRequest } from '@/lib/api-helpers';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const supabase = getSupabaseClientForRequest(request);
     const restaurantId = parseInt(params.id);
 
     if (isNaN(restaurantId)) {

@@ -3,7 +3,7 @@
 // MODIFIER CETTE VARIABLE POUR BASCULER EN LOCAL !
 // =========================================================
 
-export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' = 'PROD';
+export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' = 'DEV';
 
 // =========================================================
 // CONFIGURATIONS HYBRIDES
