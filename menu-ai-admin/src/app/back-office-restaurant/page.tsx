@@ -166,6 +166,14 @@ export default function BackOfficeRestaurantPage() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [generatedSQL, setGeneratedSQL] = useState<{ verification: string; execution: string } | null>(null);
 
+  // États pour la gestion des sauces workflows
+  const [saucesStep, setSaucesStep] = useState<1 | 2 | 3>(1);
+  const [selectedSaucesRestaurant, setSelectedSaucesRestaurant] = useState<number | null>(null);
+  const [saucesProducts, setSaucesProducts] = useState<any[]>([]);
+  const [selectedSaucesProducts, setSelectedSaucesProducts] = useState<number[]>([]);
+  const [loadingSaucesProducts, setLoadingSaucesProducts] = useState(false);
+  const [generatedSaucesSQL, setGeneratedSaucesSQL] = useState<{ verification: string; execution: string } | null>(null);
+
   // Fonction de formatage de date avec correction du fuseau horaire
   const formatDateTime = (dateString: string): string => {
     const date = new Date(dateString);
@@ -1019,6 +1027,67 @@ export default function BackOfficeRestaurantPage() {
     }
   };
 
+  // Fonctions pour la gestion des sauces workflows
+  const loadSaucesProducts = async (restaurantId: number) => {
+    setLoadingSaucesProducts(true);
+    try {
+      const response = await fetchWithEnv(`/api/sauces-workflows/list-products?restaurant_id=${restaurantId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setSaucesProducts(data.products || []);
+        if (data.products.length === 0) {
+          showNotification('info', 'Aucun produit', 'Aucun produit avec step "Sauces" trouvé pour ce restaurant');
+        }
+      } else {
+        showNotification('error', 'Erreur', data.error || 'Impossible de charger les produits');
+        setSaucesProducts([]);
+      }
+    } catch (error) {
+      console.error('Erreur chargement produits sauces:', error);
+      showNotification('error', 'Erreur', 'Impossible de charger les produits');
+      setSaucesProducts([]);
+    } finally {
+      setLoadingSaucesProducts(false);
+    }
+  };
+
+  const generateSaucesSQL = async () => {
+    if (!selectedSaucesRestaurant || selectedSaucesProducts.length === 0) {
+      showNotification('error', 'Données manquantes', 'Restaurant et produits requis');
+      return;
+    }
+
+    setLoadingPreview(true);
+    try {
+      const response = await fetchWithEnv('/api/sauces-workflows/generate-sql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurant_id: selectedSaucesRestaurant,
+          product_ids: selectedSaucesProducts
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setGeneratedSaucesSQL({
+          verification: data.verification,
+          execution: data.execution
+        });
+        showNotification('success', 'Scripts générés', `${data.sauces_count} sauces pour ${data.products_count} produit(s)`);
+      } else {
+        showNotification('error', 'Erreur', data.error || 'Impossible de générer les scripts SQL');
+      }
+    } catch (error) {
+      console.error('Erreur génération SQL:', error);
+      showNotification('error', 'Erreur', 'Impossible de générer les scripts SQL');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
   const deleteIcon = async (id: number) => {
     if (!confirm('Supprimer cette icône du catalogue ?')) return;
 
@@ -1260,6 +1329,16 @@ export default function BackOfficeRestaurantPage() {
               }`}
             >
               🥤 Gestion Boissons Workflows
+            </button>
+            <button
+              onClick={() => setActiveTab('sauces-workflows')}
+              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'sauces-workflows'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🌶️ Gestion Sauces Workflows
             </button>
           </nav>
         </div>
@@ -3055,6 +3134,300 @@ export default function BackOfficeRestaurantPage() {
                       setBoissonsProducts([]);
                       setSelectedBoissonsProducts([]);
                       setGeneratedSQL(null);
+                      showNotification('success', 'Réinitialisé', 'Vous pouvez recommencer le processus');
+                    }}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    ✓ Terminer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab Gestion Sauces Workflows */}
+      {activeTab === 'sauces-workflows' && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold mb-4">🌶️ Gestion Sauces Workflows</h2>
+            <p className="text-gray-600">
+              Remplacer automatiquement les sauces des workflows par les sauces standardisées (16 sauces)
+            </p>
+          </div>
+
+          {/* Indicateur d'étapes */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className="flex items-center flex-1">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
+                    saucesStep === step
+                      ? 'border-blue-500 bg-blue-500 text-white'
+                      : saucesStep > step
+                      ? 'border-green-500 bg-green-500 text-white'
+                      : 'border-gray-300 bg-white text-gray-400'
+                  }`}>
+                    {saucesStep > step ? '✓' : step}
+                  </div>
+                  <div className={`ml-3 ${saucesStep === step ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+                    {step === 1 && 'Restaurant'}
+                    {step === 2 && 'Produits'}
+                    {step === 3 && 'SQL & Vérification'}
+                  </div>
+                  {step < 3 && (
+                    <div className={`flex-1 h-1 mx-4 ${saucesStep > step ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Étape 1 : Sélection du restaurant */}
+          {saucesStep === 1 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold mb-4">Étape 1 : Sélectionner un restaurant</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Restaurant
+                  </label>
+                  <select
+                    value={selectedSaucesRestaurant || ''}
+                    onChange={(e) => setSelectedSaucesRestaurant(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">-- Sélectionner un restaurant --</option>
+                    {restaurants.map((restaurant) => (
+                      <option key={restaurant.id} value={restaurant.id}>
+                        {restaurant.name} ({restaurant.city})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => {
+                      if (!selectedSaucesRestaurant) {
+                        showNotification('warning', 'Restaurant requis', 'Veuillez sélectionner un restaurant');
+                        return;
+                      }
+                      setSaucesStep(2);
+                      loadSaucesProducts(selectedSaucesRestaurant);
+                    }}
+                    disabled={!selectedSaucesRestaurant}
+                    className={`px-6 py-2 rounded-lg font-medium ${
+                      selectedSaucesRestaurant
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    Suivant →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Étape 2 : Sélection des produits */}
+          {saucesStep === 2 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold mb-4">Étape 2 : Sélectionner les produits</h3>
+
+              {loadingSaucesProducts ? (
+                <div className="text-center py-12">
+                  <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-blue-600 bg-blue-100">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Chargement des produits...
+                  </div>
+                </div>
+              ) : saucesProducts.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-6xl mb-4">🔍</div>
+                  <p>Aucun produit avec step "Sauces" trouvé pour ce restaurant.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600">
+                      Sélectionnez les produits dont vous souhaitez remplacer les sauces par les sauces standardisées
+                    </p>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <input
+                              type="checkbox"
+                              checked={selectedSaucesProducts.length === saucesProducts.length}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedSaucesProducts(saucesProducts.map(p => p.id));
+                                } else {
+                                  setSelectedSaucesProducts([]);
+                                }
+                              }}
+                              className="rounded border-gray-300"
+                            />
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Produit
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Catégorie
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Options Sauces
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {saucesProducts.map((product) => (
+                          <tr key={product.id} className={selectedSaucesProducts.includes(product.id) ? 'bg-blue-50' : ''}>
+                            <td className="px-6 py-4">
+                              <input
+                                type="checkbox"
+                                checked={selectedSaucesProducts.includes(product.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedSaucesProducts([...selectedSaucesProducts, product.id]);
+                                  } else {
+                                    setSelectedSaucesProducts(selectedSaucesProducts.filter(id => id !== product.id));
+                                  }
+                                }}
+                                className="rounded border-gray-300"
+                              />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">{product.category_name}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">{product.sauces_count} option(s)</div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex justify-between mt-6">
+                    <button
+                      onClick={() => setSaucesStep(1)}
+                      className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      ← Retour
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (selectedSaucesProducts.length === 0) {
+                          showNotification('warning', 'Produits requis', 'Veuillez sélectionner au moins un produit');
+                          return;
+                        }
+                        setSaucesStep(3);
+                        await generateSaucesSQL();
+                      }}
+                      disabled={selectedSaucesProducts.length === 0}
+                      className={`px-6 py-2 rounded-lg font-medium ${
+                        selectedSaucesProducts.length > 0
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      Suivant →
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Étape 3 : Prévisualisation et génération SQL */}
+          {saucesStep === 3 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold mb-4">Étape 3 : Scripts SQL</h3>
+
+              <div className="space-y-6">
+                {/* Script de vérification */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-md font-medium text-gray-900">1️⃣ Script de vérification</h4>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(generatedSaucesSQL?.verification || '');
+                          showNotification('success', 'Copié', 'Script de vérification copié dans le presse-papiers');
+                        } catch (error) {
+                          showNotification('error', 'Erreur', 'Impossible de copier dans le presse-papiers');
+                        }
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                    >
+                      📋 Copier
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Exécutez ce script en premier pour visualiser les sauces actuelles qui seront remplacées
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm overflow-x-auto max-h-64 overflow-y-auto border border-gray-200">
+                    <pre className="whitespace-pre-wrap text-xs">
+                      {generatedSaucesSQL?.verification || '-- Génération en cours...'}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Script d'exécution */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-md font-medium text-gray-900">2️⃣ Script d'exécution</h4>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(generatedSaucesSQL?.execution || '');
+                          showNotification('success', 'Copié', 'Script d\'exécution copié dans le presse-papiers');
+                        } catch (error) {
+                          showNotification('error', 'Erreur', 'Impossible de copier dans le presse-papiers');
+                        }
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      📋 Copier
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    ⚠️ Exécutez ce script uniquement après avoir vérifié les résultats du script de vérification
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm overflow-x-auto max-h-64 overflow-y-auto border border-gray-200">
+                    <pre className="whitespace-pre-wrap text-xs">
+                      {generatedSaucesSQL?.execution || '-- Génération en cours...'}
+                    </pre>
+                  </div>
+                </div>
+
+                <div className="flex justify-between mt-6">
+                  <button
+                    onClick={() => setSaucesStep(2)}
+                    className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    ← Retour
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Reset tout
+                      setSaucesStep(1);
+                      setSelectedSaucesRestaurant(null);
+                      setSaucesProducts([]);
+                      setSelectedSaucesProducts([]);
+                      setGeneratedSaucesSQL(null);
                       showNotification('success', 'Réinitialisé', 'Vous pouvez recommencer le processus');
                     }}
                     className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
