@@ -17,7 +17,7 @@ export class AudioNotificationsConfigComponent implements OnInit, OnDestroy {
   isLoading: boolean = true;
   isTestingSound: boolean = false;
   formattedEnabledSince: string = '';
-  private restaurantId: number = 1; // TODO: Récupérer depuis AuthService
+  private restaurantId: number;
   private subscriptions: Subscription[] = [];
 
   constructor(
@@ -25,7 +25,15 @@ export class AudioNotificationsConfigComponent implements OnInit, OnDestroy {
     private authService: AuthFranceService,
     private toastController: ToastController,
     private fuseauHoraireService: FuseauHoraireService
-  ) { }
+  ) {
+    // Récupérer l'ID du restaurant connecté
+    const id = this.authService.getCurrentRestaurantId();
+    if (id === null) {
+      console.error('❌ [AudioNotificationsConfig] Impossible de récupérer restaurant ID');
+      throw new Error('Restaurant ID requis - utilisateur non connecté');
+    }
+    this.restaurantId = id;
+  }
 
   ngOnInit() {
     this.loadAudioSettings();

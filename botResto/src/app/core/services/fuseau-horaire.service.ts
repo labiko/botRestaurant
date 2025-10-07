@@ -110,7 +110,7 @@ export class FuseauHoraireService {
   async getRestaurantFutureTimeForDatabase(restaurantId: number, minutes: number): Promise<string> {
     const restaurantTime = await this.getRestaurantCurrentTime(restaurantId);
     const future = new Date(restaurantTime.getTime() + (minutes * 60 * 1000));
-    
+
     // CORRECTION : Format local timestamp pour PostgreSQL (pas UTC)
     const year = future.getFullYear();
     const month = String(future.getMonth() + 1).padStart(2, '0');
@@ -118,7 +118,7 @@ export class FuseauHoraireService {
     const hour = String(future.getHours()).padStart(2, '0');
     const minute = String(future.getMinutes()).padStart(2, '0');
     const second = String(future.getSeconds()).padStart(2, '0');
-    
+
     return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
   }
 

@@ -2139,23 +2139,18 @@ export default function BackOfficeRestaurantPage() {
 
                                   {/* Sélecteur d'icône */}
                                   <div className="grid grid-cols-6 gap-2">
-                                    {[
-                                      '🍗', '🥩', '🐟', '🦐', '🍖', '🥓',
-                                      '🍛', '🍝', '🍜', '🥗', '🍞', '🥞',
-                                      '🥤', '☕', '🧃', '🍺', '🥛', '💧',
-                                      '🍕', '🍔', '🌯', '🥙', '🌮', '🥪'
-                                    ].map((iconOption, index) => (
+                                    {icons.map((iconData, index) => (
                                       <button
-                                        key={index}
-                                        onClick={() => saveOptionIcon(option.id, iconOption)}
+                                        key={`option-icon-${iconData.id}-${index}`}
+                                        onClick={() => saveOptionIcon(option.id, iconData.emoji)}
                                         className={`p-2 text-lg rounded-md border transition-all hover:scale-110 ${
-                                          option.icon === iconOption
+                                          option.icon === iconData.emoji
                                             ? 'border-green-500 bg-green-50'
                                             : 'border-gray-200 hover:border-green-300 hover:bg-gray-50'
                                         }`}
-                                        title={`Appliquer ${iconOption} à ${option.option_name}`}
+                                        title={`Appliquer ${iconData.emoji} ${iconData.name} à ${option.option_name}`}
                                       >
-                                        {iconOption}
+                                        {iconData.emoji}
                                       </button>
                                     ))}
                                   </div>
