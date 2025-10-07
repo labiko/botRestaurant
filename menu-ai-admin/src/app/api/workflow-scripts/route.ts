@@ -5,7 +5,7 @@
 // Sauvegarde un nouveau script SQL généré par le workflow
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClientForRequest } from '@/lib/api-helpers';
 
 interface CreateScriptRequest {
   productId: number;
@@ -48,10 +48,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Connexion Supabase
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Connexion Supabase (respecte l'environnement DEV/PROD)
+    const supabase = getSupabaseClientForRequest(request);
 
     // Préparation des données avec defaults
     const scriptData = {
@@ -71,11 +69,6 @@ export async function POST(request: NextRequest) {
       product_name: scriptData.product_name,
       sql_length: scriptData.sql_script.length,
       modifications: scriptData.modifications_summary
-    });
-
-    console.log('🔌 [WORKFLOW-SCRIPTS-API] Connexion Supabase:', {
-      url: !!supabaseUrl,
-      key: !!supabaseKey
     });
 
     // Insertion en base
