@@ -329,16 +329,13 @@ export class AuthFranceService {
   public async authenticateDriverByToken(driver: FranceUser): Promise<boolean> {
     try {
       // 1. Créer une session persistante (BDD + localStorage)
-      const sessionToken = this.generateSessionToken();
-      const sessionData = {
+      const sessionResult = await this.createSession({
         user_id: driver.id,
         user_type: driver.type,
-        session_token: sessionToken,
-        device_info: navigator.userAgent
-      };
+        session_token: this.generateSessionToken()
+      });
 
-      const sessionCreated = await this.createSession(sessionData);
-      if (!sessionCreated.success) {
+      if (!sessionResult.success) {
         console.error('❌ [AuthFrance] Échec création session pour token auth');
         return false;
       }
