@@ -538,6 +538,19 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       message += ' (obligatoire)';
     }
     message += '\n\n';
+    // Logique conditionnelle pour max_selections
+    if (optionGroup.conditional_max?.based_on_step !== undefined) {
+      const prevStep = optionGroup.conditional_max.based_on_step;
+      const prevSelections = Object.values(workflowData.selections)[prevStep - 1];
+
+      if (prevSelections && optionGroup.conditional_max.extract_number_from_name) {
+        const match = prevSelections[0]?.option_name?.match(/(\d+)/);
+        if (match) {
+          optionGroup.maxSelections = parseInt(match[1]);
+          console.log(`🔧 [CONDITIONAL] maxSelections ajusté à ${optionGroup.maxSelections}`);
+        }
+      }
+    }
     // Ajouter option "x" pour les étapes facultatives
     // Fallback compatible avec anciens ET nouveaux workflows
     const isStepRequired = optionGroup.required !== undefined

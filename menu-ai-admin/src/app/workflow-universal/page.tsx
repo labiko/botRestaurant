@@ -1692,7 +1692,58 @@ COMMIT;`;
                 <select
                   onChange={(e) => {
                     if (e.target.value) {
-                      loadExampleTemplate(e.target.value);
+                      if (e.target.value === 'tacos_conditional') {
+                        setWorkflowImportData({
+                          productName: 'TACOS',
+                          selectedRestaurant: null,
+                          newCategoryName: '',
+                          onSitePrice: 0,
+                          deliveryPrice: 0,
+                          steps: [
+                            {
+                              step: 1,
+                              type: 'options_selection',
+                              prompt: 'plat principal',
+                              option_groups: ['Plats'],
+                              required: true,
+                              max_selections: 1
+                            },
+                            {
+                              step: 2,
+                              type: 'options_selection',
+                              prompt: 'votre viande',
+                              option_groups: ['Viandes'],
+                              required: true,
+                              max_selections: 3,
+                              conditional_max: {
+                                enabled: true,
+                                based_on_step: 1,
+                                extract_number_from_name: true
+                              }
+                            }
+                          ],
+                          optionGroups: {
+                            'Plats': [
+                              { name: '1 viande au choix + Frites', price_modifier: 0, display_order: 1, emoji: '🥩' },
+                              { name: '2 viandes au choix + Frites', price_modifier: 1, display_order: 2, emoji: '🥩' },
+                              { name: '3 viandes au choix + Frites', price_modifier: 3, display_order: 3, emoji: '🥩' }
+                            ],
+                            'Viandes': [
+                              { name: 'Escalope', price_modifier: 0, display_order: 1, emoji: '🥩' },
+                              { name: 'Steak haché', price_modifier: 0, display_order: 2, emoji: '🥩' },
+                              { name: 'Tenders', price_modifier: 0, display_order: 3, emoji: '🥩' },
+                              { name: 'Nuggets', price_modifier: 0, display_order: 4, emoji: '🥩' },
+                              { name: 'Chicken Tandoori', price_modifier: 0, display_order: 5, emoji: '🥩' },
+                              { name: 'Chicken Curry', price_modifier: 0, display_order: 6, emoji: '🥩' },
+                              { name: 'Cordon bleu', price_modifier: 0, display_order: 7, emoji: '🥩' },
+                              { name: 'Merguez', price_modifier: 0, display_order: 8, emoji: '🥩' },
+                              { name: 'Kefta', price_modifier: 1, display_order: 9, emoji: '🥩' }
+                            ]
+                          }
+                        });
+                      } else {
+                        loadExampleTemplate(e.target.value);
+                      }
                       e.target.value = ''; // Reset select
                     }
                   }}
@@ -1703,6 +1754,7 @@ COMMIT;`;
                   <option value="simple">🍽️ Menu Simple (2 étapes obligatoires)</option>
                   <option value="complex">🍱 Menu Complexe (mix obligatoire/optionnel)</option>
                   <option value="pizza_complete">🍕 FORMULE PIZZA COMPLÈTE (6 étapes - Exemple d'entraînement)</option>
+                  <option value="tacos_conditional">🌮 TACOS avec choix viandes conditionnels (Exemple conditional_max)</option>
                 </select>
               </div>
 
@@ -1851,7 +1903,14 @@ COMMIT;`;
               {workflowImportData.steps.map((step, index) => (
                 <div key={index} className="border rounded-lg p-4 bg-gray-50">
                   <div className="flex justify-between items-start mb-3">
-                    <h3 className="font-semibold">Étape {step.step}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">Étape {step.step}</h3>
+                      {step.conditional_max && (
+                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                          📊 Conditionnel (step {step.conditional_max.based_on_step})
+                        </span>
+                      )}
+                    </div>
                     <button
                       onClick={() => {
                         const updatedSteps = workflowImportData.steps.filter((_, i) => i !== index);
@@ -1944,6 +2003,75 @@ COMMIT;`;
                           className="w-16 px-2 py-1 border rounded text-sm"
                         />
                       </div>
+                    </div>
+
+                    {/* Section Règles Conditionnelles */}
+                    <div className="border-t pt-4 mt-4">
+                      <h4 className="font-semibold mb-2">📊 Règles Conditionnelles (optionnel)</h4>
+
+                      <label className="flex items-center gap-2 mb-2">
+                        <input
+                          type="checkbox"
+                          checked={step.conditional_max?.enabled || false}
+                          onChange={(e) => {
+                            const updatedSteps = [...workflowImportData.steps];
+                            updatedSteps[index] = {
+                              ...updatedSteps[index],
+                              conditional_max: e.target.checked ? {
+                                enabled: true,
+                                based_on_step: 1,
+                                extract_number_from_name: true
+                              } : undefined
+                            };
+                            setWorkflowImportData({...workflowImportData, steps: updatedSteps});
+                          }}
+                        />
+                        <span>Max sélections basé sur step précédent</span>
+                      </label>
+
+                      {step.conditional_max?.enabled && (
+                        <div className="ml-6 space-y-2">
+                          <div>
+                            <label className="text-sm">Step source :</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={step.conditional_max.based_on_step}
+                              onChange={(e) => {
+                                const updatedSteps = [...workflowImportData.steps];
+                                updatedSteps[index] = {
+                                  ...updatedSteps[index],
+                                  conditional_max: {
+                                    ...updatedSteps[index].conditional_max,
+                                    based_on_step: parseInt(e.target.value)
+                                  }
+                                };
+                                setWorkflowImportData({...workflowImportData, steps: updatedSteps});
+                              }}
+                              className="ml-2 w-20 border rounded px-2 py-1"
+                            />
+                          </div>
+
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={step.conditional_max.extract_number_from_name}
+                              onChange={(e) => {
+                                const updatedSteps = [...workflowImportData.steps];
+                                updatedSteps[index] = {
+                                  ...updatedSteps[index],
+                                  conditional_max: {
+                                    ...updatedSteps[index].conditional_max,
+                                    extract_number_from_name: e.target.checked
+                                  }
+                                };
+                                setWorkflowImportData({...workflowImportData, steps: updatedSteps});
+                              }}
+                            />
+                            <span className="text-sm">Extraire nombre du nom d'option</span>
+                          </label>
+                        </div>
+                      )}
                     </div>
 
                     {!step.required && (

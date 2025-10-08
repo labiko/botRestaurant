@@ -19,6 +19,11 @@ export interface WorkflowStep {
   option_groups: string[];
   required: boolean;
   max_selections: number;
+  conditional_max?: {
+    enabled?: boolean;
+    based_on_step: number;
+    extract_number_from_name: boolean;
+  };
   bot_behavior?: {
     show_zero_option: boolean;
     zero_option_text?: string;
@@ -52,14 +57,26 @@ export class WorkflowGeneratorV2 {
 
     // Construire la configuration des steps
     const stepsConfig = {
-      steps: steps.map(step => ({
-        step: step.step,
-        type: step.type,
-        prompt: this.fixPromptWording(step.prompt),
-        option_groups: step.option_groups,
-        required: step.required,
-        max_selections: step.max_selections
-      }))
+      steps: steps.map(step => {
+        const stepConfig: any = {
+          step: step.step,
+          type: step.type,
+          prompt: this.fixPromptWording(step.prompt),
+          option_groups: step.option_groups,
+          required: step.required,
+          max_selections: step.max_selections
+        };
+
+        // Préserver conditional_max si présent
+        if (step.conditional_max && step.conditional_max.based_on_step) {
+          stepConfig.conditional_max = {
+            based_on_step: step.conditional_max.based_on_step,
+            extract_number_from_name: step.conditional_max.extract_number_from_name
+          };
+        }
+
+        return stepConfig;
+      })
     };
 
     let sql = `-- =========================================
@@ -72,6 +89,7 @@ export class WorkflowGeneratorV2 {
 -- ⚡ STRATÉGIE SMART UPDATE: UPDATE + INSERT + DELETE
 -- 🔒 PRÉSERVE LES IDS EXISTANTS
 -- 🚫 ÉVITE L'ACCUMULATION DE DONNÉES
+-- 🛡️ PRÉSERVE conditional_max dans steps_config
 
 BEGIN;
 
@@ -237,14 +255,26 @@ COMMIT;
 
     // Construire la configuration des steps
     const stepsConfig = {
-      steps: steps.map(step => ({
-        step: step.step,
-        type: step.type,
-        prompt: this.fixPromptWording(step.prompt),
-        option_groups: step.option_groups,
-        required: step.required,
-        max_selections: step.max_selections
-      }))
+      steps: steps.map(step => {
+        const stepConfig: any = {
+          step: step.step,
+          type: step.type,
+          prompt: this.fixPromptWording(step.prompt),
+          option_groups: step.option_groups,
+          required: step.required,
+          max_selections: step.max_selections
+        };
+
+        // Préserver conditional_max si présent
+        if (step.conditional_max && step.conditional_max.based_on_step) {
+          stepConfig.conditional_max = {
+            based_on_step: step.conditional_max.based_on_step,
+            extract_number_from_name: step.conditional_max.extract_number_from_name
+          };
+        }
+
+        return stepConfig;
+      })
     };
 
     let sql = `-- =========================================
@@ -392,14 +422,26 @@ COMMIT;
 
     // Construire la configuration des steps
     const stepsConfig = {
-      steps: steps.map(step => ({
-        step: step.step,
-        type: step.type,
-        prompt: this.fixPromptWording(step.prompt),
-        option_groups: step.option_groups,
-        required: step.required,
-        max_selections: step.max_selections
-      }))
+      steps: steps.map(step => {
+        const stepConfig: any = {
+          step: step.step,
+          type: step.type,
+          prompt: this.fixPromptWording(step.prompt),
+          option_groups: step.option_groups,
+          required: step.required,
+          max_selections: step.max_selections
+        };
+
+        // Préserver conditional_max si présent
+        if (step.conditional_max && step.conditional_max.based_on_step) {
+          stepConfig.conditional_max = {
+            based_on_step: step.conditional_max.based_on_step,
+            extract_number_from_name: step.conditional_max.extract_number_from_name
+          };
+        }
+
+        return stepConfig;
+      })
     };
 
     let sql = `-- =========================================
