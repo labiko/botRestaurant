@@ -28,12 +28,38 @@ export class TimezoneService {
       timezone,
       
       /**
-       * Obtenir l'heure actuelle (retourne Date UTC, le formatage se fait ailleurs)
+       * Obtenir l'heure actuelle dans le timezone du restaurant
        */
       getCurrentTime(): Date {
-        
         const now = new Date();
-        
+
+        // Formater dans le timezone du restaurant
+        const formatted = now.toLocaleString('fr-FR', {
+          timeZone: timezone, // Variable disponible dans closure
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+
+        // Parser "DD/MM/YYYY HH:mm:ss"
+        const parts = formatted.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+        if (parts) {
+          const [, day, month, year, hour, minute, second] = parts;
+          // Utiliser Date.UTC pour stocker l'heure locale
+          return new Date(Date.UTC(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day),
+            parseInt(hour),
+            parseInt(minute),
+            parseInt(second)
+          ));
+        }
+
         return now;
       },
       

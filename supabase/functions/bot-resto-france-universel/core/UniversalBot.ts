@@ -144,19 +144,24 @@ export class UniversalBot implements IMessageHandler {
     this.whatsappContactService = new WhatsAppContactService(greenApiUrl, instanceId, apiToken);
     
     // Initialiser les services de commande et adresse
-    this.orderService = new OrderService(this.supabaseUrl, this.supabaseKey);
+    this.orderService = new OrderService(
+      this.supabaseUrl,
+      this.supabaseKey,
+      this.getCurrentTime.bind(this)
+    );
     this.addressService = new AddressManagementService(
-      this.supabaseUrl, 
-      this.supabaseKey, 
+      this.supabaseUrl,
+      this.supabaseKey,
       this.whatsappContactService
     );
     this.googlePlacesService = new GooglePlacesService();
-    
+
     // Initialiser le service d'annulation
     this.cancellationService = new CancellationService(
-      this.supabaseUrl, 
-      this.supabaseKey, 
-      this.messageSender as any // WhatsAppNotificationFranceService compatible
+      this.supabaseUrl,
+      this.supabaseKey,
+      this.messageSender as any, // WhatsAppNotificationFranceService compatible
+      this.getCurrentTime.bind(this)
     );
     
     // Initialiser le service de découverte des restaurants
@@ -285,6 +290,13 @@ export class UniversalBot implements IMessageHandler {
         await this.handleRestoCommand(phoneNumber);
         return;
       }
+
+      // TEST HORAIRE - Commande temporaire pour vérifier timezone
+      // COMMENTÉ - Test validé le 2025-10-08
+      // if (message.toLowerCase().trim() === 'testhoraire') {
+      //   await this.handleTestHoraireCommand(phoneNumber);
+      //   return;
+      // }
 
       // PRIORITÉ 3: Messages classiques (salut/bonjour) - Menu générique
       if (message.toLowerCase().includes('salut') || message.toLowerCase().includes('bonjour')) {
@@ -3260,13 +3272,13 @@ export class UniversalBot implements IMessageHandler {
   async handleRestoCommand(phoneNumber: string): Promise<void> {
     try {
       console.log(`🏪 [RestaurantDiscovery] Commande "resto" reçue de: ${phoneNumber}`);
-      
+
       // 1. Nettoyer session existante (même logique qu'annuler)
       await this.deleteSession(phoneNumber);
-      
-      // 2. Créer session pour sélection de restaurant  
+
+      // 2. Créer session pour sélection de restaurant
       await this.createRestaurantDiscoverySession(phoneNumber);
-      
+
       // 3. Envoyer menu de choix
       const message = `🏪 **CHOISIR UN RESTAURANT**
 
@@ -3274,15 +3286,142 @@ export class UniversalBot implements IMessageHandler {
 📍 **2** - Restaurants près de moi
 
 💡 Tapez votre choix (**1** ou **2**)`;
-      
+
       await this.messageSender.sendMessage(phoneNumber, message);
-      
+
     } catch (error) {
       console.error('❌ [RestaurantDiscovery] Erreur handleRestoCommand:', error);
-      await this.messageSender.sendMessage(phoneNumber, 
+      await this.messageSender.sendMessage(phoneNumber,
         '❌ Erreur lors de l\'accès aux restaurants. Veuillez réessayer.');
     }
   }
+
+  /**
+   * 🧪 TEST - Vérification timezone et horaires pour restaurant Guinée
+   * COMMENTÉ - Test validé le 2025-10-08
+   * Résultats : ✅ UTC correctement géré, conversions timezone OK pour Paris et Guinée
+   */
+  /* async handleTestHoraireCommand(phoneNumber: string): Promise<void> {
+    try {
+      const supabase = await this.getSupabaseClient();
+
+      // Récupérer un restaurant PARIS
+      const { data: restoParis, error: errorParis } = await supabase
+        .from('france_restaurants')
+        .select('*')
+        .eq('timezone', 'Europe/Paris')
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+
+      // Récupérer un restaurant GUINÉE
+      const { data: restoGuinee, error: errorGuinee } = await supabase
+        .from('france_restaurants')
+        .select('*')
+        .eq('timezone', 'Africa/Conakry')
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+
+      if ((errorParis && errorGuinee) || (!restoParis && !restoGuinee)) {
+        await this.messageSender.sendMessage(phoneNumber,
+          '❌ Aucun restaurant trouvé pour le test');
+        return;
+      }
+
+      const restaurant = restoParis || restoGuinee;
+
+      // Heure UTC actuelle du serveur
+      const nowUTC = new Date();
+      const utcString = nowUTC.toISOString();
+
+      // Heure convertie Paris
+      const timeInParis = nowUTC.toLocaleString('fr-FR', {
+        timeZone: 'Europe/Paris',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+
+      // Heure convertie Guinée
+      const timeInGuinea = nowUTC.toLocaleString('fr-FR', {
+        timeZone: 'Africa/Conakry',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+
+      // Heure actuelle calculée par le service (comme pour vérification)
+      const currentTime = nowUTC.toLocaleTimeString('fr-FR', {
+        timeZone: restaurant.timezone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+
+      // Jour actuel en français
+      const days = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+      const localeDateString = nowUTC.toLocaleDateString('en-US', {
+        timeZone: restaurant.timezone,
+        weekday: 'short'
+      });
+      const dayMap: { [key: string]: number } = {
+        'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3,
+        'Thu': 4, 'Fri': 5, 'Sat': 6
+      };
+      const dayIndex = dayMap[localeDateString.split(',')[0]] || 0;
+      const currentDay = days[dayIndex];
+
+      // Horaires du jour
+      const businessHours = restaurant.business_hours || {};
+      const todaySchedule = businessHours[currentDay];
+
+      // Vérification avec le service
+      const scheduleResult = this.scheduleService.checkRestaurantSchedule(restaurant);
+
+      // Construction du message de test
+      const message = `🧪 **TEST HORAIRE - ${restaurant.name}**
+
+📍 **Timezone**: ${restaurant.timezone}
+
+⏰ **Heure UTC serveur**:
+${utcString}
+
+🇫🇷 **Heure Paris** (Europe/Paris):
+${timeInParis}
+
+🇬🇳 **Heure Guinée** (Africa/Conakry):
+${timeInGuinea}
+
+🎯 **Restaurant testé**:
+🕐 **Heure actuelle** (calculée): ${currentTime}
+📅 **Jour actuel**: ${currentDay}
+
+📋 **Horaires aujourd'hui**:
+${todaySchedule ? `${todaySchedule.isOpen ? '✅ Ouvert' : '❌ Fermé'} ${todaySchedule.opening || ''} - ${todaySchedule.closing || ''}` : '❌ Pas d\'horaire configuré'}
+
+🎯 **Résultat vérification**:
+${scheduleResult.isOpen ? '✅ RESTAURANT OUVERT' : '🔴 RESTAURANT FERMÉ'}
+Statut: ${scheduleResult.status}
+${scheduleResult.message || ''}
+${scheduleResult.nextOpenTime ? `Prochaine ouverture: ${scheduleResult.nextOpenTime}` : ''}`;
+
+      await this.messageSender.sendMessage(phoneNumber, message);
+
+    } catch (error) {
+      console.error('❌ [TestHoraire] Erreur:', error);
+      await this.messageSender.sendMessage(phoneNumber,
+        '❌ Erreur lors du test horaire');
+    }
+  } */
 
   /**
    * Créer session temporaire pour découverte restaurants
@@ -3744,7 +3883,7 @@ Tapez un numéro entre **1** et **${restaurants?.length || 0}**.`);
         .from('france_customer_addresses')
         .update({
           is_default: true,
-          updated_at: new Date().toISOString()
+          updated_at: this.getCurrentTime().toISOString()
         })
         .eq('id', addressId);
 

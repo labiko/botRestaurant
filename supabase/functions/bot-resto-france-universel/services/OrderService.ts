@@ -62,11 +62,14 @@ export interface OrderData {
 
 export class OrderService {
   private supabase: SupabaseClient;
+  private getTimeFunc?: () => Date;
 
   constructor(
     private supabaseUrl: string,
-    private supabaseKey: string
+    private supabaseKey: string,
+    getTimeFunc?: () => Date
   ) {
+    this.getTimeFunc = getTimeFunc;
     this.initSupabase();
   }
 
@@ -503,9 +506,10 @@ export class OrderService {
    * Mettre à jour le statut d'une commande
    */
   async updateOrderStatus(orderId: number, status: string): Promise<boolean> {
-    const { error } = await this.supabase
+    const updatedAt = this.getTimeFunc ? this.getTimeFunc().toISOString() : 'NOW()';
+    const { error} = await this.supabase
       .from('france_orders')
-      .update({ status, updated_at: 'NOW()' }) // Utilise le fuseau PostgreSQL (Europe/Paris)
+      .update({ status, updated_at: updatedAt })
       .eq('id', orderId);
     
     if (error) {

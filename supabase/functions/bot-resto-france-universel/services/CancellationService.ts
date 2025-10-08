@@ -71,12 +71,15 @@ export interface CancellationResult {
 
 export class CancellationService {
   private supabase: SupabaseClient;
-  
+  private getTimeFunc?: () => Date;
+
   constructor(
     private supabaseUrl: string,
     private supabaseKey: string,
-    private messageSender?: any // IMessageSender pour notifications livreur
+    private messageSender?: any, // IMessageSender pour notifications livreur
+    getTimeFunc?: () => Date
   ) {
+    this.getTimeFunc = getTimeFunc;
     this.initSupabase();
   }
 
@@ -143,11 +146,12 @@ export class CancellationService {
       }
 
       // 2. Mettre à jour statut en BDD avec timestamp correct
+      const updatedAt = this.getTimeFunc ? this.getTimeFunc().toISOString() : 'NOW()';
       const { error } = await this.supabase
         .from('france_orders')
-        .update({ 
-          status: 'annulee', 
-          updated_at: 'NOW()' // Utilise le fuseau PostgreSQL (Europe/Paris)
+        .update({
+          status: 'annulee',
+          updated_at: updatedAt
         })
         .eq('id', orderId)
         .not('status', 'in', '("livree","servie","recuperee","annulee")');
