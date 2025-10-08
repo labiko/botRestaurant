@@ -3,7 +3,17 @@
 // MODIFIER CETTE VARIABLE POUR BASCULER EN LOCAL !
 // =========================================================
 
-export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' = 'PROD';
+// Détection automatique pour builds (Vercel), manuel pour local
+import { environment } from '../../environments/environment';
+
+// ✅ MODIFIER CETTE LIGNE EN LOCAL pour basculer DEV/PROD
+const LOCAL_ENVIRONMENT: 'DEV' | 'PROD' = 'PROD';
+
+// Auto-détection pour Vercel, sinon utilise LOCAL_ENVIRONMENT
+export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' =
+  typeof environment !== 'undefined' && 'production' in environment
+    ? (environment.production ? 'PROD' : 'DEV')
+    : LOCAL_ENVIRONMENT;
 
 // =========================================================
 // CONFIGURATIONS HYBRIDES
