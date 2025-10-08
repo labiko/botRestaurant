@@ -33,11 +33,12 @@ jobs:
           npm config set registry https://registry.npmjs.org/
           rm -f package-lock.json
           npm install --legacy-peer-deps --registry https://registry.npmjs.org/
+          npm install -g @ionic/cli
 
       - name: Build Application
         working-directory: ./botResto
         run: |
-          npm run build:prod
+          ionic build --prod
         env:
           CI: false
 
