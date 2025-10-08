@@ -1,9 +1,9 @@
-// 🔧 CONFIGURATION ENVIRONNEMENT - HYBRIDE LOCAL/VERCEL
+// 🔧 CONFIGURATION ENVIRONNEMENT - PRODUCTION
 // =========================================================
-// MODIFIER CETTE VARIABLE POUR BASCULER EN LOCAL !
+// Ce fichier est utilisé pour les builds PRODUCTION
 // =========================================================
 
-export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' = 'DEV';
+export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' = 'PROD';
 
 // =========================================================
 // CONFIGURATIONS HYBRIDES
@@ -26,29 +26,11 @@ const ENVIRONMENTS = {
   }
 };
 
-// Récupération simple de l'environnement Vercel
-const getVercelEnvironment = (): 'DEV' | 'PROD' => {
-  // Vérification sécurisée pour Angular/Vercel
-  if (typeof process !== 'undefined' && process.env && process.env['NEXT_PUBLIC_ENVIRONMENT']) {
-    const env = process.env['NEXT_PUBLIC_ENVIRONMENT'];
-    return env === 'PROD' ? 'PROD' : 'DEV';
-  }
-
-  // Fallback local
-  return CURRENT_ENVIRONMENT;
-};
-
-// Environnement final
-const FINAL_ENVIRONMENT = getVercelEnvironment();
-
-// Configuration utilisée (logs discrets pour debug si nécessaire)
-console.log('🔧 [CONFIG] Environnement final:', FINAL_ENVIRONMENT);
-
-// Configuration finale simplifiée - DEV
+// Configuration finale simplifiée - PROD
 export const FRANCE_CONFIG = {
-  supabaseFranceUrl: ENVIRONMENTS.DEV.supabaseFranceUrl,
-  supabaseFranceAnonKey: ENVIRONMENTS.DEV.supabaseFranceAnonKey,
-  vercelUrl: ENVIRONMENTS.DEV.vercelUrl,
+  supabaseFranceUrl: ENVIRONMENTS.PROD.supabaseFranceUrl,
+  supabaseFranceAnonKey: ENVIRONMENTS.PROD.supabaseFranceAnonKey,
+  vercelUrl: ENVIRONMENTS.PROD.vercelUrl,
 
   // Green API (identique pour DEV et PROD)
   greenApi: {
@@ -61,11 +43,9 @@ export const FRANCE_CONFIG = {
   payment: {
     successUrl: `https://menu-ai-admin.vercel.app/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
     cancelUrl: `https://menu-ai-admin.vercel.app/payment-cancel.html?session_id={CHECKOUT_SESSION_ID}`,
-    webhookUrl: `${ENVIRONMENTS.DEV.supabaseFranceUrl}/functions/v1/payment-webhook-handler`
+    webhookUrl: `${ENVIRONMENTS.PROD.supabaseFranceUrl}/functions/v1/payment-webhook-handler`
   },
 
-  environmentName: ENVIRONMENTS.DEV.environmentName,
-  debugMode: ENVIRONMENTS.DEV.debugMode
+  environmentName: ENVIRONMENTS.PROD.environmentName,
+  debugMode: ENVIRONMENTS.PROD.debugMode
 };
-
-// Configuration exportée sans logs de debug
