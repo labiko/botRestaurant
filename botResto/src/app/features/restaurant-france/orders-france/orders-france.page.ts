@@ -503,15 +503,13 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   }
 
   /**
-   * Récupérer le nom du livreur assigné
+   * Récupérer le nom du livreur assigné (prénom uniquement)
    */
   getDriverName(order: FranceOrder): string {
     if (order.delivery_driver) {
-      const firstName = order.delivery_driver.first_name || '';
-      const lastName = order.delivery_driver.last_name || '';
-      return `${firstName} ${lastName}`.trim() || 'Livreur';
+      return order.delivery_driver.first_name || 'Livreur';
     }
-    
+
     return 'Livreur assigné';
   }
 
@@ -916,13 +914,13 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
           // DEBUG: Log pour vérifier les valeurs
           order.pendingDriversCount = assignmentState.pendingDrivers.length;
           
-          // Construire la liste des noms des livreurs
+          // Construire la liste des noms des livreurs (prénoms uniquement)
           if (assignmentState.pendingDrivers.length > 0) {
             order.pendingDriverNames = assignmentState.pendingDrivers
               .map(a => {
                 const driver = a.france_delivery_drivers;
                 if (driver) {
-                  return `${driver.first_name || ''} ${driver.last_name || ''}`.trim();
+                  return driver.first_name || 'Livreur inconnu';
                 }
                 return 'Livreur inconnu';
               })
