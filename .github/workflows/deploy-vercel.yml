@@ -38,7 +38,7 @@ jobs:
       - name: Build Application
         working-directory: ./botResto
         run: |
-          ionic build --prod
+          npm run build:prod
         env:
           CI: false
 
