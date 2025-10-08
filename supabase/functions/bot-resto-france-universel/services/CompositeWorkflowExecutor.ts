@@ -1143,19 +1143,63 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
    * Obtenir le nom d'affichage pour un groupe
    */ getGroupDisplayName(groupName) {
     const displayNames = {
+      // Viandes
       'viande': 'Viandes',
       'viandes': 'Viandes',
+      'choix viande': 'Viandes',
+      'choix_viande': 'Viandes',
+      'viandes & charcuterie': 'Viandes & Charcuterie',
+
+      // Sauces
       'sauce': 'Sauces',
       'sauces': 'Sauces',
-      'extras': 'Suppléments',
-      'extras_choice': 'Suppléments',
+
+      // Extras & Suppléments
+      'extras': 'Extras',
+      'extras_choice': 'Extras',
       'supplements': 'Suppléments',
+      'suppléments': 'Suppléments',
+      'suppléments bowl': 'Suppléments',
+      'choix suppléments': 'Suppléments',
+
+      // Boissons
       'boisson': 'Boisson',
       'boissons': 'Boissons',
+      'boissons_choix': 'Boissons',
+      'boisson 33cl incluse': 'Boisson 33cl incluse',
+      'boisson 1.5l incluse': 'Boisson 1.5L incluse',
+      'boisson enfant': 'Boisson enfant',
+
+      // Plats
+      'plats': 'Plats',
+      'plat principal': 'Plat principal',
+      'choix_plat': 'Plats',
+
+      // Choix spécifiques
+      'pizzas_choix': 'Pizzas',
+      'paninis_choix': 'Paninis',
+      'pates_choix': 'Pâtes',
+      'salades_choix': 'Salades',
+      'desserts_choix': 'Desserts',
+
+      // Accompagnements
       'accompagnement': 'Accompagnement',
+      'accompagnement_panini': 'Accompagnement',
+
+      // Condiments
+      'condiments': 'Condiments',
+
+      // Fromages
+      'fromages & légumes': 'Fromages & Légumes',
+
+      // Spécialités
+      'cheesy crust': 'Cheesy Crust',
+
+      // Autres
       'taille': 'Taille',
       'size': 'Taille'
     };
+
     return displayNames[groupName.toLowerCase()] || groupName;
   }
   /**

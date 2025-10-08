@@ -297,9 +297,9 @@ export class DeliveryAssignmentService {
         .select('*')
         .eq('order_id', orderId)
         .eq('assignment_status', 'accepted')
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = not found (OK)
+      if (error) {
         console.error('❌ [DeliveryAssignment] Erreur vérification assignation acceptée:', error);
         return null;
       }

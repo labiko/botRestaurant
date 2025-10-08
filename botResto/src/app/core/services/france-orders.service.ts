@@ -864,7 +864,7 @@ export class FranceOrdersService {
         .select('auto_send_on_order, send_on_delivery, is_active')
         .eq('restaurant_id', this.currentRestaurantId)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (configError || !paymentConfig || !paymentConfig.is_active) {
         // Pas de configuration active = pas d'envoi automatique
