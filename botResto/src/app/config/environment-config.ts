@@ -1,9 +1,12 @@
-// 🔧 CONFIGURATION ENVIRONNEMENT - HYBRIDE LOCAL/VERCEL
+// 🔧 CONFIGURATION ENVIRONNEMENT - DÉTECTION AUTOMATIQUE
 // =========================================================
-// MODIFIER CETTE VARIABLE POUR BASCULER EN LOCAL !
+// Utilise environment.production pour détecter DEV/PROD
 // =========================================================
 
-export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' = 'DEV';
+import { environment } from '../../environments/environment';
+
+// Détection automatique via Angular environment
+export const CURRENT_ENVIRONMENT: 'DEV' | 'PROD' = environment.production ? 'PROD' : 'DEV';
 
 // =========================================================
 // CONFIGURATIONS HYBRIDES
@@ -26,29 +29,17 @@ const ENVIRONMENTS = {
   }
 };
 
-// Récupération simple de l'environnement Vercel
-const getVercelEnvironment = (): 'DEV' | 'PROD' => {
-  // Vérification sécurisée pour Angular/Vercel
-  if (typeof process !== 'undefined' && process.env && process.env['NEXT_PUBLIC_ENVIRONMENT']) {
-    const env = process.env['NEXT_PUBLIC_ENVIRONMENT'];
-    return env === 'PROD' ? 'PROD' : 'DEV';
-  }
+// Configuration utilisée (logs discrets pour debug)
+console.log('🔧 [CONFIG] Environnement détecté:', CURRENT_ENVIRONMENT);
 
-  // Fallback local
-  return CURRENT_ENVIRONMENT;
-};
+// Sélection automatique de l'environnement
+const SELECTED_ENV = ENVIRONMENTS[CURRENT_ENVIRONMENT];
 
-// Environnement final
-const FINAL_ENVIRONMENT = getVercelEnvironment();
-
-// Configuration utilisée (logs discrets pour debug si nécessaire)
-console.log('🔧 [CONFIG] Environnement final:', FINAL_ENVIRONMENT);
-
-// Configuration finale simplifiée - DEV
+// Configuration finale - Automatique selon build
 export const FRANCE_CONFIG = {
-  supabaseFranceUrl: ENVIRONMENTS.DEV.supabaseFranceUrl,
-  supabaseFranceAnonKey: ENVIRONMENTS.DEV.supabaseFranceAnonKey,
-  vercelUrl: ENVIRONMENTS.DEV.vercelUrl,
+  supabaseFranceUrl: SELECTED_ENV.supabaseFranceUrl,
+  supabaseFranceAnonKey: SELECTED_ENV.supabaseFranceAnonKey,
+  vercelUrl: SELECTED_ENV.vercelUrl,
 
   // Green API (identique pour DEV et PROD)
   greenApi: {
@@ -61,11 +52,11 @@ export const FRANCE_CONFIG = {
   payment: {
     successUrl: `https://menu-ai-admin.vercel.app/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
     cancelUrl: `https://menu-ai-admin.vercel.app/payment-cancel.html?session_id={CHECKOUT_SESSION_ID}`,
-    webhookUrl: `${ENVIRONMENTS.DEV.supabaseFranceUrl}/functions/v1/payment-webhook-handler`
+    webhookUrl: `${SELECTED_ENV.supabaseFranceUrl}/functions/v1/payment-webhook-handler`
   },
 
-  environmentName: ENVIRONMENTS.DEV.environmentName,
-  debugMode: ENVIRONMENTS.DEV.debugMode
+  environmentName: SELECTED_ENV.environmentName,
+  debugMode: SELECTED_ENV.debugMode
 };
 
 // Configuration exportée sans logs de debug
