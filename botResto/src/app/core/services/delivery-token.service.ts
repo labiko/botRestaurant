@@ -259,7 +259,7 @@ export class DeliveryTokenService {
 
       // 🕐 CORRECTION TIMEZONE : Utiliser l'heure du restaurant pour la comparaison
       const restaurantId = token.france_orders.restaurant_id;
-      const currentTime = await this.fuseauHoraireService.getCurrentDatabaseTimeForRestaurant();
+      const currentTime = await this.fuseauHoraireService.getRestaurantFutureTimeForDatabase(restaurantId, 0);
       const now = new Date(currentTime);
 
       // 🕐 CONVERSION TIMEZONE : expires_at stocké SANS timezone, il faut le convertir
@@ -415,10 +415,18 @@ export class DeliveryTokenService {
       };
 
       // 4. Mettre à jour l'authentification dans AuthFranceService
-      this.authFranceService.authenticateDriverByToken(driver);
-      
+      const authenticated = await this.authFranceService.authenticateDriverByToken(driver);
+
+      if (!authenticated) {
+        console.error('❌ [DeliveryToken] Échec création session persistante');
+        return {
+          success: false,
+          message: 'Erreur lors de la création de la session'
+        };
+      }
+
       console.log('✅ [DeliveryToken] Authentification par token réussie pour:', driver.name);
-      
+
       return {
         success: true,
         driver: driver,

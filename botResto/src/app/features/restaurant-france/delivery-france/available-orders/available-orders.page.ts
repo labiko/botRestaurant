@@ -346,12 +346,27 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
             await loading.present();
 
             try {
+              // Si on a un token dans l'URL, l'utiliser directement
+              if (this.acceptanceToken) {
+                const acceptResult = await this.deliveryTokenService.acceptOrderByToken(this.acceptanceToken);
+
+                if (acceptResult.success) {
+                  this.loadAvailableOrders();
+                  this.presentToast('Commande acceptée avec succès');
+                  this.router.navigate(['/restaurant-france/delivery-france/my-orders']);
+                } else {
+                  this.presentToast(acceptResult.message || 'Erreur lors de l\'acceptation');
+                }
+                await loading.dismiss();
+                return;
+              }
+
               // MODIFICATION: Réutiliser le token existant au lieu d'en générer un nouveau
               // Récupérer les tokens existants pour cette commande
               const existingTokens = await this.deliveryTokenService.getTokensForOrder(order.id);
-              
-              // MODIFICATION: Utiliser n'importe quel token disponible (pas de contrôle livreur)
-              const availableToken = existingTokens.length > 0 ? existingTokens[0] : null;
+
+              // Trouver le token du livreur connecté
+              const availableToken = existingTokens.find(t => t.driver_id === this.currentDriver!.id);
               
               if (availableToken) {
                 // Utiliser le token existant (avec logs détaillés [ACCEPT_DETAILED])
@@ -368,10 +383,10 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
               } else {
                 // Fallback: Générer un token si aucun n'existe pour ce livreur
                 const tokenResult = await this.deliveryTokenService.generateTokensForOrder(order.id);
-                
+
                 if (tokenResult.success && tokenResult.tokens.length > 0) {
-                  // Utiliser n'importe quel token généré (pas de contrôle livreur)
-                  const newToken = tokenResult.tokens[0];
+                  // Trouver le token du livreur connecté
+                  const newToken = tokenResult.tokens.find(t => t.driver_id === this.currentDriver!.id);
                   
                   if (newToken) {
                     const acceptResult = await this.deliveryTokenService.acceptOrderByToken(newToken.token);

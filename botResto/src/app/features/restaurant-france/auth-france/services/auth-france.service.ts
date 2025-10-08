@@ -326,12 +326,37 @@ export class AuthFranceService {
    * NOUVEAU : Authentifier un livreur par token (méthode publique)
    * Utilisée par le service delivery-token pour l'auto-login
    */
-  public authenticateDriverByToken(driver: FranceUser): void {
-    this.setCurrentUser(driver);
-    
-    // NOUVEAU: Démarrer monitoring session pour livreur authentifié par token
-    if (driver.type === 'driver') {
-      this.driverSessionMonitorService.startMonitoring(driver.id);
+  public async authenticateDriverByToken(driver: FranceUser): Promise<boolean> {
+    try {
+      // 1. Créer une session persistante (BDD + localStorage)
+      const sessionToken = this.generateSessionToken();
+      const sessionData = {
+        user_id: driver.id,
+        user_type: driver.type,
+        session_token: sessionToken,
+        device_info: navigator.userAgent
+      };
+
+      const sessionCreated = await this.createSession(sessionData);
+      if (!sessionCreated.success) {
+        console.error('❌ [AuthFrance] Échec création session pour token auth');
+        return false;
+      }
+
+      // 2. Mettre à jour l'état d'authentification
+      this.setCurrentUser(driver);
+
+      // 3. Démarrer monitoring session pour livreur authentifié par token
+      if (driver.type === 'driver') {
+        this.driverSessionMonitorService.startMonitoring(driver.id);
+      }
+
+      console.log('✅ [AuthFrance] Session persistante créée pour auth par token');
+      return true;
+
+    } catch (error) {
+      console.error('❌ [AuthFrance] Erreur authenticateDriverByToken:', error);
+      return false;
     }
   }
 
