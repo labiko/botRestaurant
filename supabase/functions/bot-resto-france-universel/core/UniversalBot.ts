@@ -3256,8 +3256,12 @@ export class UniversalBot implements IMessageHandler {
     }
     
     // Prix et action - Utiliser la devise du restaurant
-    productBlock += `💰 ${this.formatPrice(activePrice)} - Tapez ${index + 1}\n\n`;
-    
+    // Afficher "Prix selon choix" pour les produits workflow avec prix 0
+    const priceDisplay = (activePrice === 0 && (product.workflow_type || product.requires_steps))
+      ? 'Prix selon choix'
+      : this.formatPrice(activePrice);
+    productBlock += `💰 ${priceDisplay} - Tapez ${index + 1}\n\n`;
+
     return productBlock;
   }
 
