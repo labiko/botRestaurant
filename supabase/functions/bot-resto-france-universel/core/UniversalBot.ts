@@ -2192,26 +2192,52 @@ export class UniversalBot implements IMessageHandler {
     console.log(`📍 [AddressWorkflow] ${existingAddresses.length} adresses trouvées`);
 
     if (existingAddresses.length > 0) {
-      // ✅ Client a des adresses → Afficher liste
-      let message = `📍 *Vos adresses enregistrées :*\n\n`;
+      // ✅ Client a des adresses → Afficher liste avec format moderne
+      let message = `📍 Vos adresses enregistrées :\n\n`;
 
       existingAddresses.forEach((addr, index) => {
-        const icon = this.getAddressIcon(addr.address_label);
-        const defaultMark = addr.is_default ? ' ⭐' : '';
-        message += `${index + 1}. ${icon} ${addr.address_label}${defaultMark}\n`;
-        message += `   ${addr.full_address}\n\n`;
+        // Séparateur visuel
+        message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+
+        // Emoji numéroté
+        const numberEmoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][index] || `${index + 1}️⃣`;
+
+        // Emoji selon le type d'adresse
+        let typeEmoji = '🏠';
+        if (addr.address_label.toLowerCase().includes('bureau')) {
+          typeEmoji = '🏢';
+        }
+
+        // Nom en majuscules avec badge favori
+        const labelUpper = addr.address_label.toUpperCase();
+        const favoriteTag = addr.is_default ? ' ⭐ FAVORI' : '';
+        message += `${numberEmoji} ${typeEmoji} ${labelUpper}${favoriteTag}\n`;
+
+        // Parser l'adresse pour séparer rue et ville/code postal
+        const addressParts = addr.full_address.split(',');
+        if (addressParts.length >= 2) {
+          const street = addressParts[0].trim();
+          const cityPostal = addressParts.slice(1).join(',').trim();
+          message += `📍 ${street}\n`;
+          message += `📮 ${cityPostal}\n\n`;
+        } else {
+          // Fallback si format non standard
+          message += `📍 ${addr.full_address}\n\n`;
+        }
       });
 
       const nextNum = existingAddresses.length + 1;
+      const nextNumberEmoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][nextNum - 1] || `${nextNum}️⃣`;
+      message += `━━━━━━━━━━━━━━━━━━━━━\n`;
 
       // Option selon config resto
       if (deliveryAddressMode === 'geolocation') {
-        message += `${nextNum}. 📍 Partager ma position\n\n`;
+        message += `${nextNumberEmoji} 📍 Partager ma position\n\n`;
       } else {
-        message += `${nextNum}. ➕ Nouvelle adresse\n\n`;
+        message += `${nextNumberEmoji} ➕ Nouvelle adresse\n\n`;
       }
 
-      message += `Tapez le numéro de votre choix`;
+      message += `💡 Tapez le numéro de votre choix`;
 
       await this.messageSender.sendMessage(phoneNumber, message);
 
@@ -3811,29 +3837,63 @@ Tapez un numéro entre **1** et **${restaurants?.length || 0}**.`);
       const cleanPhone = phoneNumber.replace('@c.us', '');
       const existingAddresses = await this.addressService.getCustomerAddresses(cleanPhone);
 
-      // Afficher liste
+      // Afficher liste avec format moderne
       let message = existingAddresses?.length > 0
-        ? `📍 *Vos adresses enregistrées :*\n\n`
+        ? `📍 Vos adresses enregistrées :\n\n`
         : `Aucune adresse enregistrée.\n\n`;
 
-      // Lister adresses existantes
+      // Lister adresses existantes avec format moderne
       existingAddresses?.forEach((addr: any, index: number) => {
-        const icon = this.getAddressIcon(addr.address_label);
-        const defaultMark = addr.is_default ? ' ⭐' : '';
-        message += `${index + 1}. ${icon} ${addr.address_label}${defaultMark}\n`;
-        message += `   ${addr.full_address}\n\n`;
+        // Séparateur visuel
+        message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+
+        // Emoji numéroté
+        const numberEmoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][index] || `${index + 1}️⃣`;
+
+        // Emoji selon le type d'adresse
+        let typeEmoji = '🏠';
+        if (addr.address_label.toLowerCase().includes('bureau')) {
+          typeEmoji = '🏢';
+        }
+
+        // Nom en majuscules avec badge favori
+        const labelUpper = addr.address_label.toUpperCase();
+        const favoriteTag = addr.is_default ? ' ⭐ FAVORI' : '';
+        message += `${numberEmoji} ${typeEmoji} ${labelUpper}${favoriteTag}\n`;
+
+        // Parser l'adresse pour séparer rue et ville/code postal
+        const addressParts = addr.full_address.split(',');
+        if (addressParts.length >= 2) {
+          const street = addressParts[0].trim();
+          const cityPostal = addressParts.slice(1).join(',').trim();
+          message += `📍 ${street}\n`;
+          message += `📮 ${cityPostal}\n\n`;
+        } else {
+          // Fallback si format non standard
+          message += `📍 ${addr.full_address}\n\n`;
+        }
       });
 
       const nextNum = (existingAddresses?.length || 0) + 1;
+      const nextNumberEmoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][nextNum - 1] || `${nextNum}️⃣`;
+
+      if (existingAddresses?.length > 0) {
+        message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+      }
 
       // Option partage position (SI resto en mode geolocation)
       const showGpsOption = restaurant?.delivery_address_mode === 'geolocation';
       if (showGpsOption) {
-        message += `${nextNum}. 📍 Partager ma position\n\n`;
+        message += `${nextNumberEmoji} 📍 Partager ma position\n\n`;
+      } else if (existingAddresses?.length > 0) {
+        message += `${nextNumberEmoji} ➕ Nouvelle adresse\n\n`;
       }
 
-      message += `Tapez le numéro de votre choix\n`;
-      message += `Ou tapez votre adresse directement`;
+      if (existingAddresses?.length > 0) {
+        message += `💡 Tapez le numéro de votre choix`;
+      } else {
+        message += `Tapez votre adresse directement`;
+      }
 
       await this.messageSender.sendMessage(phoneNumber, message);
 
