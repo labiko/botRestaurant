@@ -220,9 +220,14 @@ ion-content {
         --inner-padding-start: 0; // Pas de padding interne
         --inner-padding-end: 0;
         min-height: 65px;
-        display: flex;
-        align-items: center;
         position: relative;
+
+        // Force l'alignement à gauche pour le contenu
+        &::part(native) {
+          padding-left: 0;
+          padding-right: 0;
+          justify-content: flex-start;
+        }
 
         &.phone-input {
           &.ion-focused {
@@ -262,9 +267,12 @@ ion-content {
         .input-prefix {
           display: flex;
           align-items: center;
+          justify-content: flex-start; // Forcer alignement à gauche
           margin-right: 8px; // Espacement entre icône et texte
-          margin-left: 0; // Collé à gauche
+          margin-left: 16px !important; // Déplacé 3px à droite
+          padding-left: 0 !important; // Pas de padding à gauche
           flex-shrink: 0;
+          order: -1; // Forcer à être le premier élément
 
           // Drapeau français en CSS pur
           .french-indicator {
@@ -301,6 +309,8 @@ ion-content {
             color: var(--ion-color-primary);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             opacity: 0.8;
+            margin: 0; // Pas de margin auto
+            display: block; // Block pour éviter centrage inline
           }
         }
 
@@ -318,6 +328,7 @@ ion-content {
             transform: translateY(0);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             margin: 0; // Pas de margin
+            padding-left: 16px; // Alignement avec le select
 
             &.modern-label {
               letter-spacing: 0.3px;
@@ -325,7 +336,7 @@ ion-content {
           }
 
           ion-select {
-            --padding-start: 0;
+            --padding-start: 16px; // Alignement avec les icônes des autres champs
             --padding-end: 0;
             font-size: 16px;
             font-weight: 500;
@@ -613,7 +624,10 @@ ion-content {
 
           .input-prefix {
             margin-right: 6px; // Espacement réduit sur mobile
-            margin-left: 0; // Collé à gauche
+            margin-left: 16px !important; // Déplacé 3px à droite
+            padding-left: 0 !important; // Pas de padding à gauche
+            justify-content: flex-start; // Forcer alignement à gauche
+            order: -1; // Forcer à être le premier élément
 
             .flag-icon {
               font-size: 16px;
@@ -626,6 +640,8 @@ ion-content {
 
             .phone-icon, .password-icon {
               font-size: 18px; // Légèrement plus petites sur mobile
+              margin: 0; // Pas de margin auto
+              display: block; // Block pour éviter centrage inline
             }
           }
 
@@ -636,6 +652,11 @@ ion-content {
             ion-label {
               font-size: 12px;
               margin: 0; // Pas de margin
+              padding-left: 16px; // Alignement avec le select
+            }
+
+            ion-select {
+              --padding-start: 16px; // Alignement avec les icônes des autres champs
             }
 
             ion-input {
