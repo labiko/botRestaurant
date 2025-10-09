@@ -315,7 +315,13 @@ export class MyOrdersPage implements OnInit, OnDestroy {
       // Auto-validation si les 4 chiffres sont saisis
       if (this.isOTPComplete(orderId)) {
         setTimeout(() => {
-          this.validateInlineOTP({ id: orderId } as DeliveryOrder);
+          // ✅ FIX: Retrouver l'objet order complet depuis this.myOrders
+          const fullOrder = this.myOrders.find(o => o.id === orderId);
+          if (fullOrder) {
+            this.validateInlineOTP(fullOrder);
+          } else {
+            console.error('❌ [MyOrders] Commande introuvable pour ID:', orderId);
+          }
         }, 200);
       }
     } else {
@@ -402,11 +408,24 @@ export class MyOrdersPage implements OnInit, OnDestroy {
 
           // NOUVEAU: Envoyer le message de remerciement au client
           try {
+            // 🐛 DEBUG: Logger l'objet order complet avant l'envoi WhatsApp
+            console.log('📞 [MyOrders] === DÉBUT DEBUG WHATSAPP COMPLETION ===');
+            console.log('📞 [MyOrders] Order ID:', order.id);
+            console.log('📞 [MyOrders] Order Number:', order.order_number);
+            console.log('📞 [MyOrders] Phone Number:', order.phone_number);
+            console.log('📞 [MyOrders] Phone Number type:', typeof order.phone_number);
+            console.log('📞 [MyOrders] Customer Name:', order.customer_name);
+            console.log('📞 [MyOrders] Customer Country Code:', (order as any).customer_country_code);
+            console.log('📞 [MyOrders] Restaurant:', order.france_restaurants);
+            console.log('📞 [MyOrders] Order complet:', JSON.stringify(order, null, 2));
+            console.log('📞 [MyOrders] === FIN DEBUG WHATSAPP COMPLETION ===');
+
             const restaurantName = order.france_restaurants?.name || 'Restaurant';
             const messageSent = await this.whatsappNotificationFranceService.sendOrderCompletionMessage(
               order.phone_number,
               order.order_number,
-              restaurantName
+              restaurantName,
+              order.delivery_mode
             );
             
             if (messageSent) {

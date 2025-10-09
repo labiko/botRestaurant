@@ -405,25 +405,45 @@ Merci pour votre commande !
    * Envoie un message de remerciement après validation OTP - Modèle 5
    */
   async sendOrderCompletionMessage(
-    clientPhone: string, 
-    orderNumber: string, 
-    restaurantName: string
+    clientPhone: string,
+    orderNumber: string,
+    restaurantName: string,
+    deliveryMode?: string
   ): Promise<boolean> {
     try {
       console.log(`🎉 [WhatsAppFrance] Sending completion message for order ${orderNumber}`);
-      
-      const completionMessage = `🌟 *Livraison réussie - Commande #${orderNumber}*
 
-Votre expérience avec *${restaurantName}* se termine en beauté ! ✨
+      // Adapter le titre et la confirmation selon le mode
+      let title = '';
+      let confirmation = '';
 
-✅ Livraison confirmée
-🍽️ Il ne reste plus qu'à déguster !
+      switch(deliveryMode) {
+        case 'livraison':
+          title = '✅ Livraison confirmée !';
+          confirmation = 'Commande livrée avec succès 🎉';
+          break;
+        case 'a_emporter':
+          title = '✅ Commande récupérée !';
+          confirmation = 'Retrait effectué avec succès 🎉';
+          break;
+        case 'sur_place':
+          title = '✅ Commande servie !';
+          confirmation = 'Service effectué avec succès 🎉';
+          break;
+        default:
+          title = '✅ Commande confirmée !';
+          confirmation = 'Commande traitée avec succès 🎉';
+      }
 
-Tapez "resto" pour commander à nouveau ! 
+      const completionMessage = `${title}
 
-Excellente dégustation ! 
+${confirmation}
 
-${restaurantName} 💫`;
+Bon appétit ! 🍽️
+
+👉 Pour recommander, tapez directement le numéro de téléphone du restaurant
+
+${restaurantName}`;
 
       const result = await this.sendMessage(clientPhone, completionMessage, orderNumber);
       
