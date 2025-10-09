@@ -311,20 +311,26 @@ export class LoginFrancePage implements OnInit, OnDestroy {
       return;
     }
 
-    const phoneNumber = this.loginForm.get('phone')?.value;
-    const countryCode = this.loginForm.get('country_code_selector')?.value;
+    const localNumber = this.loginForm.get('phone')?.value;
+    const selectedPrefix = this.loginForm.get('country_code_selector')?.value;
 
-    if (!phoneNumber) {
+    if (!localNumber) {
       await this.showToast('Veuillez saisir votre numéro de téléphone', 'warning');
       return;
     }
 
-    // Construire le numéro complet
-    let localNumber = phoneNumber.replace(/\s+/g, '');
-    if (localNumber.startsWith('0')) {
-      localNumber = localNumber.substring(1);
+    // Convertir prefix vers code pays dynamiquement (SYSTÈME UNIVERSEL)
+    const countryCode = this.universalAuthService.getCountryCodeFromPrefix(selectedPrefix);
+
+    if (!countryCode) {
+      await this.showToast('Pays non supporté', 'danger');
+      return;
     }
-    const finalPhone = `${countryCode}${localNumber}`;
+
+    // Formatage simple vers international (SYSTÈME UNIVERSEL)
+    const internationalNumber = this.universalAuthService.formatToInternational(localNumber.trim(), countryCode);
+
+    console.log('📞 [Code oublié] Local:', localNumber, '→ International:', internationalNumber);
 
     const loading = await this.loadingController.create({
       message: 'Envoi en cours...'
@@ -332,7 +338,7 @@ export class LoginFrancePage implements OnInit, OnDestroy {
     await loading.present();
 
     try {
-      const result = await this.authFranceService.resendDriverAccessCode(finalPhone);
+      const result = await this.authFranceService.resendDriverAccessCode(internationalNumber);
 
       loading.dismiss();
 
