@@ -243,6 +243,7 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  gap: 8px; // Espacement entre identity et contact
 }
 
 .driver-identity {
@@ -250,6 +251,7 @@
   align-items: center;
   gap: 12px;
   flex: 1;
+  min-width: 0; // Important pour ellipsis
 }
 
 // Avatar moderne avec ion-avatar
@@ -276,20 +278,27 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  
+  flex: 1;
+  min-width: 0; // Important pour permettre text-overflow
+
   .driver-name {
     font-weight: 600;
     font-size: 16px;
     color: var(--ion-color-dark);
+    // Limiter à 1 ligne avec ellipsis
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
-  
+
   .assignment-status {
     display: flex;
     align-items: center;
     gap: 4px;
     font-size: 12px;
     color: var(--ion-color-success);
-    
+
     ion-icon {
       font-size: 14px;
     }
@@ -313,16 +322,17 @@
   font-size: 14px;
   font-weight: 500;
   transition: all 0.2s ease;
-  
+  flex-shrink: 0; // Empêcher la compression du bouton
+
   &:hover {
     background: var(--ion-color-primary-shade);
     transform: scale(1.02);
   }
-  
+
   .phone-icon {
     font-size: 16px;
   }
-  
+
   .phone-text {
     white-space: nowrap;
   }
@@ -386,15 +396,55 @@
     transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
   }
-  
+
   70% {
     transform: scale(1);
     box-shadow: 0 0 0 10px rgba(74, 222, 128, 0);
   }
-  
+
   100% {
     transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
+// Optimisation mobile pour le bloc livreur
+@media (max-width: 767px) {
+  .driver-info-badge {
+    &.modern {
+      padding: 12px; // Réduire padding de 16px à 12px
+      gap: 6px; // Réduire gap de 8px à 6px
+    }
+  }
+
+  .driver-name-section {
+    .driver-name {
+      font-size: 14px; // Réduire de 16px à 14px sur mobile
+    }
+
+    .assignment-status {
+      font-size: 11px; // Réduire de 12px à 11px
+    }
+  }
+
+  .phone-button {
+    padding: 6px 10px; // Réduire padding de 8px 12px à 6px 10px
+    font-size: 13px; // Réduire de 14px à 13px
+    gap: 6px; // Réduire gap de 8px à 6px
+
+    .phone-icon {
+      font-size: 14px; // Réduire de 16px à 14px
+    }
+  }
+
+  .assignment-meta {
+    font-size: 11px; // Réduire de 12px à 11px
+    padding-top: 6px; // Réduire padding de 8px à 6px
+  }
+
+  .delivery-status {
+    font-size: 11px; // Réduire de 12px à 11px
+    margin-top: 6px; // Réduire margin de 8px à 6px
   }
 }
 

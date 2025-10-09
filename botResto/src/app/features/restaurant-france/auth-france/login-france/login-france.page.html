@@ -48,9 +48,6 @@
       <!-- Sélecteur de pays pour livreur uniquement -->
       <div class="input-container" *ngIf="selectedProfileType === 'driver'">
         <ion-item class="modern-input" lines="none">
-          <div class="input-prefix">
-            <ion-icon name="globe-outline"></ion-icon>
-          </div>
           <div class="input-content">
             <ion-label position="floating" class="modern-label">Pays</ion-label>
             <ion-select formControlName="country_code_selector" interface="popover">
@@ -65,9 +62,6 @@
       <!-- Sélecteur de pays pour restaurant -->
       <div class="input-container" *ngIf="selectedProfileType === 'restaurant'">
         <ion-item class="modern-input" lines="none">
-          <div class="input-prefix">
-            <ion-icon name="globe-outline"></ion-icon>
-          </div>
           <div class="input-content">
             <ion-label position="floating" class="modern-label">Pays</ion-label>
             <ion-select formControlName="country_code_selector" interface="popover">

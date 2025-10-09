@@ -92,7 +92,7 @@
               <div class="status-indicator" [attr.data-status]="order.currentStatus">
                 <ion-icon [name]="getStatusIcon(order.currentStatus)" [color]="getStatusColor(order.currentStatus)"></ion-icon>
               </div>
-              <span class="order-number">Commande #{{order.orderNumber}}</span>
+              <span class="order-number">#{{order.orderNumber}}</span>
             </ion-card-title>
             <ion-card-subtitle>
               <ion-chip [color]="getStatusColor(order.currentStatus)" size="small" fill="solid">

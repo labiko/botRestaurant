@@ -207,17 +207,21 @@ ion-content {
       }
 
       .modern-input {
-        border-radius: 16px;
-        background: white;
-        box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
-        border: 2px solid #e8ecf4;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        --background: white;
+        border-radius: 20px; // Plus arrondi (16px → 20px)
+        background: rgba(255, 255, 255, 0.95); // Glassmorphism subtil
+        backdrop-filter: blur(10px);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(232, 236, 244, 0.8); // Border plus fine (2px → 1px)
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); // Animation plus douce
+        --background: transparent;
         --color: var(--ion-color-dark);
+        --padding-start: 16px; // Padding ion-item à gauche
+        --padding-end: 16px; // Padding ion-item à droite
+        --inner-padding-start: 0; // Pas de padding interne
+        --inner-padding-end: 0;
         min-height: 65px;
         display: flex;
         align-items: center;
-        padding: 0 16px;
         position: relative;
 
         &.phone-input {
@@ -242,25 +246,29 @@ ion-content {
 
         &.ion-focused {
           border-color: var(--ion-color-primary);
-          box-shadow: 0 6px 25px rgba(var(--ion-color-primary-rgb), 0.15);
-          transform: translateY(-2px);
-          background: linear-gradient(135deg, rgba(var(--ion-color-primary-rgb), 0.02) 0%, rgba(var(--ion-color-primary-rgb), 0.05) 100%);
-          
-          .phone-icon, .password-icon {
-            color: var(--ion-color-primary);
-            transform: scale(1.1);
+          box-shadow: 0 4px 20px rgba(var(--ion-color-primary-rgb), 0.2); // Ombre plus douce
+          transform: translateY(-1px); // Moins de mouvement (2px → 1px)
+          background: rgba(255, 255, 255, 1); // Fond blanc pur au focus
+
+          .input-prefix {
+            .phone-icon, .password-icon {
+              color: var(--ion-color-primary);
+              opacity: 1; // Opacité complète au focus
+              transform: scale(1.05); // Animation douce
+            }
           }
         }
 
         .input-prefix {
           display: flex;
           align-items: center;
-          margin-right: 12px;
+          margin-right: 8px; // Espacement entre icône et texte
+          margin-left: 0; // Collé à gauche
           flex-shrink: 0;
 
           // Drapeau français en CSS pur
           .french-indicator {
-            margin-right: 10px;
+            margin-right: 0;
             
             .flag-background {
               width: 24px;
@@ -289,26 +297,38 @@ ion-content {
           }
 
           .phone-icon, .password-icon {
-            font-size: 22px;
+            font-size: 20px; // Taille cohérente
             color: var(--ion-color-primary);
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.8;
           }
         }
 
         .input-content {
           flex: 1;
           min-width: 0;
+          width: 100%; // Prend tout l'espace disponible
+          margin: 0; // Pas de margin
+          padding: 0; // Pas de padding
 
           ion-label {
             color: var(--ion-color-medium);
             font-weight: 500;
             font-size: 13px;
             transform: translateY(0);
-            transition: all 0.3s ease;
-            
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            margin: 0; // Pas de margin
+
             &.modern-label {
               letter-spacing: 0.3px;
             }
+          }
+
+          ion-select {
+            --padding-start: 0;
+            --padding-end: 0;
+            font-size: 16px;
+            font-weight: 500;
           }
 
           ion-input {
@@ -350,17 +370,11 @@ ion-content {
           }
         }
 
-        // Animation au focus pour les icônes
-        &.ion-focused .input-prefix .phone-icon,
-        &.ion-focused .input-prefix .password-icon {
-          color: var(--ion-color-primary);
-          transform: scale(1.1);
-        }
-
         // Effet de shimmer lors du survol
         &:hover:not(.ion-focused) {
-          background: linear-gradient(145deg, white 0%, rgba(var(--ion-color-primary-rgb), 0.02) 100%);
-          border-color: rgba(var(--ion-color-primary-rgb), 0.3);
+          background: rgba(255, 255, 255, 0.98);
+          border-color: rgba(var(--ion-color-primary-rgb), 0.4);
+          box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
         }
       }
     }
@@ -520,12 +534,12 @@ ion-content {
 // =============================================================================
 @media (max-width: 480px) {
   .header-section {
-    padding: 10px 15px 20px 15px; // Header plus compact sur mobile
-    min-height: 140px; // Plus petit sur mobile
+    padding: 8px 15px 15px 15px; // Header plus compact sur mobile
+    min-height: 110px; // Réduit de 140px à 110px
 
     .app-logo {
-      width: 60px !important;
-      height: 60px !important;
+      width: 55px !important; // Réduit de 60px à 55px
+      height: 55px !important;
     }
 
     .app-title {
@@ -563,12 +577,22 @@ ion-content {
   }
 
   .login-section {
-    padding: 15px;
-    min-height: calc(100vh - 160px); // Ajustement pour header plus petit
+    padding: 12px; // Réduit de 15px à 12px
+    min-height: calc(100vh - 130px); // Ajusté pour header 110px
 
     .login-header {
-      margin-bottom: 20px; // Réduction espace sur mobile
-      
+      margin-bottom: 15px; // Réduit de 20px à 15px
+
+      .back-button {
+        // Masquer le texte, garder uniquement l'icône
+        font-size: 0;
+
+        ion-icon {
+          font-size: 24px;
+          margin-right: 0;
+        }
+      }
+
       .login-title {
         font-size: 1.2rem;
 
@@ -580,18 +604,19 @@ ion-content {
 
     .login-form {
       .input-container {
-        margin-bottom: 15px;
+        margin-bottom: 10px; // Réduit de 15px à 10px
 
         .modern-input {
-          min-height: 52px;
-          padding: 0 12px;
+          min-height: 48px; // Réduit de 52px à 48px
+          --padding-start: 12px; // Padding mobile à gauche
+          --padding-end: 12px; // Padding mobile à droite
 
           .input-prefix {
-            margin-right: 8px;
+            margin-right: 6px; // Espacement réduit sur mobile
+            margin-left: 0; // Collé à gauche
 
             .flag-icon {
               font-size: 16px;
-              margin-right: 6px;
             }
 
             .country-code {
@@ -600,13 +625,17 @@ ion-content {
             }
 
             .phone-icon, .password-icon {
-              font-size: 18px;
+              font-size: 18px; // Légèrement plus petites sur mobile
             }
           }
 
           .input-content {
+            margin: 0; // Pas de margin
+            padding: 0; // Pas de padding
+
             ion-label {
               font-size: 12px;
+              margin: 0; // Pas de margin
             }
 
             ion-input {
