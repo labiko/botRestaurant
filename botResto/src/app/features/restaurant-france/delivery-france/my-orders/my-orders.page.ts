@@ -16,6 +16,7 @@ import { DeliveryOrderItemsService } from '../../../../core/services/delivery-or
 import { UniversalOrderDisplayService, FormattedItem } from '../../../../core/services/universal-order-display.service';
 import { AddressWhatsAppService } from '../../../../core/services/address-whatsapp.service';
 import { FuseauHoraireService } from '../../../../core/services/fuseau-horaire.service';
+import { DeliveryTokenService } from '../../../../core/services/delivery-token.service';
 
 @Component({
   selector: 'app-my-orders',
@@ -69,7 +70,8 @@ export class MyOrdersPage implements OnInit, OnDestroy {
     private deliveryOrderItemsService: DeliveryOrderItemsService,
     private universalOrderDisplayService: UniversalOrderDisplayService,
     private addressWhatsAppService: AddressWhatsAppService,
-    private fuseauHoraireService: FuseauHoraireService
+    private fuseauHoraireService: FuseauHoraireService,
+    private deliveryTokenService: DeliveryTokenService
   ) {}
 
   ngOnInit() {
@@ -435,6 +437,24 @@ export class MyOrdersPage implements OnInit, OnDestroy {
             }
           } catch (messageError) {
             console.error('❌ [MyOrders] Erreur envoi message remerciement:', messageError);
+          }
+
+          // NOUVEAU: Désactiver le token du livreur
+          try {
+            if (this.currentDriver?.id) {
+              const tokenDisabled = await this.deliveryTokenService.markTokenAsUsedAfterOTP(
+                order.id,
+                this.currentDriver.id
+              );
+
+              if (tokenDisabled) {
+                console.log(`✅ [MyOrders] Token désactivé pour livreur ${this.currentDriver.id}`);
+              } else {
+                console.warn(`⚠️ [MyOrders] Échec désactivation token (non bloquant)`);
+              }
+            }
+          } catch (tokenError) {
+            console.error('❌ [MyOrders] Erreur désactivation token (non bloquant):', tokenError);
           }
 
           this.showOTPInput[order.id] = false;

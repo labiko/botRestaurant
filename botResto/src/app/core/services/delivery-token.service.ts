@@ -278,6 +278,12 @@ export class DeliveryTokenService {
       if (token.used) {
         // Si token utilisé, vérifier si c'est pour accès post-acceptation
         if (token.france_orders.driver_id === token.driver_id) {
+          // NOUVEAU: Refuser si commande déjà livrée
+          if (token.france_orders.status === 'livree') {
+            console.log('❌ [DeliveryToken] Commande déjà livrée');
+            return { valid: false, reason: 'Commande déjà livrée' };
+          }
+
           // Token utilisé mais par le bon livreur - permettre l'accès si pas expiré
           if (expiresAtUTC > now) {
             console.log('✅ [DeliveryToken] Accès post-acceptation autorisé');
@@ -807,6 +813,35 @@ export class DeliveryTokenService {
         deletedCount: 0,
         message: 'Erreur lors du nettoyage'
       };
+    }
+  }
+
+  /**
+   * Marquer le token d'un livreur comme utilisé après validation OTP
+   */
+  async markTokenAsUsedAfterOTP(orderId: number, driverId: number): Promise<boolean> {
+    try {
+      console.log(`🔒 [DeliveryToken] Désactivation token après OTP - Commande ${orderId}, Livreur ${driverId}`);
+
+      const { error } = await this.supabaseFranceService.client
+        .from('delivery_tokens')
+        .update({
+          used: true,
+          updated_at: this.fuseauHoraireService.getCurrentTimeForDatabase()
+        })
+        .eq('order_id', orderId)
+        .eq('driver_id', driverId);
+
+      if (error) {
+        console.error('❌ [DeliveryToken] Erreur désactivation token après OTP:', error);
+        return false;
+      }
+
+      console.log(`✅ [DeliveryToken] Token désactivé après validation OTP`);
+      return true;
+    } catch (error) {
+      console.error('❌ [DeliveryToken] Erreur markTokenAsUsedAfterOTP:', error);
+      return false;
     }
   }
 }
