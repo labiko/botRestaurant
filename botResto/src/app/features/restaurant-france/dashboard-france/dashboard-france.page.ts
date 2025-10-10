@@ -254,7 +254,7 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
    */
   async loadStripeConfig() {
     try {
-      const { data } = await this.supabaseFranceService.getClient().functions.invoke('subscription-restaurant', {
+      const { data } = await this.supabaseFranceService.client.functions.invoke('subscription-restaurant', {
         body: { action: 'get_config' }
       });
       this.stripeConfig = data?.config;
@@ -274,7 +274,7 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
         throw new Error('Restaurant ID non trouvé');
       }
 
-      const { data, error } = await this.supabaseFranceService.getClient().functions.invoke('subscription-restaurant', {
+      const { data, error } = await this.supabaseFranceService.client.functions.invoke('subscription-restaurant', {
         body: {
           action: 'create_checkout',
           restaurant_id: restaurantId,
