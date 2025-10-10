@@ -1194,6 +1194,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
           handler: async () => {
             await alert.dismiss();
             this.router.navigate(['/restaurant-france/payments-france']);
+            return false;
           }
         }
       ],
