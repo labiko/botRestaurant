@@ -10,7 +10,7 @@ interface Restaurant {
   subscription_end_date: string;
   subscription_plan: 'monthly' | 'quarterly' | 'annual';
   phone: string;
-  email: string;
+  whatsapp_number: string;
 }
 
 interface ProlongModalData {
@@ -48,7 +48,7 @@ export default function SubscriptionsPage() {
     try {
       const { data, error } = await supabase
         .from('france_restaurants')
-        .select('id, name, subscription_status, subscription_end_date, subscription_plan, phone, email')
+        .select('id, name, subscription_status, subscription_end_date, subscription_plan, phone, whatsapp_number')
         .order('subscription_end_date', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
@@ -76,7 +76,7 @@ export default function SubscriptionsPage() {
       filtered = filtered.filter(r =>
         r.name.toLowerCase().includes(term) ||
         r.phone?.toLowerCase().includes(term) ||
-        r.email?.toLowerCase().includes(term)
+        r.whatsapp_number?.toLowerCase().includes(term)
       );
     }
 
@@ -220,7 +220,7 @@ export default function SubscriptionsPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Nom, téléphone, email..."
+              placeholder="Nom, téléphone, WhatsApp..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>

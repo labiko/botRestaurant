@@ -40,7 +40,12 @@ const routes: Routes = [
     path: 'settings',
     loadChildren: () => import('./settings-france/settings-france.module').then(m => m.SettingsFrancePageModule),
     canActivate: [RestaurantFranceGuard]
+  },  {
+    path: 'payments-france',
+    loadChildren: () => import('./payments-france/payments-france.module').then( m => m.PaymentsFrancePageModule),
+    canActivate: [RestaurantFranceGuard]
   },
+
 ];
 
 @NgModule({

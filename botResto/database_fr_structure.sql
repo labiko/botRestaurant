@@ -1,6 +1,26 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
+CREATE TABLE public.admin_stripe_config (
+  id bigint NOT NULL DEFAULT nextval('admin_stripe_config_id_seq'::regclass),
+  config_name character varying DEFAULT 'main'::character varying UNIQUE,
+  stripe_public_key text NOT NULL,
+  stripe_secret_key text NOT NULL,
+  stripe_webhook_secret text,
+  price_id_monthly text,
+  price_id_quarterly text,
+  price_id_annual text,
+  amount_monthly numeric DEFAULT 49.00,
+  amount_quarterly numeric DEFAULT 127.00,
+  amount_annual numeric DEFAULT 420.00,
+  currency character varying DEFAULT 'EUR'::character varying,
+  is_active boolean DEFAULT true,
+  environment character varying DEFAULT 'live'::character varying CHECK (environment::text = ANY (ARRAY['test'::character varying, 'live'::character varying]::text[])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  notes text,
+  CONSTRAINT admin_stripe_config_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.automation_logs (
   id integer NOT NULL DEFAULT nextval('automation_logs_id_seq'::regclass),
   action character varying NOT NULL,
@@ -405,6 +425,9 @@ CREATE TABLE public.france_restaurants (
   deployment_status character varying DEFAULT 'production'::character varying CHECK (deployment_status::text = ANY (ARRAY['development'::character varying, 'testing'::character varying, 'production'::character varying]::text[])),
   delivery_address_mode character varying DEFAULT 'address'::character varying CHECK (delivery_address_mode::text = ANY (ARRAY['address'::character varying, 'geolocation'::character varying]::text[])),
   currency character varying DEFAULT 'EUR'::character varying CHECK (currency::text = ANY (ARRAY['EUR'::character varying, 'GNF'::character varying, 'XOF'::character varying]::text[])),
+  subscription_status character varying DEFAULT 'active'::character varying CHECK (subscription_status::text = ANY (ARRAY['active'::character varying, 'expiring'::character varying, 'expired'::character varying, 'suspended'::character varying]::text[])),
+  subscription_end_date timestamp with time zone,
+  subscription_plan character varying DEFAULT 'monthly'::character varying CHECK (subscription_plan::text = ANY (ARRAY['monthly'::character varying, 'quarterly'::character varying, 'annual'::character varying]::text[])),
   CONSTRAINT france_restaurants_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.france_sessions (
@@ -668,6 +691,24 @@ CREATE TABLE public.step_executor_mappings (
   is_active boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT step_executor_mappings_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.subscription_history (
+  id bigint NOT NULL DEFAULT nextval('subscription_history_id_seq'::regclass),
+  restaurant_id integer NOT NULL,
+  action character varying NOT NULL CHECK (action::text = ANY (ARRAY['manual_renewal'::character varying, 'stripe_renewal'::character varying, 'initial_setup'::character varying, 'suspension'::character varying, 'reactivation'::character varying]::text[])),
+  old_end_date timestamp with time zone,
+  new_end_date timestamp with time zone,
+  duration_months integer,
+  amount_paid numeric,
+  payment_method character varying CHECK (payment_method::text = ANY (ARRAY['manual'::character varying, 'stripe'::character varying, 'free'::character varying]::text[])),
+  admin_user character varying,
+  stripe_session_id character varying,
+  stripe_payment_intent character varying,
+  notes text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT subscription_history_pkey PRIMARY KEY (id),
+  CONSTRAINT subscription_history_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
 );
 CREATE TABLE public.supported_countries (
   id integer NOT NULL DEFAULT nextval('supported_countries_id_seq'::regclass),

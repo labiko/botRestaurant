@@ -80,3 +80,4 @@ dist/
 build/
 *.zip
 *.tar.gz
+insert_stripe_config_test.sql
