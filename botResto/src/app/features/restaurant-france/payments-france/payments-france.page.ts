@@ -171,6 +171,6 @@ export class PaymentsFrancePage implements OnInit {
    * Retour au dashboard
    */
   goBack() {
-    this.router.navigate(['/dashboard-france']);
+    this.router.navigate(['/restaurant-france/dashboard-france']);
   }
 }
