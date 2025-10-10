@@ -106,6 +106,24 @@ function SidebarContent() {
       bgColor: 'bg-purple-50',
       description: 'Vérification intelligente catégorie par catégorie'
     },
+    {
+      id: 'subscriptions',
+      label: 'Gestion Abonnements',
+      icon: '💳',
+      path: '/subscriptions',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      description: 'Gérer et prolonger les abonnements restaurants'
+    },
+    {
+      id: 'stripe-config',
+      label: 'Configuration Stripe',
+      icon: '⚙️',
+      path: '/stripe-config',
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50',
+      description: 'Paramétrer les clés et plans Stripe'
+    },
     ...(process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' ? [{
       id: 'green-api-health',
       label: 'Green API Health',
