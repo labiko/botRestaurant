@@ -1191,8 +1191,9 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       buttons: [
         {
           text: 'Renouveler',
-          handler: () => {
-            this.router.navigate(['/dashboard-france']);
+          handler: async () => {
+            await alert.dismiss();
+            this.router.navigate(['/restaurant-france/payments-france']);
           }
         }
       ],
