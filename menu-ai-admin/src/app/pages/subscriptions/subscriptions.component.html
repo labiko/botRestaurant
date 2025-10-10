@@ -1,0 +1,115 @@
+<div class="subscriptions-container">
+  <h1>📊 Gestion des Abonnements</h1>
+
+  <div class="filters">
+    <div class="filter-buttons">
+      <button
+        (click)="filter = 'all'; applyFilters()"
+        [class.active]="filter === 'all'">
+        Tous ({{ restaurants.length }})
+      </button>
+      <button
+        (click)="filter = 'expiring'; applyFilters()"
+        [class.active]="filter === 'expiring'"
+        class="btn-warning">
+        ⚠️ Expirant < 30j
+      </button>
+      <button
+        (click)="filter = 'expired'; applyFilters()"
+        [class.active]="filter === 'expired'"
+        class="btn-danger">
+        ❌ Expirés
+      </button>
+    </div>
+
+    <input
+      type="text"
+      [(ngModel)]="searchTerm"
+      (input)="applyFilters()"
+      placeholder="🔍 Rechercher restaurant..."
+      class="search-input">
+  </div>
+
+  <div class="restaurants-list" *ngIf="!isLoading">
+    <div
+      *ngFor="let resto of filteredRestaurants"
+      class="restaurant-card">
+
+      <div class="resto-info">
+        <h3>{{ resto.name }}</h3>
+        <span [class]="getStatusBadgeClass(resto.subscription_status)">
+          {{ resto.subscription_status }}
+        </span>
+      </div>
+
+      <div class="resto-details">
+        <p><strong>Plan:</strong> {{ resto.subscription_plan }}</p>
+        <p><strong>Expire le:</strong> {{ resto.subscription_end_date | date:'dd/MM/yyyy' }}</p>
+        <p
+          [class.text-danger]="getDaysRemaining(resto.subscription_end_date) < 0"
+          [class.text-warning]="getDaysRemaining(resto.subscription_end_date) < 30 && getDaysRemaining(resto.subscription_end_date) >= 0">
+          <strong>J restants:</strong> {{ getDaysRemaining(resto.subscription_end_date) }}
+        </p>
+      </div>
+
+      <button
+        (click)="openProlongModal(resto)"
+        class="btn-prolong">
+        ➕ Prolonger
+      </button>
+    </div>
+
+    <div *ngIf="filteredRestaurants.length === 0" class="no-results">
+      Aucun restaurant trouvé
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="loading">
+    Chargement...
+  </div>
+
+  <div *ngIf="showProlongModal" class="modal-overlay" (click)="closeProlongModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2>➕ Prolonger Abonnement</h2>
+
+      <div class="modal-body">
+        <h3>{{ selectedRestaurant?.name }}</h3>
+        <p class="current-end">
+          Expire actuellement le:
+          <strong>{{ selectedRestaurant?.subscription_end_date | date:'dd/MM/yyyy' }}</strong>
+        </p>
+
+        <div class="form-group">
+          <label>Durée de prolongation</label>
+          <select [(ngModel)]="prolongDuration" class="form-control">
+            <option [value]="1">1 mois</option>
+            <option [value]="3">3 mois</option>
+            <option [value]="6">6 mois</option>
+            <option [value]="12">12 mois</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Notes (ex: Paiement mobile money reçu)</label>
+          <textarea
+            [(ngModel)]="prolongNotes"
+            class="form-control"
+            rows="3"
+            placeholder="Détails du paiement..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button (click)="closeProlongModal()" class="btn-cancel">
+          Annuler
+        </button>
+        <button
+          (click)="prolongSubscription()"
+          [disabled]="isProlonging"
+          class="btn-confirm">
+          {{ isProlonging ? 'Prolongation...' : '✅ Confirmer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

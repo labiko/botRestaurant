@@ -1,0 +1,267 @@
+.subscriptions-container {
+  padding: 20px;
+
+  h1 {
+    margin-bottom: 30px;
+    color: #333;
+  }
+
+  .filters {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    gap: 20px;
+
+    .filter-buttons {
+      display: flex;
+      gap: 10px;
+
+      button {
+        padding: 10px 20px;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+
+        &.active {
+          background: #4CAF50;
+          color: white;
+          border-color: #4CAF50;
+        }
+
+        &.btn-warning.active {
+          background: #FF9800;
+          border-color: #FF9800;
+        }
+
+        &.btn-danger.active {
+          background: #f44336;
+          border-color: #f44336;
+        }
+
+        &:hover:not(.active) {
+          background: #f5f5f5;
+        }
+      }
+    }
+
+    .search-input {
+      flex: 1;
+      max-width: 300px;
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+
+      &:focus {
+        outline: none;
+        border-color: #4CAF50;
+      }
+    }
+  }
+
+  .restaurants-list {
+    display: grid;
+    gap: 20px;
+
+    .restaurant-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      display: grid;
+      grid-template-columns: 2fr 2fr auto;
+      gap: 20px;
+      align-items: center;
+
+      .resto-info {
+        h3 {
+          margin: 0 0 10px 0;
+          color: #333;
+        }
+
+        span {
+          padding: 4px 12px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-weight: 600;
+
+          &.badge-success {
+            background: #4CAF50;
+            color: white;
+          }
+
+          &.badge-warning {
+            background: #FF9800;
+            color: white;
+          }
+
+          &.badge-danger {
+            background: #f44336;
+            color: white;
+          }
+
+          &.badge-secondary {
+            background: #999;
+            color: white;
+          }
+        }
+      }
+
+      .resto-details {
+        p {
+          margin: 5px 0;
+          color: #666;
+
+          &.text-danger {
+            color: #f44336;
+            font-weight: 600;
+          }
+
+          &.text-warning {
+            color: #FF9800;
+            font-weight: 600;
+          }
+        }
+      }
+
+      .btn-prolong {
+        padding: 10px 20px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+
+        &:hover {
+          background: #45a049;
+        }
+      }
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+  }
+
+  .loading {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+
+      h2 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .modal-body {
+        margin: 20px 0;
+
+        h3 {
+          color: #4CAF50;
+          margin-bottom: 10px;
+        }
+
+        .current-end {
+          color: #666;
+          margin-bottom: 20px;
+        }
+
+        .form-group {
+          margin-bottom: 20px;
+
+          label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+          }
+
+          .form-control {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+
+            &:focus {
+              outline: none;
+              border-color: #4CAF50;
+            }
+          }
+
+          select.form-control {
+            cursor: pointer;
+          }
+
+          textarea.form-control {
+            resize: vertical;
+          }
+        }
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+
+        button {
+          padding: 10px 20px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-weight: 600;
+
+          &.btn-cancel {
+            background: #ddd;
+            color: #333;
+
+            &:hover {
+              background: #ccc;
+            }
+          }
+
+          &.btn-confirm {
+            background: #4CAF50;
+            color: white;
+
+            &:hover:not(:disabled) {
+              background: #45a049;
+            }
+
+            &:disabled {
+              opacity: 0.6;
+              cursor: not-allowed;
+            }
+          }
+        }
+      }
+    }
+  }
+}

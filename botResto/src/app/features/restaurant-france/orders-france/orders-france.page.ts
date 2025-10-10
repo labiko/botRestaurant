@@ -47,6 +47,14 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
   private restaurantId: number;
 
+  // NOUVEAU : Infos abonnement
+  subscriptionInfo: {
+    status: string;
+    endDate: string;
+    plan: string;
+    daysRemaining: number;
+  } | null = null;
+
   constructor(
     public franceOrdersService: FranceOrdersService,
     public authService: AuthFranceService,
@@ -134,6 +142,21 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
       // Enrichir les commandes avec les noms WhatsApp
       this.orders = await this.addressWhatsAppService.enrichOrdersWithWhatsAppNames(orders);
+
+      // NOUVEAU : Capturer infos abonnement depuis la première commande
+      if (this.orders.length > 0 && (this.orders[0] as any).subscription_status) {
+        this.subscriptionInfo = {
+          status: (this.orders[0] as any).subscription_status,
+          endDate: (this.orders[0] as any).subscription_end_date,
+          plan: (this.orders[0] as any).subscription_plan,
+          daysRemaining: (this.orders[0] as any).days_remaining
+        };
+
+        // Bloquer l'accès si expiré
+        if (this.subscriptionInfo.status === 'expired') {
+          await this.showSubscriptionExpiredAlert();
+        }
+      }
 
       // 🔍 DEBUG: Vérifier le online_payment_status de la commande 171
       const order171 = orders.find(o => o.id === 171);
@@ -1156,6 +1179,26 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    */
   formatPrice(amount: number): string {
     return this.restaurantConfigService.formatPrice(amount, this.restaurantCurrency);
+  }
+
+  /**
+   * NOUVEAU : Afficher alerte expiration abonnement
+   */
+  async showSubscriptionExpiredAlert() {
+    const alert = await this.alertController.create({
+      header: '⚠️ Abonnement Expiré',
+      message: 'Votre abonnement a expiré. Veuillez renouveler pour continuer à utiliser le service.',
+      buttons: [
+        {
+          text: 'Renouveler',
+          handler: () => {
+            this.router.navigate(['/dashboard-france']);
+          }
+        }
+      ],
+      backdropDismiss: false
+    });
+    await alert.present();
   }
 
 }

@@ -7,6 +7,7 @@ import { Location } from '@angular/common';
 import { AuthFranceService, FranceUser } from '../auth-france/services/auth-france.service';
 import { FranceOrdersService, FranceOrder } from '../../../core/services/france-orders.service';
 import { DriversFranceService } from '../../../core/services/drivers-france.service';
+import { SupabaseFranceService } from '../../../core/services/supabase-france.service';
 
 @Component({
   selector: 'app-dashboard-france',
@@ -28,19 +29,27 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
   private userSubscription?: Subscription;
   private ordersSubscription?: Subscription;
 
+  // NOUVEAU : Stripe config et renouvellement
+  stripeConfig: any = null;
+  isLoadingStripe = false;
+  isCreatingCheckout = false;
+
   constructor(
     private authFranceService: AuthFranceService,
     private franceOrdersService: FranceOrdersService,
     private driversFranceService: DriversFranceService,
     private router: Router,
     private alertController: AlertController,
-    private location: Location
+    private location: Location,
+    private supabaseFranceService: SupabaseFranceService
   ) { }
 
   ngOnInit() {
     // Bloquer complètement la navigation arrière
     this.preventBackNavigation();
     this.initializeDashboard();
+    // NOUVEAU : Charger config Stripe
+    this.loadStripeConfig();
   }
 
   /**
@@ -238,5 +247,58 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
       'livraison': 'Livraison'
     };
     return modes[mode] || mode;
+  }
+
+  /**
+   * NOUVEAU : Charger config Stripe
+   */
+  async loadStripeConfig() {
+    try {
+      const { data } = await this.supabaseFranceService.getClient().functions.invoke('subscription-restaurant', {
+        body: { action: 'get_config' }
+      });
+      this.stripeConfig = data?.config;
+    } catch (error) {
+      console.error('❌ Erreur config Stripe:', error);
+    }
+  }
+
+  /**
+   * NOUVEAU : Renouveler abonnement
+   */
+  async renewSubscription(plan: 'monthly' | 'quarterly' | 'annual') {
+    this.isCreatingCheckout = true;
+    try {
+      const restaurantId = this.authFranceService.getCurrentRestaurantId();
+      if (!restaurantId) {
+        throw new Error('Restaurant ID non trouvé');
+      }
+
+      const { data, error } = await this.supabaseFranceService.getClient().functions.invoke('subscription-restaurant', {
+        body: {
+          action: 'create_checkout',
+          restaurant_id: restaurantId,
+          plan: plan
+        }
+      });
+
+      if (error) throw error;
+
+      // Rediriger vers Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      }
+
+    } catch (error) {
+      console.error('❌ Erreur checkout:', error);
+      const alert = await this.alertController.create({
+        header: 'Erreur',
+        message: 'Erreur lors de la création du paiement',
+        buttons: ['OK']
+      });
+      await alert.present();
+    } finally {
+      this.isCreatingCheckout = false;
+    }
   }
 }
