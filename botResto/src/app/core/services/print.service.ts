@@ -136,16 +136,18 @@ export class PrintService {
 
       // Formatter chaque item pour le ticket
       articlesText = formattedItems.map((item: FormattedItem) => {
-        let itemLine = `- ${item.quantity}x ${item.productName}: ${item.totalPrice.toFixed(2)}€`;
+        let itemLine = `- ${item.quantity}x ${item.productName}: ${item.totalPrice.toFixed(2)}EUR`;
 
         // Ajouter la taille si présente
         if (item.sizeInfo) {
           itemLine += ` (${item.sizeInfo})`;
         }
 
-        // Ajouter la configuration inline si présente
-        if (item.inlineConfiguration && item.inlineConfiguration.length > 0) {
-          itemLine += `\n  → ${item.inlineConfiguration.join(', ')}`;
+        // ✅ NOUVEAU : Ajouter la configuration détaillée complète (comme le back-office)
+        if (item.formattedConfiguration && item.formattedConfiguration.length > 0) {
+          item.formattedConfiguration.forEach(configLine => {
+            itemLine += `\n  ${configLine.category}: ${configLine.value}`;
+          });
         }
 
         // Ajouter les items supplémentaires (pour les menus)
