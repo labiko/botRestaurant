@@ -2809,6 +2809,7 @@ export class UniversalBot implements IMessageHandler {
       quantity: quantity,
       unitPrice: selectedProduct.price,
       totalPrice: totalPrice,
+      icon: selectedProduct.icon || null,
       configuration: selectedProduct.configuration || null
     };
 
@@ -2824,6 +2825,7 @@ export class UniversalBot implements IMessageHandler {
         quantity: 1,
         unitPrice: product.price,
         totalPrice: product.price,
+        icon: product.icon || null,
         configuration: null
       }));
 
