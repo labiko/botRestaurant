@@ -128,6 +128,9 @@ export class PrintService {
     let articlesText = 'Aucun article';
 
     if (order.items && Array.isArray(order.items)) {
+      // 🔍 DEBUG: Voir EXACTEMENT ce que contient items
+      console.log('🔍 PRINT items reçus:', JSON.stringify(order.items, null, 2));
+
       // Parser les items avec le service universel
       const formattedItems: FormattedItem[] = this.universalOrderDisplayService.formatOrderItems(order.items);
 
