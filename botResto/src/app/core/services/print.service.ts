@@ -42,15 +42,12 @@ export class PrintService {
     }, 0);
   }
 
-  private generateAndPrint(orderData: any): void {
+  private async generateAndPrint(orderData: any): Promise<void> {
     // Génération du ticket
     const ticket = this.formatTicket(orderData);
 
-    // Mode simulation (pour l'instant)
-    console.log('🖨️ IMPRESSION TICKET:');
-    console.log(ticket);
-
-    // Plus tard: envoi Bluetooth à l'imprimante
+    // Envoi Bluetooth à l'imprimante
+    await this.printViaBluetooth(ticket);
   }
 
   private formatTicket(order: any): string {
@@ -147,5 +144,126 @@ Mode: ${deliveryModeText}
 ${order.notes ? `Notes: ${order.notes}` : ''}
 ============================
 `;
+  }
+
+  /**
+   * Connecter l'imprimante via Web Bluetooth
+   */
+  private async connectPrinter(): Promise<BluetoothRemoteGATTCharacteristic | null> {
+    try {
+      console.log('🔍 Recherche imprimante Bluetooth...');
+
+      // Demander l'accès Bluetooth
+      const device = await (navigator as any).bluetooth.requestDevice({
+        filters: [
+          { namePrefix: 'BlueTooth' },
+          { namePrefix: 'POS' },
+          { namePrefix: 'Printer' }
+        ],
+        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+      });
+
+      console.log('✅ Périphérique trouvé:', device.name);
+
+      // Connecter au GATT server
+      const server = await device.gatt!.connect();
+      console.log('✅ Connecté au serveur GATT');
+
+      // Obtenir le service d'impression
+      const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+      console.log('✅ Service obtenu');
+
+      // Obtenir la caractéristique d'écriture
+      const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+      console.log('✅ Caractéristique obtenue');
+
+      return characteristic;
+    } catch (error) {
+      console.error('❌ Erreur connexion Bluetooth:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Convertir texte en commandes ESC/POS
+   */
+  private convertToESCPOS(text: string): Uint8Array {
+    const encoder = new TextEncoder();
+    const ESC = 0x1B;
+    const GS = 0x1D;
+
+    // Commandes ESC/POS
+    const INIT = [ESC, 0x40]; // Initialiser
+    const ALIGN_CENTER = [ESC, 0x61, 0x01]; // Centrer
+    const ALIGN_LEFT = [ESC, 0x61, 0x00]; // Aligner à gauche
+    const BOLD_ON = [ESC, 0x45, 0x01]; // Gras ON
+    const BOLD_OFF = [ESC, 0x45, 0x00]; // Gras OFF
+    const CUT_PAPER = [GS, 0x56, 0x00]; // Couper papier
+    const LINE_FEED = [0x0A]; // Saut de ligne
+
+    // Construire le buffer
+    const buffer: number[] = [];
+
+    // Initialiser
+    buffer.push(...INIT);
+
+    // Ajouter le texte ligne par ligne
+    const lines = text.split('\n');
+    lines.forEach(line => {
+      if (line.includes('====')) {
+        // Lignes de séparation centrées
+        buffer.push(...ALIGN_CENTER);
+      } else {
+        // Texte normal aligné à gauche
+        buffer.push(...ALIGN_LEFT);
+      }
+
+      // Ajouter le texte
+      const encoded = encoder.encode(line);
+      buffer.push(...Array.from(encoded));
+      buffer.push(...LINE_FEED);
+    });
+
+    // Sauts de ligne et coupe
+    buffer.push(...LINE_FEED);
+    buffer.push(...LINE_FEED);
+    buffer.push(...CUT_PAPER);
+
+    return new Uint8Array(buffer);
+  }
+
+  /**
+   * Imprimer via Bluetooth
+   */
+  private async printViaBluetooth(ticket: string): Promise<void> {
+    try {
+      console.log('🖨️ Démarrage impression Bluetooth...');
+
+      // Connecter à l'imprimante
+      const characteristic = await this.connectPrinter();
+      if (!characteristic) {
+        console.error('❌ Impossible de connecter à l\'imprimante');
+        return;
+      }
+
+      // Convertir le ticket en ESC/POS
+      const escposData = this.convertToESCPOS(ticket);
+      console.log('✅ Ticket converti en ESC/POS:', escposData.length, 'bytes');
+
+      // Envoyer à l'imprimante (par chunks de 512 bytes)
+      const chunkSize = 512;
+      for (let i = 0; i < escposData.length; i += chunkSize) {
+        const chunk = escposData.slice(i, i + chunkSize);
+        await characteristic.writeValue(chunk);
+        console.log(`📤 Envoyé ${i + chunk.length}/${escposData.length} bytes`);
+      }
+
+      console.log('✅ Impression terminée !');
+    } catch (error) {
+      console.error('❌ Erreur impression:', error);
+      // Fallback : afficher dans la console
+      console.log('🖨️ IMPRESSION TICKET (fallback):');
+      console.log(ticket);
+    }
   }
 }
