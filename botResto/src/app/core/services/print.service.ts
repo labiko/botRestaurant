@@ -1,24 +1,93 @@
 import { Injectable } from '@angular/core';
 import { UniversalOrderDisplayService, FormattedItem } from './universal-order-display.service';
+import { SupabaseFranceService } from './supabase-france.service';
+import { AuthFranceService } from '../../features/restaurant-france/auth-france/services/auth-france.service';
 
 @Injectable({ providedIn: 'root' })
 export class PrintService {
   private autoPrintEnabled = false;
+  private restaurantId: number | null = null;
 
   constructor(
-    private universalOrderDisplayService: UniversalOrderDisplayService
+    private universalOrderDisplayService: UniversalOrderDisplayService,
+    private supabaseFranceService: SupabaseFranceService,
+    private authFranceService: AuthFranceService
   ) {
-    // Charger la configuration depuis localStorage
-    const saved = localStorage.getItem('autoPrintEnabled');
-    this.autoPrintEnabled = saved === 'true';
+    // Charger l'ID du restaurant
+    this.restaurantId = this.authFranceService.getCurrentRestaurantId();
+
+    // Charger la configuration depuis la base de données
+    this.loadAutoPrintConfig();
   }
 
-  setAutoPrintEnabled(enabled: boolean): void {
+  /**
+   * Charger la configuration d'impression depuis la base de données
+   */
+  private async loadAutoPrintConfig(): Promise<void> {
+    if (this.restaurantId === null) {
+      console.warn('⚠️ PrintService: Impossible de charger la config - Restaurant ID non disponible');
+      return;
+    }
+
+    try {
+      const { data, error } = await this.supabaseFranceService.client
+        .from('france_restaurants')
+        .select('auto_print_enabled')
+        .eq('id', this.restaurantId)
+        .single();
+
+      if (error) {
+        console.error('❌ PrintService: Erreur chargement config impression:', error);
+        return;
+      }
+
+      if (data) {
+        this.autoPrintEnabled = data.auto_print_enabled ?? true;
+        console.log('✅ PrintService: Config impression chargée depuis BDD:', this.autoPrintEnabled);
+      }
+    } catch (error) {
+      console.error('❌ PrintService: Exception lors du chargement:', error);
+    }
+  }
+
+  /**
+   * Activer/désactiver l'impression automatique (sauvegarde en base)
+   */
+  async setAutoPrintEnabled(enabled: boolean): Promise<void> {
     this.autoPrintEnabled = enabled;
-    localStorage.setItem('autoPrintEnabled', enabled.toString());
+
+    if (this.restaurantId === null) {
+      console.warn('⚠️ PrintService: Impossible de sauvegarder - Restaurant ID non disponible');
+      return;
+    }
+
+    try {
+      const { error } = await this.supabaseFranceService.client
+        .from('france_restaurants')
+        .update({ auto_print_enabled: enabled })
+        .eq('id', this.restaurantId);
+
+      if (error) {
+        console.error('❌ PrintService: Erreur sauvegarde config impression:', error);
+        throw error;
+      }
+
+      console.log('✅ PrintService: Config impression sauvegardée en BDD:', enabled);
+    } catch (error) {
+      console.error('❌ PrintService: Exception lors de la sauvegarde:', error);
+      throw error;
+    }
   }
 
   getAutoPrintEnabled(): boolean {
+    return this.autoPrintEnabled;
+  }
+
+  /**
+   * Recharger la configuration depuis la base de données
+   */
+  async reloadAutoPrintConfig(): Promise<boolean> {
+    await this.loadAutoPrintConfig();
     return this.autoPrintEnabled;
   }
 

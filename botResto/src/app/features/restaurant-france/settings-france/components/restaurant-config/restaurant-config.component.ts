@@ -86,10 +86,10 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
     this.initializeSimpleHours();
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.loadRestaurantData();
-    // Charger l'état du toggle impression automatique
-    this.autoPrintEnabled = this.printService.getAutoPrintEnabled();
+    // Charger l'état du toggle impression automatique depuis la base
+    this.autoPrintEnabled = await this.printService.reloadAutoPrintConfig();
   }
 
   ngOnDestroy() {
@@ -718,13 +718,22 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
   }
 
   // Méthode pour gérer le changement du toggle impression automatique
-  onToggleAutoPrint(): void {
-    this.printService.setAutoPrintEnabled(this.autoPrintEnabled);
+  async onToggleAutoPrint(): Promise<void> {
+    try {
+      await this.printService.setAutoPrintEnabled(this.autoPrintEnabled);
 
-    const message = this.autoPrintEnabled
-      ? 'Impression automatique activée'
-      : 'Impression automatique désactivée';
+      const message = this.autoPrintEnabled
+        ? 'Impression automatique activée'
+        : 'Impression automatique désactivée';
 
-    this.presentToast(message, 'success');
+      this.presentToast(message, 'success');
+    } catch (error) {
+      console.error('❌ Erreur sauvegarde impression automatique:', error);
+
+      // Revenir à l'état précédent en cas d'erreur
+      this.autoPrintEnabled = !this.autoPrintEnabled;
+
+      this.presentToast('Erreur lors de la sauvegarde de la configuration d\'impression', 'danger');
+    }
   }
 }
