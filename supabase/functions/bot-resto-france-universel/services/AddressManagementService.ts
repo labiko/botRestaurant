@@ -336,18 +336,46 @@ export class AddressManagementService {
    * FORMAT UNIVERSEL - Même structure pour tous les restaurants
    */
   formatAddressSelectionMessage(addresses: CustomerAddress[]): string {
-    let message = `🚚 Votre adresse:\n\n`;
-    
+    let message = `📍 Vos adresses enregistrées :\n\n`;
+
     addresses.forEach((addr, index) => {
-      const emoji = addr.is_default ? '⭐' : '📍';
-      message += `${index + 1} ${emoji} ${addr.address_label}\n`;
-      message += `${addr.full_address}\n\n`;
+      // Séparateur visuel
+      message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+
+      // Emoji numéroté
+      const numberEmoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][index] || `${index + 1}️⃣`;
+
+      // Emoji selon le type d'adresse
+      let typeEmoji = '🏠';
+      if (addr.address_label.toLowerCase().includes('bureau')) {
+        typeEmoji = '🏢';
+      }
+
+      // Nom en majuscules avec badge favori
+      const labelUpper = addr.address_label.toUpperCase();
+      const favoriteTag = addr.is_default ? ' ⭐ FAVORI' : '';
+      message += `${numberEmoji} ${typeEmoji} ${labelUpper}${favoriteTag}\n`;
+
+      // Parser l'adresse pour séparer rue et ville/code postal
+      const addressParts = addr.full_address.split(',');
+      if (addressParts.length >= 2) {
+        const street = addressParts[0].trim();
+        const cityPostal = addressParts.slice(1).join(',').trim();
+        message += `📍 ${street}\n`;
+        message += `📮 ${cityPostal}\n\n`;
+      } else {
+        // Fallback si format non standard
+        message += `📍 ${addr.full_address}\n\n`;
+      }
     });
-    
+
+    // Option nouvelle adresse
     const nextNumber = addresses.length + 1;
-    message += `${nextNumber} ➕ NOUVELLE\n\n`;
-    message += `Tapez ${addresses.map((_, i) => i + 1).join(', ')} ou ${nextNumber}`;
-    
+    const nextNumberEmoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][nextNumber - 1] || `${nextNumber}️⃣`;
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `${nextNumberEmoji} ➕ Nouvelle adresse\n\n`;
+    message += `💡 Tapez le numéro de votre choix`;
+
     return message;
   }
 

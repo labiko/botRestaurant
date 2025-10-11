@@ -11,6 +11,23 @@
     </ion-buttons>
   </ion-toolbar>
 
+  <!-- NOUVEAU : Banner Abonnement - Version discrète -->
+  <ion-toolbar *ngIf="subscriptionInfo" [color]="subscriptionInfo.daysRemaining < 0 ? 'danger' : 'light'">
+    <ion-title class="ion-text-center" [style.color]="subscriptionInfo.daysRemaining < 0 ? 'white' : '#666'" style="font-size: 13px;">
+      <span *ngIf="(subscriptionInfo.status === 'active' || subscriptionInfo.status === 'expiring') && subscriptionInfo.daysRemaining >= 30">
+        ✅ Abonnement actif - Expire le {{ subscriptionInfo.endDate | date:'dd/MM/yyyy' }}
+      </span>
+      <span *ngIf="(subscriptionInfo.status === 'active' || subscriptionInfo.status === 'expiring') && subscriptionInfo.daysRemaining < 30 && subscriptionInfo.daysRemaining >= 0">
+        ⚠️ Votre abonnement expire dans {{ subscriptionInfo.daysRemaining }} jours -
+        <a [routerLink]="['/restaurant-france/payments-france']" style="color: #333; text-decoration: underline;">Renouveler maintenant</a>
+      </span>
+      <span *ngIf="subscriptionInfo.status === 'expired'">
+        ❌ Abonnement expiré -
+        <a [routerLink]="['/restaurant-france/payments-france']" style="color: white; text-decoration: underline;">Renouveler pour continuer</a>
+      </span>
+    </ion-title>
+  </ion-toolbar>
+
   <!-- Filter tabs -->
   <ion-toolbar>
     <ion-segment [(ngModel)]="selectedFilter" scrollable>

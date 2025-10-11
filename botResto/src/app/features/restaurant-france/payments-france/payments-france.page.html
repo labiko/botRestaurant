@@ -1,0 +1,158 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>💳 Paiements & Abonnement</ion-title>
+  </ion-toolbar>
+
+  <!-- Onglets modernes -->
+  <ion-toolbar class="tabs-toolbar">
+    <ion-segment [(ngModel)]="selectedTab" (ionChange)="selectTab($event.detail.value)">
+      <ion-segment-button value="renewal">
+        <ion-label>
+          <ion-icon name="card-outline"></ion-icon>
+          Renouvellement
+        </ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="history">
+        <ion-label>
+          <ion-icon name="time-outline"></ion-icon>
+          Historique
+        </ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- ONGLET: Renouvellement -->
+  <div *ngIf="selectedTab === 'renewal'" class="renewal-section">
+    <div class="section-header">
+      <h2>💳 Renouveler mon Abonnement</h2>
+      <p>Choisissez la durée de votre abonnement</p>
+    </div>
+
+    <ion-grid *ngIf="stripeConfig">
+      <ion-row>
+        <!-- Plan Mensuel -->
+        <ion-col size="12" sizeMd="4">
+          <ion-card class="plan-card">
+            <ion-card-header>
+              <ion-card-title>📅 Mensuel</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <div class="price">{{ stripeConfig.amount_monthly }}€<span>/mois</span></div>
+              <ion-button expand="block" (click)="renewSubscription('monthly')" [disabled]="isCreatingCheckout">
+                Renouveler 1 mois
+              </ion-button>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+
+        <!-- Plan Trimestriel -->
+        <ion-col size="12" sizeMd="4">
+          <ion-card class="plan-card popular">
+            <ion-badge color="warning" class="badge-popular">⭐ POPULAIRE</ion-badge>
+            <ion-card-header>
+              <ion-card-title>📅 Trimestriel</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <div class="price">{{ stripeConfig.amount_quarterly }}€<span>/3 mois</span></div>
+              <p class="savings">Économisez 14%</p>
+              <ion-button expand="block" color="warning" (click)="renewSubscription('quarterly')" [disabled]="isCreatingCheckout">
+                Renouveler 3 mois
+              </ion-button>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+
+        <!-- Plan Annuel -->
+        <ion-col size="12" sizeMd="4">
+          <ion-card class="plan-card">
+            <ion-card-header>
+              <ion-card-title>📅 Annuel</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <div class="price">{{ stripeConfig.amount_annual }}€<span>/an</span></div>
+              <p class="savings">Économisez 29%</p>
+              <ion-button expand="block" (click)="renewSubscription('annual')" [disabled]="isCreatingCheckout">
+                Renouveler 12 mois
+              </ion-button>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+
+    <!-- Loading Stripe config -->
+    <div *ngIf="isLoadingStripe" class="loading-container">
+      <ion-spinner name="crescent"></ion-spinner>
+      <p>Chargement des options...</p>
+    </div>
+
+    <!-- Aucune config -->
+    <ion-card *ngIf="!stripeConfig && !isLoadingStripe">
+      <ion-card-content class="text-center">
+        <ion-icon name="alert-circle-outline" style="font-size: 48px; color: var(--ion-color-warning);"></ion-icon>
+        <h3>Configuration non disponible</h3>
+        <p>Les options de renouvellement ne sont pas encore configurées.</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- ONGLET: Historique -->
+  <div *ngIf="selectedTab === 'history'" class="history-section">
+    <div class="section-header">
+      <h2>📊 Historique des Abonnements</h2>
+      <p>Consultez l'historique de vos renouvellements</p>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="isLoadingHistory" class="loading-container">
+      <ion-spinner name="crescent"></ion-spinner>
+      <p>Chargement de l'historique...</p>
+    </div>
+
+    <!-- Liste historique -->
+    <ion-list *ngIf="!isLoadingHistory && subscriptionHistory.length > 0">
+      <ion-item *ngFor="let item of subscriptionHistory" class="history-item">
+        <ion-label>
+          <h2>{{ getActionLabel(item.action) }}</h2>
+          <p>
+            <strong>Date:</strong> {{ formatDate(item.created_at) }}
+          </p>
+          <p *ngIf="item.old_end_date">
+            <strong>Ancienne fin:</strong> {{ formatDate(item.old_end_date) }}
+          </p>
+          <p *ngIf="item.new_end_date">
+            <strong>Nouvelle fin:</strong> {{ formatDate(item.new_end_date) }}
+          </p>
+          <p *ngIf="item.duration_months">
+            <strong>Durée:</strong> {{ item.duration_months }} mois
+          </p>
+          <p *ngIf="item.amount_paid">
+            <strong>Montant:</strong> {{ item.amount_paid }}€
+          </p>
+          <p *ngIf="item.payment_method">
+            {{ getPaymentMethodLabel(item.payment_method) }}
+          </p>
+          <p *ngIf="item.notes" class="notes">
+            <strong>Notes:</strong> {{ item.notes }}
+          </p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+
+    <!-- Aucun historique -->
+    <ion-card *ngIf="!isLoadingHistory && subscriptionHistory.length === 0">
+      <ion-card-content class="text-center">
+        <ion-icon name="document-text-outline" style="font-size: 48px; color: var(--ion-color-medium);"></ion-icon>
+        <h3>Aucun historique</h3>
+        <p>Aucun renouvellement enregistré pour le moment.</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

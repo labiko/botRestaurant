@@ -51,5 +51,14 @@ verify_jwt = false
 [functions.green-api-health-monitor]
 verify_jwt = false
 
+[functions.subscription-admin]
+verify_jwt = false
+
+[functions.subscription-restaurant]
+verify_jwt = false
+
+[functions.subscription-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = false

@@ -1,0 +1,396 @@
+// Toolbar onglets
+.tabs-toolbar {
+  --background: #f8f9fa;
+}
+
+// Onglets
+ion-segment {
+  padding: 8px;
+}
+
+ion-segment-button {
+  --indicator-color: var(--ion-color-primary);
+  --indicator-height: 3px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  min-width: 120px;
+
+  ion-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+
+    ion-icon {
+      font-size: 20px;
+    }
+  }
+}
+
+// Sections - Design moderne
+.renewal-section,
+.history-section {
+  padding: 24px 16px;
+  background: #f8f9fa;
+  min-height: calc(100vh - 180px);
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 0 16px;
+
+  h2 {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 12px;
+    color: var(--ion-color-primary);
+    letter-spacing: -0.5px;
+  }
+
+  p {
+    color: var(--ion-color-medium);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+}
+
+// Cartes de plan - Design moderne avec alignement
+.plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 320px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  overflow: visible;
+  margin-bottom: 16px;
+
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  &.popular {
+    border: 2px solid var(--ion-color-warning);
+    transform: scale(1.02);
+    padding-top: 12px; // Espace pour le badge
+
+    .badge-popular {
+      position: absolute;
+      top: 6px;
+      right: 16px;
+      z-index: 10;
+      font-weight: 700;
+      padding: 6px 16px;
+      border-radius: 20px;
+      box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+    }
+
+    ion-card-header {
+      padding-top: 28px; // Plus d'espace en haut
+    }
+
+    &:hover {
+      transform: translateY(-8px) scale(1.02);
+    }
+  }
+
+  ion-card-header {
+    text-align: center;
+    padding: 32px 16px 16px;
+    flex-shrink: 0;
+
+    ion-card-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--ion-color-primary);
+      margin: 0;
+    }
+  }
+
+  ion-card-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+    padding: 8px 20px 24px;
+    flex-grow: 1;
+
+    .price {
+      font-size: 42px;
+      font-weight: 800;
+      color: var(--ion-color-dark);
+      margin: 16px 0;
+      line-height: 1;
+
+      span {
+        font-size: 16px;
+        font-weight: 400;
+        color: var(--ion-color-medium);
+        margin-left: 2px;
+      }
+    }
+
+    .savings {
+      color: var(--ion-color-success);
+      font-weight: 600;
+      font-size: 15px;
+      min-height: 22px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    ion-button {
+      margin-top: auto;
+      --border-radius: 12px;
+      font-weight: 600;
+      font-size: 15px;
+      height: 48px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+}
+
+// Loading et états vides - Design moderne
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  background: #ffffff;
+  border-radius: 16px;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  ion-spinner {
+    margin-bottom: 20px;
+    --color: var(--ion-color-primary);
+    transform: scale(1.5);
+  }
+
+  p {
+    color: var(--ion-color-medium);
+    font-size: 16px;
+    font-weight: 500;
+  }
+}
+
+// Message vide
+ion-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  ion-card-content.text-center {
+    padding: 60px 40px;
+
+    ion-icon {
+      font-size: 72px;
+      margin-bottom: 20px;
+      opacity: 0.4;
+    }
+
+    h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--ion-color-dark);
+    }
+
+    p {
+      font-size: 15px;
+      color: var(--ion-color-medium);
+      line-height: 1.5;
+    }
+  }
+}
+
+// Historique - Design moderne
+.history-section {
+  ion-list {
+    background: transparent;
+    padding: 0;
+  }
+}
+
+.history-item {
+  --padding-start: 0;
+  --padding-end: 0;
+  --inner-padding-end: 0;
+  --border-width: 0;
+  --background: transparent;
+  margin-bottom: 20px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  ion-label {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border-left: 5px solid var(--ion-color-primary);
+    transition: all 0.3s ease;
+    display: block;
+
+    &:hover {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      transform: translateX(6px);
+    }
+
+    h2 {
+      font-size: 19px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--ion-color-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    p {
+      font-size: 15px;
+      color: var(--ion-color-medium);
+      margin: 8px 0;
+      line-height: 1.6;
+      display: flex;
+      align-items: baseline;
+
+      strong {
+        color: var(--ion-color-dark);
+        font-weight: 700;
+        margin-right: 8px;
+        min-width: 110px;
+        display: inline-block;
+      }
+    }
+
+    .notes {
+      background: linear-gradient(135deg, #fff9e6 0%, #fff5d6 100%);
+      padding: 14px 18px;
+      border-radius: 10px;
+      margin-top: 16px;
+      font-style: italic;
+      font-size: 14px;
+      color: #856404;
+      border-left: 4px solid var(--ion-color-warning);
+      box-shadow: 0 2px 4px rgba(255, 193, 7, 0.1);
+
+      strong {
+        color: #856404;
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+// Responsive - Design adaptatif
+@media (max-width: 768px) {
+  .section-header {
+    margin-bottom: 24px;
+
+    h2 {
+      font-size: 24px;
+    }
+
+    p {
+      font-size: 14px;
+    }
+  }
+
+  .plan-card {
+    margin-bottom: 20px;
+    min-height: 280px;
+
+    ion-card-header {
+      padding: 24px 16px 12px;
+
+      ion-card-title {
+        font-size: 20px;
+      }
+    }
+
+    ion-card-content {
+      .price {
+        font-size: 36px;
+      }
+    }
+
+    &.popular {
+      transform: scale(1);
+
+      &:hover {
+        transform: translateY(-8px) scale(1);
+      }
+    }
+  }
+
+  .history-item {
+    margin-bottom: 16px;
+
+    ion-label {
+      padding: 18px;
+
+      h2 {
+        font-size: 17px;
+        margin-bottom: 12px;
+      }
+
+      p {
+        font-size: 14px;
+        flex-direction: column;
+        align-items: flex-start;
+
+        strong {
+          min-width: auto;
+          margin-bottom: 2px;
+        }
+      }
+
+      .notes {
+        padding: 12px 14px;
+        font-size: 13px;
+        margin-top: 12px;
+      }
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .renewal-section,
+  .history-section {
+    padding: 16px 12px;
+  }
+
+  ion-card-content.text-center {
+    padding: 40px 20px;
+
+    ion-icon {
+      font-size: 56px;
+    }
+
+    h3 {
+      font-size: 18px;
+    }
+
+    p {
+      font-size: 14px;
+    }
+  }
+}
+
+// Utilities
+.text-center {
+  text-align: center;
+}

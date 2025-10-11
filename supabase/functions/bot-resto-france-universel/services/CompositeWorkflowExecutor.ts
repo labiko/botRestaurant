@@ -1722,11 +1722,28 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
         deliveryMode: session.sessionData.deliveryMode
       };
       // Ajouter au panier existant
-      const cart = session.sessionData.cart || {};
-      const itemKey = `menu_${workflow.product.id}_${getCurrentTime().getTime()}`;
-      cart[itemKey] = cartItem;
+      // 🐛 [CART_FIX] DEBUG: État du panier AVANT correction
+      console.log('🐛 [CART_FIX] Panier AVANT:', JSON.stringify(session.sessionData.cart));
+      console.log('🐛 [CART_FIX] Type panier AVANT:', Array.isArray(session.sessionData.cart) ? 'ARRAY' : 'OBJET');
+
+      // ✅ CORRECTION BUG: Uniformiser le panier en ARRAY au lieu d'OBJET
+      const cart = Array.isArray(session.sessionData.cart)
+        ? session.sessionData.cart
+        : Object.values(session.sessionData.cart || {});
+
+      // 🐛 [CART_FIX] DEBUG: État du panier APRÈS conversion
+      console.log('🐛 [CART_FIX] Panier APRÈS conversion:', JSON.stringify(cart));
+      console.log('🐛 [CART_FIX] Nombre items dans panier:', cart.length);
+
+      // Ajouter le nouveau menu pizza au panier (ARRAY)
+      cart.push(cartItem);
+
+      // 🐛 [CART_FIX] DEBUG: État du panier APRÈS ajout
+      console.log('🐛 [CART_FIX] Panier APRÈS ajout:', JSON.stringify(cart));
+      console.log('🐛 [CART_FIX] Nombre items après ajout:', cart.length);
+
       // Calculer le total
-      const totalPrice = Object.values(cart).reduce((sum, item)=>sum + item.price * item.quantity, 0);
+      const totalPrice = cart.reduce((sum, item)=>sum + item.price * item.quantity, 0);
       // Sauvegarder
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
       const supabase = createClient(this.supabaseUrl, this.supabaseKey);

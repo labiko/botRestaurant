@@ -108,14 +108,40 @@ Le bot universel est la version de production active qui gère tous les pays. Ne
 - **`rm`** - INTERDIT ! Ne jamais supprimer de fichiers automatiquement
 - **`del`** - INTERDIT ! Ne jamais supprimer de fichiers automatiquement
 
-## 🔒 RÈGLE ABSOLUE - ÉCRITURE BASE DE DONNÉES
+## 🔒 RÈGLE ABSOLUE - EXÉCUTION SQL EN BASE
 
-**⚠️ INTERDICTION TOTALE D'ÉCRITURE EN BASE** :
-- **NE JAMAIS exécuter d'INSERT, UPDATE, DELETE** directement en base de données
-- **NE JAMAIS modifier les données** de production ou développement
-- **UNIQUEMENT DES REQUÊTES SELECT** pour la lecture/consultation
-- **TOUJOURS donner le SQL à l'utilisateur** pour qu'il l'exécute lui-même
-- **JAMAIS de psql avec des commandes d'écriture** - Lecture seule exclusivement
+**⚠️ RÈGLES D'EXÉCUTION SQL DIRECTE** :
+
+### **✅ AUTORISÉ - Scripts de lecture (SELECT)** :
+- **Exécuter directement** les requêtes `SELECT` en PROD/DEV
+- **Scripts de vérification** et d'analyse (ANALYSE_*.sql)
+- **Consultation** des données existantes
+- **EXPLAIN** pour analyser les requêtes
+- **DESCRIBE** ou **SHOW** pour la structure
+
+### **❌ STRICTEMENT INTERDIT - Scripts de modification** :
+- **NE JAMAIS exécuter** `INSERT`, `UPDATE`, `DELETE` directement
+- **NE JAMAIS exécuter** `CREATE`, `ALTER`, `DROP`
+- **NE JAMAIS exécuter** de scripts de nettoyage (NETTOYAGE_*.sql)
+- **NE JAMAIS exécuter** de scripts d'alimentation (ALIMENTATION_*.sql)
+- **NE JAMAIS exécuter** de scripts de migration (MIGRATION_*.sql)
+
+### **✅ Workflow obligatoire pour modifications** :
+1. **Créer le script SQL** avec transactions (`BEGIN;` ... `COMMIT;`)
+2. **DONNER le script à l'utilisateur** pour qu'il l'exécute lui-même
+3. **NE JAMAIS l'exécuter directement**, même si demandé
+4. **Exception** : Scripts de vérification (SELECT uniquement)
+
+### **📋 Exemples** :
+```sql
+-- ✅ AUTORISÉ - Exécution directe
+SELECT COUNT(*) FROM france_product_options WHERE icon IS NULL;
+
+-- ❌ INTERDIT - Donner à l'utilisateur
+UPDATE france_product_options SET icon = '🥤' WHERE ...;
+INSERT INTO france_products (...) VALUES (...);
+DELETE FROM france_product_options WHERE ...;
+```
 
 ## 🔄 RÈGLE SYNCHRONISATION DEV → PROD
 
@@ -127,27 +153,10 @@ Lors de la génération de scripts SQL pour synchroniser `france_restaurants` DE
 
 **Raison** : Ces champs sont spécifiques à chaque environnement et ne doivent jamais être écrasés automatiquement.
 
-**✅ Autorisé :**
-- `SELECT` pour consulter les données
-- `DESCRIBE` ou `SHOW` pour la structure
-- `EXPLAIN` pour analyser les requêtes
-
-**❌ STRICTEMENT INTERDIT :**
-- `INSERT`, `UPDATE`, `DELETE`
-- `CREATE`, `ALTER`, `DROP`
-- Toute commande qui modifie les données ou la structure
-
-**✅ Commandes autorisées :**
-- `supabase db push` - Applique les migrations sans supprimer les données
-- Scripts SQL avec **transactions** (`BEGIN;` ... `COMMIT;`)
-- Requêtes `INSERT`, `UPDATE` avec conditions appropriées
-- **UNIQUEMENT FOURNIR LE CODE SQL** pour que l'utilisateur l'exécute
-
 **🔄 En cas de problème de données :**
 - Toujours créer des scripts de **restauration** avant toute modification
 - Utiliser des **sauvegardes** avant les opérations risquées
 - Ne jamais faire de modifications destructives sans accord explicite de l'utilisateur
-- **Ne jamais exécuter directement** - Toujours donner le SQL à copier/coller
 
 ## 🔄 PRINCIPE DE RÉUTILISATION
 

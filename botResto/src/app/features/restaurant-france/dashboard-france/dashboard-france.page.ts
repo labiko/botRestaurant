@@ -188,6 +188,13 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
   }
 
   /**
+   * Navigation vers les paiements
+   */
+  goToPayments() {
+    this.router.navigate(['/restaurant-france/payments-france']);
+  }
+
+  /**
    * Déconnexion
    */
   async logout() {
