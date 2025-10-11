@@ -124,7 +124,7 @@ export class UniversalCartFormatter {
     
     // Nom du produit avec émoji
     const displayName = quantity > 1 ? `${quantity}x ${product.name}` : product.name;
-    detail += `${categoryEmoji} ${displayName}\n`;
+    detail += `*${categoryEmoji} → ${displayName}*\n`;
     
     // Afficher la configuration si elle existe
     if (product.configuration) {
@@ -144,36 +144,41 @@ export class UniversalCartFormatter {
 
   /**
    * Formater un groupe de composants (sauces, viandes, etc.)
+   * Option C: Emoji de chaque option (depuis icon en base) + flèche
    */
   private formatComponentGroup(groupName: string, selections: any[]): string {
     if (!selections || selections.length === 0) {
       return '';
     }
-    
-    // Extraire les noms des sélections de manière robuste
-    const values = selections.map(s => {
-      // Si c'est un objet avec option_name ou name
+
+    // Formater avec emoji + flèche pour chaque option
+    let formatted = '';
+
+    selections.forEach(s => {
+      // Extraire le nom
+      let name = '';
       if (s && typeof s === 'object' && (s.option_name || s.name)) {
-        return s.option_name || s.name;
+        name = s.option_name || s.name;
+      } else if (typeof s === 'string') {
+        name = s;
       }
-      // Si c'est déjà un string
-      if (typeof s === 'string') {
-        return s;
+
+      // Ignorer si vide ou "Pas de..."
+      if (!name || this.shouldSkipComponent(name)) {
+        return;
       }
-      // Sinon retourner vide pour éviter [object Object]
-      return '';
-    }).filter(v => v !== '').join(', ');
-    
-    // Ne pas afficher si c'est "Pas de..." ou équivalent
-    if (this.shouldSkipComponent(values)) {
-      return '';
-    }
-    
-    // Obtenir l'émoji approprié
-    const emoji = this.getComponentEmoji(groupName);
-    
-    // Formater avec indentation
-    return `   ${emoji} ${values}\n`;
+
+      // Extraire l'emoji depuis la colonne icon (priorité) ou fallback
+      let icon = '•'; // Fallback par défaut
+      if (s && typeof s === 'object' && s.icon) {
+        icon = s.icon;
+      }
+
+      // Formater avec emoji + flèche + nom
+      formatted += `   ${icon} → ${name}\n`;
+    });
+
+    return formatted;
   }
 
   /**
