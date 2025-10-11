@@ -8,6 +8,10 @@ export class PrintService {
   private autoPrintEnabled = false;
   private restaurantId: number | null = null;
 
+  // Mémorisation du device Bluetooth pour éviter la popup à chaque impression
+  private bluetoothDevice: any = null;
+  private bluetoothCharacteristic: any = null;
+
   constructor(
     private universalOrderDisplayService: UniversalOrderDisplayService,
     private supabaseFranceService: SupabaseFranceService,
@@ -217,12 +221,37 @@ ${order.notes ? `Notes: ${order.notes}` : ''}
 
   /**
    * Connecter l'imprimante via Web Bluetooth
+   * Réutilise le device mémorisé si disponible (évite la popup à chaque impression)
    */
   private async connectPrinter(): Promise<any | null> {
     try {
+      // 1. Si on a déjà un device ET une characteristic valides, les réutiliser
+      if (this.bluetoothDevice && this.bluetoothCharacteristic) {
+        // Vérifier si le device est toujours connecté
+        if (this.bluetoothDevice.gatt.connected) {
+          console.log('♻️ Réutilisation du device Bluetooth mémorisé:', this.bluetoothDevice.name);
+          return this.bluetoothCharacteristic;
+        } else {
+          // Device déconnecté, tenter une reconnexion
+          console.log('🔄 Device déconnecté, tentative de reconnexion...');
+          try {
+            const server = await this.bluetoothDevice.gatt.connect();
+            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            this.bluetoothCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+            console.log('✅ Reconnecté au device mémorisé');
+            return this.bluetoothCharacteristic;
+          } catch (reconnectError) {
+            console.warn('⚠️ Échec reconnexion, nouvelle sélection nécessaire:', reconnectError);
+            // Réinitialiser pour forcer une nouvelle sélection
+            this.bluetoothDevice = null;
+            this.bluetoothCharacteristic = null;
+          }
+        }
+      }
+
+      // 2. Première connexion ou reconnexion échouée : demander sélection utilisateur
       console.log('🔍 Recherche imprimante Bluetooth...');
 
-      // Demander l'accès Bluetooth
       const device = await (navigator as any).bluetooth.requestDevice({
         filters: [
           { namePrefix: 'BlueTooth' },
@@ -232,7 +261,7 @@ ${order.notes ? `Notes: ${order.notes}` : ''}
         optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
       });
 
-      console.log('✅ Périphérique trouvé:', device.name);
+      console.log('✅ Périphérique sélectionné:', device.name);
 
       // Connecter au GATT server
       const server = await device.gatt!.connect();
@@ -246,9 +275,17 @@ ${order.notes ? `Notes: ${order.notes}` : ''}
       const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
       console.log('✅ Caractéristique obtenue');
 
+      // 3. Mémoriser le device et la characteristic pour les prochaines impressions
+      this.bluetoothDevice = device;
+      this.bluetoothCharacteristic = characteristic;
+      console.log('💾 Device Bluetooth mémorisé pour les prochaines impressions');
+
       return characteristic;
     } catch (error) {
       console.error('❌ Erreur connexion Bluetooth:', error);
+      // En cas d'erreur, réinitialiser pour forcer une nouvelle sélection la prochaine fois
+      this.bluetoothDevice = null;
+      this.bluetoothCharacteristic = null;
       return null;
     }
   }
