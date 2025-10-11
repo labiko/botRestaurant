@@ -2730,6 +2730,15 @@ export class UniversalBot implements IMessageHandler {
     console.log('🔍 DEBUG_QUANTITY_PRODUCT:', JSON.stringify(selectedProduct, null, 2));
     console.log('🔍 DEBUG_QUANTITY_VALUE:', quantity);
 
+    // Récupérer l'icône depuis les products en session si manquante
+    if (selectedProduct && !selectedProduct.icon && session.sessionData?.products) {
+      const fullProduct = session.sessionData.products.find(p => p.id === selectedProduct.id);
+      if (fullProduct?.icon) {
+        selectedProduct.icon = fullProduct.icon;
+        console.log(`✅ [QuantityInput] Icône récupérée depuis session: ${fullProduct.icon} pour ${selectedProduct.name}`);
+      }
+    }
+
     // Traitement quantité pour workflow simple
 
 
