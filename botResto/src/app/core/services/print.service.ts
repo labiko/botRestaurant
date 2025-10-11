@@ -149,7 +149,7 @@ ${order.notes ? `Notes: ${order.notes}` : ''}
   /**
    * Connecter l'imprimante via Web Bluetooth
    */
-  private async connectPrinter(): Promise<BluetoothRemoteGATTCharacteristic | null> {
+  private async connectPrinter(): Promise<any | null> {
     try {
       console.log('🔍 Recherche imprimante Bluetooth...');
 
