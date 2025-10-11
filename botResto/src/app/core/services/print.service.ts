@@ -254,10 +254,68 @@ ${order.notes ? `Notes: ${order.notes}` : ''}
   }
 
   /**
-   * Convertir texte en commandes ESC/POS
+   * Nettoyer le texte pour l'impression thermique
+   * - Supprimer emojis
+   * - Remplacer caractères accentués
+   * - Remplacer symbole €
+   * - Supprimer astérisques
+   * - Couper lignes trop longues (42 caractères max pour 58mm)
+   */
+  private sanitizeForThermalPrinter(text: string): string {
+    // 1. Supprimer tous les emojis (plage Unicode)
+    let sanitized = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
+
+    // 2. Remplacer les caractères accentués par leurs équivalents ASCII
+    const accentMap: { [key: string]: string } = {
+      'à': 'a', 'â': 'a', 'ä': 'a', 'á': 'a', 'ã': 'a',
+      'è': 'e', 'ê': 'e', 'ë': 'e', 'é': 'e',
+      'ì': 'i', 'î': 'i', 'ï': 'i', 'í': 'i',
+      'ò': 'o', 'ô': 'o', 'ö': 'o', 'ó': 'o', 'õ': 'o',
+      'ù': 'u', 'û': 'u', 'ü': 'u', 'ú': 'u',
+      'ç': 'c', 'ñ': 'n',
+      'À': 'A', 'Â': 'A', 'Ä': 'A', 'Á': 'A', 'Ã': 'A',
+      'È': 'E', 'Ê': 'E', 'Ë': 'E', 'É': 'E',
+      'Ì': 'I', 'Î': 'I', 'Ï': 'I', 'Í': 'I',
+      'Ò': 'O', 'Ô': 'O', 'Ö': 'O', 'Ó': 'O', 'Õ': 'O',
+      'Ù': 'U', 'Û': 'U', 'Ü': 'U', 'Ú': 'U',
+      'Ç': 'C', 'Ñ': 'N'
+    };
+
+    for (const [accented, plain] of Object.entries(accentMap)) {
+      sanitized = sanitized.replace(new RegExp(accented, 'g'), plain);
+    }
+
+    // 3. Remplacer le symbole € par EUR
+    sanitized = sanitized.replace(/€/g, 'EUR');
+
+    // 4. Supprimer les astérisques qui peuvent causer des problèmes
+    sanitized = sanitized.replace(/\*/g, '');
+
+    // 5. Couper les lignes trop longues (42 caractères max pour imprimante 58mm)
+    const lines = sanitized.split('\n');
+    const wrappedLines: string[] = [];
+
+    lines.forEach(line => {
+      if (line.length <= 42) {
+        wrappedLines.push(line);
+      } else {
+        // Couper la ligne en segments de 42 caractères
+        for (let i = 0; i < line.length; i += 42) {
+          wrappedLines.push(line.substring(i, i + 42));
+        }
+      }
+    });
+
+    return wrappedLines.join('\n');
+  }
+
+  /**
+   * Convertir texte en commandes ESC/POS avec encodage ASCII
    */
   private convertToESCPOS(text: string): Uint8Array {
-    const encoder = new TextEncoder();
+    // Nettoyer le texte avant conversion
+    const cleanText = this.sanitizeForThermalPrinter(text);
+
     const ESC = 0x1B;
     const GS = 0x1D;
 
@@ -277,7 +335,7 @@ ${order.notes ? `Notes: ${order.notes}` : ''}
     buffer.push(...INIT);
 
     // Ajouter le texte ligne par ligne
-    const lines = text.split('\n');
+    const lines = cleanText.split('\n');
     lines.forEach(line => {
       if (line.includes('====')) {
         // Lignes de séparation centrées
@@ -287,9 +345,18 @@ ${order.notes ? `Notes: ${order.notes}` : ''}
         buffer.push(...ALIGN_LEFT);
       }
 
-      // Ajouter le texte
-      const encoded = encoder.encode(line);
-      buffer.push(...Array.from(encoded));
+      // Encoder en ASCII pur (caractères 0-127)
+      for (let i = 0; i < line.length; i++) {
+        const charCode = line.charCodeAt(i);
+        // Garder uniquement les caractères ASCII imprimables (32-126)
+        if (charCode >= 32 && charCode <= 126) {
+          buffer.push(charCode);
+        } else {
+          // Remplacer les caractères non-ASCII par un espace
+          buffer.push(32);
+        }
+      }
+
       buffer.push(...LINE_FEED);
     });
 
