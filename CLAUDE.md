@@ -412,6 +412,49 @@ Avant chaque déploiement:
 
 **Note** : Ne pas utiliser le format pooler (`aws-0-eu-central-1.pooler.supabase.com:6543`) qui ne fonctionne pas.
 
+---
+
+## 🔄 DUMP COMPLET PROD → DEV (Structure + Données)
+
+**⚠️ COMMANDES RECOMMANDÉES**: Utiliser ces commandes pour synchroniser complètement DEV avec PROD :
+
+### **1️⃣ Export PROD (schéma public uniquement)** :
+```bash
+cd /c/Users/diall/Documents/IonicProjects/Claude/botRestaurant && \
+"/c/Program Files/PostgreSQL/17/bin/pg_dump" \
+  --clean \
+  --if-exists \
+  --no-owner \
+  --no-privileges \
+  --schema=public \
+  "postgresql://postgres:p4zN25F7Gfw9Py@db.vywbhlnzvfqtiurwmrac.supabase.co:5432/postgres" \
+  > dump_prod_public_$(date +%Y%m%d_%H%M%S).sql
+```
+
+**Options expliquées :**
+- `--clean` : Génère les commandes DROP avant CREATE
+- `--if-exists` : Ajoute IF EXISTS aux DROP (évite les erreurs)
+- `--no-owner` : Ignore les propriétaires (évite les conflits de users)
+- `--no-privileges` : Ignore les permissions (évite les conflits)
+- `--schema=public` : Exporte uniquement le schéma public (données métier)
+
+### **2️⃣ Import en DEV** :
+```bash
+cd /c/Users/diall/Documents/IonicProjects/Claude/botRestaurant && \
+"/c/Program Files/PostgreSQL/17/bin/psql" \
+  "postgresql://postgres:p4zN25F7Gfw9Py@db.lphvdoyhwaelmwdfkfuh.supabase.co:5432/postgres" \
+  < dump_prod_public_YYYYMMDD_HHMMSS.sql
+```
+
+**⚠️ ATTENTION** : L'import écrase **TOUTES les données DEV** avec les données PROD !
+
+**📋 Workflow complet :**
+1. Exécuter la commande d'export → Fichier `dump_prod_public_YYYYMMDD_HHMMSS.sql` créé
+2. Vérifier la taille du fichier (`ls -lh dump_prod_public_*.sql`)
+3. Remplacer `YYYYMMDD_HHMMSS` dans la commande d'import par le nom du fichier
+4. Exécuter la commande d'import
+5. Vérifier les logs pour s'assurer du succès
+
 ## Fichier bot WhatsApp
 
 - **Code principal**: `C:\Users\diall\Documents\IonicProjects\Claude\botRestaurant\supabase\functions\webhook-whatsapp\index.ts`
