@@ -704,6 +704,11 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
   private formatPhoneWithCountryCode(localNumber: string, countryCode: string): string {
     let cleaned = localNumber.replace(/\D/g, '');
 
+    // Si le numéro commence déjà par le country code, le retourner tel quel
+    if (cleaned.startsWith(countryCode)) {
+      return cleaned;
+    }
+
     // Enlever 0 initial si présent
     if (cleaned.startsWith('0')) {
       cleaned = cleaned.substring(1);
