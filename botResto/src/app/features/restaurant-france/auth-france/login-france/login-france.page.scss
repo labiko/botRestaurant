@@ -147,22 +147,26 @@ ion-content {
 // =============================================================================
 .login-section {
   padding: 20px;
+  padding-top: 60px;
   background: white;
   border-radius: 25px 25px 0 0;
   margin-top: -15px;
   position: relative;
   z-index: 2;
   min-height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 
   .login-header {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     position: relative;
 
     .back-button {
       position: absolute;
       top: -5px;
-      left: -10px;
+      left: 6px;
       --color: var(--ion-color-primary);
       font-size: 14px;
       font-weight: 500;
@@ -194,7 +198,7 @@ ion-content {
     margin: 0 auto;
 
     .input-container {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       position: relative;
       animation: slideInUp 0.6s ease-out;
       
@@ -219,7 +223,7 @@ ion-content {
         --padding-end: 16px; // Padding ion-item à droite
         --inner-padding-start: 0; // Pas de padding interne
         --inner-padding-end: 0;
-        min-height: 65px;
+        min-height: 48px;
         position: relative;
 
         // Force l'alignement à gauche pour le contenu
@@ -327,7 +331,7 @@ ion-content {
             font-size: 13px;
             transform: translateY(0);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            margin: 0; // Pas de margin
+            margin: 0 0 6px 0;
             padding-left: 16px; // Alignement avec le select
 
             &.modern-label {
@@ -350,8 +354,8 @@ ion-content {
             font-weight: 500;
             --padding-start: 0;
             --padding-end: 0;
-            --padding-top: 8px;
-            --padding-bottom: 8px;
+            --padding-top: 12px;
+            --padding-bottom: 12px;
             
             &.phone-number-input {
               letter-spacing: 1px;
@@ -391,7 +395,7 @@ ion-content {
     }
 
     .form-actions {
-      margin-top: 30px;
+      margin-top: 24px;
 
       .login-button {
         height: 50px;
@@ -589,12 +593,14 @@ ion-content {
 
   .login-section {
     padding: 12px; // Réduit de 15px à 12px
+    padding-top: 40px; // Déplace le contenu vers le bas sur mobile
     min-height: calc(100vh - 130px); // Ajusté pour header 110px
 
     .login-header {
       margin-bottom: 15px; // Réduit de 20px à 15px
 
       .back-button {
+        left: 6px; // Position visible sur mobile
         // Masquer le texte, garder uniquement l'icône
         font-size: 0;
 
