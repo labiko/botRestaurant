@@ -83,6 +83,7 @@
             <ion-input
               formControlName="phone"
               type="tel"
+              placeholder="06 12 34 56 78"
               clearInput="true"
               class="phone-number-input">
             </ion-input>
@@ -102,6 +103,7 @@
             <ion-input
               formControlName="password"
               [type]="showPassword ? 'text' : 'password'"
+              [placeholder]="selectedProfileType === 'restaurant' ? 'Entrez votre mot de passe' : 'Entrez votre code'"
               [maxlength]="selectedProfileType === 'driver' ? 6 : null"
               clearInput="true"
               class="password-field">
