@@ -9,7 +9,8 @@ const routes: Routes = [
   },
   {
     path: 'auth/login',
-    loadChildren: () => import('./auth/login/login.module').then( m => m.LoginPageModule)
+    redirectTo: 'restaurant-france/auth-france/login-france',
+    pathMatch: 'full'
   },
   {
     path: 'restaurant/dashboard',
