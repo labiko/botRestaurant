@@ -96,9 +96,9 @@ export class LoginFrancePage implements OnInit, OnDestroy {
   private onPopState = (event: PopStateEvent) => {
     // Ajouter immédiatement une nouvelle entrée pour le prochain clic
     history.pushState(null, '', window.location.href);
-    
-    // Rediriger vers la même page
-    window.location.href = '/restaurant-france/auth-france/login-france';
+
+    // Rediriger vers la racine qui force vers login
+    window.location.href = '/';
   }
 
   ngOnDestroy() {

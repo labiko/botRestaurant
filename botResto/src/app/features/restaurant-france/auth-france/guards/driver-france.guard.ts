@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, Router, UrlTree } from '@angular/router';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, filter, take } from 'rxjs/operators';
 import { AuthFranceService } from '../services/auth-france.service';
 
 @Injectable({
@@ -16,6 +16,8 @@ export class DriverFranceGuard implements CanActivate {
 
   canActivate(): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
     return this.authFranceService.currentUser$.pipe(
+      filter(user => user !== undefined),
+      take(1),
       map(user => {
         if (user && user.type === 'driver') {
           return true;
