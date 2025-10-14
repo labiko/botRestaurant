@@ -1,19 +1,15 @@
 // API pour récupérer la vitrine d'un restaurant spécifique
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Configuration PRODUCTION - Même config que restaurants/management
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL_PROD || process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD || process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { getSupabaseClientForRequest } from '@/lib/api-helpers';
 
 // GET - Récupérer la vitrine d'un restaurant par son ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const { id } = params;
+    const supabase = getSupabaseClientForRequest(request);
+    const { id } = await params;
     const restaurantId = parseInt(id, 10);
 
     if (isNaN(restaurantId)) {

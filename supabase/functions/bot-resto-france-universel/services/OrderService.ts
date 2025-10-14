@@ -520,4 +520,37 @@ export class OrderService {
     console.log(`✅ [OrderService] Statut mis à jour: ${status}`);
     return true;
   }
+
+  /**
+   * Construire le message de notification pour le restaurant
+   */
+  buildRestaurantNotificationMessage(
+    order: any,
+    customerPhone: string,
+    currency: string = 'EUR'
+  ): string {
+    let message = `🔔 *NOUVELLE COMMANDE* 🔔\n\n`;
+    message += `🎫 *Commande #${order.order_number}*\n`;
+    message += `💰 *Montant:* ${this.formatPrice(order.total_amount, currency)}\n`;
+
+    // Mode de livraison
+    const modeEmoji: Record<string, string> = {
+      'livraison': '🚚',
+      'a_emporter': '📦',
+      'sur_place': '🍽️'
+    };
+    message += `${modeEmoji[order.delivery_mode] || '📦'} *Mode:* ${order.delivery_mode}\n`;
+
+    // Adresse si livraison (limitée à 30 caractères)
+    if (order.delivery_mode === 'livraison' && order.delivery_address) {
+      const shortAddress = order.delivery_address.length > 30
+        ? order.delivery_address.substring(0, 30) + '...'
+        : order.delivery_address;
+      message += `📍 *Adresse:* ${shortAddress}\n`;
+    }
+
+    message += `\n👉 *Ouvrir l'app pour voir les détails*`;
+
+    return message;
+  }
 }
