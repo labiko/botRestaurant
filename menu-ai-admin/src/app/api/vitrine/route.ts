@@ -1,40 +1,48 @@
 // API pour la gestion des vitrines - CRUD principal
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Configuration PRODUCTION - Même config que restaurants/management
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL_PROD || process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD || process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { getSupabaseClientForRequest } from '@/lib/api-helpers';
 
 // GET - Récupérer toutes les vitrines
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = getSupabaseClientForRequest(request);
     const { searchParams } = new URL(request.url);
     const restaurantId = searchParams.get('restaurant_id');
 
+    // Récupérer les vitrines sans jointure
     let query = supabase
       .from('restaurant_vitrine_settings')
-      .select(`
-        *,
-        restaurant:france_restaurants(
-          name, phone, whatsapp_number,
-          address, city, business_hours
-        )
-      `);
+      .select('*');
 
     if (restaurantId) {
       query = query.eq('restaurant_id', restaurantId);
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data: vitrines, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       console.error('Erreur récupération vitrines:', error);
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, vitrines: data });
+    // Récupérer les infos des restaurants associés
+    if (vitrines && vitrines.length > 0) {
+      const restaurantIds = vitrines.map(v => v.restaurant_id);
+      const { data: restaurants } = await supabase
+        .from('france_restaurants')
+        .select('id, name, phone, whatsapp_number, address, city, business_hours')
+        .in('id', restaurantIds);
+
+      // Combiner vitrines + restaurants
+      const vitrinesWithRestaurants = vitrines.map(vitrine => ({
+        ...vitrine,
+        restaurant: restaurants?.find(r => r.id === vitrine.restaurant_id) || null
+      }));
+
+      return NextResponse.json({ success: true, vitrines: vitrinesWithRestaurants });
+    }
+
+    return NextResponse.json({ success: true, vitrines: [] });
   } catch (error) {
     console.error('Erreur API vitrines GET:', error);
     return NextResponse.json({ success: false, error: 'Erreur interne du serveur' }, { status: 500 });
@@ -44,7 +52,7 @@ export async function GET(request: NextRequest) {
 // POST - Créer une nouvelle vitrine
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = getSupabaseClientForRequest(request);
     const body = await request.json();
 
     // Validation des champs requis
@@ -85,11 +93,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insérer la nouvelle vitrine
+    // Insérer la nouvelle vitrine (sans jointure)
     const { data, error } = await supabase
       .from('restaurant_vitrine_settings')
       .insert(body)
-      .select()
+      .select('*')  // Sélectionner explicitement toutes les colonnes de la table uniquement
       .single();
 
     if (error) {

@@ -2308,6 +2308,9 @@ export class UniversalBot implements IMessageHandler {
 
       await this.messageSender.sendMessage(phoneNumber, confirmationMessage);
 
+      // Notification au restaurant
+      await this.sendRestaurantNotification(order, session.restaurantId, phoneNumber);
+
       // Supprimer l'ancienne session AVANT de créer la nouvelle
       await this.deleteSession(phoneNumber);
 
@@ -2621,8 +2624,11 @@ export class UniversalBot implements IMessageHandler {
         address,
         this.restaurantConfig?.currency || 'EUR'
       );
-      
+
       await this.messageSender.sendMessage(phoneNumber, confirmationMessage);
+
+      // Notification au restaurant
+      await this.sendRestaurantNotification(order, restaurantId, phoneNumber);
 
       // Supprimer l'ancienne session AVANT de créer la nouvelle
       await this.deleteSession(phoneNumber);
@@ -2655,6 +2661,47 @@ export class UniversalBot implements IMessageHandler {
     } catch (error) {
       console.error('❌ [getRestaurantName] Erreur:', error);
       return 'Restaurant';
+    }
+  }
+
+  /**
+   * Envoyer notification WhatsApp au restaurant
+   */
+  private async sendRestaurantNotification(
+    order: any,
+    restaurantId: number,
+    customerPhone: string
+  ): Promise<void> {
+    try {
+      console.log(`🔔 [RestaurantNotif] Envoi notification resto ID: ${restaurantId}`);
+
+      // Récupérer le whatsapp_number du restaurant
+      const supabase = await this.getSupabaseClient();
+      const { data: restaurant } = await supabase
+        .from('france_restaurants')
+        .select('whatsapp_number')
+        .eq('id', restaurantId)
+        .single();
+
+      if (!restaurant?.whatsapp_number) {
+        console.warn('⚠️ [RestaurantNotif] Pas de whatsapp_number pour le resto');
+        return;
+      }
+
+      // Construire le message
+      const message = this.orderService.buildRestaurantNotificationMessage(
+        order,
+        customerPhone,
+        this.restaurantConfig?.currency || 'EUR'
+      );
+
+      // Envoyer la notification
+      await this.messageSender.sendMessage(restaurant.whatsapp_number, message);
+      console.log(`✅ [RestaurantNotif] Notification envoyée au resto`);
+
+    } catch (error) {
+      console.error('❌ [RestaurantNotif] Erreur:', error);
+      // Ne pas bloquer la commande si la notification échoue
     }
   }
 
@@ -3171,8 +3218,12 @@ export class UniversalBot implements IMessageHandler {
           null,
           this.restaurantConfig?.currency || 'EUR'
         );
-        
+
         await this.messageSender.sendMessage(phoneNumber, confirmationMessage);
+
+        // Notification au restaurant
+        await this.sendRestaurantNotification(order, restaurantId, phoneNumber);
+
         await this.deleteSession(phoneNumber);
         
       } else {

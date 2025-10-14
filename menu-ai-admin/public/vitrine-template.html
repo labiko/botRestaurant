@@ -885,6 +885,94 @@
             to { transform: rotate(90deg); }
         }
 
+        /* ========================================
+           OPTIMISATION IMPRESSION A4
+           ======================================== */
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 15mm;
+            }
+
+            body {
+                background: white;
+                padding: 0;
+                overflow: visible;
+            }
+
+            body::before {
+                display: none;
+            }
+
+            .container {
+                max-width: 100%;
+                box-shadow: none;
+                page-break-after: avoid;
+                page-break-inside: avoid;
+                overflow: visible;
+                animation: none;
+            }
+
+            .logo {
+                animation: none;
+            }
+
+            .qr-container {
+                animation: none;
+            }
+
+            .qr-container::before,
+            .qr-container::after {
+                display: none;
+            }
+
+            .qr-code {
+                width: 220px;
+                height: 220px;
+            }
+
+            /* Masquer éléments inutiles à l'impression */
+            .orientation-btn,
+            .floating-elements,
+            .live-stats,
+            .menu-preview,
+            .testimonials-container,
+            .whatsapp-button,
+            .footer {
+                display: none !important;
+            }
+
+            /* Garder seulement l'essentiel */
+            .logo,
+            h1,
+            .subtitle,
+            .promo,
+            .qr-container,
+            .instructions {
+                page-break-inside: avoid;
+            }
+
+            /* Compacter les instructions */
+            .instructions {
+                margin: 15px 0;
+                padding: 10px;
+            }
+
+            .step {
+                margin: 8px 0;
+            }
+
+            .step-text {
+                font-size: 14px;
+            }
+
+            .promo {
+                animation: none;
+                margin: 10px 0;
+                padding: 10px;
+            }
+        }
+
         /* Mode Landscape forcé */
         .container.landscape-mode {
             max-width: 90vw !important;

@@ -10,6 +10,7 @@ import { PhoneNumberUtilsService } from '../../../../../core/services/phone-numb
 import { SupabaseFranceService } from '../../../../../core/services/supabase-france.service';
 import { PrintService } from '../../../../../core/services/print.service';
 import { CurrencyService, AVAILABLE_CURRENCIES } from '../../../../../core/services/currency.service';
+import { UniversalAuthService } from '../../../../../core/services/universal-auth.service';
 
 @Component({
   selector: 'app-restaurant-config',
@@ -71,7 +72,8 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
     private phoneNumberUtils: PhoneNumberUtilsService,
     private supabaseFranceService: SupabaseFranceService,
     private printService: PrintService,
-    public currencyService: CurrencyService
+    public currencyService: CurrencyService,
+    private universalAuthService: UniversalAuthService
   ) {
     // Récupérer l'ID du restaurant depuis la session
     const id = this.authFranceService.getCurrentRestaurantId();
@@ -166,8 +168,11 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
             // Update form validators based on hideDeliveryInfo
             this.updateDeliveryFieldsValidators();
 
-            // Stocker le country_code
-            this.currentCountryCode = config.country_code || '33';
+            // Récupérer le préfixe téléphonique depuis supported_countries (comme login-france)
+            const country = this.universalAuthService.getCountryByCode(config.country_code || 'FR');
+            this.currentCountryCode = country?.phone_prefix || '33';
+
+            console.log(`🔧 [RestaurantConfig] Country: ${config.country_code} → Prefix: ${this.currentCountryCode}`);
 
             // Extraire numéros locaux (enlever l'indicatif)
             const phoneLocal = this.extractLocalNumber(config.phone || '', this.currentCountryCode);
@@ -251,12 +256,22 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
     await loading.present();
 
     try {
-      const phoneLocal = this.restaurantForm.get('phone')?.value;
-      const whatsappLocal = this.restaurantForm.get('whatsapp_number')?.value;
+      const phoneLocal = this.restaurantForm.get('phone')?.value?.trim();
+      const whatsappLocal = this.restaurantForm.get('whatsapp_number')?.value?.trim();
 
-      // Formater avec l'indicatif du restaurant (déjà en base)
-      const phoneFinal = this.formatPhoneWithCountryCode(phoneLocal, this.currentCountryCode);
-      const whatsappFinal = this.formatPhoneWithCountryCode(whatsappLocal, this.currentCountryCode);
+      // Récupérer le code pays depuis le préfixe (comme login-france)
+      const countryCode = this.universalAuthService.getCountryCodeFromPrefix(this.currentCountryCode);
+
+      if (!countryCode) {
+        throw new Error('Pays non supporté');
+      }
+
+      // Formater vers international avec le système universel (comme login-france)
+      const phoneFinal = this.universalAuthService.formatToInternational(phoneLocal, countryCode);
+      const whatsappFinal = this.universalAuthService.formatToInternational(whatsappLocal, countryCode);
+
+      console.log(`📞 [Save] Phone: ${phoneLocal} → ${phoneFinal}`);
+      console.log(`📞 [Save] WhatsApp: ${whatsappLocal} → ${whatsappFinal}`);
 
       // Sauvegarder directement avec Supabase
       const { error } = await this.supabaseFranceService.client

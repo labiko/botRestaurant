@@ -1,36 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 import { BOT_WHATSAPP_NUMBER } from '@/constants/bot';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL_PROD || process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD || process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { getSupabaseClientForRequest } from '@/lib/api-helpers';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = getSupabaseClientForRequest(request);
+    const { slug } = await params;
 
-    // Récupérer les données de la vitrine
+    // Récupérer les données de la vitrine sans jointure
     const { data: vitrine, error } = await supabase
       .from('restaurant_vitrine_settings')
-      .select(`
-        *,
-        restaurant:france_restaurants(
-          name, phone, whatsapp_number,
-          address, city, business_hours
-        )
-      `)
-      .eq('slug', params.slug)
+      .select('*')
+      .eq('slug', slug)
       .eq('is_active', true)
       .single();
 
     if (error || !vitrine) {
       return new NextResponse('Vitrine non trouvée', { status: 404 });
     }
+
+    // Récupérer les infos du restaurant séparément
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from('france_restaurants')
+      .select('name, phone, whatsapp_number, address, city, business_hours')
+      .eq('id', vitrine.restaurant_id)
+      .single();
+
+    if (restaurantError || !restaurant) {
+      return new NextResponse('Restaurant non trouvé', { status: 404 });
+    }
+
+    // Combiner les données
+    const vitrineWithRestaurant = {
+      ...vitrine,
+      france_restaurants: restaurant
+    };
 
     // Récupérer les produits populaires avec sélection intelligente
     const { data: popularProducts, error: productsError } = await supabase
@@ -40,7 +49,7 @@ export async function GET(
         price_on_site_base,
         category:france_menu_categories(name, icon)
       `)
-      .eq('restaurant_id', vitrine.restaurant_id)
+      .eq('restaurant_id', vitrineWithRestaurant.restaurant_id)
       .eq('is_active', true)
       .not('price_on_site_base', 'is', null) // Exclure les prix null
       .order('display_order')
@@ -102,12 +111,12 @@ export async function GET(
       }
     };
 
-    const feature1 = parseFeature(vitrine.feature_1);
-    const feature2 = parseFeature(vitrine.feature_2);
-    const feature3 = parseFeature(vitrine.feature_3);
+    const feature1 = parseFeature(vitrineWithRestaurant.feature_1);
+    const feature2 = parseFeature(vitrineWithRestaurant.feature_2);
+    const feature3 = parseFeature(vitrineWithRestaurant.feature_3);
 
     // Utiliser la constante globale pour le numéro du bot
-    const restaurantPhone = vitrine.restaurant.phone;
+    const restaurantPhone = vitrineWithRestaurant.france_restaurants.phone;
 
     const formatBusinessHours = (businessHours: string | object) => {
       if (typeof businessHours === 'string') {
@@ -124,11 +133,16 @@ export async function GET(
         const productPrice = product.price_on_site_base || 0;
         const productIcon = product.category?.icon || '🍽️';
 
+        // N'afficher le prix que s'il est > 0
+        const priceHTML = productPrice > 0
+          ? `<div class="menu-item-price">${productPrice}€</div>`
+          : '';
+
         return `
                 <div class="menu-item">
                     <div class="menu-item-emoji">${productIcon}</div>
                     <div class="menu-item-name">${productName}</div>
-                    <div class="menu-item-price">${productPrice}€</div>
+                    ${priceHTML}
                 </div>`;
       }).join('');
     } catch (htmlError) {
@@ -152,26 +166,26 @@ export async function GET(
 
     // Remplacer les placeholders
     const replacements = {
-      '{{RESTAURANT_NAME}}': vitrine.restaurant.name.toUpperCase(),
-      '{{PRIMARY_COLOR}}': vitrine.primary_color,
-      '{{SECONDARY_COLOR}}': vitrine.secondary_color,
-      '{{ACCENT_COLOR}}': vitrine.accent_color,
-      '{{LOGO_EMOJI}}': vitrine.logo_emoji,
-      '{{SUBTITLE}}': vitrine.subtitle,
-      '{{PROMO_TEXT}}': vitrine.promo_text || '',
+      '{{RESTAURANT_NAME}}': vitrineWithRestaurant.france_restaurants.name.toUpperCase(),
+      '{{PRIMARY_COLOR}}': vitrineWithRestaurant.primary_color,
+      '{{SECONDARY_COLOR}}': vitrineWithRestaurant.secondary_color,
+      '{{ACCENT_COLOR}}': vitrineWithRestaurant.accent_color,
+      '{{LOGO_EMOJI}}': vitrineWithRestaurant.logo_emoji,
+      '{{SUBTITLE}}': vitrineWithRestaurant.subtitle,
+      '{{PROMO_TEXT}}': vitrineWithRestaurant.promo_text || '',
       '{{PHONE}}': restaurantPhone,
       '{{WHATSAPP_NUMBER}}': BOT_WHATSAPP_NUMBER,
-      '{{DELIVERY_TIME}}': vitrine.delivery_time_min.toString(),
-      '{{RATING}}': vitrine.average_rating.toString(),
+      '{{DELIVERY_TIME}}': vitrineWithRestaurant.delivery_time_min.toString(),
+      '{{RATING}}': vitrineWithRestaurant.average_rating.toString(),
       '{{FEATURE1_EMOJI}}': feature1.emoji || '',
       '{{FEATURE1_TEXT}}': feature1.text || '',
       '{{FEATURE2_EMOJI}}': feature2.emoji || '',
       '{{FEATURE2_TEXT}}': feature2.text || '',
       '{{FEATURE3_EMOJI}}': feature3.emoji || '',
       '{{FEATURE3_TEXT}}': feature3.text || '',
-      '{{ADDRESS}}': vitrine.restaurant.address,
-      '{{CITY}}': vitrine.restaurant.city,
-      '{{BUSINESS_HOURS}}': formatBusinessHours(vitrine.restaurant.business_hours),
+      '{{ADDRESS}}': vitrineWithRestaurant.france_restaurants.address,
+      '{{CITY}}': vitrineWithRestaurant.france_restaurants.city,
+      '{{BUSINESS_HOURS}}': formatBusinessHours(vitrineWithRestaurant.france_restaurants.business_hours),
       '{{MENU_CAROUSEL}}': duplicatedCarouselHTML,
     };
 
