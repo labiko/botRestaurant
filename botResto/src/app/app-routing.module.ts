@@ -53,6 +53,10 @@ const routes: Routes = [
     path: 'payment/cancel',
     loadChildren: () => import('./features/payment/payment-callback/payment-callback.module').then( m => m.PaymentCallbackPageModule)
   },
+  {
+    path: 'legal/privacy-policy',
+    loadChildren: () => import('./features/legal/privacy-policy/privacy-policy.module').then( m => m.PrivacyPolicyPageModule)
+  },
   // Wildcard TOUJOURS en dernier pour ne pas capturer les routes définies
   {
     path: '**',
