@@ -333,7 +333,7 @@ export class DeliveryAssignmentService {
         .from('france_orders')
         .select('*')
         .eq('id', orderId)
-        .in('status', ['preparation', 'prete']) // MODIFIÉ : Accepter aussi 'preparation' pour vérification AVANT
+        .in('status', ['confirmee', 'preparation', 'prete']) // ✅ FIX: Ajout 'confirmee' pour workflow simplifié
         .eq('delivery_mode', 'livraison')
         .is('driver_id', null) // CORRIGÉ : driver_id au lieu de assigned_driver_id
         .single();
