@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projections Financières SaaS - Bot Resto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin: 5px 0;
+        }
+
+        .nav {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 3px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .nav a:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 50px;
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h2 {
+            color: #2c3e50;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h3 {
+            color: #667eea;
+            font-size: 1.5em;
+            margin: 30px 0 15px 0;
+        }
+
+        h4 {
+            color: #555;
+            font-size: 1.2em;
+            margin: 20px 0 10px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tbody tr:hover {
+            background-color: #e3f2fd;
+            transition: background-color 0.3s;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #ffd89b 0%, #19547b 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            color: white;
+            font-weight: bold;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid #667eea;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            border-left: 5px solid #28a745;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            color: #155724;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        code {
+            background: #f5f5f5;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #e74c3c;
+            font-size: 0.9em;
+        }
+
+        .conclusion-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .conclusion-box h3 {
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .conclusion-box ul {
+            list-style: none;
+            text-align: left;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .conclusion-box li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .conclusion-box li:before {
+            content: "✅ ";
+            margin-right: 10px;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .nav {
+                display: none;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            .content {
+                padding: 20px;
+            }
+            table {
+                font-size: 0.85em;
+            }
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 PROJECTIONS FINANCIÈRES SAAS</h1>
+            <p class="subtitle">Tarif unique : 89€/mois par restaurant (58 380 XOF)</p>
+            <p class="subtitle">Document de référence pour le calcul de rentabilité</p>
+            <p class="subtitle">Date : 13 Octobre 2025</p>
+            <p class="subtitle"><strong>Taux de conversion : 1 EUR = 655,957 XOF</strong></p>
+        </div>
+
+        <div class="nav">
+            <ul>
+                <li><a href="#couts">Coûts de structure</a></li>
+                <li><a href="#projections">Projections par volume</a></li>
+                <li><a href="#calculs">Détail des calculs</a></li>
+                <li><a href="#evolution">Évolution sur 3 ans</a></li>
+                <li><a href="#rentabilite">Analyse de rentabilité</a></li>
+                <li><a href="#valorisation">Valorisation entreprise</a></li>
+            </ul>
+        </div>
+
+        <div class="content">
+            <!-- COÛTS DE STRUCTURE -->
+            <section id="couts" class="section">
+                <h2>💰 COÛTS DE STRUCTURE</h2>
+
+                <div class="card">
+                    <h3>Coûts serveurs mensuels (FIXES)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Service</th>
+                                <th>Coût mensuel (EUR)</th>
+                                <th>Coût mensuel (XOF)</th>
+                                <th>Coût annuel (EUR)</th>
+                                <th>Coût annuel (XOF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>SB</td>
+                                <td>25€</td>
+                                <td>16 399 XOF</td>
+                                <td>300€</td>
+                                <td>196 787 XOF</td>
+                            </tr>
+                            <tr>
+                                <td>VCL</td>
+                                <td>25€</td>
+                                <td>16 399 XOF</td>
+                                <td>300€</td>
+                                <td>196 787 XOF</td>
+                            </tr>
+                            <tr>
+                                <td>GA</td>
+                                <td>12€</td>
+                                <td>7 871 XOF</td>
+                                <td>144€</td>
+                                <td>94 458 XOF</td>
+                            </tr>
+                            <tr>
+                                <td>GP</td>
+                                <td>5€</td>
+                                <td>3 280 XOF</td>
+                                <td>60€</td>
+                                <td>39 357 XOF</td>
+                            </tr>
+                            <tr style="font-weight: bold; background: #e3f2fd;">
+                                <td>TOTAL</td>
+                                <td>67€/mois</td>
+                                <td>43 949 XOF/mois</td>
+                                <td>804€/an</td>
+                                <td>527 389 XOF/an</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="warning">
+                        ⚠️ <strong>Important</strong> : Ces coûts sont fixes, identiques pour 1 ou 100 restaurants.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Coût matériel (VARIABLE par restaurant)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Équipement</th>
+                                <th>Prix unitaire (EUR)</th>
+                                <th>Prix unitaire (XOF)</th>
+                                <th>Amortissement</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Xiaomi Redmi Pad 2 (4GB/128GB)</td>
+                                <td>159€</td>
+                                <td>104 297 XOF</td>
+                                <td>6,6€/mois sur 24 mois</td>
+                            </tr>
+                            <tr>
+                                <td>Imprimante thermique Bluetooth 58mm</td>
+                                <td>30€</td>
+                                <td>19 679 XOF</td>
+                                <td>1,25€/mois sur 24 mois</td>
+                            </tr>
+                            <tr style="font-weight: bold; background: #e3f2fd;">
+                                <td>TOTAL PAR RESTAURANT</td>
+                                <td>189€</td>
+                                <td>123 976 XOF</td>
+                                <td>7,9€/mois sur 24 mois</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="warning">
+                        ⚠️ <strong>Important</strong> : Coût one-time en début d'abonnement, 0€ les années suivantes.
+                    </div>
+                    <div class="success">
+                        ✅ <strong>Configuration validée Amazon.fr</strong> : Google Play Services garantis + Écran 11" + Imprimante testée
+                    </div>
+                </div>
+            </section>
+
+            <!-- PROJECTIONS PAR VOLUME -->
+            <section id="projections" class="section">
+                <h2>📊 PROJECTIONS PAR VOLUME</h2>
+
+                <h3>Vue d'ensemble</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Restaurants</th>
+                            <th>Revenus annuels (EUR)</th>
+                            <th>Revenus annuels (XOF)</th>
+                            <th>Profit Année 1 (EUR)</th>
+                            <th>Profit Année 1 (XOF)</th>
+                            <th>Profit Année 2 (EUR)</th>
+                            <th>Profit Année 2 (XOF)</th>
+                            <th>Salaire mensuel An 2 (EUR)</th>
+                            <th>Salaire mensuel An 2 (XOF)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>5</strong></td>
+                            <td>5 340€</td>
+                            <td>3 502 810 XOF</td>
+                            <td>3 591€</td>
+                            <td>2 355 457 XOF</td>
+                            <td>4 536€</td>
+                            <td>2 975 600 XOF</td>
+                            <td>378€/mois</td>
+                            <td>247 967 XOF/mois</td>
+                        </tr>
+                        <tr style="background: #f0f0f0; font-style: italic; font-size: 0.85em; color: #666;">
+                            <td colspan="9" style="padding: 8px 15px;">
+                                💡 <strong>Calcul An1 :</strong> Revenus (5×89€×12 = 5 340€) - Serveurs (804€) - Matériel (5×189€ = 945€) = <strong>3 591€</strong> |
+                                <strong>An2 :</strong> 5 340€ - 804€ = 4 536€ (matériel déjà amorti)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>10</strong></td>
+                            <td>10 680€</td>
+                            <td>7 005 621 XOF</td>
+                            <td>7 986€</td>
+                            <td>5 238 178 XOF</td>
+                            <td>9 876€</td>
+                            <td>6 478 031 XOF</td>
+                            <td>823€/mois</td>
+                            <td>539 836 XOF/mois</td>
+                        </tr>
+                        <tr style="background: #f0f0f0; font-style: italic; font-size: 0.85em; color: #666;">
+                            <td colspan="9" style="padding: 8px 15px;">
+                                💡 <strong>Calcul An1 :</strong> Revenus (10×89€×12 = 10 680€) - Serveurs (804€) - Matériel (10×189€ = 1 890€) = <strong>7 986€</strong> |
+                                <strong>An2 :</strong> 10 680€ - 804€ = 9 876€ (matériel déjà amorti)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>20</strong></td>
+                            <td>21 360€</td>
+                            <td>14 011 241 XOF</td>
+                            <td>16 776€</td>
+                            <td>11 003 621 XOF</td>
+                            <td>20 556€</td>
+                            <td>13 483 852 XOF</td>
+                            <td>1 713€/mois</td>
+                            <td>1 123 654 XOF/mois</td>
+                        </tr>
+                        <tr style="background: #f0f0f0; font-style: italic; font-size: 0.85em; color: #666;">
+                            <td colspan="9" style="padding: 8px 15px;">
+                                💡 <strong>Calcul An1 :</strong> Revenus (20×89€×12 = 21 360€) - Serveurs (804€) - Matériel (20×189€ = 3 780€) = <strong>16 776€</strong> |
+                                <strong>An2 :</strong> 21 360€ - 804€ = 20 556€ (matériel déjà amorti)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>50</strong></td>
+                            <td>53 400€</td>
+                            <td>35 028 103 XOF</td>
+                            <td>43 146€</td>
+                            <td>28 296 690 XOF</td>
+                            <td>52 596€</td>
+                            <td>34 501 706 XOF</td>
+                            <td>4 383€/mois</td>
+                            <td>2 875 142 XOF/mois</td>
+                        </tr>
+                        <tr style="background: #f0f0f0; font-style: italic; font-size: 0.85em; color: #666;">
+                            <td colspan="9" style="padding: 8px 15px;">
+                                💡 <strong>Calcul An1 :</strong> Revenus (50×89€×12 = 53 400€) - Serveurs (804€) - Matériel (50×189€ = 9 450€) = <strong>43 146€</strong> |
+                                <strong>An2 :</strong> 53 400€ - 804€ = 52 596€ (matériel déjà amorti)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>100</strong></td>
+                            <td>106 800€</td>
+                            <td>70 056 207 XOF</td>
+                            <td>87 096€</td>
+                            <td>57 120 534 XOF</td>
+                            <td>105 996€</td>
+                            <td>69 528 818 XOF</td>
+                            <td>8 833€/mois</td>
+                            <td>5 794 068 XOF/mois</td>
+                        </tr>
+                        <tr style="background: #f0f0f0; font-style: italic; font-size: 0.85em; color: #666;">
+                            <td colspan="9" style="padding: 8px 15px;">
+                                💡 <strong>Calcul An1 :</strong> Revenus (100×89€×12 = 106 800€) - Serveurs (804€) - Matériel (100×189€ = 18 900€) = <strong>87 096€</strong> |
+                                <strong>An2 :</strong> 106 800€ - 804€ = 105 996€ (matériel déjà amorti)
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- 10 RESTAURANTS -->
+                <div class="card">
+                    <h3>📈 10 RESTAURANTS</h3>
+
+                    <h4>Année 1</h4>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Revenus annuels</div>
+                            <div class="stat-value">10 680€</div>
+                            <div class="stat-label">7 005 621 XOF</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Profit net</div>
+                            <div class="stat-value">7 986€</div>
+                            <div class="stat-label">5 238 178 XOF</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Marge par resto/mois</div>
+                            <div class="stat-value">66,6€</div>
+                            <div class="stat-label">43 687 XOF</div>
+                        </div>
+                    </div>
+
+                    <h4>Année 2</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Élément</th>
+                                <th>Montant annuel (EUR)</th>
+                                <th>Montant annuel (XOF)</th>
+                                <th>Montant mensuel (EUR)</th>
+                                <th>Montant mensuel (XOF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Revenus</td>
+                                <td>10 680€</td>
+                                <td>7 005 621 XOF</td>
+                                <td>890€</td>
+                                <td>583 802 XOF</td>
+                            </tr>
+                            <tr>
+                                <td>Coûts serveurs</td>
+                                <td>804€</td>
+                                <td>527 389 XOF</td>
+                                <td>67€</td>
+                                <td>43 949 XOF</td>
+                            </tr>
+                            <tr>
+                                <td>Coûts terminals</td>
+                                <td>0€</td>
+                                <td>0 XOF</td>
+                                <td>0€</td>
+                                <td>0 XOF</td>
+                            </tr>
+                            <tr style="font-weight: bold; background: #d4edda;">
+                                <td>PROFIT NET</td>
+                                <td>9 876€</td>
+                                <td>6 478 031 XOF</td>
+                                <td>823€</td>
+                                <td>539 836 XOF</td>
+                            </tr>
+                            <tr>
+                                <td>Marge par resto</td>
+                                <td>988€/an</td>
+                                <td>648 088 XOF/an</td>
+                                <td>82,3€/mois</td>
+                                <td>54 007 XOF/mois</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="success">
+                        <strong>Croissance</strong> : +28% vs Année 1
+                    </div>
+                </div>
+
+                <!-- 50 RESTAURANTS -->
+                <div class="card">
+                    <h3>🔥 50 RESTAURANTS</h3>
+
+                    <h4>Année 1</h4>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Revenus annuels</div>
+                            <div class="stat-value">53 400€</div>
+                            <div class="stat-label">35 028 103 XOF</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Profit net</div>
+                            <div class="stat-value">43 146€</div>
+                            <div class="stat-label">28 296 690 XOF</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Salaire équivalent</div>
+                            <div class="stat-value">3 595€</div>
+                            <div class="stat-label">2 358 166 XOF/mois</div>
+                        </div>
+                    </div>
+
+                    <h4>Année 2</h4>
+                    <div class="highlight">
+                        <p style="font-size: 1.2em; text-align: center;">
+                            💰 Profit net : <strong>52 596€</strong> (34 501 706 XOF)<br>
+                            💼 Équivalent salaire mensuel : <strong>4 383€</strong> (2 875 142 XOF)
+                        </p>
+                    </div>
+                    <div class="success">
+                        <strong>Croissance</strong> : +26% vs Année 1
+                    </div>
+                </div>
+            </section>
+
+            <!-- ANALYSE DE RENTABILITÉ -->
+            <section id="rentabilite" class="section">
+                <h2>📈 ANALYSE DE RENTABILITÉ</h2>
+
+                <div class="card">
+                    <h3>Seuil de rentabilité</h3>
+                    <div class="success">
+                        <p><strong>Sans amortissement terminal (année 2+)</strong></p>
+                        <p>Seuil = 67€ ÷ 89€ = 0,75 restaurant</p>
+                        <p><strong>✅ Seuil de rentabilité : 1 restaurant minimum</strong></p>
+                    </div>
+
+                    <div class="warning">
+                        <p><strong>Avec amortissement terminal (année 1)</strong></p>
+                        <p>Pour 1 resto : Marge = 4,1€ ✓ Rentable (mais très serré)</p>
+                        <p>Pour 5 restos : Marge = 57,7€ ✓ Rentable et confortable</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>ROI (Return On Investment)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Investissement initial</th>
+                                <th>5 restos (EUR)</th>
+                                <th>5 restos (XOF)</th>
+                                <th>10 restos (EUR)</th>
+                                <th>10 restos (XOF)</th>
+                                <th>20 restos (EUR)</th>
+                                <th>20 restos (XOF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Matériel (Xiaomi + Imprimante)</td>
+                                <td>945€</td>
+                                <td>619 879 XOF</td>
+                                <td>1 890€</td>
+                                <td>1 239 759 XOF</td>
+                                <td>3 780€</td>
+                                <td>2 479 518 XOF</td>
+                            </tr>
+                            <tr>
+                                <td>Serveurs (1er mois)</td>
+                                <td>67€</td>
+                                <td>43 949 XOF</td>
+                                <td>67€</td>
+                                <td>43 949 XOF</td>
+                                <td>67€</td>
+                                <td>43 949 XOF</td>
+                            </tr>
+                            <tr style="font-weight: bold;">
+                                <td>Total investissement</td>
+                                <td>1 012€</td>
+                                <td>663 828 XOF</td>
+                                <td>1 957€</td>
+                                <td>1 283 708 XOF</td>
+                                <td>3 847€</td>
+                                <td>2 523 467 XOF</td>
+                            </tr>
+                            <tr style="background: #d4edda;">
+                                <td>Profit année 1</td>
+                                <td>3 591€</td>
+                                <td>2 355 457 XOF</td>
+                                <td>7 986€</td>
+                                <td>5 238 178 XOF</td>
+                                <td>16 776€</td>
+                                <td>11 003 621 XOF</td>
+                            </tr>
+                            <tr style="font-weight: bold; background: #fff3cd;">
+                                <td>ROI</td>
+                                <td>355%</td>
+                                <td>355%</td>
+                                <td>408%</td>
+                                <td>408%</td>
+                                <td>436%</td>
+                                <td>436%</td>
+                            </tr>
+                            <tr>
+                                <td>Durée amortissement</td>
+                                <td>3,4 mois</td>
+                                <td>3,4 mois</td>
+                                <td>2,9 mois</td>
+                                <td>2,9 mois</td>
+                                <td>2,8 mois</td>
+                                <td>2,8 mois</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <h3>Comparaison vs UberEats (15% commission)</h3>
+                    <p><strong>Restaurant type : 300 commandes/mois, panier moyen 15€</strong></p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Solution</th>
+                                <th>Coût mensuel (EUR)</th>
+                                <th>Coût mensuel (XOF)</th>
+                                <th>Coût annuel (EUR)</th>
+                                <th>Coût annuel (XOF)</th>
+                                <th>Économie vs Vous (EUR)</th>
+                                <th>Économie vs Vous (XOF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background: #d4edda;">
+                                <td><strong>Votre SAAS</strong></td>
+                                <td>89€</td>
+                                <td>58 380 XOF</td>
+                                <td>1 068€</td>
+                                <td>700 562 XOF</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                            <tr style="background: #f8d7da;">
+                                <td><strong>UberEats (15%)</strong></td>
+                                <td>675€</td>
+                                <td>442 771 XOF</td>
+                                <td>8 100€</td>
+                                <td>5 313 252 XOF</td>
+                                <td><strong>7 032€/an</strong></td>
+                                <td><strong>4 612 690 XOF/an</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="success">
+                        <strong>Seuil de rentabilité client</strong> : 36 commandes/mois<br>
+                        Au-delà de 36 commandes/mois, votre solution est moins chère ✓
+                    </div>
+                </div>
+            </section>
+
+            <!-- VALORISATION ENTREPRISE -->
+            <section id="valorisation" class="section">
+                <h2>💎 VALORISATION ENTREPRISE</h2>
+
+                <div class="card">
+                    <h3>Méthode MRR (Monthly Recurring Revenue)</h3>
+                    <p><strong>Formule</strong> : Valorisation = MRR × Multiple</p>
+                    <p><strong>Multiples SAAS B2B</strong> : 30× à 50× le MRR selon maturité</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Restaurants</th>
+                                <th>MRR (EUR)</th>
+                                <th>MRR (XOF)</th>
+                                <th>Valorisation ×30 (EUR)</th>
+                                <th>Valorisation ×30 (XOF)</th>
+                                <th>Valorisation ×50 (EUR)</th>
+                                <th>Valorisation ×50 (XOF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>5</td>
+                                <td>445€</td>
+                                <td>291 901 XOF</td>
+                                <td>13 350€</td>
+                                <td>8 757 021 XOF</td>
+                                <td>22 250€</td>
+                                <td>14 595 035 XOF</td>
+                            </tr>
+                            <tr>
+                                <td>10</td>
+                                <td>890€</td>
+                                <td>583 802 XOF</td>
+                                <td>26 700€</td>
+                                <td>17 514 051 XOF</td>
+                                <td>44 500€</td>
+                                <td>29 190 086 XOF</td>
+                            </tr>
+                            <tr>
+                                <td>20</td>
+                                <td>1 780€</td>
+                                <td>1 167 603 XOF</td>
+                                <td>53 400€</td>
+                                <td>35 028 103 XOF</td>
+                                <td>89 000€</td>
+                                <td>58 380 173 XOF</td>
+                            </tr>
+                            <tr>
+                                <td>50</td>
+                                <td>4 450€</td>
+                                <td>2 919 009 XOF</td>
+                                <td>133 500€</td>
+                                <td>87 570 258 XOF</td>
+                                <td>222 500€</td>
+                                <td>145 950 431 XOF</td>
+                            </tr>
+                            <tr>
+                                <td>100</td>
+                                <td>8 900€</td>
+                                <td>5 838 017 XOF</td>
+                                <td>267 000€</td>
+                                <td>175 140 517 XOF</td>
+                                <td>445 000€</td>
+                                <td>291 900 862 XOF</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <h3>Facteurs augmentant le multiple</h3>
+                    <div class="success">
+                        ✅ Croissance > 100% YoY<br>
+                        ✅ Taux de churn < 5%<br>
+                        ✅ CAC < 3 mois de LTV<br>
+                        ✅ Marges > 70%
+                    </div>
+                </div>
+            </section>
+
+            <!-- CONCLUSIONS -->
+            <section id="conclusions" class="section">
+                <div class="conclusion-box">
+                    <h2 style="color: white; border: none;">✅ CONCLUSIONS</h2>
+
+                    <div class="stats-grid">
+                        <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px;">
+                            <h4 style="color: white;">Seuil rentabilité</h4>
+                            <p style="font-size: 1.5em; font-weight: bold;">1 restaurant</p>
+                            <p>✅ Excellent</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px;">
+                            <h4 style="color: white;">Marge unitaire</h4>
+                            <p style="font-size: 1.5em; font-weight: bold;">66€/resto</p>
+                            <p>✅ Confortable</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px;">
+                            <h4 style="color: white;">ROI An 1</h4>
+                            <p style="font-size: 1.5em; font-weight: bold;">355-436%</p>
+                            <p>✅ Exceptionnel</p>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 30px;">Recommandations</h3>
+                    <ul>
+                        <li><strong>Objectif Année 1</strong> : 10 restaurants minimum → Profit : 7 986€ (5 238 178 XOF) | ROI : 408%</li>
+                        <li><strong>Objectif Année 2</strong> : 20 restaurants → Profit : 20 556€ (13 483 852 XOF)</li>
+                        <li><strong>Objectif Année 3</strong> : 50 restaurants → Profit : 52 596€ (34 501 706 XOF)</li>
+                    </ul>
+
+                    <div style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.95); border-radius: 10px; color: #333;">
+                        <h3 style="color: #667eea;">Configuration Xiaomi Redmi Pad 2 (189€) - OPTIMALE</h3>
+                        <ul style="color: #333;">
+                            <li>✅ Rentable dès le 1er client</li>
+                            <li>✅ Marges confortables (66€/resto = 43k XOF/resto)</li>
+                            <li>✅ ROI exceptionnel : 408% en année 1 (10 restos)</li>
+                            <li>✅ Compétitif vs UberEats (87% moins cher)</li>
+                            <li>✅ Écran 11" + Google Play garanti (Amazon.fr)</li>
+                            <li>✅ Scalable et pérenne</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="footer">
+            <p>Document généré le 13 Octobre 2025 | Taux de conversion : 1 EUR = 655,957 XOF</p>
+            <p>© 2025 Bot Resto - Tous droits réservés</p>
+        </div>
+    </div>
+</body>
+</html>

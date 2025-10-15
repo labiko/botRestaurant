@@ -31,26 +31,17 @@
   <!-- Filter tabs -->
   <ion-toolbar>
     <ion-segment [(ngModel)]="selectedFilter" scrollable>
-      <ion-segment-button value="all">
-        <ion-label>Toutes ({{ getOrderCountByStatus('all') }})</ion-label>
-      </ion-segment-button>
       <ion-segment-button value="pending">
-        <ion-label>En attente ({{ getOrderCountByStatus('pending') }})</ion-label>
+        <ion-label>🔔 Nouvelles ({{ getOrderCountByStatus('pending') }})</ion-label>
       </ion-segment-button>
-      <ion-segment-button value="confirmee">
-        <ion-label>Confirmées ({{ getOrderCountByStatus('confirmee') }})</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="preparation">
-        <ion-label>En préparation ({{ getOrderCountByStatus('preparation') }})</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="prete">
-        <ion-label>Prêtes ({{ getOrderCountByStatus('prete') }})</ion-label>
+      <ion-segment-button value="en_cours">
+        <ion-label>👨‍🍳 En cours ({{ getOrderCountByStatus('en_cours') }})</ion-label>
       </ion-segment-button>
       <ion-segment-button value="en_livraison">
-        <ion-label>En livraison ({{ getOrderCountByStatus('en_livraison') }})</ion-label>
+        <ion-label>🚚 Livraison ({{ getOrderCountByStatus('en_livraison') }})</ion-label>
       </ion-segment-button>
       <ion-segment-button value="historique">
-        <ion-label>Historique ({{ getOrderCountByStatus('historique') }})</ion-label>
+        <ion-label>📚 Historique ({{ getOrderCountByStatus('historique') }})</ion-label>
       </ion-segment-button>
     </ion-segment>
   </ion-toolbar>
@@ -302,7 +293,7 @@
                       </ion-avatar>
                     </div>
                     <div class="driver-name-section">
-                      <div class="driver-name">{{ order.pendingDriverNames || 'Livreur assigné' }}</div>
+                      <div class="driver-name">{{ getDriverName(order) }}</div>
                       <div class="assignment-status">
                         <ion-icon name="checkmark-circle" color="success" size="small"></ion-icon>
                         <span>Livreur assigné</span>
@@ -310,9 +301,9 @@
                     </div>
                   </div>
                   <div class="driver-contact">
-                    <a href="tel:{{ order.phone_number }}" class="phone-button" *ngIf="order.phone_number">
+                    <a href="tel:{{ getDriverPhone(order) }}" class="phone-button" *ngIf="getDriverPhone(order)">
                       <ion-icon name="call" class="phone-icon"></ion-icon>
-                      <span class="phone-text">{{ order.phone_number }}</span>
+                      <span class="phone-text">{{ getDriverPhone(order) }}</span>
                     </a>
                   </div>
                 </div>
