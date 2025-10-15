@@ -168,9 +168,21 @@ export class FranceOrdersService {
   }
 
   private processOrder(order: any): FranceOrder {
+    // ========== DEBUG LOGS - Données SQL livreur ==========
+    console.log('[DEBUG_DRIVER] processOrder() - Commande:', order.order_number);
+    console.log('[DEBUG_DRIVER] processOrder() - order.driver_id depuis SQL:', order.driver_id);
+    console.log('[DEBUG_DRIVER] processOrder() - order.delivery_driver depuis SQL:', order.delivery_driver);
+    console.log('[DEBUG_DRIVER] processOrder() - Toutes les propriétés driver:', {
+      driver_id: order.driver_id,
+      delivery_driver: order.delivery_driver,
+      assigned_driver_id: order.assigned_driver_id,
+      driver_assignment_status: order.driver_assignment_status
+    });
+    // ====================================================
+
     // Extraire les items du format complexe du bot
     let processedItems: any[] = [];
-    
+
     try {
       const rawItems = order.items;
       
@@ -246,6 +258,16 @@ export class FranceOrdersService {
       processedItems = [];
     }
 
+    // ✅ NOUVEAU : Construire l'objet delivery_driver depuis les colonnes SQL
+    const delivery_driver = (order.driver_id && order.driver_first_name) ? {
+      id: order.driver_id,
+      first_name: order.driver_first_name,
+      last_name: order.driver_last_name,
+      phone_number: order.driver_phone_number
+    } : undefined;
+
+    console.log('[DEBUG_DRIVER] processOrder() - delivery_driver construit:', delivery_driver);
+
     return {
       ...order,
       items: processedItems,
@@ -253,6 +275,8 @@ export class FranceOrdersService {
       availableActions: this.getAvailableActions(order.status, order.delivery_mode),
       // Alias pour compatibilité UI avec le système de livraison
       assigned_driver_id: order.driver_id,
+      // ✅ NOUVEAU : Objet delivery_driver construit depuis les colonnes SQL
+      delivery_driver: delivery_driver,
       // ✅ PLAN INITIAL : Propriétés d'assignation calculées par la fonction SQL
       hasAnyAssignment: (order.assignment_count > 0) || false,
       hasPendingAssignment: (order.pending_assignment_count > 0) || false,
@@ -309,7 +333,7 @@ export class FranceOrdersService {
         { key: 'cancel', label: 'Annuler', color: 'danger', nextStatus: 'annulee' }
       ],
       'confirmee': [
-        { key: 'prepare', label: 'Préparer', color: 'warning', nextStatus: 'preparation' },
+        { key: 'ready', label: 'Marquer prête', color: 'primary', nextStatus: 'prete' },
         { key: 'cancel', label: 'Annuler', color: 'danger', nextStatus: 'annulee' }
       ],
       'preparation': [

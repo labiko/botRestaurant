@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Resto - Solution de Gestion de Commandes WhatsApp</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+            padding: 40px 20px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.3rem;
+            opacity: 0.95;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .tab {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding-bottom: 10px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            border-bottom-color: white;
+        }
+
+        .section-title {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .section-title h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .section-title p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .pricing-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 35px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        }
+
+        .card.popular {
+            border: 3px solid #ff9800;
+        }
+
+        .badge {
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background: #ff9800;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .card-price {
+            font-size: 3rem;
+            color: #333;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .card-price span {
+            font-size: 1.2rem;
+            color: #666;
+            font-weight: 400;
+        }
+
+        .card-savings {
+            color: #4caf50;
+            font-weight: 600;
+            margin-bottom: 25px;
+            font-size: 1rem;
+        }
+
+        .card-features {
+            list-style: none;
+            margin-bottom: 30px;
+        }
+
+        .card-features li {
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-features li:last-child {
+            border-bottom: none;
+        }
+
+        .card-features li::before {
+            content: "✓";
+            color: #4caf50;
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+
+        .cta-button {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .cta-button.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .cta-button.secondary {
+            background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
+            color: white;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .benefits-section {
+            background: white;
+            border-radius: 20px;
+            padding: 50px 40px;
+            margin-top: 50px;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .benefit-item {
+            text-align: center;
+        }
+
+        .benefit-icon {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+        }
+
+        .benefit-title {
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .benefit-desc {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .contact-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            padding: 50px 40px;
+            margin-top: 50px;
+            text-align: center;
+        }
+
+        .contact-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        .contact-section p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.95;
+        }
+
+        .contact-button {
+            display: inline-block;
+            background: white;
+            color: #667eea;
+            padding: 20px 50px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .contact-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.3);
+        }
+
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin: 50px 0;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .pricing-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .card-price {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🤖 Bot Resto</h1>
+            <p>La solution tout-en-un pour gérer vos commandes WhatsApp<br>Tablette + Imprimante + Application professionnelle</p>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-number">2 mois</div>
+                <div class="stat-label">Point mort</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">49€</div>
+                <div class="stat-label">Marge nette/mois</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">0€</div>
+                <div class="stat-label">Coûts cachés</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">24/7</div>
+                <div class="stat-label">Support technique</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active">NOTRE OFFRE</div>
+            <div class="tab">AVANTAGES</div>
+        </div>
+
+        <!-- Section Title -->
+        <div class="section-title">
+            <h2>📦 Pack Tout Compris</h2>
+            <p>Tout ce dont vous avez besoin pour digitaliser vos commandes</p>
+        </div>
+
+        <!-- Pricing Cards -->
+        <div class="pricing-cards">
+            <!-- Pack Mensuel -->
+            <div class="card">
+                <div class="card-icon">📱</div>
+                <div class="card-title">Mensuel</div>
+                <div class="card-price">89€<span>/mois</span></div>
+                <ul class="card-features">
+                    <li>Tablette Android 8.4" (120€ offerte)</li>
+                    <li>Imprimante thermique Bluetooth (30€ offerte)</li>
+                    <li>Application back-office professionnelle</li>
+                    <li>Intégration WhatsApp Business</li>
+                    <li>Mises à jour automatiques</li>
+                    <li>Support technique inclus</li>
+                </ul>
+                <button class="cta-button primary">COMMENCER MAINTENANT</button>
+            </div>
+
+            <!-- Pack Trimestriel -->
+            <div class="card popular">
+                <div class="badge">POPULAIRE</div>
+                <div class="card-icon">🚀</div>
+                <div class="card-title">Trimestriel</div>
+                <div class="card-price">249€<span>/3 mois</span></div>
+                <div class="card-savings">Économisez 14%</div>
+                <ul class="card-features">
+                    <li>Tablette Android 8.4" (120€ offerte)</li>
+                    <li>Imprimante thermique Bluetooth (30€ offerte)</li>
+                    <li>Application back-office professionnelle</li>
+                    <li>Intégration WhatsApp Business</li>
+                    <li>Mises à jour automatiques</li>
+                    <li>Support technique prioritaire</li>
+                    <li>Formation personnalisée incluse</li>
+                </ul>
+                <button class="cta-button secondary">ÉCONOMISER 14%</button>
+            </div>
+
+            <!-- Pack Annuel -->
+            <div class="card">
+                <div class="card-icon">💎</div>
+                <div class="card-title">Annuel</div>
+                <div class="card-price">828€<span>/an</span></div>
+                <div class="card-savings">Économisez 29%</div>
+                <ul class="card-features">
+                    <li>Tablette Android 8.4" (120€ offerte)</li>
+                    <li>Imprimante thermique Bluetooth (30€ offerte)</li>
+                    <li>Application back-office professionnelle</li>
+                    <li>Intégration WhatsApp Business</li>
+                    <li>Mises à jour automatiques</li>
+                    <li>Support technique VIP 24/7</li>
+                    <li>Formation complète sur site</li>
+                    <li>2 mois offerts</li>
+                </ul>
+                <button class="cta-button primary">MEILLEURE VALEUR</button>
+            </div>
+        </div>
+
+        <!-- Benefits Section -->
+        <div class="benefits-section">
+            <div class="section-title" style="color: #333;">
+                <h2>✨ Pourquoi choisir Bot Resto ?</h2>
+                <p style="color: #666;">Une solution complète pensée pour les restaurateurs</p>
+            </div>
+
+            <div class="benefits-grid">
+                <div class="benefit-item">
+                    <div class="benefit-icon">⚡</div>
+                    <div class="benefit-title">Installation Rapide</div>
+                    <div class="benefit-desc">Prêt à l'emploi en moins de 15 minutes. Nous configurons tout pour vous.</div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">💰</div>
+                    <div class="benefit-title">Matériel Offert</div>
+                    <div class="benefit-desc">Tablette (120€) + Imprimante (30€) incluses dans l'abonnement. Zéro investissement initial.</div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">📲</div>
+                    <div class="benefit-title">WhatsApp Intégré</div>
+                    <div class="benefit-desc">Vos clients commandent sur WhatsApp, vous recevez tout sur votre tablette.</div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">🖨️</div>
+                    <div class="benefit-icon">🖨️</div>
+                    <div class="benefit-title">Impression Automatique</div>
+                    <div class="benefit-desc">Chaque commande s'imprime automatiquement. Plus de notes manuscrites.</div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">🔄</div>
+                    <div class="benefit-title">Mises à Jour Gratuites</div>
+                    <div class="benefit-desc">Nouvelles fonctionnalités ajoutées régulièrement sans frais supplémentaires.</div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">🎓</div>
+                    <div class="benefit-title">Formation Incluse</div>
+                    <div class="benefit-desc">Formation complète de votre équipe pour une prise en main immédiate.</div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">🛡️</div>
+                    <div class="benefit-title">Sans Engagement</div>
+                    <div class="benefit-desc">Résiliez à tout moment. Pas de frais cachés ni de pénalités.</div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">📊</div>
+                    <div class="benefit-title">Statistiques en Temps Réel</div>
+                    <div class="benefit-desc">Suivez vos ventes et performances directement depuis l'application.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Section -->
+        <div class="contact-section">
+            <h2>🎯 Prêt à digitaliser votre restaurant ?</h2>
+            <p>Rejoignez les dizaines de restaurants qui ont déjà fait confiance à Bot Resto.<br>Démo gratuite disponible sans engagement.</p>
+            <a href="tel:+33753058254" class="contact-button">📞 Appelez-nous maintenant</a>
+        </div>
+    </div>
+</body>
+</html>

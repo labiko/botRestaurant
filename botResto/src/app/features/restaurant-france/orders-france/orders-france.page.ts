@@ -25,7 +25,7 @@ import { RestaurantConfigService } from '../services/restaurant-config.service';
 })
 export class OrdersFrancePage implements OnInit, OnDestroy {
   orders: FranceOrder[] = [];
-  selectedFilter: string = 'all';
+  selectedFilter: string = 'pending';
   isLoading: boolean = false;
   private ordersSubscription?: Subscription;
   private autoRefreshSubscription?: Subscription;
@@ -238,30 +238,26 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   getFilteredOrders(): FranceOrder[] {
     // Appliquer d'abord le filtre par statut
     let statusFilteredOrders: FranceOrder[] = [];
-    if (this.selectedFilter === 'all') {
-      statusFilteredOrders = this.orders.filter(order => 
-        order.status !== 'livree' && order.status !== 'annulee' && order.status !== 'servie' && order.status !== 'recuperee'
+    if (this.selectedFilter === 'en_cours') {
+      // NOUVEAU : Regrouper confirmée + en préparation + prête (+ assignée)
+      statusFilteredOrders = this.orders.filter(order =>
+        order.status === 'confirmee' || order.status === 'preparation' || order.status === 'prete' || order.status === 'assignee'
       );
     } else if (this.selectedFilter === 'historique') {
-      statusFilteredOrders = this.orders.filter(order => 
+      statusFilteredOrders = this.orders.filter(order =>
         order.status === 'livree' || order.status === 'annulee' || order.status === 'servie' || order.status === 'recuperee'
-      );
-    } else if (this.selectedFilter === 'prete') {
-      // Inclure aussi les commandes assignées dans l'onglet PRÊTES
-      statusFilteredOrders = this.orders.filter(order => 
-        order.status === 'prete' || order.status === 'assignee'
       );
     } else {
       statusFilteredOrders = this.orders.filter(order => order.status === this.selectedFilter);
     }
-    
+
     // Appliquer ensuite le filtre de recherche
     const searchFilteredOrders = this.applySearchFilter(statusFilteredOrders);
-    
+
     // Mettre à jour les compteurs
     this.filteredOrdersCount = searchFilteredOrders.length;
     this.totalOrdersCount = statusFilteredOrders.length;
-    
+
     return searchFilteredOrders;
   }
 
@@ -292,13 +288,14 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   }
 
   getOrderCountByStatus(status: string): number {
-    if (status === 'all') {
-      return this.orders.filter(order => 
-        order.status !== 'livree' && order.status !== 'annulee' && order.status !== 'servie' && order.status !== 'recuperee'
+    if (status === 'en_cours') {
+      // NOUVEAU : Compter confirmée + en préparation + prête (+ assignée)
+      return this.orders.filter(order =>
+        order.status === 'confirmee' || order.status === 'preparation' || order.status === 'prete' || order.status === 'assignee'
       ).length;
     }
     if (status === 'historique') {
-      return this.orders.filter(order => 
+      return this.orders.filter(order =>
         order.status === 'livree' || order.status === 'annulee' || order.status === 'servie' || order.status === 'recuperee'
       ).length;
     }
@@ -357,15 +354,18 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    * NOUVEAU : Change automatiquement vers l'onglet du statut
    */
   private switchToStatusTab(status: string): void {
-    // Mapping des statuts vers les onglets
+    // Mapping des statuts vers les onglets (SIMPLIFIÉ selon nouveau système)
     const statusToTab: Record<string, string> = {
       'pending': 'pending',
-      'confirmee': 'confirmee', 
-      'preparation': 'preparation',
-      'prete': 'prete',
+      'confirmee': 'en_cours',
+      'preparation': 'en_cours',
+      'prete': 'en_cours',
+      'assignee': 'en_cours',
       'en_livraison': 'en_livraison',
-      'livree': 'all', // Les commandes livrées restent visibles dans "Toutes"
-      'annulee': 'all'  // Les commandes annulées restent visibles dans "Toutes"
+      'livree': 'historique',
+      'annulee': 'historique',
+      'servie': 'historique',
+      'recuperee': 'historique'
     };
 
     const targetTab = statusToTab[status];
@@ -529,10 +529,17 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    * Récupérer le nom du livreur assigné (prénom uniquement)
    */
   getDriverName(order: FranceOrder): string {
+    console.log('[DEBUG_DRIVER] getDriverName() appelé pour commande:', order.order_number);
+    console.log('[DEBUG_DRIVER] order.delivery_driver:', order.delivery_driver);
+    console.log('[DEBUG_DRIVER] order.driver_id:', order.driver_id);
+    console.log('[DEBUG_DRIVER] order.driver_assignment_status:', order.driver_assignment_status);
+
     if (order.delivery_driver) {
+      console.log('[DEBUG_DRIVER] ✅ delivery_driver trouvé:', order.delivery_driver.first_name);
       return order.delivery_driver.first_name || 'Livreur';
     }
 
+    console.log('[DEBUG_DRIVER] ❌ delivery_driver non disponible - retour fallback');
     return 'Livreur assigné';
   }
 
@@ -540,10 +547,16 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    * Récupérer le téléphone du livreur assigné
    */
   getDriverPhone(order: FranceOrder): string {
+    console.log('[DEBUG_DRIVER] getDriverPhone() appelé pour commande:', order.order_number);
+    console.log('[DEBUG_DRIVER] order.delivery_driver:', order.delivery_driver);
+    console.log('[DEBUG_DRIVER] order.driver_id:', order.driver_id);
+
     if (order.delivery_driver?.phone_number) {
+      console.log('[DEBUG_DRIVER] ✅ phone_number trouvé:', order.delivery_driver.phone_number);
       return order.delivery_driver.phone_number;
     }
-    
+
+    console.log('[DEBUG_DRIVER] ❌ phone_number non disponible - retour vide');
     return '';
   }
 
