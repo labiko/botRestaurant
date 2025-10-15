@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Resto - Flyer Moderne</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f1f5f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .flyer {
+            width: 595px;
+            height: 842px;
+            background: white;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.12);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Header compact */
+        .header {
+            background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%);
+            padding: 30px 40px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            font-size: 44px;
+            background: white;
+            width: 65px;
+            height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .logo-text h1 {
+            font-size: 32px;
+            font-weight: 900;
+            color: white;
+            letter-spacing: -1px;
+            margin-bottom: 2px;
+        }
+
+        .logo-text p {
+            font-size: 14px;
+            color: rgba(255,255,255,0.95);
+            font-weight: 600;
+        }
+
+        /* Main content - 2 colonnes */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 200px;
+            gap: 30px;
+            padding: 35px 40px;
+            height: calc(842px - 125px - 110px); /* Total - header - footer */
+        }
+
+        /* Colonne gauche */
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .hero-title {
+            font-size: 28px;
+            font-weight: 900;
+            line-height: 1.2;
+            color: #1E293B;
+            margin-bottom: 5px;
+        }
+
+        .hero-title .highlight {
+            background: linear-gradient(135deg, #8B5CF6, #A78BFA);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 15px;
+            color: #64748B;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        .features-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #F8FAFC;
+            border-radius: 10px;
+            border-left: 3px solid #8B5CF6;
+        }
+
+        .feature-icon {
+            font-size: 22px;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #8B5CF6, #A78BFA);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .feature-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1E293B;
+            line-height: 1.3;
+        }
+
+        /* Stats compacts */
+        .stats-mini {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: auto;
+        }
+
+        .stat-mini {
+            text-align: center;
+            padding: 14px;
+            background: linear-gradient(135deg, #1E293B, #334155);
+            border-radius: 12px;
+        }
+
+        .stat-mini-number {
+            font-size: 24px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #84CC16, #A3E635);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: block;
+        }
+
+        .stat-mini-label {
+            font-size: 9px;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        /* Colonne droite - QR Code */
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #F8FAFC, #EFF6FF);
+            border-radius: 16px;
+            border: 2px dashed #8B5CF6;
+            padding: 20px 15px;
+        }
+
+        .qr-container {
+            background: white;
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            margin-bottom: 12px;
+        }
+
+        .qr-code {
+            width: 140px;
+            height: 140px;
+            display: block;
+        }
+
+        .qr-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #8B5CF6;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Footer contact */
+        .footer-contact {
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+            padding: 22px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .contact-info {
+            flex: 1;
+        }
+
+        .contact-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.85);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .contact-phone {
+            font-size: 32px;
+            font-weight: 900;
+            color: white;
+            letter-spacing: 1px;
+        }
+
+        .contact-badge {
+            background: rgba(255,255,255,0.25);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+            backdrop-filter: blur(10px);
+            white-space: nowrap;
+        }
+
+        /* Decorations */
+        .decoration {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(139, 92, 246, 0.06);
+            z-index: 0;
+        }
+
+        .dec-1 {
+            width: 250px;
+            height: 250px;
+            top: -120px;
+            right: -80px;
+        }
+
+        .dec-2 {
+            width: 180px;
+            height: 180px;
+            bottom: 50px;
+            left: -90px;
+        }
+    </style>
+</head>
+<body>
+    <div class="flyer">
+        <!-- Decorations -->
+        <div class="decoration dec-1"></div>
+        <div class="decoration dec-2"></div>
+
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-icon">🤖</div>
+            <div class="logo-text">
+                <h1>BOT RESTO</h1>
+                <p>Assistant WhatsApp Intelligent</p>
+            </div>
+        </div>
+
+        <!-- Main Content - 2 colonnes -->
+        <div class="main-content">
+            <!-- Colonne Gauche -->
+            <div class="left-column">
+                <div>
+                    <h2 class="hero-title">
+                        Automatisez vos<br>
+                        commandes <span class="highlight">WhatsApp</span>
+                    </h2>
+                    <p class="hero-subtitle">
+                        Un assistant intelligent qui travaille 24h/24<br>
+                        pour augmenter vos ventes sans effort
+                    </p>
+                </div>
+
+                <div class="features-list">
+                    <div class="feature-item">
+                        <div class="feature-icon">⏰</div>
+                        <div class="feature-text">Disponible 24h/24, 7j/7<br>Ne perdez plus aucune commande</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">✓</div>
+                        <div class="feature-text">Zéro erreur de commande<br>Confirmation automatique</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">📍</div>
+                        <div class="feature-text">Calcul livraison intelligent<br>Prix automatiques</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">💳</div>
+                        <div class="feature-text">Paiement mobile intégré<br>Orange Money & Wave</div>
+                    </div>
+                </div>
+
+                <div class="stats-mini">
+                    <div class="stat-mini">
+                        <span class="stat-mini-number">+40%</span>
+                        <div class="stat-mini-label">Commandes</div>
+                    </div>
+                    <div class="stat-mini">
+                        <span class="stat-mini-number">-60%</span>
+                        <div class="stat-mini-label">Temps</div>
+                    </div>
+                    <div class="stat-mini">
+                        <span class="stat-mini-number">ROI 1M</span>
+                        <div class="stat-mini-label">Rentable</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colonne Droite - QR Code -->
+            <div class="right-column">
+                <div class="qr-container">
+                    <img class="qr-code"
+                         src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=https://botresto.vercel.app"
+                         alt="QR Code Bot Resto">
+                </div>
+                <div class="qr-label">Scannez pour<br>voir la démo</div>
+            </div>
+        </div>
+
+        <!-- Footer Contact -->
+        <div class="footer-contact">
+            <div class="contact-info">
+                <div class="contact-label">📞 APPELEZ-NOUS</div>
+                <div class="contact-phone">77 93 66 61</div>
+            </div>
+            <div class="contact-badge">DÉMO GRATUIT</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -303,7 +303,24 @@ export class UniversalBot implements IMessageHandler {
         await this.handleGenericGreeting(phoneNumber);
         return;
       }
-      
+
+      // PRIORITÉ 3.5: Gestion des réponses RGPD (OK/NON)
+      if (message.toLowerCase().trim() === 'ok' || message.toLowerCase().trim() === 'non') {
+        // Vérifier si un workflow est en attente de consentement
+        const supabase = await this.getSupabaseClient();
+        const { data: pendingWorkflow } = await supabase
+          .from('france_gdpr_consents')
+          .select('pending_workflow')
+          .eq('phone_number', phoneNumber)
+          .maybeSingle();
+
+        if (pendingWorkflow && pendingWorkflow.pending_workflow) {
+          // Workflow en attente → Traiter comme réponse à l'écran RGPD
+          await this.handleGDPRConsent(phoneNumber, message);
+          return;
+        }
+      }
+
       // PRIORITÉ 4: Gestion complète des messages selon l'état de session
 
       // ANTI-SESSION PARASITE : Vérifier existence session AVANT getSession()
@@ -875,6 +892,17 @@ export class UniversalBot implements IMessageHandler {
    */
   private async handleDirectRestaurantAccess(phoneNumber: string, restaurant: any): Promise<void> {
     try {
+      // ✅ RGPD : Vérifier le consentement AVANT toute action
+      const hasGdprConsent = await this.checkGdprConsent(phoneNumber);
+
+      if (!hasGdprConsent) {
+        // Pas de consentement → Stocker le contexte en base avec le restaurant et afficher l'écran
+        await this.savePendingWorkflow(phoneNumber, { type: 'direct_access', restaurant });
+        await this.showGdprConsentScreen(phoneNumber);
+        return; // Arrêter le traitement
+      }
+
+      // ✅ Consentement validé → Continuer le workflow normal
       // VÉRIFICATION DES HORAIRES avec le service dédié
       const scheduleResult = this.scheduleService.checkRestaurantSchedule(restaurant);
       
@@ -3365,6 +3393,17 @@ export class UniversalBot implements IMessageHandler {
     try {
       console.log(`🏪 [RestaurantDiscovery] Commande "resto" reçue de: ${phoneNumber}`);
 
+      // ✅ RGPD : Vérifier le consentement AVANT toute action
+      const hasGdprConsent = await this.checkGdprConsent(phoneNumber);
+
+      if (!hasGdprConsent) {
+        // Pas de consentement → Stocker le contexte en base et afficher l'écran
+        await this.savePendingWorkflow(phoneNumber, { type: 'resto' });
+        await this.showGdprConsentScreen(phoneNumber);
+        return; // Arrêter le traitement
+      }
+
+      // ✅ Consentement validé → Continuer le workflow normal
       // 1. Nettoyer session existante (même logique qu'annuler)
       await this.deleteSession(phoneNumber);
 
@@ -4202,6 +4241,271 @@ Tapez un numéro entre **1** et **${restaurants?.length || 0}**.`);
       await this.messageSender.sendMessage(phoneNumber,
         '❌ Erreur sauvegarde. Tapez "annuler" pour recommencer.'
       );
+    }
+  }
+
+  // ========================================================================
+  // MÉTHODES RGPD - CONSENTEMENT EXPLICITE (Article 6 RGPD)
+  // ========================================================================
+
+  /**
+   * Vérifier si un client a déjà donné son consentement GDPR
+   * Article 7 RGPD - Preuve du consentement
+   */
+  private async checkGdprConsent(phoneNumber: string): Promise<boolean> {
+    try {
+      const supabase = await this.getSupabaseClient();
+      const { data, error } = await supabase
+        .from('france_gdpr_consents')
+        .select('consent_given')
+        .eq('phone_number', phoneNumber)
+        .eq('consent_given', true)
+        .maybeSingle();
+
+      if (error) {
+        console.error('❌ [GDPR] Erreur vérification consentement:', error);
+        return false;
+      }
+
+      const hasConsent = !!data;
+      console.log(`🔒 [GDPR] Consentement pour ${phoneNumber}: ${hasConsent}`);
+      return hasConsent;
+
+    } catch (error) {
+      console.error('❌ [GDPR] Erreur checkGdprConsent:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Gérer le workflow de consentement GDPR - VERSION SIMPLIFIÉE
+   * Article 6 RGPD - Consentement libre, spécifique, éclairé et univoque
+   * ✅ NE TOUCHE PAS la session - utilise UNIQUEMENT france_gdpr_consents
+   */
+  private async handleGDPRConsent(phoneNumber: string, message: string): Promise<void> {
+    try {
+      const response = message.toLowerCase().trim();
+
+      // Cas 1 : Client accepte le consentement
+      if (response === 'ok') {
+        await this.saveGdprConsent(phoneNumber, true);
+
+        await this.messageSender.sendMessage(phoneNumber,
+          `✅ Merci ! Votre consentement a été enregistré. 🍕`);
+
+        // ✅ Récupérer le contexte stocké en base et continuer le bon workflow
+        const context = await this.getPendingWorkflow(phoneNumber);
+
+        if (context) {
+          // Nettoyer le contexte en base après récupération
+          await this.clearPendingWorkflow(phoneNumber);
+
+          // Continuer selon le type de contexte
+          if (context.type === 'resto') {
+            // Workflow "resto" : afficher menu choix restaurants
+            await this.handleRestoCommand(phoneNumber);
+          } else if (context.type === 'direct_access' && context.restaurant) {
+            // Workflow QR code : afficher menu du restaurant scanné
+            await this.handleDirectRestaurantAccess(phoneNumber, context.restaurant);
+          }
+        } else {
+          // Pas de contexte trouvé (ne devrait pas arriver)
+          await this.messageSender.sendMessage(phoneNumber,
+            `Tapez **resto** pour voir les restaurants disponibles.`);
+        }
+
+        return;
+      }
+
+      // Cas 2 : Client refuse le consentement
+      if (response === 'non' || response === 'no' || response === 'refuse') {
+        await this.saveGdprConsent(phoneNumber, false);
+
+        // Nettoyer le contexte stocké en base
+        await this.clearPendingWorkflow(phoneNumber);
+
+        await this.messageSender.sendMessage(phoneNumber,
+          `❌ **Consentement refusé**
+
+Sans votre consentement, nous ne pouvons malheureusement pas traiter de commande.
+
+Si vous changez d'avis, vous pouvez nous recontacter à tout moment.
+
+Merci de votre compréhension ! 👋`);
+        return;
+      }
+
+      // Cas 3 : Réponse invalide → Réafficher l'écran
+      await this.showGdprConsentScreen(phoneNumber);
+
+    } catch (error) {
+      console.error('❌ [GDPR] Erreur handleGDPRConsent:', error);
+      await this.messageSender.sendMessage(phoneNumber,
+        `❌ Une erreur est survenue. Veuillez réessayer.`);
+    }
+  }
+
+  /**
+   * Afficher l'écran de consentement GDPR
+   * Article 13 RGPD - Information des personnes
+   */
+  private async showGdprConsentScreen(phoneNumber: string): Promise<void> {
+    // Récupérer le nom du restaurant si contexte disponible
+    const restaurantName = this.restaurantConfig?.brandName || this.restaurantConfig?.name || 'notre restaurant';
+
+    const message = `🔒 Bienvenue chez ${restaurantName} !
+
+Pour commander, nous collectons :
+• Nom, téléphone, adresse
+
+Ces données servent uniquement pour votre commande.
+
+📄 Infos complètes : https://botresto.vercel.app/legal/privacy-policy
+
+Tapez OK pour accepter et commander.`;
+
+    await this.messageSender.sendMessage(phoneNumber, message);
+  }
+
+  /**
+   * Enregistrer le consentement GDPR en base de données
+   * Article 7 RGPD - Conservation de la preuve du consentement
+   */
+  private async saveGdprConsent(phoneNumber: string, consentGiven: boolean): Promise<void> {
+    try {
+      const supabase = await this.getSupabaseClient();
+
+      // Vérifier si un consentement existe déjà
+      const { data: existing } = await supabase
+        .from('france_gdpr_consents')
+        .select('id')
+        .eq('phone_number', phoneNumber)
+        .maybeSingle();
+
+      const consentData = {
+        phone_number: phoneNumber,
+        consent_given: consentGiven,
+        consent_date: new Date().toISOString(),
+        consent_method: 'whatsapp',
+        ip_address: null, // WhatsApp ne fournit pas l'IP
+        user_agent: 'WhatsApp Bot',
+        updated_at: new Date().toISOString()
+      };
+
+      if (existing) {
+        // Mettre à jour le consentement existant
+        await supabase
+          .from('france_gdpr_consents')
+          .update(consentData)
+          .eq('id', existing.id);
+
+        console.log(`✅ [GDPR] Consentement mis à jour pour ${phoneNumber}: ${consentGiven}`);
+      } else {
+        // Créer un nouveau consentement
+        await supabase
+          .from('france_gdpr_consents')
+          .insert(consentData);
+
+        console.log(`✅ [GDPR] Consentement créé pour ${phoneNumber}: ${consentGiven}`);
+      }
+
+    } catch (error) {
+      console.error('❌ [GDPR] Erreur saveGdprConsent:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sauvegarder le workflow en attente en base de données
+   * Article 7 RGPD - Persistance du contexte pour continuité après consentement
+   */
+  private async savePendingWorkflow(phoneNumber: string, workflow: { type: 'resto' | 'direct_access', restaurant?: any }): Promise<void> {
+    try {
+      const supabase = await this.getSupabaseClient();
+
+      // Vérifier si un enregistrement existe déjà
+      const { data: existing } = await supabase
+        .from('france_gdpr_consents')
+        .select('id')
+        .eq('phone_number', phoneNumber)
+        .maybeSingle();
+
+      if (existing) {
+        // Mettre à jour le pending_workflow
+        await supabase
+          .from('france_gdpr_consents')
+          .update({ pending_workflow: workflow })
+          .eq('id', existing.id);
+
+        console.log(`🔒 [GDPR] Workflow sauvegardé pour ${phoneNumber}:`, workflow.type);
+      } else {
+        // Créer un nouvel enregistrement avec pending_workflow
+        await supabase
+          .from('france_gdpr_consents')
+          .insert({
+            phone_number: phoneNumber,
+            consent_given: false,
+            consent_date: new Date().toISOString(),
+            consent_method: 'whatsapp',
+            pending_workflow: workflow,
+            ip_address: null,
+            user_agent: 'WhatsApp Bot',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        console.log(`🔒 [GDPR] Enregistrement créé avec workflow pour ${phoneNumber}:`, workflow.type);
+      }
+
+    } catch (error) {
+      console.error('❌ [GDPR] Erreur savePendingWorkflow:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Récupérer le workflow en attente depuis la base de données
+   */
+  private async getPendingWorkflow(phoneNumber: string): Promise<{ type: 'resto' | 'direct_access', restaurant?: any } | null> {
+    try {
+      const supabase = await this.getSupabaseClient();
+
+      const { data } = await supabase
+        .from('france_gdpr_consents')
+        .select('pending_workflow')
+        .eq('phone_number', phoneNumber)
+        .maybeSingle();
+
+      if (data && data.pending_workflow) {
+        console.log(`🔒 [GDPR] Workflow récupéré pour ${phoneNumber}:`, data.pending_workflow);
+        return data.pending_workflow;
+      }
+
+      console.log(`🔒 [GDPR] Aucun workflow en attente pour ${phoneNumber}`);
+      return null;
+
+    } catch (error) {
+      console.error('❌ [GDPR] Erreur getPendingWorkflow:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Nettoyer le workflow en attente de la base de données
+   */
+  private async clearPendingWorkflow(phoneNumber: string): Promise<void> {
+    try {
+      const supabase = await this.getSupabaseClient();
+
+      await supabase
+        .from('france_gdpr_consents')
+        .update({ pending_workflow: null })
+        .eq('phone_number', phoneNumber);
+
+      console.log(`🔒 [GDPR] Workflow nettoyé pour ${phoneNumber}`);
+
+    } catch (error) {
+      console.error('❌ [GDPR] Erreur clearPendingWorkflow:', error);
     }
   }
 }
