@@ -2274,7 +2274,7 @@ export class UniversalBot implements IMessageHandler {
         sessionData: {
           ...session.sessionData,
           existingAddresses: existingAddresses,
-          showGpsOption: deliveryAddressMode !== 'text'
+          showGpsOption: deliveryAddressMode === 'geolocation'
         }
       });
 
@@ -2374,7 +2374,7 @@ export class UniversalBot implements IMessageHandler {
         return;
       }
 
-      // ✅ Partage position (SI option disponible)
+      // ✅ Partage position (SI option disponible en mode geolocation)
       if (showGpsOption && choice === existingAddresses.length + 1) {
         await this.messageSender.sendMessage(phoneNumber,
           '📍 *ENVOYEZ VOTRE POSITION GPS*\n\n🔹 Cliquez 📎 → Localisation\n🔹 Attendez 10s (stabilisation)\n🔹 Vérifiez précision ≤ 50m\n🔹 "Envoyer localisation actuelle"\n\n❌ Évitez: Position en direct / Lieux suggérés'
@@ -2387,6 +2387,19 @@ export class UniversalBot implements IMessageHandler {
         return;
       }
 
+      // ✅ Nouvelle adresse (SI option disponible en mode address)
+      if (!showGpsOption && choice === existingAddresses.length + 1) {
+        await this.messageSender.sendMessage(phoneNumber,
+          '📝 *Saisissez votre nouvelle adresse complète*\n\n💡 *Exemple : 15 rue de la Paix, 75001 Paris*'
+        );
+
+        await this.sessionManager.updateSession(session.id, {
+          botState: 'AWAITING_NEW_ADDRESS',
+          sessionData: session.sessionData
+        });
+        return;
+      }
+
       // ✅ Saisie directe adresse (texte libre - non numérique)
       if (isNaN(choice) && text.length >= 10) {
         // Réutiliser le workflow existant
@@ -2394,8 +2407,8 @@ export class UniversalBot implements IMessageHandler {
         return;
       }
 
-      // Choix invalide
-      const maxChoice = existingAddresses.length + (showGpsOption ? 1 : 0);
+      // Choix invalide - Toujours +1 pour la dernière option (GPS ou Nouvelle adresse)
+      const maxChoice = existingAddresses.length + 1;
       await this.messageSender.sendMessage(phoneNumber,
         `❌ Choix invalide. Tapez un numéro entre 1 et ${maxChoice}\nOu tapez votre adresse directement`
       );
