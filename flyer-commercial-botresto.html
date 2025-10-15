@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Resto - Flyer Commercial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .flyer {
+            width: 595px;  /* A5 largeur en pixels (210mm) */
+            height: 842px; /* A5 hauteur en pixels (297mm) */
+            background: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            padding: 40px;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: 800;
+            color: #FF6B35;
+            margin-bottom: 5px;
+        }
+
+        .tagline {
+            font-size: 14px;
+            color: #666;
+            font-weight: 400;
+        }
+
+        .divider {
+            height: 3px;
+            background: linear-gradient(90deg, #FF6B35, #FF8C61);
+            margin: 20px 0;
+            border-radius: 2px;
+        }
+
+        .problem {
+            background: linear-gradient(135deg, #FF6B35 0%, #FF5722 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .problem h2 {
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 10px;
+        }
+
+        .problem p {
+            font-size: 13px;
+            opacity: 0.95;
+        }
+
+        .solution {
+            background: linear-gradient(135deg, #27AE60 0%, #2ECC71 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .solution h2 {
+            font-size: 24px;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 10px;
+        }
+
+        .solution p {
+            font-size: 13px;
+            opacity: 0.95;
+        }
+
+        .benefits {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .benefit-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .benefit-item .icon {
+            font-size: 18px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+            color: white;
+            padding: 15px 10px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-box .number {
+            font-size: 24px;
+            font-weight: 800;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stat-box .label {
+            font-size: 10px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .qr-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .qr-code {
+            width: 140px;
+            height: 140px;
+            background: white;
+            margin: 0 auto 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #FF6B35;
+            font-size: 60px;
+        }
+
+        .qr-text {
+            font-size: 14px;
+            font-weight: 700;
+            color: #2C3E50;
+            text-transform: uppercase;
+        }
+
+        .cta {
+            background: linear-gradient(135deg, #FF6B35 0%, #FF5722 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .cta h3 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .cta .contact {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .cta .email {
+            font-size: 14px;
+            opacity: 0.95;
+            margin-bottom: 12px;
+        }
+
+        .cta .offer {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="flyer">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🤖 BOT RESTO</div>
+            <div class="tagline">Votre Assistant WhatsApp Intelligent</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Problem -->
+        <div class="problem">
+            <h2>❌ VOUS PERDEZ<br>DES COMMANDES<br>WHATSAPP ?</h2>
+            <p>Messages non lus, commandes perdues, erreurs...</p>
+        </div>
+
+        <!-- Solution -->
+        <div class="solution">
+            <h2>✅ BOT RESTO AUTOMATISE<br>VOS COMMANDES</h2>
+            <p>Notre bot prend vos commandes automatiquement 24h/24</p>
+        </div>
+
+        <!-- Benefits -->
+        <div class="benefits">
+            <div class="benefit-item">
+                <span class="icon">✓</span>
+                <span>Disponible 24h/24</span>
+            </div>
+            <div class="benefit-item">
+                <span class="icon">✓</span>
+                <span>Zéro erreur</span>
+            </div>
+            <div class="benefit-item">
+                <span class="icon">✓</span>
+                <span>Calcul livraison auto</span>
+            </div>
+            <div class="benefit-item">
+                <span class="icon">✓</span>
+                <span>Paiement mobile</span>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-box">
+                <span class="number">+40%</span>
+                <span class="label">Commandes</span>
+            </div>
+            <div class="stat-box">
+                <span class="number">-60%</span>
+                <span class="label">Temps</span>
+            </div>
+            <div class="stat-box">
+                <span class="number">ROI</span>
+                <span class="label">1 Mois</span>
+            </div>
+            <div class="stat-box">
+                <span class="number">💰</span>
+                <span class="label">Économie</span>
+            </div>
+        </div>
+
+        <!-- QR Code -->
+        <div class="qr-section">
+            <div class="qr-code">📱</div>
+            <div class="qr-text">Scannez pour voir la démo</div>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta">
+            <h3>📞 Devis Gratuit</h3>
+            <div class="contact">+33 X XX XX XX XX</div>
+            <div class="email">contact@botresto.com</div>
+            <div class="offer">🎁 ESSAI 14 JOURS OFFERT</div>
+        </div>
+    </div>
+</body>
+</html>

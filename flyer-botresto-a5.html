@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Resto - Flyer Commercial A5</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f1f5f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .flyer {
+            width: 595px;  /* A5 largeur */
+            height: 842px; /* A5 hauteur */
+            background: white;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Header moderne avec gradient */
+        .header {
+            background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%);
+            padding: 35px 35px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-icon {
+            font-size: 48px;
+            background: white;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .logo-text {
+            flex: 1;
+        }
+
+        .logo-title {
+            font-size: 38px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 5px;
+        }
+
+        .logo-subtitle {
+            font-size: 18px;
+            opacity: 1;
+            font-weight: 600;
+        }
+
+        /* Content area */
+        .content {
+            padding: 25px 35px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Problem section */
+        .problem-section {
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            color: white;
+            padding: 18px 24px;
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .problem-section::after {
+            content: '🚀';
+            position: absolute;
+            font-size: 120px;
+            opacity: 0.15;
+            right: -20px;
+            top: -30px;
+        }
+
+        .problem-title {
+            font-size: 22px;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .problem-desc {
+            font-size: 12px;
+            opacity: 0.95;
+            line-height: 1.4;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Solution section */
+        .solution-section {
+            background: linear-gradient(135deg, #84CC16 0%, #65A30D 100%);
+            color: white;
+            padding: 18px 24px;
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .solution-section::after {
+            content: '✓';
+            position: absolute;
+            font-size: 140px;
+            opacity: 0.1;
+            right: -25px;
+            top: -40px;
+            font-weight: 800;
+        }
+
+        .solution-title {
+            font-size: 20px;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .solution-desc {
+            font-size: 12px;
+            opacity: 0.95;
+            line-height: 1.4;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Benefits grid */
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .benefit-card {
+            background: #F8FAFC;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid #E2E8F0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .benefit-icon {
+            font-size: 20px;
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #8B5CF6, #A78BFA);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .benefit-text {
+            font-size: 11px;
+            font-weight: 600;
+            color: #1E293B;
+            line-height: 1.3;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+            color: white;
+            padding: 16px 10px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 22px;
+            font-weight: 800;
+            display: block;
+            margin-bottom: 4px;
+            background: linear-gradient(135deg, #84CC16, #A3E635);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            opacity: 0.85;
+        }
+
+        /* QR Code Section */
+        .qr-section {
+            background: linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%);
+            padding: 15px;
+            border-radius: 16px;
+            text-align: center;
+            border: 2px dashed #8B5CF6;
+        }
+
+        .qr-container {
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-bottom: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .qr-code {
+            width: 110px;
+            height: 110px;
+            display: block;
+        }
+
+        .qr-text {
+            font-size: 12px;
+            font-weight: 700;
+            color: #8B5CF6;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Footer CTA */
+        .footer-cta {
+            background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+            color: white;
+            padding: 22px 25px 25px;
+            border-radius: 16px 16px 0 0;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        .cta-title {
+            font-size: 16px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .cta-phone {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+            color: white;
+        }
+
+        .cta-email {
+            font-size: 12px;
+            opacity: 0.95;
+            margin-bottom: 12px;
+        }
+
+        .cta-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.25);
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Decorative elements */
+        .decoration-circle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .circle-1 {
+            width: 200px;
+            height: 200px;
+            top: -100px;
+            right: -50px;
+        }
+
+        .circle-2 {
+            width: 150px;
+            height: 150px;
+            bottom: 100px;
+            left: -75px;
+        }
+    </style>
+</head>
+<body>
+    <div class="flyer">
+        <!-- Decorative circles -->
+        <div class="decoration-circle circle-1"></div>
+        <div class="decoration-circle circle-2"></div>
+
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-section">
+                <div class="logo-icon">🤖</div>
+                <div class="logo-text">
+                    <div class="logo-title">BOT RESTO</div>
+                    <div class="logo-subtitle">Assistant WhatsApp Intelligent</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Problem -->
+            <div class="problem-section">
+                <div class="problem-title">
+                    Automatisez vos commandes<br>WhatsApp dès maintenant
+                </div>
+                <div class="problem-desc">
+                    Augmentez vos ventes avec un assistant intelligent<br>qui travaille 24h/24 pour vous
+                </div>
+            </div>
+
+            <!-- Solution -->
+            <div class="solution-section">
+                <div class="solution-title">
+                    Bot Resto automatise<br>vos commandes 24h/24
+                </div>
+                <div class="solution-desc">
+                    Notre bot intelligent prend vos commandes<br>automatiquement, sans erreur, jour et nuit
+                </div>
+            </div>
+
+            <!-- Benefits -->
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon">⏰</div>
+                    <div class="benefit-text">Disponible 24h/24<br>7j/7</div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">✓</div>
+                    <div class="benefit-text">Zéro erreur<br>de commande</div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">📍</div>
+                    <div class="benefit-text">Calcul livraison<br>automatique</div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">💳</div>
+                    <div class="benefit-text">Paiement mobile<br>intégré</div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-number">+40%</span>
+                    <span class="stat-label">Commandes</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">-60%</span>
+                    <span class="stat-label">Temps</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">ROI</span>
+                    <span class="stat-label">1 Mois</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">💰</span>
+                    <span class="stat-label">Économie</span>
+                </div>
+            </div>
+
+            <!-- QR Code -->
+            <div class="qr-section">
+                <div class="qr-container">
+                    <!-- QR Code généré avec api.qrserver.com -->
+                    <img class="qr-code"
+                         src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=https://botresto.vercel.app"
+                         alt="QR Code Bot Resto">
+                </div>
+                <div class="qr-text">Scannez pour la démo</div>
+            </div>
+        </div>
+
+        <!-- Footer CTA -->
+        <div class="footer-cta">
+            <div class="cta-title">📞 Devis Gratuit</div>
+            <div class="cta-phone">77 93 66 61</div>
+            <div class="cta-email">contact@botresto.com</div>
+            <div class="cta-badge">🎁 ESSAI 14 JOURS OFFERT</div>
+        </div>
+    </div>
+</body>
+</html>
