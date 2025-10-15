@@ -114,9 +114,29 @@
         }
 
         .subtitle {
-            color: #666;
-            font-size: 18px;
+            color: #000000;
+            font-size: 20px;
+            font-weight: 600;
             margin-bottom: 30px;
+        }
+
+        .digital-badge {
+            background: linear-gradient(135deg, {{PRIMARY_COLOR}} 0%, {{SECONDARY_COLOR}} 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            display: inline-block;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .phone-display {
+            color: #000000 !important;
+            font-weight: 800 !important;
+            font-size: 28px !important;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .qr-container {
@@ -215,20 +235,22 @@
         .step-number {
             background: linear-gradient(135deg, {{PRIMARY_COLOR}} 0%, {{SECONDARY_COLOR}} 100%);
             color: white;
-            width: 35px;
-            height: 35px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
+            font-weight: 800;
+            font-size: 20px;
             margin-right: 15px;
             flex-shrink: 0;
         }
 
         .step-text {
-            color: #333;
-            font-size: 16px;
+            color: #000000;
+            font-size: 18px;
+            font-weight: 500;
         }
 
         .whatsapp-button {
@@ -889,87 +911,168 @@
            OPTIMISATION IMPRESSION A4
            ======================================== */
         @media print {
+            /* Configuration de la page */
             @page {
                 size: A4 portrait;
-                margin: 15mm;
+                margin: 1.5cm;
             }
 
+            /* Corps de page */
             body {
-                background: white;
-                padding: 0;
-                overflow: visible;
+                background: white !important;
+                padding: 0 !important;
+                overflow: visible !important;
             }
 
             body::before {
-                display: none;
+                display: none !important;
             }
 
+            /* Container principal */
             .container {
-                max-width: 100%;
-                box-shadow: none;
+                background: white !important;
+                box-shadow: none !important;
+                max-width: 100% !important;
+                padding: 20px !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
                 page-break-after: avoid;
                 page-break-inside: avoid;
-                overflow: visible;
-                animation: none;
-            }
-
-            .logo {
-                animation: none;
-            }
-
-            .qr-container {
-                animation: none;
-            }
-
-            .qr-container::before,
-            .qr-container::after {
-                display: none;
-            }
-
-            .qr-code {
-                width: 220px;
-                height: 220px;
+                overflow: visible !important;
             }
 
             /* Masquer éléments inutiles à l'impression */
             .orientation-btn,
             .floating-elements,
-            .live-stats,
             .menu-preview,
             .testimonials-container,
+            .live-stats,
+            .features,
             .whatsapp-button,
             .footer {
                 display: none !important;
             }
 
-            /* Garder seulement l'essentiel */
-            .logo,
-            h1,
-            .subtitle,
-            .promo,
-            .qr-container,
-            .instructions {
-                page-break-inside: avoid;
+            /* Logo - optimisation impression */
+            .logo {
+                background: {{PRIMARY_COLOR}} !important;
+                box-shadow: none !important;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+                animation: none !important;
             }
 
-            /* Compacter les instructions */
+            /* Titre restaurant */
+            h1 {
+                color: {{PRIMARY_COLOR}} !important;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+
+            /* Sous-titre - NOIR pour impression */
+            .subtitle {
+                color: #000000 !important;
+                font-size: 20px !important;
+                font-weight: 600 !important;
+            }
+
+            /* Badge digital - optimisation couleurs */
+            .digital-badge {
+                background: linear-gradient(135deg, {{PRIMARY_COLOR}} 0%, {{SECONDARY_COLOR}} 100%) !important;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+
+            /* Promo - optimisation */
+            .promo {
+                background: linear-gradient(135deg, #ff6b6b 0%, {{PRIMARY_COLOR}} 100%) !important;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+                animation: none !important;
+                margin: 10px 0 !important;
+                padding: 10px !important;
+            }
+
+            /* QR Code container - optimisation */
+            .qr-container {
+                background: white !important;
+                box-shadow: 0 0 0 3px {{PRIMARY_COLOR}} !important;
+                padding: 30px !important;
+                margin: 30px auto !important;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+                animation: none !important;
+            }
+
+            .qr-container::before,
+            .qr-container::after {
+                display: none !important;
+            }
+
+            .qr-code {
+                width: 280px !important;
+                height: 280px !important;
+                filter: contrast(1.3) brightness(0.95) !important;
+            }
+
+            /* Numéro de téléphone - NOIR et GROS */
+            .phone-display {
+                color: #000000 !important;
+                font-weight: 800 !important;
+                font-size: 28px !important;
+            }
+
+            /* Instructions - optimisation */
             .instructions {
-                margin: 15px 0;
-                padding: 10px;
+                background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%) !important;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+                margin: 15px 0 !important;
+                padding: 15px !important;
+                page-break-inside: avoid !important;
             }
 
             .step {
-                margin: 8px 0;
+                margin: 12px 0 !important;
+                page-break-inside: avoid !important;
             }
 
+            /* Numéros d'étapes - COULEUR VISIBLE */
+            .step-number {
+                background: {{PRIMARY_COLOR}} !important;
+                width: 45px !important;
+                height: 45px !important;
+                font-size: 24px !important;
+                font-weight: 900 !important;
+                print-color-adjust: exact !important;
+                -webkit-print-color-adjust: exact !important;
+            }
+
+            /* Texte des étapes - NOIR et GROS */
             .step-text {
-                font-size: 14px;
+                color: #000000 !important;
+                font-size: 20px !important;
+                font-weight: 600 !important;
             }
 
-            .promo {
-                animation: none;
-                margin: 10px 0;
-                padding: 10px;
+            /* Force l'impression exacte des couleurs */
+            * {
+                print-color-adjust: exact !important;
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+
+            /* Éviter les coupures de pages */
+            .qr-section,
+            .instructions,
+            .step {
+                page-break-inside: avoid !important;
+            }
+
+            /* Désactiver toutes les animations */
+            * {
+                animation: none !important;
+                transition: none !important;
             }
         }
 
@@ -1272,6 +1375,8 @@
             <h1>{{RESTAURANT_NAME}}</h1>
             <div class="subtitle">{{SUBTITLE}}</div>
 
+            <div class="digital-badge">📱 100% DIGITAL SUR WHATSAPP</div>
+
             <div class="promo">
                 {{PROMO_TEXT}}
             </div>
@@ -1280,7 +1385,7 @@
                 <div class="qr-code">
                     <canvas id="qrcode"></canvas>
                 </div>
-                <div style="text-align: center; margin-top: 15px; color: #000000; font-weight: bold; font-size: 18px;">
+                <div class="phone-display" style="text-align: center; margin-top: 15px;">
                     📞 {{PHONE}}
                 </div>
             </div>

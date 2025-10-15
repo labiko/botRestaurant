@@ -39,25 +39,25 @@
   <div class="stats-section" *ngIf="drivers.length > 0">
     <ion-grid>
       <ion-row>
-        <ion-col size="3">
+        <ion-col size="6" size-md="3">
           <div class="stat-item">
             <div class="stat-number">{{ drivers.length }}</div>
             <div class="stat-label">Total</div>
           </div>
         </ion-col>
-        <ion-col size="3">
+        <ion-col size="6" size-md="3">
           <div class="stat-item">
             <div class="stat-number success">{{ getActiveDriversCount() }}</div>
             <div class="stat-label">Actifs</div>
           </div>
         </ion-col>
-        <ion-col size="3">
+        <ion-col size="6" size-md="3">
           <div class="stat-item">
             <div class="stat-number primary">{{ getOnlineDriversCount() }}</div>
             <div class="stat-label">En ligne</div>
           </div>
         </ion-col>
-        <ion-col size="3">
+        <ion-col size="6" size-md="3">
           <div class="stat-item">
             <div class="stat-number warning">{{ getInactiveDriversCount() }}</div>
             <div class="stat-label">Inactifs</div>

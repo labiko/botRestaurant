@@ -330,16 +330,116 @@ ion-fab-button {
 
 // Responsive design
 @media (max-width: 768px) {
+  // Header section mobile
+  .header-section {
+    padding: 15px;
+    margin-bottom: 15px;
+
+    .header-info {
+      gap: 12px;
+
+      .header-icon {
+        font-size: 2.5rem;
+      }
+
+      .info-text {
+        h2 {
+          font-size: 1.3rem;
+        }
+
+        p {
+          font-size: 0.85rem;
+        }
+      }
+    }
+  }
+
+  // Stats section mobile - 2 colonnes
+  .stats-section {
+    padding: 0 12px;
+    margin-bottom: 15px;
+
+    .stat-item {
+      padding: 10px 8px;
+
+      .stat-number {
+        font-size: 1.6rem;
+      }
+
+      .stat-label {
+        font-size: 0.7rem;
+      }
+    }
+  }
+
+  // Drivers section mobile
+  .drivers-section {
+    padding: 0 12px;
+
+    h3 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+  }
+
+  // Driver card mobile
   .driver-card {
     .driver-header {
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
+      margin-bottom: 12px;
+
+      .driver-info {
+        h4 {
+          font-size: 1rem;
+        }
+
+        p {
+          font-size: 0.85rem;
+        }
+      }
+
+      .driver-status {
+        flex-direction: row;
+        gap: 8px;
+        width: 100%;
+        justify-content: space-around;
+
+        .status-toggle-container,
+        .online-toggle-container {
+          min-width: auto;
+          flex: 1;
+
+          .status-badge,
+          .online-badge {
+            font-size: 0.65rem;
+            padding: 3px 6px;
+          }
+
+          .status-toggle,
+          .online-toggle {
+            transform: scale(0.75);
+          }
+        }
+      }
     }
 
     .driver-stats {
+      padding: 10px;
+      margin-bottom: 12px;
+      gap: 8px;
+
       .stat-group {
+        .stat-icon {
+          font-size: 1rem;
+        }
+
+        .stat-value {
+          font-size: 1rem;
+        }
+
         .stat-text {
-          font-size: 0.7rem;
+          font-size: 0.65rem;
         }
       }
     }
@@ -350,20 +450,81 @@ ion-fab-button {
 
       ion-button {
         flex: none;
+        font-size: 0.8rem;
+        height: 32px;
+      }
+    }
+  }
+
+  // FAB button mobile - plus petit
+  ion-fab-button {
+    --box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+    transform: scale(0.9);
+  }
+}
+
+// Extra small screens (< 400px)
+@media (max-width: 400px) {
+  .header-section {
+    padding: 12px;
+
+    .header-info {
+      .header-icon {
+        font-size: 2rem;
+      }
+
+      .info-text {
+        h2 {
+          font-size: 1.1rem;
+        }
+
+        p {
+          font-size: 0.8rem;
+        }
       }
     }
   }
 
   .stats-section {
     .stat-item {
-      padding: 12px;
+      padding: 8px 5px;
 
       .stat-number {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
       }
 
       .stat-label {
-        font-size: 0.75rem;
+        font-size: 0.65rem;
+      }
+    }
+  }
+
+  .driver-card {
+    .driver-header {
+      .driver-status {
+        .status-badge,
+        .online-badge {
+          font-size: 0.6rem;
+          padding: 2px 5px;
+        }
+      }
+    }
+
+    .driver-stats {
+      padding: 8px;
+
+      .stat-group {
+        .stat-icon {
+          font-size: 0.9rem;
+        }
+
+        .stat-value {
+          font-size: 0.9rem;
+        }
+
+        .stat-text {
+          font-size: 0.6rem;
+        }
       }
     }
   }
