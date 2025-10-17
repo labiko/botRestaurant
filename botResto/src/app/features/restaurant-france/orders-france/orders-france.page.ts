@@ -313,8 +313,11 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     const success = await this.franceOrdersService.updateOrderStatus(order.id, action.nextStatus);
 
     if (success) {
-      // Recharger les commandes pour voir les changements
-      await this.franceOrdersService.loadOrders(this.restaurantId);
+      // Passage instantané vers l'onglet correspondant
+      this.switchToStatusTab(action.nextStatus);
+
+      // Recharger les commandes en arrière-plan (sans await)
+      this.franceOrdersService.loadOrders(this.restaurantId);
 
       // NOUVEAU : Impression automatique si confirmation de commande
       if (action.nextStatus === 'confirmee') {
@@ -340,9 +343,6 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
         // Déclencher l'impression asynchrone (ne bloque pas l'UI)
         this.printService.printOrderAsync(orderData);
       }
-
-      // NOUVEAU : Passage automatique vers l'onglet correspondant au nouveau statut
-      this.switchToStatusTab(action.nextStatus);
     } else {
       // Gérer l'erreur (toast, alert, etc.)
       console.error('Erreur mise à jour statut commande');

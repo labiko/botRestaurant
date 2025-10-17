@@ -7,6 +7,7 @@ import { AuthFranceService } from '../../features/restaurant-france/auth-france/
 export class PrintService {
   private autoPrintEnabled = false;
   private restaurantId: number | null = null;
+  private restaurantName: string | null = null;
 
   // Mémorisation du device Bluetooth pour éviter la popup à chaque impression
   private bluetoothDevice: any = null;
@@ -36,7 +37,7 @@ export class PrintService {
     try {
       const { data, error } = await this.supabaseFranceService.client
         .from('france_restaurants')
-        .select('auto_print_enabled')
+        .select('name, auto_print_enabled')
         .eq('id', this.restaurantId)
         .single();
 
@@ -46,8 +47,12 @@ export class PrintService {
       }
 
       if (data) {
+        this.restaurantName = data.name;
         this.autoPrintEnabled = data.auto_print_enabled ?? true;
-        console.log('✅ PrintService: Config impression chargée depuis BDD:', this.autoPrintEnabled);
+        console.log('✅ PrintService: Config impression chargée depuis BDD:', {
+          name: this.restaurantName,
+          autoPrint: this.autoPrintEnabled
+        });
       }
     } catch (error) {
       console.error('❌ PrintService: Exception lors du chargement:', error);
@@ -205,7 +210,7 @@ export class PrintService {
 
     return `
 ============================
-     ${order.restaurant_name || 'RESTAURANT'}
+     ${this.restaurantName || order.restaurant_name || 'RESTAURANT'}
 ============================
 Commande #${order.order_number || order.id}
 ${new Date().toLocaleString('fr-FR')}
