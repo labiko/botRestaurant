@@ -33,21 +33,23 @@
 
       <ion-card-content>
         <div class="mode-actions">
-          <ion-button 
-            fill="clear" 
+          <ion-button
+            fill="clear"
             [color]="mode.is_enabled ? 'danger' : 'success'"
             (click)="toggleMode(mode)">
             <ion-icon [name]="mode.is_enabled ? 'pause-circle' : 'play-circle'" slot="start"></ion-icon>
             {{ mode.is_enabled ? 'Désactiver' : 'Activer' }}
           </ion-button>
 
-          <ion-button 
-            fill="clear" 
+          <!-- BOUTON MODIFIER MASQUÉ - Décommenter si besoin
+          <ion-button
+            fill="clear"
             color="primary"
             (click)="editModeDetails(mode)">
             <ion-icon name="create" slot="start"></ion-icon>
             Modifier
           </ion-button>
+          -->
         </div>
 
         <!-- Mode spécifique: Livraison -->
