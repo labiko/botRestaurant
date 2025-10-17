@@ -1,0 +1,24 @@
+========================================
+CATÉGORIE: SMASHS (ID: 661)
+Restaurant: Pizza Yolo 77 (ID: 1)
+Date extraction: 2025-10-17
+========================================
+
+🍔 SMASH CLASSIC — 8,90 €
+
+🍔 L'ORIGINAL — 11,90 €
+
+✨ SMASH SIGNATURE — 12,90 €
+
+🥓 SMASH BACON — 11,90 €
+
+🍯 LE SMASH MIELLEUX — 11,90 €
+
+🐔 CHICKEN CRAZY — 11,90 €
+
+========================================
+TOTAL: 6 produits
+STATUT: Prix sur place présents ✅
+        Icônes présentes ✅
+        Compositions manquantes ❌
+========================================

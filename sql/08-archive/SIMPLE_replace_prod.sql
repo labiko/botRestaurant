@@ -1,0 +1,20 @@
+-- =========================================================================
+-- REMPLACEMENT SIMPLE ET DIRECT PROD = DEV
+-- ⚠️ EXÉCUTER SUR PROD - COMMIT AUTOMATIQUE
+-- =========================================================================
+
+-- SUPPRESSION BRUTALE (en cascade, supprime tout ce qui est lié)
+DELETE FROM france_restaurants;
+
+-- INSERTION DES 4 RESTAURANTS DE DEV
+INSERT INTO france_restaurants (id, name, slug, address, city, postal_code, phone, whatsapp_number, delivery_zone_km, min_order_amount, delivery_fee, is_active, business_hours, created_at, updated_at, password_hash, timezone, country_code, hide_delivery_info, is_exceptionally_closed, latitude, longitude, audio_notifications_enabled, audio_volume, audio_enabled_since, deployment_status, delivery_address_mode, currency) VALUES
+(1, 'Pizza Yolo 77', 'pizza-yolo-77', '251 Av. Philippe Bur, 77550 Moissy-Cramayel', 'Paris', '77000', '33601234567', '33601234567', 5, 0.00, 2.50, true, '{"jeudi":{"isOpen":true,"closing":"23:00","opening":"08:00"},"lundi":{"isOpen":true,"closing":"23:00","opening":"09:00"},"mardi":{"isOpen":true,"closing":"04:00","opening":"08:00"},"samedi":{"isOpen":true,"closing":"23:00","opening":"10:00"},"dimanche":{"isOpen":true,"closing":"22:00","opening":"08:00"},"mercredi":{"isOpen":true,"closing":"04:00","opening":"08:00"},"vendredi":{"isOpen":true,"closing":"23:00","opening":"07:00"}}'::jsonb, '2025-09-01 13:16:46.405758', '2025-09-07 18:57:59.6647', 'Passer@123', 'Europe/Paris', 'FR', true, false, 48.62753600, 2.59375800, true, 35, '2025-10-02 18:36:40', 'production', 'address', 'EUR'),
+(16, 'Le Nouveau O''CV Moissy', 'le-nouveau-ocv-moissy', '37 Pl. du 14 Juillet 1789, 77550 Moissy-Cramayel', 'Moissy-cramayel', NULL, '33675654321', '33675654321', 5, 0.00, 2.50, true, '{"jeudi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"lundi":{"isOpen":true,"closing":"23:59","opening":"10:00"},"mardi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"samedi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"dimanche":{"isOpen":true,"closing":"00:56","opening":"07:00"},"mercredi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"vendredi":{"isOpen":true,"closing":"23:50","opening":"07:00"}}'::jsonb, '2025-09-20 22:14:19.263306', '2025-09-20 22:14:19.263306', '810790', 'Europe/Paris', 'FR', false, false, NULL, NULL, true, 50, NULL, 'production', 'address', 'EUR'),
+(17, 'Le Carreman', 'le-carreman', '206 rue de seville', 'NONGO TADY', NULL, '224601234567', '224601234567', 5, 0.00, 2.50, true, '{"jeudi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"lundi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"mardi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"samedi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"dimanche":{"isOpen":true,"closing":"23:50","opening":"07:00"},"mercredi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"vendredi":{"isOpen":true,"closing":"23:50","opening":"07:00"}}'::jsonb, '2025-09-23 17:37:36.896514', '2025-10-06 11:13:10.466', '810790', 'Africa/Conakry', 'GN', false, false, 48.62825690, 2.58958699, true, 50, NULL, 'production', 'address', 'GNF'),
+(18, 'Bh Tacos one', 'bh-tacos-one', '21 Pl. des Fontaines', '77176 Savigny-le-Temple', NULL, '33675123456', '33675123456', 5, 0.00, 2.50, true, '{"jeudi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"lundi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"mardi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"samedi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"dimanche":{"isOpen":true,"closing":"23:50","opening":"07:00"},"mercredi":{"isOpen":true,"closing":"23:50","opening":"07:00"},"vendredi":{"isOpen":true,"closing":"23:50","opening":"07:00"}}'::jsonb, '2025-09-28 15:41:30.110135', '2025-09-28 15:41:30.110135', '810790', 'Europe/Paris', 'FR', false, false, NULL, NULL, true, 50, NULL, 'production', 'address', 'EUR');
+
+-- RÉINITIALISER LA SÉQUENCE
+SELECT setval('france_restaurants_id_seq', 18);
+
+-- VÉRIFICATION
+SELECT id, name, phone, whatsapp_number, city, country_code FROM france_restaurants ORDER BY id;

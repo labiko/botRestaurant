@@ -69,7 +69,8 @@ export async function GET(
         price_modifier: option.price_modifier,
         display_order: option.display_order,
         is_active: option.is_active,
-        icon: option.icon
+        icon: option.icon,
+        composition: option.composition
       });
     });
 

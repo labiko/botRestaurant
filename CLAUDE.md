@@ -276,6 +276,69 @@ Avec détails complets:
 Fichier résultat: "🇺🇸 L'AMÉRICAIN — pain brioche, 2 steaks façon bouchère 150g, bacon, œufs, cornichons — 13,50 €"
 ```
 
+## 📁 ORGANISATION DES SCRIPTS SQL
+
+**⚠️ RÈGLE OBLIGATOIRE**: TOUS les nouveaux scripts SQL doivent être créés dans le dossier approprié selon leur type :
+
+### **Structure des dossiers :**
+```
+sql/
+├── 01-schema/          # Structures de base (CREATE TABLE, setup_*.sql)
+├── 02-migrations/      # Modifications structure (ADD, ALTER)
+├── 03-data/
+│   ├── insert/         # Insertions (INSERT, ALIMENTATION_*.sql)
+│   ├── update/         # Mises à jour (UPDATE_*.sql, update_*.sql)
+│   └── delete/         # Suppressions (DELETE_*.sql, NETTOYAGE_*.sql)
+├── 04-fixes/           # Corrections (FIX_*.sql, REFONTE_*.sql)
+├── 05-analysis/        # Analyses (ANALYSE_*.sql, check_*.sql)
+├── 06-verification/    # Vérifications (VERIFY_*.sql, test_*.sql)
+├── 07-debug/           # Debug (debug_*.sql)
+└── 08-archive/         # Anciens scripts obsolètes
+```
+
+### **Règles de création :**
+
+1. **Scripts de structure** → `sql/01-schema/`
+   - Exemple : `create_new_table.sql`, `setup_indexes.sql`
+
+2. **Scripts de migration** → `sql/02-migrations/`
+   - Exemple : `add_new_column.sql`, `alter_table_structure.sql`
+
+3. **Scripts d'insertion** → `sql/03-data/insert/`
+   - Exemple : `INSERT_NEW_PRODUCTS.sql`, `ALIMENTATION_MENU_PIZZA.sql`
+
+4. **Scripts de mise à jour** → `sql/03-data/update/`
+   - Exemple : `UPDATE_PRICES_BURGERS.sql`, `FIX_ICONS_MENU_MIDI.sql`
+
+5. **Scripts de suppression** → `sql/03-data/delete/`
+   - Exemple : `DELETE_OLD_PRODUCTS.sql`, `NETTOYAGE_DUPLICATES.sql`
+
+6. **Scripts de correction** → `sql/04-fixes/`
+   - Exemple : `FIX_WORKFLOW_TACOS.sql`, `REFONTE_CHICKEN_BOX.sql`
+
+7. **Scripts d'analyse** → `sql/05-analysis/`
+   - Exemple : `ANALYSE_ICONS_MANQUANTES.sql`, `check_data_consistency.sql`
+
+8. **Scripts de vérification** → `sql/06-verification/`
+   - Exemple : `VERIFY_MIGRATION_SUCCESS.sql`, `test_workflow.sql`
+
+9. **Scripts de debug** → `sql/07-debug/`
+   - Exemple : `debug_composite_workflow.sql`
+
+### **Backups et dumps :**
+- **Dumps complets** → `backups/dumps/prod/` ou `backups/dumps/dev/`
+- **Structures extraites** → `backups/structures/prod/` ou `backups/structures/dev/`
+
+### **Convention de nommage :**
+- **MAJUSCULES** : Scripts production importants (`UPDATE_PRICES_PROD.sql`, `FIX_ICONS_GLOBAL.sql`)
+- **minuscules** : Scripts de travail/dev (`update_test.sql`, `fix_local.sql`)
+- **Suffixe environnement** : `_PROD` ou `_DEV` quand applicable
+
+### **⚠️ IMPORTANT** :
+- **NE JAMAIS créer de scripts SQL à la racine** du projet
+- **TOUJOURS** créer dans le dossier approprié dès le départ
+- Les scripts mal placés seront automatiquement archivés dans `sql/08-archive/`
+
 ## Development Commands
 
 ```bash

@@ -1,37 +1,23 @@
-# 📁 SQL Scripts - Bot Restaurant
+# 📁 Organisation des Scripts SQL
 
-## Structure des dossiers
+Organisation automatique créée le 2025-10-17
 
-```
-sql/
-├── automation/           # Scripts d'automatisation 
-├── diagnostics/         # Scripts de diagnostic
-├── fixes/              # Scripts de correction
-├── migrations/         # Migrations de base de données
-└── README.md           # Ce fichier
-```
+## 📂 Structure des Dossiers
 
-## 📋 Guide d'utilisation
+### 01-schema/ - Scripts de création de structure
+### 02-migrations/ - Scripts de modification de structure  
+### 03-data/ - Scripts de manipulation de données (insert/update/delete)
+### 04-fixes/ - Scripts de correction
+### 05-analysis/ - Scripts d'analyse et diagnostic
+### 06-verification/ - Scripts de vérification et test
+### 07-debug/ - Scripts de débogage
+### 08-archive/ - Scripts anciens ou obsolètes
 
-### 1. Automatisation
-- **Objectif** : Configurer automatiquement les catégories de produits
-- **Localisation** : `automation/`
+## 🗄️ Backups
+- backups/dumps/prod/ - Dumps production
+- backups/dumps/dev/ - Dumps développement
+- backups/structures/ - Structures extraites
 
-### 2. Diagnostics  
-- **Objectif** : Analyser l'état des données avant modification
-- **Localisation** : `diagnostics/`
-
-### 3. Corrections
-- **Objectif** : Réparer des configurations cassées
-- **Localisation** : `fixes/`
-
-### 4. Migrations
-- **Objectif** : Modifications de structure de base de données
-- **Localisation** : `migrations/`
-
-## ⚠️ Règles d'utilisation
-
-1. **TOUJOURS** exécuter un diagnostic avant automatisation
-2. **TOUJOURS** faire un backup avant modification importante
-3. **TESTER** sur un environnement de dev si possible
-4. **DOCUMENTER** les changements dans ce README
+## 📝 Conventions
+- MAJUSCULES = Scripts production (UPDATE_, FIX_, ANALYSE_)
+- minuscules = Scripts dev (update_, fix_, check_)

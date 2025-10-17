@@ -531,6 +531,28 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       await this.completeUniversalWorkflow(phoneNumber, session, workflowData);
       return;
     }
+
+    // ✅ NOUVEAU CODE - Vérifier conditional_display
+    if (optionGroup.conditional_display) {
+      const { based_on_step, show_if_selected } = optionGroup.conditional_display;
+
+      // Trouver la sélection du step référencé
+      const stepKeys = Object.keys(workflowData.selections);
+      const previousSelection = workflowData.selections[stepKeys[based_on_step - 1]];
+
+      if (previousSelection && previousSelection.length > 0) {
+        const selectedName = previousSelection[0].option_name;
+
+        // Si l'option sélectionnée n'est PAS dans show_if_selected
+        if (!show_if_selected.includes(selectedName)) {
+          // SKIP ce step automatiquement
+          workflowData.currentStep = stepIndex + 1;
+          return await this.showUniversalWorkflowStep(phoneNumber, session, workflowData, workflowData.currentStep);
+        }
+      }
+    }
+    // FIN NOUVEAU CODE
+
     // Template adaptatif basé sur la configuration
     let message = `🔧 *Configuration: ${workflowData.productName}*\n\n`;
     message += `📋 *${optionGroup.displayName.toUpperCase()}*`;
@@ -1328,7 +1350,8 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
           required: step.required !== false,
           minSelections: 1,
           maxSelections: step.max_selections || 1,
-          options: options
+          options: options,
+          conditional_display: step.conditional_display  // ✅ COPIER conditional_display
         };
         console.log(`🔥 [DEBUG_WORKFLOW_V2] Option group créé:`, {
           groupName: optionGroup.groupName,

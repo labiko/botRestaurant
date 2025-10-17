@@ -48,7 +48,6 @@ export class ConfigurationManager implements IRestaurantConfigManager {
         .select('*')
         .eq('restaurant_id', restaurantId)
         .eq('is_active', true)
-        .order('version', { ascending: false })
         .limit(1)
         .single();
 
