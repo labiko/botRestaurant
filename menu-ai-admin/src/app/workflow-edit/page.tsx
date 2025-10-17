@@ -12,6 +12,8 @@ interface RealOption {
   price_modifier: number;
   display_order: number;
   is_active: boolean;
+  icon?: string;
+  composition?: string;
 }
 
 interface OptionGroup {
@@ -313,7 +315,8 @@ export default function WorkflowEditPage() {
           name: option.option_name,
           price_modifier: option.price_modifier,
           display_order: option.display_order,
-          emoji: (option.icon && option.icon !== 'undefined') ? option.icon : getEmojiForGroup(group.group_name, option.option_name)
+          emoji: (option.icon && option.icon !== 'undefined') ? option.icon : getEmojiForGroup(group.group_name, option.option_name),
+          composition: option.composition
         }));
       });
 
@@ -787,6 +790,17 @@ export default function WorkflowEditPage() {
                                   <span className="text-sm text-green-600 font-medium whitespace-nowrap">{priceDisplay}</span>
                                 </div>
                               </div>
+                              {option.composition && (
+                                <div className="mt-2">
+                                  <textarea
+                                    value={option.composition || ''}
+                                    onChange={(e) => handleUpdateRealOption(activeTabIndex, optionIndex, 'composition', e.target.value)}
+                                    placeholder="Composition du plat (ingrédients, poids, etc.)"
+                                    className="w-full text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-green-500 resize-none"
+                                    rows={2}
+                                  />
+                                </div>
+                              )}
                             </div>
                           </div>
 

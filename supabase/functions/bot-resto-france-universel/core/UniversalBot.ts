@@ -1874,6 +1874,9 @@ export class UniversalBot implements IMessageHandler {
       }
 
       let menuText = `${categoryDisplayIcon} *${category.name.toUpperCase()}*\n`;
+      if (category.description) {
+        menuText += `${category.description}\n`;
+      }
       menuText += `${deliveryMode === 'livraison' ? '🚚 Prix livraison' : '📍 Prix sur place'}\n\n`;
       
       const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
