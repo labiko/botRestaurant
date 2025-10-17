@@ -157,6 +157,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       const workflowData = {
         productId: product.id,
         productName: product.name,
+        productIcon: product.icon || '📋',  // ✅ Icône du produit depuis la base
         productPrice: product.price,
         currentStep: 0,
         totalSteps: optionGroups.length,
@@ -345,6 +346,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     const workflowData = {
       productId: product.id,
       productName: product.name,
+      productIcon: product.icon || '📋',  // ✅ Icône du produit depuis la base
       productPrice: product.base_price || product.price_on_site_base,
       currentStep: 0,
       totalSteps: optionGroups.length,
@@ -505,6 +507,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     const workflowData = {
       productId: product.id,
       productName: productName,
+      productIcon: product.icon || '📋',  // ✅ Icône du produit depuis la base
       productPrice: finalPrice,
       selectedVariant: selectedVariant,
       currentStep: 0,
@@ -1010,7 +1013,8 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
    */ buildStepMessage(workflowData, optionGroup) {
     const stepNumber = workflowData.currentStep + 1;
     const totalSteps = workflowData.totalSteps;
-    let message = `📋 *${workflowData.productName.toUpperCase()}* - Étape ${stepNumber}/${totalSteps}\n\n`;
+    const productIcon = workflowData.productIcon || '📋';  // ✅ Utiliser l'icône du produit
+    let message = `${productIcon} *${workflowData.productName.toUpperCase()}* - Étape ${stepNumber}/${totalSteps}\n\n`;
     const emoji = this.getGroupEmoji(optionGroup.groupName);
     message += `${emoji} *${optionGroup.displayName.toUpperCase()}*`;
     if (optionGroup.maxSelections > 1) {
@@ -1367,6 +1371,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       const workflowData = {
         productId: product.id,
         productName: product.name,
+        productIcon: product.icon || '📋',  // ✅ Icône du produit depuis la base
         productPrice: product.price,
         currentStep: 0,
         totalSteps: optionGroups.length,
