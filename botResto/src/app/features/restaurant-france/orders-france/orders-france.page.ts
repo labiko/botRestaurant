@@ -47,6 +47,9 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
   private restaurantId: number;
 
+  // NOUVEAU : Flag pour griser bouton pendant assignation
+  isProcessingAssignment = false;
+
   // NOUVEAU : Infos abonnement
   subscriptionInfo: {
     status: string;
@@ -611,6 +614,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
         {
           text: 'Assigner maintenant',
           handler: () => {
+            this.isProcessingAssignment = true;
             this.startAutomaticAssignment(order);
           }
         }
@@ -690,6 +694,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     } catch (error) {
       console.error('❌ [OrdersFrance] Erreur assignation automatique:', error);
       this.presentToast('Erreur lors du lancement de l\'assignation', 'danger');
+    } finally {
+      this.isProcessingAssignment = false;
     }
   }
 

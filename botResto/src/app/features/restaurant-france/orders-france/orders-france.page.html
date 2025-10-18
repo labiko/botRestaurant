@@ -493,6 +493,7 @@
               size="small"
               [color]="action.color"
               [hidden]="shouldHideActionButton(order, action)"
+              [disabled]="action.nextStatus === 'prete' && isProcessingAssignment"
               (click)="onActionButtonClick(order, action)">
               {{ action.label }}
             </ion-button>

@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **NE JAMAIS faire de commits partiels** avec seulement certains fichiers
 - **Committer TOUT le projet** à chaque fois
 - **Un seul commit global** pour toutes les modifications en cours
+- **⚠️ MISE À JOUR VERSION OBLIGATOIRE** : Si le back office est modifié, TOUJOURS mettre à jour le numéro de version dans la page login avant le commit
 
 ## 🔄 STRATÉGIE DE BRANCHES
 
