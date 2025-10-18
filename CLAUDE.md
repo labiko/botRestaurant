@@ -39,6 +39,40 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **⚠️ IMPORTANT**: Avant toute modification du code, s'assurer que les changements ne cassent pas les workflows existants. Toujours tester les scénarios fonctionnels après chaque modification.
 
+## 🔒 MODE STABILISATION - BOT EN PRODUCTION
+
+**⚠️ RÈGLE CRITIQUE - BOT EN PRODUCTION ACTIVE** :
+
+Le bot est actuellement **EN PRODUCTION** avec des clients payants actifs. **Toute modification non-critique peut impacter le business**.
+
+### **📋 RÈGLES STRICTES** :
+
+**❌ INTERDIT (sauf demande explicite)** :
+- Nouvelles fonctionnalités
+- Modifications de l'interface utilisateur
+- Changements de workflows existants
+- Optimisations non-critiques
+- Refactoring de code fonctionnel
+- Expérimentations
+
+**✅ AUTORISÉ UNIQUEMENT** :
+- **Correction de bugs critiques** qui bloquent les commandes
+- **Fixes de sécurité** urgents
+- **Corrections demandées explicitement** par l'utilisateur
+- **Support nouveau client** : ajout restaurant (données uniquement, pas de code)
+
+### **🚨 AVANT TOUTE MODIFICATION** :
+
+1. **SE DEMANDER** : "Ce changement est-il CRITIQUE pour le fonctionnement ?"
+2. **SI NON** → NE PAS MODIFIER et demander confirmation utilisateur
+3. **SI OUI** → Proposer plan minimal et attendre validation
+4. **TOUJOURS** tester impact sur workflows existants
+
+### **💰 PRINCIPE** :
+**"Si ça marche et génère des revenus, NE PAS Y TOUCHER !"**
+
+**Focus prioritaire** : Stabilité, fiabilité, support clients existants.
+
 ## 🚫 SERVEUR DE DÉVELOPPEMENT
 
 **⚠️ IMPORTANT**: NE JAMAIS essayer de lancer le projet avec `ng serve`, `ionic serve`, ou tout autre commande de serveur de développement. Le projet est toujours déjà lancé du côté utilisateur. Ne pas utiliser les commandes Bash pour démarrer/arrêter/redémarrer des serveurs.
