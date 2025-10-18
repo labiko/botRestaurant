@@ -47,6 +47,9 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
   private restaurantId: number;
 
+  // NOUVEAU : Flag pour masquer bouton pendant assignation
+  private isProcessingAssignment = false;
+
   // NOUVEAU : Infos abonnement
   subscriptionInfo: {
     status: string;
@@ -611,6 +614,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
         {
           text: 'Assigner maintenant',
           handler: () => {
+            this.isProcessingAssignment = true;  // ✅ MASQUER LE BOUTON
             this.startAutomaticAssignment(order);
           }
         }
@@ -690,6 +694,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
     } catch (error) {
       console.error('❌ [OrdersFrance] Erreur assignation automatique:', error);
       this.presentToast('Erreur lors du lancement de l\'assignation', 'danger');
+    } finally {
+      this.isProcessingAssignment = false;  // ✅ RÉACTIVER
     }
   }
 
@@ -861,6 +867,11 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    * Cache le bouton "EN LIVRAISON" pour les commandes non assignées
    */
   shouldHideActionButton(order: FranceOrder, action: OrderAction): boolean {
+    // ✅ NOUVEAU : Masquer si assignation en cours
+    if (action.nextStatus === 'prete' && this.isProcessingAssignment) {
+      return true;
+    }
+
     // Masquer le bouton "EN LIVRAISON" si la commande n'est pas assignée
     if (action.nextStatus === 'en_livraison' && !order.assigned_driver_id) {
       return true;
