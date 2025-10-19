@@ -104,6 +104,73 @@ Le bot est actuellement **EN PRODUCTION** avec des clients payants actifs. **Tou
 
 **⚠️ IMPORTANT**: NE JAMAIS essayer de lancer le projet avec `ng serve`, `ionic serve`, ou tout autre commande de serveur de développement. Le projet est toujours déjà lancé du côté utilisateur. Ne pas utiliser les commandes Bash pour démarrer/arrêter/redémarrer des serveurs.
 
+## 📱 RÈGLES IONIC MODALS - CONFIGURATION OBLIGATOIRE
+
+**⚠️ CRITIQUE**: Toute nouvelle modal Ionic doit être configurée correctement pour s'ouvrir comme popup et non en plein écran.
+
+### **Problème fréquent:**
+Une modal qui s'ouvre en plein écran (comme une page) au lieu d'être une popup centrée.
+
+### **Cause:**
+- Classe CSS manquante dans `global.scss`
+- Sans cette classe, Ionic affiche la modal en `width: 100%; height: 100%`
+
+### **Solution obligatoire en 3 étapes:**
+
+#### **1️⃣ Structure HTML de la modal:**
+```html
+<!-- ✅ CORRECT - Container principal -->
+<div style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+  <!-- En-tête -->
+  <div>...</div>
+
+  <!-- Contenu scrollable -->
+  <div style="flex: 1; overflow-y: auto;">...</div>
+
+  <!-- Footer toujours visible -->
+  <div style="flex-shrink: 0;">
+    <!-- Boutons -->
+  </div>
+</div>
+
+<!-- ❌ INCORRECT -->
+<div style="height: 100vh;">  <!-- Ne pas utiliser 100vh ! -->
+<div style="position: fixed;">  <!-- Ne pas utiliser fixed ! -->
+```
+
+#### **2️⃣ Classe CSS dans `global.scss`:**
+```scss
+// Ajouter dans global.scss pour chaque nouvelle modal
+.nom-modal {
+  --width: 90%;
+  --max-width: 500px;
+  --height: auto;
+  --max-height: 90%;
+  --border-radius: 16px;
+  --backdrop-opacity: 0.5;
+}
+```
+
+#### **3️⃣ Configuration dans le code TypeScript:**
+```typescript
+const modal = await this.modalController.create({
+  component: VotreModalComponent,
+  cssClass: 'nom-modal',  // ⚠️ OBLIGATOIRE ! Doit correspondre à la classe dans global.scss
+  backdropDismiss: false,
+  showBackdrop: true
+});
+```
+
+### **⚠️ Points clés:**
+- `height: 100%` (pas `100vh`) pour s'adapter à la taille de la modal Ionic
+- `flex-shrink: 0` pour le footer (pas `position: sticky` ni `position: fixed`)
+- Classe CSS dans `global.scss` est **OBLIGATOIRE**
+- Le `cssClass` dans `create()` doit **correspondre** à la classe dans `global.scss`
+
+### **Exemple de modals correctes:**
+- `.add-driver-modal` (référence)
+- `.invite-client-modal`
+
 ## ⚠️ INTERDICTION ABSOLUE - GESTION NODE_MODULES
 
 **🚨 RÈGLE CRITIQUE** - Ces commandes détruisent l'environnement de travail :
