@@ -305,6 +305,15 @@ ${this.restaurantName || 'Votre restaurant'}`;
     }
   }
 
+  /**
+   * Détecter si on est sur tablette (768px - 1024px)
+   */
+  isTablet(): boolean {
+    if (typeof window === 'undefined') return false;
+    const width = window.innerWidth;
+    return width >= 768 && width <= 1024;
+  }
+
   dismiss() {
     this.modalController.dismiss();
   }
