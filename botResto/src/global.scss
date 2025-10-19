@@ -200,6 +200,16 @@ p {
   --backdrop-opacity: 0.5;
 }
 
+// Styles pour la modale d'invitation client (même style)
+.invite-client-modal {
+  --width: 90%;
+  --max-width: 500px;
+  --height: auto;
+  --max-height: 90%;
+  --border-radius: 16px;
+  --backdrop-opacity: 0.5;
+}
+
 // Classes utilitaires globales
 .text-center {
   text-align: center;
