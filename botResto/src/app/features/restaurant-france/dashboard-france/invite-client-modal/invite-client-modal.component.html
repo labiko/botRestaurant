@@ -7,16 +7,20 @@
     📱 Inviter un client
   </div>
 
-  <!-- Message d'erreur si formulaire non initialisé -->
-  <div *ngIf="!inviteForm" style="padding: 40px; text-align: center;">
-    <div style="background: #ff6b6b; color: white; padding: 20px; border-radius: 12px;">
-      <h3>❌ Erreur d'initialisation</h3>
-      <p>Le formulaire ne s'est pas chargé correctement.</p>
-      <button (click)="dismiss()" style="background: white; color: #ff6b6b; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
-        Fermer
-      </button>
+  <!-- Spinner de chargement pendant initialisation -->
+  <div *ngIf="!inviteForm" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px;">
+    <div style="text-align: center;">
+      <div style="width: 60px; height: 60px; border: 4px solid #e0e0e0; border-top: 4px solid #6c5ce7; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+      <p style="color: #636e72; font-size: 16px; margin: 0;">Chargement...</p>
     </div>
   </div>
+
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 
   <!-- Contenu du formulaire -->
   <div style="flex: 1; overflow-y: auto; padding: 15px;" *ngIf="inviteForm" [style.padding-bottom.px]="isTablet() ? 10 : 100">
