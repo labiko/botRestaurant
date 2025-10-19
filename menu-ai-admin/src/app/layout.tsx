@@ -22,6 +22,28 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Menu AI Admin - Gestion Restaurants",
   description: "Interface d'administration intelligente pour la gestion des menus de restaurants",
+  manifest: "/manifest.json",
+  themeColor: "#2563eb",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Menu AI Admin",
+  },
+  icons: {
+    icon: [
+      { url: "/pwa-icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/pwa-icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/pwa-icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+  },
 };
 
 export default function RootLayout({

@@ -1341,105 +1341,170 @@ export default function BackOfficeRestaurantPage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">🏪 Back Office Restaurant</h1>
-        <p className="text-gray-600">Gérer l'activation, désactivation des restaurants et gestion des icônes</p>
+    <>
+      {/* Media queries pour tablette 8.4" (1920x1200) */}
+      <style jsx>{`
+        @media (min-width: 1800px) and (max-width: 2000px) and (min-height: 1100px) and (max-height: 1300px) {
+          /* Optimisations spécifiques tablette 8.4" haute résolution */
+          .tablet-optimize-padding {
+            padding: 1rem !important;
+          }
 
-        {/* Navigation par tabs */}
-        <div className="mt-6 border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('restaurants')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'restaurants'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              🏪 Gestion Restaurants
-            </button>
-            <button
-              onClick={() => setActiveTab('icons')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'icons'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              🎨 Gestion Icônes
-            </button>
-            <button
-              onClick={() => setActiveTab('catalogue')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'catalogue'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              🗂️ Catalogue Icônes
-            </button>
-            <button
-              onClick={() => setActiveTab('vitrine')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'vitrine'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              🌐 Gestion Vitrine
-            </button>
-            <button
-              onClick={() => setActiveTab('countries')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'countries'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              🌍 Gestion Pays
-            </button>
-            <button
-              onClick={() => setActiveTab('boissons-workflows')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'boissons-workflows'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              🥤 Gestion Boissons Workflows
-            </button>
-            <button
-              onClick={() => setActiveTab('sauces-workflows')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'sauces-workflows'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              🌶️ Gestion Sauces Workflows
-            </button>
-            <button
-              onClick={() => setActiveTab('clean-orders')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'clean-orders'
-                  ? 'border-red-500 text-red-600'
-                  : 'border-transparent text-gray-500 hover:text-red-700 hover:border-red-300'
-              }`}
-            >
-              🧹 Nettoyage Commandes
-            </button>
-            <button
-              onClick={() => setActiveTab('qr-posters')}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'qr-posters'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              🖼️ Affiches QR Code
-            </button>
-          </nav>
+          .tablet-optimize-text {
+            font-size: 0.95rem !important;
+          }
+
+          .tablet-optimize-title {
+            font-size: 1.5rem !important;
+          }
+
+          .tablet-optimize-subtitle {
+            font-size: 0.9rem !important;
+          }
+
+          .tablet-optimize-spacing {
+            margin-bottom: 1rem !important;
+          }
+
+          .tablet-optimize-tabs {
+            margin-top: 1rem !important;
+          }
+
+          /* Afficher toutes les colonnes sur tablette 8.4" grâce à la haute résolution */
+          .tablet-show-columns {
+            display: table-cell !important;
+          }
+
+          /* Touch targets optimisés pour tablette */
+          .tablet-touch-target {
+            min-height: 44px !important;
+            min-width: 44px !important;
+          }
+        }
+      `}</style>
+
+      <div className="p-3 sm:p-6 tablet-optimize-padding">
+        <div className="mb-4 sm:mb-6 tablet-optimize-spacing">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 tablet-optimize-title">🏪 Back Office Restaurant</h1>
+          <p className="text-sm sm:text-base text-gray-600 tablet-optimize-subtitle">Gérer l'activation, désactivation des restaurants et gestion des icônes</p>
+
+          {/* Navigation par tabs */}
+          <div className="mt-4 sm:mt-6 tablet-optimize-tabs">
+
+            {/* Mobile: Dropdown select (< 640px) */}
+            <div className="sm:hidden">
+              <select
+                value={activeTab}
+                onChange={(e) => setActiveTab(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="restaurants">🏪 Gestion Restaurants</option>
+                <option value="icons">🎨 Gestion Icônes</option>
+                <option value="catalogue">🗂️ Catalogue Icônes</option>
+                <option value="vitrine">🌐 Gestion Vitrine</option>
+                <option value="countries">🌍 Gestion Pays</option>
+                <option value="boissons-workflows">🥤 Gestion Boissons Workflows</option>
+                <option value="sauces-workflows">🌶️ Gestion Sauces Workflows</option>
+                <option value="clean-orders">🧹 Nettoyage Commandes</option>
+                <option value="qr-posters">🖼️ Affiches QR Code</option>
+              </select>
+            </div>
+
+            {/* Tablet/Desktop: Onglets normaux (>= 640px) */}
+            <div className="hidden sm:block border-b border-gray-200 overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+              <nav className="-mb-px flex space-x-4 sm:space-x-8 min-w-max" aria-label="Tabs">
+              <button
+                onClick={() => setActiveTab('restaurants')}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'restaurants'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                🏪 Gestion Restaurants
+              </button>
+              <button
+                onClick={() => setActiveTab('icons')}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'icons'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                🎨 Gestion Icônes
+              </button>
+              <button
+                onClick={() => setActiveTab('catalogue')}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'catalogue'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                🗂️ Catalogue Icônes
+              </button>
+              <button
+                onClick={() => setActiveTab('vitrine')}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'vitrine'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                🌐 Gestion Vitrine
+              </button>
+              <button
+                onClick={() => setActiveTab('countries')}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'countries'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                🌍 Gestion Pays
+              </button>
+              <button
+                onClick={() => setActiveTab('boissons-workflows')}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'boissons-workflows'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                🥤 Gestion Boissons Workflows
+              </button>
+              <button
+                onClick={() => setActiveTab('sauces-workflows')}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'sauces-workflows'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                🌶️ Gestion Sauces Workflows
+              </button>
+              <button
+                onClick={() => setActiveTab('clean-orders')}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'clean-orders'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-red-700 hover:border-red-300'
+                }`}
+              >
+                🧹 Nettoyage Commandes
+              </button>
+              <button
+                onClick={() => setActiveTab('qr-posters')}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'qr-posters'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                🖼️ Affiches QR Code
+              </button>
+            </nav>
+          </div>
         </div>
       </div>
 
@@ -1511,7 +1576,7 @@ export default function BackOfficeRestaurantPage() {
               <button
                 onClick={loadRestaurants}
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 tablet-touch-target bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
                 {loading ? 'Actualisation...' : '🔄 Actualiser'}
               </button>
@@ -1534,41 +1599,42 @@ export default function BackOfficeRestaurantPage() {
               <p>Aucun restaurant trouvé</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+              <table className="w-full min-w-[640px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Restaurant</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localisation</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dernière MAJ</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Restaurant</th>
+                    <th className="hidden md:table-cell tablet-show-columns px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localisation</th>
+                    <th className="hidden lg:table-cell tablet-show-columns px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                    <th className="hidden xl:table-cell tablet-show-columns px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dernière MAJ</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {restaurants.map((restaurant) => (
                     <tr key={restaurant.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{restaurant.name}</div>
-                        <div className="text-sm text-gray-500">ID: {restaurant.id}</div>
+                        <div className="text-sm font-medium text-gray-900 tablet-optimize-text">{restaurant.name}</div>
+                        <div className="text-xs sm:text-sm text-gray-500">ID: {restaurant.id}</div>
+                        <div className="md:hidden text-xs text-gray-600 mt-1">{restaurant.city || 'Non spécifié'}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{restaurant.city || 'Non spécifié'}</div>
+                    <td className="hidden md:table-cell tablet-show-columns px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="text-sm text-gray-900 tablet-optimize-text">{restaurant.city || 'Non spécifié'}</div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="hidden lg:table-cell tablet-show-columns px-3 sm:px-6 py-3 sm:py-4">
                       <div className="space-y-1">
                         {restaurant.phone && (
-                          <div className="text-sm text-gray-900">📞 {restaurant.phone}</div>
+                          <div className="text-sm text-gray-900 tablet-optimize-text">📞 {restaurant.phone}</div>
                         )}
                         {restaurant.whatsapp_number && restaurant.whatsapp_number !== restaurant.phone && (
-                          <div className="text-sm text-gray-600">💬 {restaurant.whatsapp_number}</div>
+                          <div className="text-sm text-gray-600 tablet-optimize-text">💬 {restaurant.whatsapp_number}</div>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         restaurant.is_active
                           ? 'bg-green-100 text-green-800'
@@ -1577,17 +1643,17 @@ export default function BackOfficeRestaurantPage() {
                         {restaurant.is_active ? '✅ Actif' : '❌ Inactif'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
+                    <td className="hidden xl:table-cell tablet-show-columns px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="text-sm text-gray-900 tablet-optimize-text">
                         {formatDateTime(restaurant.updated_at)}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="flex items-center space-x-1 sm:space-x-2">
                         {/* Bouton voir/éditer */}
                         <button
                           onClick={() => openEditModal(restaurant)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                          className="p-1.5 sm:p-2 tablet-touch-target text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer touch-manipulation"
                           title="Voir/Éditer les informations"
                         >
                           👁️
@@ -1597,7 +1663,7 @@ export default function BackOfficeRestaurantPage() {
                         <button
                           onClick={() => toggleRestaurantStatus(restaurant.id, !restaurant.is_active)}
                           disabled={updating === restaurant.id}
-                          className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                          className={`p-1.5 sm:p-2 tablet-touch-target rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer touch-manipulation ${
                             restaurant.is_active
                               ? 'text-red-600 hover:bg-red-50'
                               : 'text-green-600 hover:bg-green-50'
@@ -1605,16 +1671,16 @@ export default function BackOfficeRestaurantPage() {
                           title={restaurant.is_active ? 'Désactiver le restaurant' : 'Activer le restaurant'}
                         >
                           {updating === restaurant.id ? (
-                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                           ) : restaurant.is_active ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                           ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                           )}
@@ -2060,7 +2126,7 @@ export default function BackOfficeRestaurantPage() {
                   <button
                     onClick={() => selectedRestaurantId && loadCategoriesForRestaurant(selectedRestaurantId)}
                     disabled={loadingCategories}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 tablet-touch-target bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
                   >
                     {loadingCategories ? '⏳ Chargement...' : '🔄 Actualiser'}
                   </button>
@@ -4124,5 +4190,6 @@ export default function BackOfficeRestaurantPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

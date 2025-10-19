@@ -11,6 +11,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Un seul commit global** pour toutes les modifications en cours
 - **⚠️ MISE À JOUR VERSION OBLIGATOIRE** : Si le back office est modifié, TOUJOURS mettre à jour le numéro de version dans la page login avant le commit
 
+## 🚀 RÈGLE DÉPLOIEMENT MENU-AI-ADMIN (VERCEL)
+
+**⚠️ RÈGLE ABSOLUE** : Quand l'utilisateur demande "deploy" ou "déployer menu-ai-admin" :
+
+### **Déploiement automatique en PRODUCTION**
+```bash
+cd /c/Users/diall/Documents/IonicProjects/Claude/botRestaurant/menu-ai-admin && \
+vercel --prod --yes
+```
+
+**TOUJOURS déployer directement en PRODUCTION** :
+- ✅ **Commande** : `vercel --prod --yes`
+- ✅ **URL Production** : `menu-ai-admin.vercel.app`
+- ❌ **NE JAMAIS utiliser** : `vercel` (preview) sauf demande explicite
+- ⚠️ **AVANT le déploiement** : TOUJOURS mettre à jour le numéro de version dans `src/app/login/page.tsx`
+
+### **Workflow de déploiement obligatoire**
+1. **Mettre à jour la version** dans `menu-ai-admin/src/app/login/page.tsx`
+2. **Déployer en PROD** avec `vercel --prod --yes`
+3. **Vérifier** que le déploiement est réussi
+4. **Retourner l'URL** de production à l'utilisateur
+
+### **⚠️ IMPORTANT**
+- Ce projet est en **production active** avec des utilisateurs
+- **Pas de preview** sauf demande explicite
+- **Toujours en PROD directement**
+
 ## 🔄 STRATÉGIE DE BRANCHES
 
 **⚠️ RÈGLES CRITIQUES DE DÉVELOPPEMENT** :
