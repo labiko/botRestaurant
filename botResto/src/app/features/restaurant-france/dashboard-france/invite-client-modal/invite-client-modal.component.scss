@@ -1,0 +1,53 @@
+.phone-input-container {
+  margin-bottom: 20px;
+}
+
+.input-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--ion-color-dark);
+}
+
+.phone-input-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.country-selector {
+  flex: 0 0 100px;
+  padding: 12px 8px;
+  border: 1px solid var(--ion-color-medium);
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+}
+
+.phone-input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid var(--ion-color-medium);
+  border-radius: 8px;
+  font-size: 16px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--ion-color-primary);
+  }
+}
+
+.phone-preview {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--ion-color-success-tint);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--ion-color-success-shade);
+}
+
+.error-message {
+  margin-top: 8px;
+  color: var(--ion-color-danger);
+  font-size: 13px;
+}

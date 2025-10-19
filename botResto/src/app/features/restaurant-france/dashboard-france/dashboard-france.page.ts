@@ -1,12 +1,13 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
-import { AlertController } from '@ionic/angular';
+import { AlertController, ModalController, ToastController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { Location } from '@angular/common';
 
 import { AuthFranceService, FranceUser } from '../auth-france/services/auth-france.service';
 import { FranceOrdersService, FranceOrder } from '../../../core/services/france-orders.service';
 import { DriversFranceService } from '../../../core/services/drivers-france.service';
+import { InviteClientModalComponent } from './invite-client-modal/invite-client-modal.component';
 
 @Component({
   selector: 'app-dashboard-france',
@@ -34,7 +35,9 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
     private driversFranceService: DriversFranceService,
     private router: Router,
     private alertController: AlertController,
-    private location: Location
+    private location: Location,
+    private modalController: ModalController,
+    private toastController: ToastController
   ) { }
 
   ngOnInit() {
@@ -192,6 +195,45 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
    */
   goToPayments() {
     this.router.navigate(['/restaurant-france/payments-france']);
+  }
+
+  /**
+   * Ouvrir la modal d'invitation client WhatsApp
+   */
+  async openInviteModal() {
+    const modal = await this.modalController.create({
+      component: InviteClientModalComponent,
+      backdropDismiss: false
+    });
+
+    await modal.present();
+
+    const { data } = await modal.onWillDismiss();
+
+    if (data && data.success) {
+      await this.showToast('✅ Invitation WhatsApp envoyée avec succès !', 'success');
+    } else if (data && data.success === false) {
+      await this.showToast('⚠️ Erreur lors de l\'envoi de l\'invitation', 'warning');
+    }
+  }
+
+  /**
+   * Afficher un toast
+   */
+  private async showToast(message: string, color: 'success' | 'danger' | 'warning' = 'success') {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      color,
+      position: 'top',
+      buttons: [
+        {
+          text: '✕',
+          role: 'cancel'
+        }
+      ]
+    });
+    await toast.present();
   }
 
   /**
