@@ -203,7 +203,9 @@ export class DashboardFrancePage implements OnInit, OnDestroy {
   async openInviteModal() {
     const modal = await this.modalController.create({
       component: InviteClientModalComponent,
-      backdropDismiss: false
+      cssClass: 'invite-client-modal',
+      backdropDismiss: false,
+      showBackdrop: true
     });
 
     await modal.present();
