@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useFetch } from '@/hooks/useFetch';
+import { QRPosterGenerator } from '@/components/QRPosterGenerator';
 
 interface Restaurant {
   id: number;
@@ -1428,6 +1429,16 @@ export default function BackOfficeRestaurantPage() {
             >
               🧹 Nettoyage Commandes
             </button>
+            <button
+              onClick={() => setActiveTab('qr-posters')}
+              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'qr-posters'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🖼️ Affiches QR Code
+            </button>
           </nav>
         </div>
       </div>
@@ -1668,6 +1679,11 @@ export default function BackOfficeRestaurantPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Section Affiches QR Code */}
+      {activeTab === 'qr-posters' && (
+        <QRPosterGenerator restaurants={restaurants} />
       )}
 
       {/* Modal d'édition des informations restaurant */}
