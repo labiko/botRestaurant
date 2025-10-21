@@ -118,6 +118,12 @@ export default function LoginPage() {
           </div>
         </form>
 
+        {/* Version */}
+        <div className="text-center mt-4">
+          <p className="text-xs text-gray-400">
+            Version 2.5.0 - Mobile Responsive
+          </p>
+        </div>
       </div>
     </div>
   );

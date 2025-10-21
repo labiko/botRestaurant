@@ -11,6 +11,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Un seul commit global** pour toutes les modifications en cours
 - **⚠️ MISE À JOUR VERSION OBLIGATOIRE** : Si le back office est modifié, TOUJOURS mettre à jour le numéro de version dans la page login avant le commit
 
+## 🚀 RÈGLE DÉPLOIEMENT MENU-AI-ADMIN (VERCEL)
+
+**⚠️ RÈGLE ABSOLUE** : Quand l'utilisateur demande "deploy" ou "déployer menu-ai-admin" :
+
+### **Déploiement automatique en PRODUCTION**
+```bash
+cd /c/Users/diall/Documents/IonicProjects/Claude/botRestaurant/menu-ai-admin && \
+vercel --prod --yes
+```
+
+**TOUJOURS déployer directement en PRODUCTION** :
+- ✅ **Commande** : `vercel --prod --yes`
+- ✅ **URL Production** : `menu-ai-admin.vercel.app`
+- ❌ **NE JAMAIS utiliser** : `vercel` (preview) sauf demande explicite
+- ⚠️ **AVANT le déploiement** : TOUJOURS mettre à jour le numéro de version dans `src/app/login/page.tsx`
+
+### **Workflow de déploiement obligatoire**
+1. **Mettre à jour la version** dans `menu-ai-admin/src/app/login/page.tsx`
+2. **Déployer en PROD** avec `vercel --prod --yes`
+3. **Vérifier** que le déploiement est réussi
+4. **Retourner l'URL** de production à l'utilisateur
+
+### **⚠️ IMPORTANT**
+- Ce projet est en **production active** avec des utilisateurs
+- **Pas de preview** sauf demande explicite
+- **Toujours en PROD directement**
+
 ## 🔄 STRATÉGIE DE BRANCHES
 
 **⚠️ RÈGLES CRITIQUES DE DÉVELOPPEMENT** :
@@ -39,9 +66,110 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **⚠️ IMPORTANT**: Avant toute modification du code, s'assurer que les changements ne cassent pas les workflows existants. Toujours tester les scénarios fonctionnels après chaque modification.
 
+## 🔒 MODE STABILISATION - BOT EN PRODUCTION
+
+**⚠️ RÈGLE CRITIQUE - BOT EN PRODUCTION ACTIVE** :
+
+Le bot est actuellement **EN PRODUCTION** avec des clients payants actifs. **Toute modification non-critique peut impacter le business**.
+
+### **📋 RÈGLES STRICTES** :
+
+**❌ INTERDIT (sauf demande explicite)** :
+- Nouvelles fonctionnalités
+- Modifications de l'interface utilisateur
+- Changements de workflows existants
+- Optimisations non-critiques
+- Refactoring de code fonctionnel
+- Expérimentations
+
+**✅ AUTORISÉ UNIQUEMENT** :
+- **Correction de bugs critiques** qui bloquent les commandes
+- **Fixes de sécurité** urgents
+- **Corrections demandées explicitement** par l'utilisateur
+- **Support nouveau client** : ajout restaurant (données uniquement, pas de code)
+
+### **🚨 AVANT TOUTE MODIFICATION** :
+
+1. **SE DEMANDER** : "Ce changement est-il CRITIQUE pour le fonctionnement ?"
+2. **SI NON** → NE PAS MODIFIER et demander confirmation utilisateur
+3. **SI OUI** → Proposer plan minimal et attendre validation
+4. **TOUJOURS** tester impact sur workflows existants
+
+### **💰 PRINCIPE** :
+**"Si ça marche et génère des revenus, NE PAS Y TOUCHER !"**
+
+**Focus prioritaire** : Stabilité, fiabilité, support clients existants.
+
 ## 🚫 SERVEUR DE DÉVELOPPEMENT
 
 **⚠️ IMPORTANT**: NE JAMAIS essayer de lancer le projet avec `ng serve`, `ionic serve`, ou tout autre commande de serveur de développement. Le projet est toujours déjà lancé du côté utilisateur. Ne pas utiliser les commandes Bash pour démarrer/arrêter/redémarrer des serveurs.
+
+## 📱 RÈGLES IONIC MODALS - CONFIGURATION OBLIGATOIRE
+
+**⚠️ CRITIQUE**: Toute nouvelle modal Ionic doit être configurée correctement pour s'ouvrir comme popup et non en plein écran.
+
+### **Problème fréquent:**
+Une modal qui s'ouvre en plein écran (comme une page) au lieu d'être une popup centrée.
+
+### **Cause:**
+- Classe CSS manquante dans `global.scss`
+- Sans cette classe, Ionic affiche la modal en `width: 100%; height: 100%`
+
+### **Solution obligatoire en 3 étapes:**
+
+#### **1️⃣ Structure HTML de la modal:**
+```html
+<!-- ✅ CORRECT - Container principal -->
+<div style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+  <!-- En-tête -->
+  <div>...</div>
+
+  <!-- Contenu scrollable -->
+  <div style="flex: 1; overflow-y: auto;">...</div>
+
+  <!-- Footer toujours visible -->
+  <div style="flex-shrink: 0;">
+    <!-- Boutons -->
+  </div>
+</div>
+
+<!-- ❌ INCORRECT -->
+<div style="height: 100vh;">  <!-- Ne pas utiliser 100vh ! -->
+<div style="position: fixed;">  <!-- Ne pas utiliser fixed ! -->
+```
+
+#### **2️⃣ Classe CSS dans `global.scss`:**
+```scss
+// Ajouter dans global.scss pour chaque nouvelle modal
+.nom-modal {
+  --width: 90%;
+  --max-width: 500px;
+  --height: auto;
+  --max-height: 90%;
+  --border-radius: 16px;
+  --backdrop-opacity: 0.5;
+}
+```
+
+#### **3️⃣ Configuration dans le code TypeScript:**
+```typescript
+const modal = await this.modalController.create({
+  component: VotreModalComponent,
+  cssClass: 'nom-modal',  // ⚠️ OBLIGATOIRE ! Doit correspondre à la classe dans global.scss
+  backdropDismiss: false,
+  showBackdrop: true
+});
+```
+
+### **⚠️ Points clés:**
+- `height: 100%` (pas `100vh`) pour s'adapter à la taille de la modal Ionic
+- `flex-shrink: 0` pour le footer (pas `position: sticky` ni `position: fixed`)
+- Classe CSS dans `global.scss` est **OBLIGATOIRE**
+- Le `cssClass` dans `create()` doit **correspondre** à la classe dans `global.scss`
+
+### **Exemple de modals correctes:**
+- `.add-driver-modal` (référence)
+- `.invite-client-modal`
 
 ## ⚠️ INTERDICTION ABSOLUE - GESTION NODE_MODULES
 
@@ -120,18 +248,19 @@ Le bot universel est la version de production active qui gère tous les pays. Ne
 - **EXPLAIN** pour analyser les requêtes
 - **DESCRIBE** ou **SHOW** pour la structure
 
-### **❌ STRICTEMENT INTERDIT - Scripts de modification** :
-- **NE JAMAIS exécuter** `INSERT`, `UPDATE`, `DELETE` directement
-- **NE JAMAIS exécuter** `CREATE`, `ALTER`, `DROP`
-- **NE JAMAIS exécuter** de scripts de nettoyage (NETTOYAGE_*.sql)
-- **NE JAMAIS exécuter** de scripts d'alimentation (ALIMENTATION_*.sql)
-- **NE JAMAIS exécuter** de scripts de migration (MIGRATION_*.sql)
+### **❌ STRICTEMENT INTERDIT - Scripts de modification EN PROD** :
+- **NE JAMAIS exécuter** `INSERT`, `UPDATE`, `DELETE` directement en PROD
+- **NE JAMAIS exécuter** `CREATE`, `ALTER`, `DROP` en PROD
+- **NE JAMAIS exécuter** de scripts de nettoyage (NETTOYAGE_*.sql) en PROD
+- **NE JAMAIS exécuter** de scripts d'alimentation (ALIMENTATION_*.sql) en PROD
+- **NE JAMAIS exécuter** de scripts de migration (MIGRATION_*.sql) en PROD
+- **⚠️ RÈGLE ABSOLUE** : Aucune modification directe en PROD - TOUJOURS donner le script à l'utilisateur
 
 ### **✅ Workflow obligatoire pour modifications** :
 1. **Créer le script SQL** avec transactions (`BEGIN;` ... `COMMIT;`)
 2. **DONNER le script à l'utilisateur** pour qu'il l'exécute lui-même
-3. **NE JAMAIS l'exécuter directement**, même si demandé
-4. **Exception** : Scripts de vérification (SELECT uniquement)
+3. **NE JAMAIS l'exécuter directement en PROD**, même si demandé
+4. **Exception UNIQUE** : Scripts de vérification (SELECT uniquement)
 
 ### **📋 Exemples** :
 ```sql

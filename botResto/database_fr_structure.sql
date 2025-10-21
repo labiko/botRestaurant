@@ -209,6 +209,20 @@ CREATE TABLE public.france_driver_locations (
   CONSTRAINT france_driver_locations_pkey PRIMARY KEY (id),
   CONSTRAINT france_driver_locations_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.france_delivery_drivers(id)
 );
+CREATE TABLE public.france_gdpr_consents (
+  id bigint NOT NULL DEFAULT nextval('france_gdpr_consents_id_seq'::regclass),
+  phone_number character varying NOT NULL,
+  consent_given boolean NOT NULL DEFAULT false,
+  consent_date timestamp with time zone NOT NULL DEFAULT now(),
+  consent_method character varying NOT NULL,
+  consent_withdrawn_date timestamp with time zone,
+  ip_address character varying,
+  user_agent text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  pending_workflow jsonb,
+  CONSTRAINT france_gdpr_consents_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.france_icons (
   id integer NOT NULL DEFAULT nextval('france_icons_id_seq'::regclass),
   emoji character varying NOT NULL UNIQUE,
@@ -228,6 +242,7 @@ CREATE TABLE public.france_menu_categories (
   display_order integer DEFAULT 0,
   is_active boolean DEFAULT true,
   created_at timestamp without time zone DEFAULT now(),
+  description text,
   CONSTRAINT france_menu_categories_pkey PRIMARY KEY (id),
   CONSTRAINT france_menu_categories_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.france_restaurants(id)
 );
@@ -428,6 +443,7 @@ CREATE TABLE public.france_restaurants (
   subscription_status character varying DEFAULT 'active'::character varying CHECK (subscription_status::text = ANY (ARRAY['active'::character varying, 'expiring'::character varying, 'expired'::character varying, 'suspended'::character varying]::text[])),
   subscription_end_date timestamp with time zone,
   subscription_plan character varying DEFAULT 'monthly'::character varying CHECK (subscription_plan::text = ANY (ARRAY['monthly'::character varying, 'quarterly'::character varying, 'annual'::character varying]::text[])),
+  auto_print_enabled boolean NOT NULL DEFAULT true,
   CONSTRAINT france_restaurants_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.france_sessions (

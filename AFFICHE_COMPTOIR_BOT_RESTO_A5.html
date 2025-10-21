@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Resto France - Affiche Comptoir A5</title>
+    <style>
+        @page {
+            size: A5 portrait;
+            margin: 0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 148mm;
+            height: 210mm;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FFFFFF 0%, #F5F5F5 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15mm;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Bordure décorative */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 8mm;
+            left: 8mm;
+            right: 8mm;
+            bottom: 8mm;
+            border: 2px solid #5B4DC7;
+            border-radius: 12px;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        /* Header avec logo et titre */
+        .header {
+            text-align: center;
+            z-index: 1;
+            margin-bottom: 5mm;
+        }
+
+        .logo {
+            width: 60mm;
+            height: auto;
+            margin-bottom: 5mm;
+            filter: drop-shadow(0 4px 8px rgba(91, 77, 199, 0.2));
+        }
+
+        .title {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #5B4DC7;
+            margin-bottom: 3mm;
+            letter-spacing: -0.5px;
+        }
+
+        .flag {
+            font-size: 28pt;
+            margin-right: 5px;
+        }
+
+        .tagline {
+            font-size: 12pt;
+            color: #7CB342;
+            font-weight: 600;
+            margin-bottom: 2mm;
+        }
+
+        /* QR Code section */
+        .qr-section {
+            background: white;
+            padding: 10mm;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            z-index: 1;
+        }
+
+        .qr-placeholder {
+            width: 80mm;
+            height: 80mm;
+            border: 3px dashed #5B4DC7;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #F8F7FF;
+            margin-bottom: 5mm;
+        }
+
+        .qr-text {
+            font-size: 14pt;
+            color: #5B4DC7;
+            font-weight: 600;
+        }
+
+        .scan-instruction {
+            font-size: 13pt;
+            color: #2E2E2E;
+            font-weight: 600;
+            margin-bottom: 3mm;
+        }
+
+        /* Steps section */
+        .steps {
+            text-align: center;
+            z-index: 1;
+        }
+
+        .steps-title {
+            font-size: 11pt;
+            color: #2E2E2E;
+            font-weight: 600;
+            margin-bottom: 4mm;
+        }
+
+        .steps-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 3mm;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+        }
+
+        .step-number {
+            width: 25px;
+            height: 25px;
+            background: linear-gradient(135deg, #5B4DC7 0%, #7E6FD8 100%);
+            color: white;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 11pt;
+            margin-bottom: 2mm;
+        }
+
+        .step-text {
+            font-size: 9pt;
+            color: #2E2E2E;
+            font-weight: 500;
+            line-height: 1.3;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            font-size: 8pt;
+            color: #666666;
+            z-index: 1;
+        }
+
+        /* Accent decoratif */
+        .accent {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            opacity: 0.05;
+        }
+
+        .accent-1 {
+            top: -30px;
+            right: -30px;
+            background: #5B4DC7;
+        }
+
+        .accent-2 {
+            bottom: -30px;
+            left: -30px;
+            background: #7CB342;
+        }
+    </style>
+</head>
+<body>
+    <!-- Accents décoratifs -->
+    <div class="accent accent-1"></div>
+    <div class="accent accent-2"></div>
+
+    <!-- Header -->
+    <div class="header">
+        <!-- Note: Remplacer cette image par le logo réel lors de l'impression -->
+        <div style="width: 60mm; height: 60mm; background: linear-gradient(135deg, #5B4DC7 0%, #9B8FE8 100%); border-radius: 50%; margin: 0 auto 5mm; display: flex; align-items: center; justify-content: center; color: white; font-size: 40pt;">
+            🤖
+        </div>
+
+        <h1 class="title">
+            <span class="flag">🇫🇷</span>Bot Resto France
+        </h1>
+        <p class="tagline">Commandez en ligne - Rapide & Simple</p>
+    </div>
+
+    <!-- QR Code -->
+    <div class="qr-section">
+        <div class="qr-placeholder">
+            <span class="qr-text">📱 SCANNER ICI<br>VOTRE QR CODE</span>
+        </div>
+        <p class="scan-instruction">Scannez pour commander</p>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps">
+        <p class="steps-title">Comment ça marche ?</p>
+        <div class="steps-container">
+            <div class="step">
+                <div class="step-number">1</div>
+                <p class="step-text">Scannez<br>le QR code</p>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <p class="step-text">Choisissez<br>vos plats</p>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <p class="step-text">Validez &<br>payez</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>Paiement sécurisé • Service rapide • Zéro attente</p>
+    </div>
+</body>
+</html>

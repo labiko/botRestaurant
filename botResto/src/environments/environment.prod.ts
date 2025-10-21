@@ -17,6 +17,9 @@ export const environment = {
     baseUrl: 'https://7105.api.greenapi.com'
   },
 
+  // 🤖 Numéro WhatsApp du Bot Universel (PROD)
+  botWhatsAppNumber: '33753058254',
+
   // 🔍 INDICATEUR D'ENVIRONNEMENT
   environmentName: 'PROD',
   debugMode: false,
