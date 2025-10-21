@@ -248,18 +248,19 @@ Le bot universel est la version de production active qui gère tous les pays. Ne
 - **EXPLAIN** pour analyser les requêtes
 - **DESCRIBE** ou **SHOW** pour la structure
 
-### **❌ STRICTEMENT INTERDIT - Scripts de modification** :
-- **NE JAMAIS exécuter** `INSERT`, `UPDATE`, `DELETE` directement
-- **NE JAMAIS exécuter** `CREATE`, `ALTER`, `DROP`
-- **NE JAMAIS exécuter** de scripts de nettoyage (NETTOYAGE_*.sql)
-- **NE JAMAIS exécuter** de scripts d'alimentation (ALIMENTATION_*.sql)
-- **NE JAMAIS exécuter** de scripts de migration (MIGRATION_*.sql)
+### **❌ STRICTEMENT INTERDIT - Scripts de modification EN PROD** :
+- **NE JAMAIS exécuter** `INSERT`, `UPDATE`, `DELETE` directement en PROD
+- **NE JAMAIS exécuter** `CREATE`, `ALTER`, `DROP` en PROD
+- **NE JAMAIS exécuter** de scripts de nettoyage (NETTOYAGE_*.sql) en PROD
+- **NE JAMAIS exécuter** de scripts d'alimentation (ALIMENTATION_*.sql) en PROD
+- **NE JAMAIS exécuter** de scripts de migration (MIGRATION_*.sql) en PROD
+- **⚠️ RÈGLE ABSOLUE** : Aucune modification directe en PROD - TOUJOURS donner le script à l'utilisateur
 
 ### **✅ Workflow obligatoire pour modifications** :
 1. **Créer le script SQL** avec transactions (`BEGIN;` ... `COMMIT;`)
 2. **DONNER le script à l'utilisateur** pour qu'il l'exécute lui-même
-3. **NE JAMAIS l'exécuter directement**, même si demandé
-4. **Exception** : Scripts de vérification (SELECT uniquement)
+3. **NE JAMAIS l'exécuter directement en PROD**, même si demandé
+4. **Exception UNIQUE** : Scripts de vérification (SELECT uniquement)
 
 ### **📋 Exemples** :
 ```sql
