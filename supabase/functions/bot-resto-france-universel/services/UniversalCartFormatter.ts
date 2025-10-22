@@ -185,15 +185,15 @@ export class UniversalCartFormatter {
    * Déterminer si un composant doit être ignoré
    */
   private shouldSkipComponent(value: string): boolean {
+    // ✅ Solution ultra-safe : patterns stricts uniquement
+    // Suppression de 'rien' (cause faux positif "VEGETARIEN")
+    // Suppression de 'sans' (cause faux positif "CROISSANT", "ARTISAN")
     const skipPatterns = [
       'pas de',
-      'sans',
       'aucun',
-      'none',
-      'no ',
-      'rien'
+      'none'
     ];
-    
+
     const lowerValue = value.toLowerCase();
     return skipPatterns.some(pattern => lowerValue.includes(pattern));
   }
@@ -253,7 +253,7 @@ export class UniversalCartFormatter {
   private formatConfigurationSummary(configuration: any): string {
     console.log('🔍 DEBUG_FORMAT_CONFIG: configuration reçue:', JSON.stringify(configuration));
     const details: string[] = [];
-    
+
     for (const [_, selections] of Object.entries(configuration)) {
       if (Array.isArray(selections)) {
         const values = selections.map(s => {
@@ -268,7 +268,7 @@ export class UniversalCartFormatter {
           // Sinon retourner vide
           return '';
         }).filter(v => v !== '').join(', ');
-        
+
         if (values && !this.shouldSkipComponent(values)) {
           details.push(values);
         }
