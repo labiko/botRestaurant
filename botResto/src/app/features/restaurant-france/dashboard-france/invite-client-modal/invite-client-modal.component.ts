@@ -240,14 +240,17 @@ export class InviteClientModalComponent implements OnInit, OnDestroy {
       const botWhatsAppNumber = environment.botWhatsAppNumber.replace(/^\+/, '');
       const botLink = `https://wa.me/${botWhatsAppNumber}?text=${encodeURIComponent(restaurantFormattedNumber)}`;
 
-      // 4. Construire le message à envoyer au client
-      const message = `🍽️ Bonjour !
+      // 4. Formater le numéro du bot pour l'affichage (ex: +33 7 53 05 82 54)
+      const formattedBotNumber = botWhatsAppNumber.replace(/^(\d{2})(\d)(\d{2})(\d{2})(\d{2})(\d{2})$/, '+$1 $2 $3 $4 $5 $6');
 
-Commandez directement sur notre bot WhatsApp :
+      // 5. Construire le message à envoyer au client
+      const message = `🍽 Bonjour !
+
+📱 Enregistrez notre numéro :
+${formattedBotNumber}
+
+👉 Puis cliquez pour commander :
 ${botLink}
-
-📱 Service rapide et sécurisé
-🚀 Commande en quelques clics
 
 ${this.restaurantName || 'Votre restaurant'}`;
 
@@ -259,7 +262,7 @@ ${this.restaurantName || 'Votre restaurant'}`;
         message: message
       });
 
-      // 5. Enregistrer l'invitation en base (plusieurs envois autorisés)
+      // 6. Enregistrer l'invitation en base (plusieurs envois autorisés)
       const { error: insertError } = await this.supabaseFranceService.client
         .from('whatsapp_client_invitations')
         .insert({
@@ -273,7 +276,7 @@ ${this.restaurantName || 'Votre restaurant'}`;
         throw insertError;
       }
 
-      // 6. Envoyer le message WhatsApp au client via Green API
+      // 7. Envoyer le message WhatsApp au client via Green API
       console.log('📤 [InviteClient] Envoi WhatsApp au client...');
 
       // Extraire l'indicatif téléphonique du numéro client
@@ -292,7 +295,7 @@ ${this.restaurantName || 'Votre restaurant'}`;
         console.warn('⚠️ [InviteClient] Échec envoi WhatsApp');
       }
 
-      // 7. Fermer la modal (SANS toast)
+      // 8. Fermer la modal (SANS toast)
       this.modalController.dismiss({
         success: whatsAppSent,
         clientPhone: `+${clientPhoneNumber}`,
