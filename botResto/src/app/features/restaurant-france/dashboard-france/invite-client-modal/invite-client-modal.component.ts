@@ -246,7 +246,7 @@ export class InviteClientModalComponent implements OnInit, OnDestroy {
       // 5. Construire le message à envoyer au client
       const message = `🍽 Bonjour !
 
-📱 Enregistrez notre numéro :
+📱 Enregistrez ce numéro (obligatoire) :
 ${formattedBotNumber}
 
 👉 Puis cliquez pour commander :
