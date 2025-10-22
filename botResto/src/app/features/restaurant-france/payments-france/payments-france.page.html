@@ -32,7 +32,7 @@
   <div *ngIf="selectedTab === 'renewal'" class="renewal-section">
     <div class="section-header">
       <h2>💳 Renouveler mon Abonnement</h2>
-      <p>Choisissez la durée de votre abonnement</p>
+      <p>Choisissez la durée de votre abonnement - diallo.labico@hotmail.fr</p>
     </div>
 
     <ion-grid *ngIf="stripeConfig">
@@ -45,7 +45,7 @@
             </ion-card-header>
             <ion-card-content>
               <div class="price">{{ stripeConfig.amount_monthly }}€<span>/mois</span></div>
-              <ion-button expand="block" (click)="renewSubscription('monthly')" [disabled]="isCreatingCheckout">
+              <ion-button expand="block" (click)="renewSubscription('monthly')" disabled="true">
                 Renouveler 1 mois
               </ion-button>
             </ion-card-content>
@@ -62,7 +62,7 @@
             <ion-card-content>
               <div class="price">{{ stripeConfig.amount_quarterly }}€<span>/3 mois</span></div>
               <p class="savings">Économisez 14%</p>
-              <ion-button expand="block" color="warning" (click)="renewSubscription('quarterly')" [disabled]="isCreatingCheckout">
+              <ion-button expand="block" color="warning" (click)="renewSubscription('quarterly')" disabled="true">
                 Renouveler 3 mois
               </ion-button>
             </ion-card-content>
@@ -78,7 +78,7 @@
             <ion-card-content>
               <div class="price">{{ stripeConfig.amount_annual }}€<span>/an</span></div>
               <p class="savings">Économisez 29%</p>
-              <ion-button expand="block" (click)="renewSubscription('annual')" [disabled]="isCreatingCheckout">
+              <ion-button expand="block" (click)="renewSubscription('annual')" disabled="true">
                 Renouveler 12 mois
               </ion-button>
             </ion-card-content>
