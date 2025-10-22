@@ -1158,6 +1158,12 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
    * "PÂTES" → "PÂTES" (pas de changement)
    */ cleanOptionName(name) {
     if (!name) return name;
+
+    // ✅ SÉCURITÉ: Ne pas toucher aux formats avec décimales (1.5L, 0.5L, etc.)
+    if (/\d+\.\d+L/i.test(name)) {
+      return name; // Retourner inchangé si contient décimal + L
+    }
+
     // Regex : enlever SEULEMENT "numéro." mais garder emoji
     // Pattern: cherche "1. " ou "10. " etc et l'enlève
     const cleaned = name.replace(/\s*\d+\.\s*/g, ' ') // Enlever tous les "1. ", "10. ", etc.
