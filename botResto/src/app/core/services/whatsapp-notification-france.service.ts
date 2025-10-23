@@ -15,6 +15,8 @@ export interface MessageTemplateFrance {
   prete: string;
   en_livraison: string;
   livree: string;
+  servie: string;
+  recuperee: string;
   annulee: string;
 }
 
@@ -85,6 +87,26 @@ Merci pour votre commande !
 
 ⭐ Notez votre expérience
 🔄 Commander à nouveau`,
+
+    // SERVIE : Commande sur place terminée
+    servie: `✅ **SERVIE !**
+Merci pour votre visite !
+
+Bon appétit ! 🍽️
+
+{reorderLink}
+
+{restaurantName}`,
+
+    // RÉCUPÉRÉE : Commande à emporter récupérée
+    recuperee: `✅ **RÉCUPÉRÉE !**
+Merci pour votre commande !
+
+Bon appétit ! 🍽️
+
+{reorderLink}
+
+{restaurantName}`,
 
     // ANNULÉE : Message court avec raison
     annulee: `❌ **COMMANDE ANNULÉE**
@@ -261,14 +283,25 @@ Merci pour votre commande !
    */
   private fillTemplateFrance(template: string, data: OrderDataFrance): string {
     let filled = template;
-    
+
     // Générer le contenu conditionnel France
     const conditionalContent = this.generateConditionalContentFrance(data);
-    
+
+    // Générer le lien WhatsApp pour recommander
+    let reorderLink = '';
+    if (data.restaurantPhone) {
+      const cleanRestaurantPhone = data.restaurantPhone.replace(/[^\d]/g, '');
+      const botNumber = environment.botWhatsAppNumber;
+      reorderLink = `👉 Pour recommander, cliquez ici :\nhttps://wa.me/${botNumber}?text=${cleanRestaurantPhone}`;
+    } else {
+      reorderLink = `👉 Pour recommander, tapez le numéro du restaurant`;
+    }
+
     // Enrichir les données avec le contenu conditionnel et formater les champs
     const enrichedData = {
       ...data,
       ...conditionalContent,
+      reorderLink: reorderLink,
       deliveryMode: this.formatDeliveryModeForWhatsApp(data.deliveryMode || '', data.deliveryAddress, data.validationCode),
       paymentMode: this.formatPaymentModeForWhatsApp(data.paymentMode || '')
     };
@@ -408,7 +441,8 @@ Merci pour votre commande !
     clientPhone: string,
     orderNumber: string,
     restaurantName: string,
-    deliveryMode?: string
+    deliveryMode?: string,
+    restaurantPhone?: string
   ): Promise<boolean> {
     try {
       console.log(`🎉 [WhatsAppFrance] Sending completion message for order ${orderNumber}`);
@@ -435,13 +469,25 @@ Merci pour votre commande !
           confirmation = 'Commande traitée avec succès 🎉';
       }
 
+      // Construire le lien WhatsApp personnalisé
+      let reorderInstruction = '';
+      if (restaurantPhone) {
+        // Nettoyer le numéro du restaurant (enlever espaces, +, etc.)
+        const cleanRestaurantPhone = restaurantPhone.replace(/[^\d]/g, '');
+        const botNumber = environment.botWhatsAppNumber;
+        const whatsappLink = `https://wa.me/${botNumber}?text=${cleanRestaurantPhone}`;
+        reorderInstruction = `👉 Pour recommander, cliquez ici :\n${whatsappLink}`;
+      } else {
+        reorderInstruction = `👉 Pour recommander, tapez directement le numéro de téléphone du restaurant`;
+      }
+
       const completionMessage = `${title}
 
 ${confirmation}
 
 Bon appétit ! 🍽️
 
-👉 Pour recommander, tapez directement le numéro de téléphone du restaurant
+${reorderInstruction}
 
 ${restaurantName}`;
 

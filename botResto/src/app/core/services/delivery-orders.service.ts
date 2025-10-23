@@ -11,6 +11,8 @@ export interface DeliveryOrder extends FranceOrder {
   delivery_instructions?: string;
   france_restaurants?: {
     name: string;
+    phone?: string;
+    whatsapp_number?: string;
   };
 }
 
@@ -39,7 +41,7 @@ export class DeliveryOrdersService {
         .from('france_orders')
         .select(`
           *,
-          france_restaurants!inner(name)
+          france_restaurants!inner(name, phone, whatsapp_number)
         `)
         .eq('driver_id', driverId)
         .in('status', ['assignee', 'en_livraison'])
@@ -75,7 +77,7 @@ export class DeliveryOrdersService {
         .from('france_orders')
         .select(`
           *,
-          france_restaurants!inner(name)
+          france_restaurants!inner(name, phone, whatsapp_number)
         `)
         .eq('restaurant_id', restaurantId)
         .eq('delivery_mode', 'livraison');

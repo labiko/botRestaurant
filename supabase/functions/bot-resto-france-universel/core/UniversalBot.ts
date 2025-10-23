@@ -2369,6 +2369,71 @@ export class UniversalBot implements IMessageHandler {
         const selectedAddress = existingAddresses[choice - 1];
         console.log(`📍 [AddressChoice] Adresse sélectionnée: ${selectedAddress.address_label}`);
 
+        // ⚠️ NOUVEAU : VALIDATION RAYON LIVRAISON (même logique que nouvelle adresse)
+        if (session.sessionData?.selectedServiceMode === 'livraison') {
+          console.log('🔍 [AddressChoice] === DÉBUT VALIDATION RAYON LIVRAISON ===');
+          const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
+
+          // Vérifier que l'adresse a des coordonnées GPS
+          if (!selectedAddress.latitude || !selectedAddress.longitude) {
+            console.error('❌ [AddressChoice] Adresse sans coordonnées GPS');
+            await this.messageSender.sendMessage(phoneNumber,
+              '❌ Cette adresse ne peut pas être utilisée (coordonnées manquantes).\n\n' +
+              'Tapez une autre adresse ou choisissez-en une nouvelle.'
+            );
+            return;
+          }
+
+          const radiusValidation = await this.deliveryRadiusService.validateAddressInRadius(
+            restaurantId,
+            selectedAddress.latitude,
+            selectedAddress.longitude
+          );
+
+          console.log(`🔍 [AddressChoice] Résultat validation:`, JSON.stringify(radiusValidation, null, 2));
+
+          if (!radiusValidation.isInRadius) {
+            console.log('❌ [AddressChoice] ADRESSE HORS ZONE DÉTECTÉE');
+            console.log(`❌ [AddressChoice] Distance: ${radiusValidation.distanceKm}km > ${radiusValidation.maxRadiusKm}km`);
+
+            // Adresse hors zone - Informer le client et proposer alternatives
+            const message = `❌ **Désolé, cette adresse est hors de notre zone de livraison**\n\n` +
+                           `📍 Distance: ${radiusValidation.distanceKm}km\n` +
+                           `🚚 Zone maximum: ${radiusValidation.maxRadiusKm}km\n\n` +
+                           `*Que souhaitez-vous faire ?*\n` +
+                           `1️⃣ Essayer une autre adresse\n` +
+                           `2️⃣ Commander à emporter\n\n` +
+                           `💡 *Tapez 1 ou 2*`;
+
+            await this.messageSender.sendMessage(phoneNumber, message);
+
+            // Mettre à jour la session pour gérer la réponse
+            await this.sessionManager.updateSession(session.id, {
+              botState: 'AWAITING_OUT_OF_ZONE_CHOICE',
+              sessionData: {
+                ...session.sessionData,
+                outOfZoneAddress: selectedAddress,
+                radiusValidation: radiusValidation
+              }
+            });
+
+            return; // Arrêter jusqu'à la réponse du client
+          }
+
+          // Adresse dans la zone - Informer le client
+          console.log('✅ [AddressChoice] ADRESSE DANS LA ZONE VALIDÉE');
+          console.log(`✅ [AddressChoice] Distance: ${radiusValidation.distanceKm}km ≤ ${radiusValidation.maxRadiusKm}km`);
+
+          if (radiusValidation.distanceKm > 0) {
+            const successMessage = `✅ **Adresse validée !**\n📍 Distance: ${radiusValidation.distanceKm}km`;
+            await this.messageSender.sendMessage(phoneNumber, successMessage);
+          }
+
+          console.log('🔍 [AddressChoice] === FIN VALIDATION RAYON LIVRAISON ===');
+        } else {
+          console.log('ℹ️ [AddressChoice] Mode de service NON-LIVRAISON - Validation rayon ignorée');
+        }
+
         // Mettre à jour dernière utilisée = défaut
         await this.updateDefaultAddress(phoneNumber, selectedAddress.id);
 
