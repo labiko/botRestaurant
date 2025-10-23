@@ -423,11 +423,13 @@ export class MyOrdersPage implements OnInit, OnDestroy {
             console.log('📞 [MyOrders] === FIN DEBUG WHATSAPP COMPLETION ===');
 
             const restaurantName = order.france_restaurants?.name || 'Restaurant';
+            const restaurantPhone = order.france_restaurants?.whatsapp_number || order.france_restaurants?.phone;
             const messageSent = await this.whatsappNotificationFranceService.sendOrderCompletionMessage(
               order.phone_number,
               order.order_number,
               restaurantName,
-              order.delivery_mode
+              order.delivery_mode,
+              restaurantPhone
             );
             
             if (messageSent) {

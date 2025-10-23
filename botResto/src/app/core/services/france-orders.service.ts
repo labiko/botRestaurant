@@ -441,10 +441,12 @@ export class FranceOrdersService {
   private shouldSendNotification(status: string, settings: NotificationSettings = this.defaultNotificationSettings): boolean {
     const statusMapping: Record<string, keyof NotificationSettings> = {
       'confirmee': 'sendOnConfirmed',
-      'preparation': 'sendOnPreparation', 
+      'preparation': 'sendOnPreparation',
       'prete': 'sendOnReady',
       'en_livraison': 'sendOnDelivery',
-      'livree': 'sendOnDelivered',
+      // ⚠️ DÉSACTIVÉ : 'livree' uniquement (géré via OTP livreur)
+      // 'livree': 'sendOnDelivered',
+      // ✅ RÉACTIVÉ : 'servie' et 'recuperee' (gérés via boutons back office)
       'servie': 'sendOnDelivered',
       'recuperee': 'sendOnDelivered',
       'annulee': 'sendOnCancelled'
@@ -559,15 +561,15 @@ export class FranceOrdersService {
   /**
    * Mappe les statuts de la base vers les statuts WhatsApp
    */
-  private mapStatusToWhatsApp(status: string): 'confirmee' | 'en_preparation' | 'prete' | 'en_livraison' | 'livree' | 'annulee' | null {
+  private mapStatusToWhatsApp(status: string): 'confirmee' | 'en_preparation' | 'prete' | 'en_livraison' | 'livree' | 'servie' | 'recuperee' | 'annulee' | null {
     const statusMapping: Record<string, string> = {
       'confirmee': 'confirmee',
       'preparation': 'en_preparation',
       'prete': 'prete',
       'en_livraison': 'en_livraison',
       'livree': 'livree',
-      'servie': 'livree',
-      'recuperee': 'livree',
+      'servie': 'servie',        // ✅ Template personnalisé "SERVIE !"
+      'recuperee': 'recuperee',  // ✅ Template personnalisé "RÉCUPÉRÉE !"
       'annulee': 'annulee'
     };
 
