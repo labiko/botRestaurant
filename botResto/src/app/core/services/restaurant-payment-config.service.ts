@@ -9,6 +9,7 @@ export interface PaymentConfig {
   provider: 'stripe' | 'lengopay' | 'wave' | 'orange_money' | 'custom';
   api_key_public?: string;
   api_key_secret?: string;
+  webhook_secret?: string;  // Secret webhook pour Stripe
   merchant_id?: string;
   license_key?: string;
   website_id?: string;
@@ -119,6 +120,7 @@ export class RestaurantPaymentConfigService {
         provider: config.provider,
         api_key_public: config.api_key_public,
         api_key_secret: config.api_key_secret,
+        webhook_secret: config.webhook_secret,
         merchant_id: config.merchant_id,
         config: config.config,
         webhook_url: config.webhook_url,

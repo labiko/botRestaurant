@@ -76,31 +76,11 @@ serve(async (req) => {
 async function handleStripeWebhook(req: Request, signature: string | null) {
   console.log('💳 [Webhook Handler] Traitement webhook Stripe');
 
-  const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-    apiVersion: '2023-10-16'
-  });
-
-  const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
-
-  if (!webhookSecret) {
-    console.error('❌ [Webhook Handler] STRIPE_WEBHOOK_SECRET manquant');
-    throw new Error('Configuration webhook manquante');
-  }
-
   if (!signature) {
     throw new Error('Signature webhook manquante');
   }
 
   const body = await req.text();
-
-  let event;
-  try {
-    event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
-    console.log(`✅ [Webhook Handler] Événement Stripe vérifié: ${event.type}`);
-  } catch (err: any) {
-    console.error('❌ [Webhook Handler] Erreur vérification signature:', err);
-    throw new Error(`Webhook signature verification failed: ${err.message}`);
-  }
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -108,27 +88,82 @@ async function handleStripeWebhook(req: Request, signature: string | null) {
   );
 
   // ========================================================================
-  // Traiter l'événement Stripe
+  // 1. Parse l'événement sans vérification pour extraire session.id
+  // ========================================================================
+  let rawEvent;
+  try {
+    rawEvent = JSON.parse(body);
+  } catch (err: any) {
+    console.error('❌ [Webhook Handler] Erreur parsing JSON:', err);
+    throw new Error('Invalid JSON payload');
+  }
+
+  const sessionId = rawEvent.data?.object?.id;
+  if (!sessionId) {
+    console.error('❌ [Webhook Handler] Session ID manquant dans le payload');
+    throw new Error('Session ID manquant');
+  }
+
+  console.log(`🔍 [Webhook Handler] Session ID extrait: ${sessionId}`);
+
+  // ========================================================================
+  // 2. Récupérer le payment_link et la config du restaurant
+  // ========================================================================
+  const { data: paymentLink, error: linkError } = await supabase
+    .from('payment_links')
+    .select(`
+      *,
+      config:restaurant_payment_configs(
+        api_key_secret,
+        webhook_secret
+      )
+    `)
+    .eq('payment_intent_id', sessionId)
+    .single();
+
+  if (linkError || !paymentLink) {
+    console.error('❌ [Webhook Handler] Payment link introuvable:', linkError);
+    throw new Error('Payment link introuvable');
+  }
+
+  console.log(`✅ [Webhook Handler] Payment link trouvé: ${paymentLink.id}`);
+
+  // ========================================================================
+  // 3. Vérifier le webhook avec les clés du restaurant
+  // ========================================================================
+  const restaurantConfig = paymentLink.config as any;
+
+  if (!restaurantConfig?.webhook_secret) {
+    console.error('❌ [Webhook Handler] webhook_secret manquant pour ce restaurant');
+    throw new Error('Configuration webhook restaurant manquante');
+  }
+
+  if (!restaurantConfig?.api_key_secret) {
+    console.error('❌ [Webhook Handler] api_key_secret manquant pour ce restaurant');
+    throw new Error('Configuration Stripe restaurant manquante');
+  }
+
+  console.log(`🔑 [Webhook Handler] Utilisation des clés du restaurant ID: ${paymentLink.restaurant_id}`);
+
+  const stripe = new Stripe(restaurantConfig.api_key_secret, {
+    apiVersion: '2023-10-16'
+  });
+
+  let event;
+  try {
+    event = await stripe.webhooks.constructEventAsync(body, signature, restaurantConfig.webhook_secret);
+    console.log(`✅ [Webhook Handler] Événement Stripe vérifié: ${event.type}`);
+  } catch (err: any) {
+    console.error('❌ [Webhook Handler] Erreur vérification signature:', err);
+    throw new Error(`Webhook signature verification failed: ${err.message}`);
+  }
+
+  // ========================================================================
+  // 4. Traiter l'événement Stripe
   // ========================================================================
 
   if (event.type === 'checkout.session.completed') {
     console.log('💰 [Webhook Handler] Paiement Stripe complété');
-
-    const session = event.data.object as any;
-
-    // Trouver le payment_link correspondant par session.id
-    const { data: paymentLink, error: linkError } = await supabase
-      .from('payment_links')
-      .select('*')
-      .eq('payment_intent_id', session.id)
-      .single();
-
-    if (linkError || !paymentLink) {
-      console.error('❌ [Webhook Handler] Payment link introuvable:', linkError);
-      throw new Error('Payment link introuvable');
-    }
-
-    console.log(`✅ [Webhook Handler] Payment link trouvé: ${paymentLink.id}`);
 
     // Mettre à jour payment_links
     const { error: updateLinkError } = await supabase

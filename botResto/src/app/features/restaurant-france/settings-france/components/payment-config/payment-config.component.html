@@ -43,6 +43,11 @@
       <ion-label position="stacked">🔒 Clé secrète</ion-label>
       <ion-input [(ngModel)]="form.api_key_secret" type="password" placeholder="sk_test_..."></ion-input>
     </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">🔐 Secret webhook</ion-label>
+      <ion-input [(ngModel)]="form.webhook_secret" type="password" placeholder="whsec_..."></ion-input>
+    </ion-item>
   </ng-container>
 
   <!-- Champs spécifiques LENGOPAY -->
@@ -163,6 +168,12 @@
     <ion-item>
       <ion-label>
         <p>Clé secrète</p>
+        <h3>•••••••••••••••••••• ✓</h3>
+      </ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label>
+        <p>Secret webhook</p>
         <h3>•••••••••••••••••••• ✓</h3>
       </ion-label>
     </ion-item>

@@ -54,7 +54,7 @@ export class UniversalOrderDisplayService {
         formattedConfiguration: this.formatConfiguration(item.configuration),
         inlineConfiguration: this.formatInlineConfiguration(item.configuration),
         additionalItems: this.formatAdditionalItems(item),
-        description: item.productDescription || item.description,
+        description: item.composition || item.productDescription || item.description,
         expandedItems: expandedItems // Nouveau champ pour les pizzas détaillées
       };
 
@@ -231,7 +231,12 @@ export class UniversalOrderDisplayService {
           return v.size_name || v.variant_name;
         }
         // Gérer les options normales avec option_name ou name (format pizzas)
-        return v.option_name || v.name || v;
+        const optionName = v.option_name || v.name;
+        const composition = v.composition;
+        // Ajouter composition SEULEMENT si elle existe et n'est pas vide
+        return (composition && composition.trim())
+          ? `${optionName} - ${composition}`
+          : optionName || v;
       }).join(', ');
     }
     
