@@ -2899,6 +2899,9 @@ export class UniversalBot implements IMessageHandler {
 
     console.log('🔍 DEBUG_CART_CONVERSION: cart après conversion:', JSON.stringify(cart));
 
+    console.log('🔍 DEBUG_COMPOSITION: selectedProduct.composition =', selectedProduct.composition);
+    console.log('🔍 DEBUG_COMPOSITION: selectedProduct =', JSON.stringify(selectedProduct, null, 2));
+
     const cartItem = {
       productId: selectedProduct.id,
       productName: selectedProduct.name,
@@ -2906,12 +2909,15 @@ export class UniversalBot implements IMessageHandler {
                  || session.sessionData?.currentCategoryName
                  || 'ProduitTest',
       productDescription: productDescription,
+      composition: selectedProduct.composition || null,
       quantity: quantity,
       unitPrice: selectedProduct.price,
       totalPrice: totalPrice,
       icon: selectedProduct.icon || null,
       configuration: selectedProduct.configuration || null
     };
+
+    console.log('🔍 DEBUG_COMPOSITION: cartItem =', JSON.stringify(cartItem, null, 2));
 
     // Dans handleQuantityInput, détecter la multisélection
     const multiProducts = session.sessionData?.multiSelectedProducts;

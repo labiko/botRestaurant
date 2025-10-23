@@ -45,6 +45,9 @@ verify_jwt = false
 [functions.payment-link-sender]
 verify_jwt = false
 
+[functions.payment-webhook-handler]
+verify_jwt = false
+
 [functions.green-api-scheduled-reboot]
 verify_jwt = false
 

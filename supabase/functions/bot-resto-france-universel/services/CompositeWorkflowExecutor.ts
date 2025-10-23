@@ -157,6 +157,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       const workflowData = {
         productId: product.id,
         productName: product.name,
+        productComposition: product.composition || null,
         productIcon: product.icon || '📋',  // ✅ Icône du produit depuis la base
         productPrice: product.price,
         currentStep: 0,
@@ -346,6 +347,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     const workflowData = {
       productId: product.id,
       productName: product.name,
+      productComposition: product.composition || null,
       productIcon: product.icon || '📋',  // ✅ Icône du produit depuis la base
       productPrice: product.base_price || product.price_on_site_base,
       currentStep: 0,
@@ -507,6 +509,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
     const workflowData = {
       productId: product.id,
       productName: productName,
+      productComposition: product.composition || null,
       productIcon: product.icon || '📋',  // ✅ Icône du produit depuis la base
       productPrice: finalPrice,
       selectedVariant: selectedVariant,
@@ -666,6 +669,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       selectedProduct: {
         id: workflowData.productId,
         name: workflowData.productName,
+        composition: workflowData.productComposition || null,
         price: this.calculateUniversalWorkflowPrice(workflowData),
         configuration: workflowData.selections
       },
@@ -1377,6 +1381,7 @@ import { QueryPerformanceMonitor } from './QueryPerformanceMonitor.ts';
       const workflowData = {
         productId: product.id,
         productName: product.name,
+        productComposition: product.composition || null,
         productIcon: product.icon || '📋',  // ✅ Icône du produit depuis la base
         productPrice: product.price,
         currentStep: 0,

@@ -27,6 +27,7 @@ export class PaymentConfigComponent implements OnInit {
     // Stripe
     api_key_public: '',
     api_key_secret: '',
+    webhook_secret: '',
     // Lengopay
     license_key: '',
     website_id: '',
@@ -87,6 +88,7 @@ export class PaymentConfigComponent implements OnInit {
         is_active: this.paymentConfig.is_active,
         api_key_public: this.paymentConfig.api_key_public || '',
         api_key_secret: this.paymentConfig.api_key_secret || '',
+        webhook_secret: this.paymentConfig.webhook_secret || '',
         license_key: this.paymentConfig.license_key || '',
         website_id: this.paymentConfig.website_id || '',
         merchant_id: this.paymentConfig.merchant_id || '',
@@ -104,6 +106,7 @@ export class PaymentConfigComponent implements OnInit {
     // Réinitialiser les champs spécifiques au provider
     this.form.api_key_public = '';
     this.form.api_key_secret = '';
+    this.form.webhook_secret = '';
     this.form.license_key = '';
     this.form.website_id = '';
     this.form.merchant_id = '';
@@ -127,6 +130,7 @@ export class PaymentConfigComponent implements OnInit {
       if (this.form.provider === 'stripe') {
         configData.api_key_public = this.form.api_key_public;
         configData.api_key_secret = this.form.api_key_secret;
+        configData.webhook_secret = this.form.webhook_secret;
       } else if (this.form.provider === 'lengopay') {
         // Pour LengoPay, utiliser config JSON + merchant_id
         configData.merchant_id = this.form.merchant_id;
