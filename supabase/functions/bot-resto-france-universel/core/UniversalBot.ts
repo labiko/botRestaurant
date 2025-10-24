@@ -2457,12 +2457,12 @@ export class UniversalBot implements IMessageHandler {
 
       // ✅ Nouvelle adresse (SI option disponible en mode address)
       if (!showGpsOption && choice === existingAddresses.length + 1) {
-        await this.messageSender.sendMessage(phoneNumber,
-          '📝 *Saisissez votre nouvelle adresse complète*\n\n💡 *Exemple : 15 rue de la Paix, 75001 Paris*'
-        );
+        const deliveryAddressMode = showGpsOption ? 'geolocation' : 'address';
+        const message = this.getNewAddressPrompt(deliveryAddressMode);
+        await this.messageSender.sendMessage(phoneNumber, message);
 
         await this.sessionManager.updateSession(session.id, {
-          botState: 'AWAITING_NEW_ADDRESS',
+          botState: deliveryAddressMode === 'geolocation' ? 'AWAITING_GPS_LOCATION' : 'AWAITING_NEW_ADDRESS',
           sessionData: session.sessionData
         });
         return;
@@ -2484,6 +2484,25 @@ export class UniversalBot implements IMessageHandler {
     } catch (error) {
       console.error('❌ [AddressChoice] Erreur:', error);
       await this.messageSender.sendMessage(phoneNumber, '❌ Erreur lors du choix d\'adresse. Veuillez réessayer.');
+    }
+  }
+
+  /**
+   * Retourne le message approprié pour la saisie d'adresse selon le mode configuré
+   */
+  private getNewAddressPrompt(deliveryAddressMode: string): string {
+    if (deliveryAddressMode === 'geolocation') {
+      // Message GPS existant (réutilisé de ligne 2448)
+      return '📍 *ENVOYEZ VOTRE POSITION GPS*\n\n' +
+             '🔹 Cliquez 📎 → Localisation\n' +
+             '🔹 Attendez 10s (stabilisation)\n' +
+             '🔹 Vérifiez précision ≤ 50m\n' +
+             '🔹 "Envoyer localisation actuelle"\n\n' +
+             '❌ Évitez: Position en direct / Lieux suggérés';
+    } else {
+      // Message texte actuel
+      return '📝 *Saisissez votre nouvelle adresse complète*\n\n' +
+             '💡 *Exemple : 15 rue de la Paix, 75001 Paris*';
     }
   }
 
@@ -3279,12 +3298,12 @@ export class UniversalBot implements IMessageHandler {
       if (choice === 1) {
         console.log('🔄 [OutOfZoneChoice] CHOIX 1: Essayer une autre adresse');
         // Essayer une autre adresse
-        await this.messageSender.sendMessage(phoneNumber, 
-          '📝 *Saisissez votre nouvelle adresse complète*\n\n💡 *Exemple : 15 rue de la Paix, 75001 Paris*'
-        );
-        
+        const deliveryAddressMode = session.sessionData?.showGpsOption ? 'geolocation' : 'address';
+        const message = this.getNewAddressPrompt(deliveryAddressMode);
+        await this.messageSender.sendMessage(phoneNumber, message);
+
         await this.sessionManager.updateSession(session.id, {
-          botState: 'AWAITING_NEW_ADDRESS',
+          botState: deliveryAddressMode === 'geolocation' ? 'AWAITING_GPS_LOCATION' : 'AWAITING_NEW_ADDRESS',
           sessionData: {
             ...session.sessionData,
             outOfZoneAddress: undefined,
@@ -3933,6 +3952,24 @@ Tapez un numéro entre **1** et **${restaurants?.length || 0}**.`);
       }
     }
 
+    // NOUVELLE VALIDATION : Vérifier si tous les produits sont simples
+    const selectedProducts = selections.map(num => products[num - 1]);
+    const hasCompositeProducts = selectedProducts.some(product =>
+      product.requires_steps ||
+      product.workflow_type === 'composite' ||
+      product.type === 'composite' ||
+      (product.france_product_sizes && product.france_product_sizes.length > 0)
+    );
+
+    if (hasCompositeProducts) {
+      const categoryName = session.sessionData?.currentCategoryName || 'cette catégorie';
+      await this.messageSender.sendMessage(phoneNumber,
+        `❌ Multisélection non autorisée pour ${categoryName}.\n` +
+        `🔧 Ces produits nécessitent une configuration individuelle.\n` +
+        `📋 Sélectionnez un produit à la fois (ex: tapez "1")`);
+      return;
+    }
+
     // Créer items panier
     const cartItems = selections.map(num => ({
       productId: products[num - 1].id,
@@ -3960,24 +3997,6 @@ Tapez un numéro entre **1** et **${restaurants?.length || 0}**.`);
         cart: finalCart
       }
     });
-
-    // NOUVELLE VALIDATION : Vérifier si tous les produits sont simples
-    const selectedProducts = selections.map(num => products[num - 1]);
-    const hasCompositeProducts = selectedProducts.some(product =>
-      product.requires_steps ||
-      product.workflow_type === 'composite' ||
-      product.type === 'composite' ||
-      (product.france_product_sizes && product.france_product_sizes.length > 0)
-    );
-
-    if (hasCompositeProducts) {
-      const categoryName = session.sessionData?.currentCategoryName || 'cette catégorie';
-      await this.messageSender.sendMessage(phoneNumber,
-        `❌ Multisélection non autorisée pour ${categoryName}.\n` +
-        `🔧 Ces produits nécessitent une configuration individuelle.\n` +
-        `📋 Sélectionnez un produit à la fois (ex: tapez "1")`);
-      return;
-    }
 
     // Si tous sont simples → Continuer avec la logique simplifiée
     await this.addMultipleSimpleProducts(phoneNumber, session, selectedProducts);

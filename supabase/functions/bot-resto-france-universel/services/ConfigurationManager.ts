@@ -57,6 +57,15 @@ export class ConfigurationManager implements IRestaurantConfigManager {
         return await this.getDefaultConfig(restaurantId);
       }
 
+      // ✅ Récupérer devise depuis france_restaurants
+      const { data: restaurant } = await this.supabase
+        .from('france_restaurants')
+        .select('currency')
+        .eq('id', restaurantId)
+        .single();
+
+      configData.currency = restaurant?.currency || 'EUR';
+
       const config = this.mapDatabaseToConfig(configData);
       
       // Mettre en cache
