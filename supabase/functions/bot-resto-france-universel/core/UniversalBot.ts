@@ -921,7 +921,11 @@ export class UniversalBot implements IMessageHandler {
       const availableModes = await this.deliveryModesService.getAvailableModes(restaurant.id);
 
       // Deuxième message : Choix du mode de livraison (dynamique)
-      const deliveryModeMessage = this.deliveryModesService.formatModesMessage(availableModes);
+      const deliveryModeMessage = this.deliveryModesService.formatModesMessage(
+        availableModes,
+        restaurant.delivery_fee_geolocation,
+        restaurant.currency
+      );
       await this.messageSender.sendMessage(phoneNumber, deliveryModeMessage);
 
       // ⚡ DÉFINIR LE CONTEXTE RESTAURANT AVANT TOUTE OPÉRATION DE SESSION
@@ -1257,9 +1261,19 @@ export class UniversalBot implements IMessageHandler {
     
     // Valider que le choix est dans la plage valide
     if (modeChoice < 1 || modeChoice > availableModes.length || isNaN(modeChoice)) {
-      // Recharger les modes pour afficher le bon message d'erreur
+      const supabase = await this.getSupabaseClient();
+      const { data: restaurant } = await supabase
+        .from('france_restaurants')
+        .select('delivery_fee_geolocation, currency')
+        .eq('id', session.restaurantId)
+        .single();
+
       const modesForError = await this.deliveryModesService.getAvailableModes(session.restaurantId);
-      const errorMessage = `❌ Choix invalide. ${this.deliveryModesService.formatModesMessage(modesForError)}`;
+      const errorMessage = `❌ Choix invalide. ${this.deliveryModesService.formatModesMessage(
+        modesForError,
+        restaurant?.delivery_fee_geolocation,
+        restaurant?.currency
+      )}`;
       await this.messageSender.sendMessage(phoneNumber, errorMessage);
       return;
     }
@@ -4306,6 +4320,79 @@ Tapez un numéro entre **1** et **${restaurants?.length || 0}**.`);
       const supabase = await this.getSupabaseClient();
 
       console.log(`💾 [GPS] Sauvegarde adresse avec label: ${label}`);
+
+      // NOUVEAU: VALIDATION RAYON LIVRAISON (même logique que adresse texte)
+      if (session.sessionData?.selectedServiceMode === 'livraison') {
+        console.log('🔍 [GPS] === DÉBUT VALIDATION RAYON LIVRAISON ===');
+        const restaurantId = session.sessionData?.selectedRestaurantId || session.restaurantId;
+        console.log(`🔍 [GPS] Restaurant ID: ${restaurantId}`);
+
+        const radiusValidation = await this.deliveryRadiusService.validateAddressInRadius(
+          restaurantId,
+          latitude,
+          longitude
+        );
+
+        console.log(`🔍 [GPS] Résultat validation:`, JSON.stringify(radiusValidation, null, 2));
+
+        if (!radiusValidation.isInRadius) {
+          console.log('❌ [GPS] ADRESSE HORS ZONE DÉTECTÉE');
+          console.log(`❌ [GPS] Distance: ${radiusValidation.distanceKm}km > ${radiusValidation.maxRadiusKm}km`);
+
+          // Adresse hors zone - Informer le client et proposer alternatives
+          const message = `❌ **Désolé, cette position est hors de notre zone de livraison**\n\n` +
+                         `📍 Distance: ${radiusValidation.distanceKm}km\n` +
+                         `🚚 Zone maximum: ${radiusValidation.maxRadiusKm}km\n\n` +
+                         `*Que souhaitez-vous faire ?*\n` +
+                         `1️⃣ Essayer une autre adresse\n` +
+                         `2️⃣ Commander à emporter\n\n` +
+                         `💡 *Tapez 1 ou 2*`;
+
+          await this.messageSender.sendMessage(phoneNumber, message);
+
+          // Mettre à jour la session pour gérer la réponse
+          await this.sessionManager.updateSession(session.id, {
+            botState: 'AWAITING_OUT_OF_ZONE_CHOICE',
+            sessionData: {
+              ...session.sessionData,
+              outOfZoneAddress: {
+                latitude: latitude,
+                longitude: longitude,
+                label: label
+              },
+              radiusValidation: radiusValidation
+            }
+          });
+
+          return; // Arrêter le processus jusqu'à la réponse du client
+        }
+
+        // Adresse dans la zone - Informer le client
+        console.log('✅ [GPS] ADRESSE DANS LA ZONE VALIDÉE');
+        console.log(`✅ [GPS] Distance: ${radiusValidation.distanceKm}km ≤ ${radiusValidation.maxRadiusKm}km`);
+
+        if (radiusValidation.distanceKm > 0) {
+          // Récupérer frais de livraison
+          const { data: restaurant } = await supabase
+            .from('france_restaurants')
+            .select('delivery_fee_geolocation, currency')
+            .eq('id', restaurantId)
+            .single();
+
+          const deliveryFee = restaurant?.delivery_fee_geolocation || 0;
+          const currency = restaurant?.currency || 'GNF';
+
+          let successMessage = `✅ **Position validée !**\n📍 Distance: ${radiusValidation.distanceKm}km`;
+
+          if (deliveryFee > 0) {
+            successMessage += `\n🚚 Frais de livraison: ${deliveryFee.toLocaleString()} ${currency}`;
+          }
+
+          await this.messageSender.sendMessage(phoneNumber, successMessage);
+        }
+
+        console.log('🔍 [GPS] === FIN VALIDATION RAYON LIVRAISON ===');
+      }
 
       // Retirer is_default des autres adresses
       await supabase

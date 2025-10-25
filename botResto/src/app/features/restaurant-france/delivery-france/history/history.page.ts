@@ -12,6 +12,8 @@ import { DeliveryCountersService, DeliveryCounters } from '../../../../core/serv
 import { DeliveryOrderItemsService } from '../../../../core/services/delivery-order-items.service';
 import { UniversalOrderDisplayService, FormattedItem } from '../../../../core/services/universal-order-display.service';
 import { FranceOrdersService } from '../../../../core/services/france-orders.service';
+import { CurrencyService } from '../../../../core/services/currency.service';
+import { RestaurantConfigService } from '../../services/restaurant-config.service';
 
 @Component({
   selector: 'app-history',
@@ -23,7 +25,8 @@ export class HistoryPage implements OnInit, OnDestroy {
   currentDriver: FranceUser | null = null;
   historyOrders: DeliveryOrder[] = [];
   isLoading = false;
-  
+  restaurantCurrency: string = 'EUR';
+
   // Compteurs partagés pour les badges
   currentCounters: DeliveryCounters = {
     myOrdersCount: 0,
@@ -57,7 +60,9 @@ export class HistoryPage implements OnInit, OnDestroy {
     private deliveryCountersService: DeliveryCountersService,
     private deliveryOrderItemsService: DeliveryOrderItemsService,
     private universalOrderDisplayService: UniversalOrderDisplayService,
-    private franceOrdersService: FranceOrdersService
+    private franceOrdersService: FranceOrdersService,
+    private currencyService: CurrencyService,
+    private restaurantConfigService: RestaurantConfigService
   ) {}
 
   ngOnInit() {
@@ -80,13 +85,18 @@ export class HistoryPage implements OnInit, OnDestroy {
       this.currentCounters = counters;
       console.log(`🔢 [History] Compteurs reçus:`, counters);
     });
-    
+
     // S'abonner aux données utilisateur
     this.userSubscription = this.authFranceService.currentUser$.subscribe(user => {
       // Ignorer undefined (en cours de vérification)
       if (user !== undefined) {
         this.currentDriver = user;
         if (user && user.type === 'driver') {
+          // Charger la configuration du restaurant pour récupérer la devise
+          this.restaurantConfigService.getRestaurantConfig(user.restaurantId).subscribe(config => {
+            this.restaurantCurrency = config.currency || 'EUR';
+          });
+
           this.loadHistoryOrders();
           this.initializeOnlineStatus();
         }
@@ -235,7 +245,7 @@ export class HistoryPage implements OnInit, OnDestroy {
   }
 
   formatPrice(amount: number): string {
-    return `${amount.toFixed(2)}€`;
+    return this.restaurantConfigService.formatPrice(amount, this.restaurantCurrency);
   }
 
   formatTime(dateString: string): string {

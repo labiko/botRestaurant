@@ -121,7 +121,7 @@ export default function LoginPage() {
         {/* Version */}
         <div className="text-center mt-4">
           <p className="text-xs text-gray-400">
-            Version 2.5.0 - Mobile Responsive
+            Version 2.5.2 - FIX numéros téléphone multi-pays
           </p>
         </div>
       </div>

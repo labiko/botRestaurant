@@ -61,7 +61,8 @@ export class AddressManagementService {
         .eq('phone_number', standardPhone)
         .eq('is_active', true)
         .order('is_default', { ascending: false })
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(3);
 
       if (error) {
         console.error('❌ [AddressService] Erreur récupération:', error);

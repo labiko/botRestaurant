@@ -162,18 +162,22 @@ export class DeliveryTokenService {
 
       // 2. NOUVEAU : Générer les tokens avec fuseau horaire du restaurant
       const tokensToInsert = await Promise.all(activeDrivers.map(async (driver) => {
-        // Utiliser le fuseau horaire spécifique au restaurant
+        // Utiliser le fuseau horaire spécifique au restaurant pour TOUS les timestamps
+        const createdAt = await this.fuseauHoraireService.getRestaurantFutureTimeForDatabase(restaurantId, 0); // 0 min = maintenant
         const expiresAt = await this.fuseauHoraireService.getRestaurantFutureTimeForDatabase(restaurantId, this.CONFIG.TOKEN_EXPIRY_MINUTES);
         const absoluteExpiresAt = await this.fuseauHoraireService.getRestaurantFutureTimeForDatabaseHours(restaurantId, this.CONFIG.TOKEN_ABSOLUTE_EXPIRY_HOURS);
 
         console.log(`🕐 [DeliveryToken] Restaurant ${restaurantId} - Token livreur ${driver.id}:`);
+        console.log(`   created_at: ${createdAt}`);
         console.log(`   expires_at: ${expiresAt}`);
         console.log(`   absolute_expires_at: ${absoluteExpiresAt}`);
+        console.log(`   ✅ Différence attendue: +${this.CONFIG.TOKEN_EXPIRY_MINUTES} minutes`);
 
         return {
           token: this.generateSecureToken(),
           order_id: orderId,
           driver_id: driver.id,
+          created_at: createdAt, // ✅ Utiliser heure restaurant au lieu de NOW() PostgreSQL
           expires_at: expiresAt,
           absolute_expires_at: absoluteExpiresAt,
           used: false,
@@ -260,24 +264,28 @@ export class DeliveryTokenService {
       // 🕐 CORRECTION TIMEZONE : Utiliser l'heure du restaurant pour la comparaison
       const restaurantId = token.france_orders.restaurant_id;
       const currentTime = await this.fuseauHoraireService.getRestaurantFutureTimeForDatabase(restaurantId, 0);
-      const now = new Date(currentTime);
 
-      // 🕐 CONVERSION TIMEZONE : expires_at stocké SANS timezone, il faut le convertir
-      const expiresAtUTC = new Date(token.expires_at + 'Z'); // Forcer interprétation UTC
-      const absoluteExpiresAtUTC = new Date(token.absolute_expires_at + 'Z'); // Forcer interprétation UTC
-
+      // ✅ COMPARAISON DIRECTE DES STRINGS (format PostgreSQL: YYYY-MM-DD HH:MM:SS)
+      // Plus besoin de convertir en Date JavaScript, évite les bugs de timezone
       console.log(`🕐 [TIMEZONE_VALIDATION] Restaurant ${restaurantId}:`);
-      console.log(`🕐 [TIMEZONE_VALIDATION] Heure restaurant (now): ${now.toISOString()}`);
-      console.log(`🕐 [TIMEZONE_VALIDATION] Token expires_at brut: ${token.expires_at}`);
-      console.log(`🕐 [TIMEZONE_VALIDATION] Token expires_at UTC: ${expiresAtUTC.toISOString()}`);
-      console.log(`🕐 [TIMEZONE_VALIDATION] Token absolute_expires_at brut: ${token.absolute_expires_at}`);
-      console.log(`🕐 [TIMEZONE_VALIDATION] Token absolute_expires_at UTC: ${absoluteExpiresAtUTC.toISOString()}`);
-      console.log(`🕐 [TIMEZONE_VALIDATION] Comparaison: ${expiresAtUTC.toISOString()} > ${now.toISOString()} = ${expiresAtUTC > now}`);
+      console.log(`🕐 [TIMEZONE_VALIDATION] Heure restaurant (currentTime): ${currentTime}`);
+      console.log(`🕐 [TIMEZONE_VALIDATION] Token expires_at: ${token.expires_at}`);
+      console.log(`🕐 [TIMEZONE_VALIDATION] Token absolute_expires_at: ${token.absolute_expires_at}`);
+      console.log(`🕐 [TIMEZONE_VALIDATION] Comparaison: ${token.expires_at} > ${currentTime} = ${token.expires_at > currentTime}`);
 
       // Vérifications de validité
+      console.log('🔍 [DEBUG_VALIDATE] === DÉBUT VÉRIFICATIONS ===');
+      console.log('🔍 [DEBUG_VALIDATE] token.used:', token.used);
+      console.log('🔍 [DEBUG_VALIDATE] token.suspended:', token.suspended);
+      console.log('🔍 [DEBUG_VALIDATE] token.france_orders.status:', token.france_orders.status);
+      console.log('🔍 [DEBUG_VALIDATE] token.france_orders.driver_id:', token.france_orders.driver_id);
+      console.log('🔍 [DEBUG_VALIDATE] token.driver_id:', token.driver_id);
+
       if (token.used) {
+        console.log('🔍 [DEBUG_VALIDATE] → Token UTILISÉ, vérification post-acceptation');
         // Si token utilisé, vérifier si c'est pour accès post-acceptation
         if (token.france_orders.driver_id === token.driver_id) {
+          console.log('🔍 [DEBUG_VALIDATE] → Token utilisé par le bon livreur');
           // NOUVEAU: Refuser si commande déjà livrée
           if (token.france_orders.status === 'livree') {
             console.log('❌ [DeliveryToken] Commande déjà livrée');
@@ -285,7 +293,7 @@ export class DeliveryTokenService {
           }
 
           // Token utilisé mais par le bon livreur - permettre l'accès si pas expiré
-          if (expiresAtUTC > now) {
+          if (token.expires_at > currentTime) {
             console.log('✅ [DeliveryToken] Accès post-acceptation autorisé');
             return {
               valid: true,
@@ -302,6 +310,8 @@ export class DeliveryTokenService {
           console.log('❌ [DeliveryToken] Token déjà utilisé');
           return { valid: false, reason: 'Token déjà utilisé' };
         }
+      } else {
+        console.log('🔍 [DEBUG_VALIDATE] → Token NON utilisé, vérifications normales');
       }
 
       if (token.suspended) {
@@ -309,22 +319,36 @@ export class DeliveryTokenService {
         return { valid: false, reason: 'Commande temporairement indisponible' };
       }
 
-      if (expiresAtUTC < now) {
-        console.log('❌ [DeliveryToken] Token expiré (relative) - expires_at < now');
-        console.log(`❌ [TIMEZONE_VALIDATION] ${expiresAtUTC.toISOString()} < ${now.toISOString()}`);
+      console.log('🔍 [DEBUG_VALIDATE] → Vérification expiration relative');
+      console.log('🔍 [DEBUG_VALIDATE] token.expires_at:', token.expires_at);
+      console.log('🔍 [DEBUG_VALIDATE] currentTime:', currentTime);
+      console.log('🔍 [DEBUG_VALIDATE] token.expires_at < currentTime =', token.expires_at < currentTime);
+
+      if (token.expires_at < currentTime) {
+        console.log('❌ [DeliveryToken] Token expiré (relative) - expires_at < currentTime');
+        console.log(`❌ [TIMEZONE_VALIDATION] ${token.expires_at} < ${currentTime}`);
         return { valid: false, reason: 'Lien expiré' };
       }
 
-      if (absoluteExpiresAtUTC < now) {
-        console.log('❌ [DeliveryToken] Token expiré (absolue) - absolute_expires_at < now');
-        console.log(`❌ [TIMEZONE_VALIDATION] ${absoluteExpiresAtUTC.toISOString()} < ${now.toISOString()}`);
+      console.log('🔍 [DEBUG_VALIDATE] → Vérification expiration absolue');
+      console.log('🔍 [DEBUG_VALIDATE] token.absolute_expires_at:', token.absolute_expires_at);
+      console.log('🔍 [DEBUG_VALIDATE] token.absolute_expires_at < currentTime =', token.absolute_expires_at < currentTime);
+
+      if (token.absolute_expires_at < currentTime) {
+        console.log('❌ [DeliveryToken] Token expiré (absolue) - absolute_expires_at < currentTime');
+        console.log(`❌ [TIMEZONE_VALIDATION] ${token.absolute_expires_at} < ${currentTime}`);
         return { valid: false, reason: 'Lien définitivement expiré' };
       }
 
+      console.log('🔍 [DEBUG_VALIDATE] → Vérification statut commande');
+      console.log('🔍 [DEBUG_VALIDATE] token.france_orders.status:', token.france_orders.status);
+
       // Pour les tokens non utilisés, vérifier que la commande est disponible
       if (token.france_orders.status !== 'prete') {
+        console.log('🔍 [DEBUG_VALIDATE] → Commande status !== prete');
         // MODIFICATION: Permettre l'accès si la commande est assignée (token déjà associé au bon livreur)
         if (token.france_orders.status === 'assignee') {
+          console.log('🔍 [DEBUG_VALIDATE] → Status = assignee, accès autorisé');
           console.log('✅ [DeliveryToken] Accès autorisé - Token non utilisé mais commande assignée');
           return {
             valid: true,
@@ -335,10 +359,15 @@ export class DeliveryTokenService {
           };
         }
         console.log('❌ [DeliveryToken] Commande non disponible, status:', token.france_orders.status);
+        console.log('🔍 [DEBUG_VALIDATE] → REJETÉ - Commande non disponible');
         return { valid: false, reason: 'Commande non disponible' };
       }
 
+      console.log('🔍 [DEBUG_VALIDATE] → Vérification driver_id');
+      console.log('🔍 [DEBUG_VALIDATE] token.france_orders.driver_id:', token.france_orders.driver_id);
+
       if (token.france_orders.driver_id) {
+        console.log('🔍 [DEBUG_VALIDATE] → Commande déjà assignée à un livreur');
         // MODIFICATION: Permettre l'accès (token déjà associé au bon livreur)
         console.log('✅ [DeliveryToken] Accès autorisé - Token du livreur assigné');
         return {
@@ -350,21 +379,28 @@ export class DeliveryTokenService {
         };
       }
 
+      console.log('🔍 [DEBUG_VALIDATE] → Toutes vérifications passées !');
       console.log('✅ [DeliveryToken] Token valide');
-      
+
       // DEBUG: Tracer driver_id
       console.log('🔍 [DEBUG_VALIDATE] token.driver_id:', token.driver_id);
       console.log('🔍 [DEBUG_VALIDATE] token object:', token);
-      
-      return {
+
+      const validResult = {
         valid: true,
         orderId: token.order_id,
         driverId: token.driver_id,
         orderData: token.france_orders as DeliveryOrder
       };
 
+      console.log('🔍 [DEBUG_VALIDATE] === FIN VALIDATION - RETOUR VALIDE ===');
+      console.log('🔍 [DEBUG_VALIDATE] Result:', validResult);
+
+      return validResult;
+
     } catch (error) {
       console.error('❌ [DeliveryToken] Erreur validateToken:', error);
+      console.log('🔍 [DEBUG_VALIDATE] === FIN VALIDATION - ERREUR EXCEPTION ===');
       return { valid: false, reason: 'Erreur lors de la validation' };
     }
   }
@@ -456,11 +492,16 @@ export class DeliveryTokenService {
     console.log(`🚀 [ACCEPT_DETAILED] ======== DÉBUT ACCEPTATION ========`);
     console.log(`🚀 [ACCEPT_DETAILED] Token: ${tokenString.substring(0, 8)}...${tokenString.substring(-4)}`);
     console.log(`🚀 [ACCEPT_DETAILED] Timestamp début: ${new Date(startTime).toISOString()}`);
+    console.log(`🚀 [ACCEPT_DETAILED] Token complet pour debug:`, tokenString);
 
     try {
       // 1. VALIDATION DU TOKEN
       console.log(`🔍 [ACCEPT_DETAILED] ÉTAPE 1: Validation du token`);
+      console.log(`🔍 [ACCEPT_DETAILED] Appel validateToken() en cours...`);
       const validation = await this.validateToken(tokenString);
+      console.log(`🔍 [ACCEPT_DETAILED] Retour de validateToken() reçu`);
+      console.log(`🔍 [ACCEPT_DETAILED] validation.valid:`, validation.valid);
+      console.log(`🔍 [ACCEPT_DETAILED] validation.reason:`, validation.reason);
       console.log(`🔍 [ACCEPT_DETAILED] Résultat validation complète:`, JSON.stringify(validation, null, 2));
       
       if (!validation.valid) {

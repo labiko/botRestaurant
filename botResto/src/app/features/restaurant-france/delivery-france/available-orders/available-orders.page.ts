@@ -14,6 +14,8 @@ import { DeliveryTokenService } from '../../../../core/services/delivery-token.s
 import { DriverSessionMonitorService } from '../../../../core/services/driver-session-monitor.service';
 import { UniversalOrderDisplayService, FormattedItem } from '../../../../core/services/universal-order-display.service';
 import { AddressWhatsAppService } from '../../../../core/services/address-whatsapp.service';
+import { CurrencyService } from '../../../../core/services/currency.service';
+import { RestaurantConfigService } from '../../services/restaurant-config.service';
 
 @Component({
   selector: 'app-available-orders',
@@ -47,6 +49,9 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   public orderHasItems: { [orderId: number]: boolean } = {};
   public orderFormattedItems: { [orderId: number]: any[] } = {};
 
+  // Devise du restaurant
+  restaurantCurrency: string = 'EUR';
+
   private userSubscription?: Subscription;
   private availableOrdersSubscription?: Subscription;
   private onlineStatusSubscription?: Subscription;
@@ -67,7 +72,9 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     private deliveryRefusalService: DeliveryRefusalService,
     private deliveryTokenService: DeliveryTokenService,
     private universalOrderDisplayService: UniversalOrderDisplayService,
-    private addressWhatsAppService: AddressWhatsAppService
+    private addressWhatsAppService: AddressWhatsAppService,
+    private currencyService: CurrencyService,
+    private restaurantConfigService: RestaurantConfigService
   ) {}
 
   ngOnInit() {
@@ -92,13 +99,18 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
     this.countersSubscription = this.deliveryCountersService.counters$.subscribe(counters => {
       this.currentCounters = counters;
     });
-    
+
     // S'abonner aux données utilisateur
     this.userSubscription = this.authFranceService.currentUser$.subscribe(user => {
       // Ignorer undefined (en cours de vérification)
       if (user !== undefined) {
         this.currentDriver = user;
         if (user && user.type === 'driver') {
+          // Charger la configuration du restaurant pour récupérer la devise
+          this.restaurantConfigService.getRestaurantConfig(user.restaurantId).subscribe(config => {
+            this.restaurantCurrency = config.currency || 'EUR';
+          });
+
           if (this.acceptanceToken) {
             // ✅ Mode token : Charger toutes les données PUIS filtrer
             console.log(`🔑 [TOKEN_DEBUG] Token: ${this.acceptanceToken.substring(0, 8)}...`);
@@ -596,7 +608,7 @@ export class AvailableOrdersPage implements OnInit, OnDestroy {
   }
 
   formatPrice(amount: number): string {
-    return `${amount.toFixed(2)}€`;
+    return this.restaurantConfigService.formatPrice(amount, this.restaurantCurrency);
   }
 
   formatTime(dateString: string): string {

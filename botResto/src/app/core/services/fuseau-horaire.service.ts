@@ -106,20 +106,22 @@ export class FuseauHoraireService {
 
   /**
    * NOUVEAU : Calculer une date d'expiration future selon le fuseau du restaurant
+   * Utilise une fonction PostgreSQL pour garantir la cohérence des calculs de timezone
    */
   async getRestaurantFutureTimeForDatabase(restaurantId: number, minutes: number): Promise<string> {
-    const restaurantTime = await this.getRestaurantCurrentTime(restaurantId);
-    const future = new Date(restaurantTime.getTime() + (minutes * 60 * 1000));
+    // ✅ Utilisation fonction PostgreSQL pour calcul correct avec offset timezone
+    const { data, error } = await this.supabaseFranceService.client
+      .rpc('calculate_token_expiry', {
+        p_restaurant_id: restaurantId,
+        p_minutes: minutes
+      });
 
-    // CORRECTION : Format local timestamp pour PostgreSQL (pas UTC)
-    const year = future.getFullYear();
-    const month = String(future.getMonth() + 1).padStart(2, '0');
-    const day = String(future.getDate()).padStart(2, '0');
-    const hour = String(future.getHours()).padStart(2, '0');
-    const minute = String(future.getMinutes()).padStart(2, '0');
-    const second = String(future.getSeconds()).padStart(2, '0');
+    if (error || !data) {
+      console.error('❌ [FuseauHoraire] Erreur calculate_token_expiry:', error);
+      throw new Error('Impossible de calculer le temps futur pour le restaurant');
+    }
 
-    return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+    return data; // Retourne timestamp formaté par PostgreSQL
   }
 
   /**
