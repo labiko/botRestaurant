@@ -110,6 +110,7 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
       delivery_zone_km: [5],
       min_order_amount: [0],
       delivery_fee: [2.50],
+      delivery_fee_geolocation: [0],
       is_active: [true],
       is_exceptionally_closed: [false],
       timezone: ['Europe/Paris', [Validators.required]],
@@ -274,11 +275,14 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
       console.log(`📞 [Save] WhatsApp: ${whatsappLocal} → ${whatsappFinal}`);
 
       // Sauvegarder directement avec Supabase
+      const deliveryFeeGeolocation = this.restaurantForm.get('delivery_fee_geolocation')?.value || 0;
+
       const { error } = await this.supabaseFranceService.client
         .from('france_restaurants')
         .update({
           phone: phoneFinal,
-          whatsapp_number: whatsappFinal
+          whatsapp_number: whatsappFinal,
+          delivery_fee_geolocation: deliveryFeeGeolocation
         })
         .eq('id', this.restaurantId);
 
@@ -705,9 +709,18 @@ export class RestaurantConfigComponent implements OnInit, OnDestroy {
   private extractLocalNumber(fullNumber: string, countryCode: string): string {
     if (!fullNumber) return '';
 
-    // Enlever l'indicatif pays
     if (fullNumber.startsWith(countryCode)) {
-      return '0' + fullNumber.substring(countryCode.length);
+      const localPart = fullNumber.substring(countryCode.length);
+
+      // Vérifier si le pays utilise un 0 initial
+      const country = this.universalAuthService.getCountryByPrefix(countryCode);
+      if (country && country.remove_leading_zero) {
+        // France : ajouter le 0
+        return '0' + localPart;
+      } else {
+        // Guinée : ne pas ajouter de 0
+        return localPart;
+      }
     }
 
     return fullNumber;

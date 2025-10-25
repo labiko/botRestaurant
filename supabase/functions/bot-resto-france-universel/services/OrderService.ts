@@ -58,6 +58,7 @@ export interface OrderData {
   status: string;
   order_number: string;
   delivery_validation_code?: string;
+  delivery_fee?: number; // NOUVEAU: Frais de livraison
 }
 
 export class OrderService {
@@ -224,8 +225,17 @@ export class OrderService {
         });
       }
     }
-    
-    message += `\n💎 *Total: ${this.formatPrice(order.total_amount, currency)}*\n`;
+
+    // Afficher breakdown si frais de livraison
+    if (order.delivery_fee && order.delivery_fee > 0) {
+      const subtotal = order.total_amount - order.delivery_fee;
+      message += `\n💰 *Sous-total:* ${this.formatPrice(subtotal, currency)}\n`;
+      message += `🚚 *Livraison:* ${this.formatPrice(order.delivery_fee, currency)}\n`;
+      message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+      message += `💎 *TOTAL: ${this.formatPrice(order.total_amount, currency)}*\n`;
+    } else {
+      message += `\n💎 *Total: ${this.formatPrice(order.total_amount, currency)}*\n`;
+    }
     
     // Informations selon le mode de livraison
     message += this.formatDeliveryInfo(deliveryMode, order, deliveryAddress);
@@ -430,9 +440,27 @@ export class OrderService {
 
       console.log(`📱 [OrderService] Numéro: ${cleanPhone}, Code pays: ${customerCountryCode}`);
 
-      // Calculer le total
+      // Calculer le total du panier
       const totalAmount = this.calculateCartTotal(cart);
-      
+
+      // NOUVEAU: Calculer frais de livraison pour mode geolocation
+      let deliveryFee = 0;
+      if (deliveryMode === 'livraison') {
+        console.log(`🚚 [OrderService] Mode livraison geolocation détecté, récupération frais...`);
+        const { data: restaurant } = await this.supabase
+          .from('france_restaurants')
+          .select('delivery_fee_geolocation')
+          .eq('id', restaurantId)
+          .single();
+
+        deliveryFee = restaurant?.delivery_fee_geolocation || 0;
+        console.log(`🚚 [OrderService] Frais de livraison geolocation: ${deliveryFee}`);
+      }
+
+      // Calculer total final (panier + frais livraison)
+      const finalTotal = totalAmount + deliveryFee;
+      console.log(`💰 [OrderService] Sous-total panier: ${totalAmount}, Frais livraison: ${deliveryFee}, Total final: ${finalTotal}`);
+
       // Générer le numéro de commande
       const orderNumber = await this.generateOrderNumber(restaurantId);
       
@@ -446,11 +474,12 @@ export class OrderService {
         phone_number: cleanPhone,
         customer_country_code: customerCountryCode,
         items: cart,
-        total_amount: totalAmount,
+        total_amount: finalTotal,
         delivery_mode: deliveryMode,
         status: 'pending',
         order_number: orderNumber,
-        delivery_validation_code: deliveryCode
+        delivery_validation_code: deliveryCode,
+        delivery_fee: deliveryFee
       };
       
       // Ajouter l'adresse de livraison si fournie

@@ -534,30 +534,16 @@ ${restaurantName}`;
       // Séparer prénom du nom complet pour un message plus personnel
       const firstName = driverName.split(' ')[0];
 
-      const message = `🌟 **BIENVENUE DANS L'ÉQUIPE ${restaurantName.toUpperCase()} !**
+      const message = `🌟 Bienvenue ${firstName} !
 
-Salut ${firstName} ! 👋
+Tu es maintenant livreur pour ${restaurantName}.
 
-🎊 C'est parti pour l'aventure livraison !
+✅ Ton compte est activé
+🟢 Tu es en ligne
 
-🔑 **Tes identifiants :**
-📱 Ton numéro : ${driverPhone}
-🔐 Ton code secret : ${accessCode}
+📦 Tu recevras les commandes directement ici sur WhatsApp.
 
-🚀 **Tu es prêt à rouler :**
-✅ Compte activé automatiquement
-🟢 Statut en ligne
-🔔 Notifications ON
-
-📍 **Ton restaurant :**
-📞 ${restaurantName}${restaurantPhone ? ' : ' + restaurantPhone : ''}
-
-🔗 **Lien de connexion :**
-${environment.productionUrl}
-
-Prêt pour les premières commandes ? 🍕🏍️
-
-Bonne route partenaire ! 💪`;
+Bonne route ! 🏍️💨`;
 
       console.log('🐛 CREATION_LIVREUR - Message construit, longueur:', message.length);
       console.log('🐛 CREATION_LIVREUR - Appel sendMessage avec:');

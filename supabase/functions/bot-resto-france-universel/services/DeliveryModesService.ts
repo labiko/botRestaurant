@@ -79,20 +79,26 @@ export class DeliveryModesService {
   /**
    * Formate le message de sélection des modes
    */
-  formatModesMessage(modes: ServiceMode[]): string {
+  formatModesMessage(modes: ServiceMode[], deliveryFee?: number, currency?: string): string {
     if (modes.length === 0) {
       return "❌ Aucun mode de service disponible pour le moment.";
     }
 
     let message = "🚚 *Choisissez votre service :*\n";
-    
+
     modes.forEach((mode, index) => {
       const emoji = this.getModeEmoji(mode.mode);
-      message += `${emoji} ${index + 1} - ${mode.displayName}\n`;
+      let displayText = `${emoji} ${index + 1} - ${mode.displayName}`;
+
+      if (mode.mode === 'livraison' && deliveryFee && deliveryFee > 0) {
+        displayText += ` (${deliveryFee.toLocaleString()} ${currency || 'GNF'})`;
+      }
+
+      message += `${displayText}\n`;
     });
-    
+
     message += "Tapez le numéro de votre choix.";
-    
+
     return message;
   }
 

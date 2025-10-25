@@ -20,6 +20,7 @@ interface Restaurant {
   country_code?: string;
   timezone?: string;
   currency?: string;
+  delivery_fee_geolocation?: number;
 }
 
 interface Category {
@@ -1972,6 +1973,24 @@ export default function BackOfficeRestaurantPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Ex: -13.7122"
                   />
+                </div>
+
+                {/* Frais de livraison geolocation */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    🚚 Frais de livraison (geolocation)
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    value={editForm.delivery_fee_geolocation || ''}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, delivery_fee_geolocation: e.target.value ? parseInt(e.target.value) : undefined }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ex: 5000"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Frais fixes pour les livraisons en mode géolocalisation (GPS)
+                  </p>
                 </div>
               </div>
 

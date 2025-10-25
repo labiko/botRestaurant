@@ -17,6 +17,8 @@ import { UniversalOrderDisplayService, FormattedItem } from '../../../../core/se
 import { AddressWhatsAppService } from '../../../../core/services/address-whatsapp.service';
 import { FuseauHoraireService } from '../../../../core/services/fuseau-horaire.service';
 import { DeliveryTokenService } from '../../../../core/services/delivery-token.service';
+import { CurrencyService } from '../../../../core/services/currency.service';
+import { RestaurantConfigService } from '../../services/restaurant-config.service';
 
 @Component({
   selector: 'app-my-orders',
@@ -28,7 +30,8 @@ export class MyOrdersPage implements OnInit, OnDestroy {
   currentDriver: FranceUser | null = null;
   myOrders: DeliveryOrder[] = [];
   isLoading = false;
-  
+  restaurantCurrency: string = 'EUR';
+
   // Compteurs partagés pour les badges
   currentCounters: DeliveryCounters = {
     myOrdersCount: 0,
@@ -71,7 +74,9 @@ export class MyOrdersPage implements OnInit, OnDestroy {
     private universalOrderDisplayService: UniversalOrderDisplayService,
     private addressWhatsAppService: AddressWhatsAppService,
     private fuseauHoraireService: FuseauHoraireService,
-    private deliveryTokenService: DeliveryTokenService
+    private deliveryTokenService: DeliveryTokenService,
+    private currencyService: CurrencyService,
+    private restaurantConfigService: RestaurantConfigService
   ) {}
 
   ngOnInit() {
@@ -95,13 +100,18 @@ export class MyOrdersPage implements OnInit, OnDestroy {
       this.currentCounters = counters;
       console.log(`🔢 [MyOrders] Compteurs reçus:`, counters);
     });
-    
+
     // S'abonner aux données utilisateur
     this.userSubscription = this.authFranceService.currentUser$.subscribe(user => {
       // Ignorer undefined (en cours de vérification)
       if (user !== undefined) {
         this.currentDriver = user;
         if (user && user.type === 'driver') {
+          // Charger la configuration du restaurant pour récupérer la devise
+          this.restaurantConfigService.getRestaurantConfig(user.restaurantId).subscribe(config => {
+            this.restaurantCurrency = config.currency || 'EUR';
+          });
+
           this.loadMyOrders();
           this.initializeOnlineStatus();
         }
@@ -553,7 +563,7 @@ export class MyOrdersPage implements OnInit, OnDestroy {
   }
 
   formatPrice(amount: number): string {
-    return `${amount.toFixed(2)}€`;
+    return this.restaurantConfigService.formatPrice(amount, this.restaurantCurrency);
   }
 
   formatTime(dateString: string): string {
