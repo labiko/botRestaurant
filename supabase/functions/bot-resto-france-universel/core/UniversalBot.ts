@@ -912,9 +912,17 @@ export class UniversalBot implements IMessageHandler {
         await this.messageSender.sendMessage(phoneNumber, closedMessage);
         return;
       }
-      
+
       // Premier message : Bienvenue personnalisé
-      const welcomeMessage = `🇫🇷 Bonjour ! Bienvenue chez ${restaurant.name} !\n🍕 ${restaurant.description || 'Découvrez notre délicieux menu'}\n📍 ${restaurant.address || 'Restaurant disponible'}`;
+      const countryFlags: { [key: string]: string } = {
+        'FR': '🇫🇷',
+        'GN': '🇬🇳',
+        'CI': '🇨🇮'
+      };
+
+      const countryFlag = countryFlags[restaurant.country_code] || '🇫🇷';
+
+      const welcomeMessage = `${countryFlag} Bonjour ! Bienvenue chez ${restaurant.name} !\n🍕 ${restaurant.description || 'Découvrez notre délicieux menu'}\n📍 ${restaurant.address || 'Restaurant disponible'}`;
       await this.messageSender.sendMessage(phoneNumber, welcomeMessage);
       
       // Charger les modes de livraison disponibles depuis la base de données
@@ -4553,7 +4561,8 @@ Pour commander, nous collectons :
 
 Ces données servent uniquement pour votre commande.
 
-📄 Infos complètes : https://botresto.vercel.app/legal/privacy-policy
+📄 Détails disponibles sur :
+botresto.vercel.app/legal/privacy-policy
 
 Tapez OK pour accepter et commander.`;
 
