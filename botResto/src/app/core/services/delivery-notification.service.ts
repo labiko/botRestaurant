@@ -16,6 +16,7 @@ export interface NotificationData {
   restaurantName: string;
   preparationTime: string;
   orderItems?: string;
+  currency: string;
 }
 
 export interface WhatsAppNotificationResult {
@@ -166,9 +167,12 @@ export class DeliveryNotificationService {
           total_amount,
           delivery_address,
           created_at,
+          updated_at,
+          restaurant_id,
           items,
           france_restaurants!restaurant_id (
-            name
+            name,
+            currency
           )
         `)
         .eq('id', orderId)
@@ -179,10 +183,16 @@ export class DeliveryNotificationService {
         return null;
       }
 
-      // Calculer le temps depuis la préparation
-      const createdTime = new Date(order.created_at);
-      const now = new Date();
-      const diffMinutes = Math.floor((now.getTime() - createdTime.getTime()) / (1000 * 60));
+      // Calculer le temps depuis la préparation avec SQL
+      const { data: minutesData } = await this.supabaseFranceService.client
+        .rpc('calculate_minutes_since_update', {
+          p_restaurant_id: order.restaurant_id,
+          p_updated_at: order.updated_at
+        });
+      const diffMinutes = minutesData || 0;
+
+      // Extraire la devise
+      const currency = (order.france_restaurants as any)?.currency || 'EUR';
 
       // Formatter les articles avec le service universel (format back-office)
       let orderItems = '';
@@ -207,7 +217,7 @@ export class DeliveryNotificationService {
             itemText += ` ${item.inlineConfiguration}`;
           }
 
-          itemText += ` - ${item.totalPrice.toFixed(2)}€`;
+          itemText += ` - ${item.totalPrice.toLocaleString()} ${currency}`;
           return itemText;
         }).join('\n');
       }
@@ -221,7 +231,8 @@ export class DeliveryNotificationService {
         deliveryAddress: order.delivery_address || 'Adresse non spécifiée',
         restaurantName: (order.france_restaurants as any)?.name || 'Restaurant',
         preparationTime: `${diffMinutes} min`,
-        orderItems
+        orderItems,
+        currency: currency
       };
 
     } catch (error) {
@@ -368,7 +379,7 @@ ${orderData.orderItems}
 
     return `🚨 *NOUVELLE COMMANDE DISPONIBLE* 🚨
 📋 N°${orderData.orderNumber} • ${orderData.restaurantName}${itemsSection}
-💳 *Total : ${orderData.totalAmount.toFixed(2)}€*
+💳 *Total : ${orderData.totalAmount.toLocaleString()} ${orderData.currency}*
 👤 Client: ${orderData.customerPhone}
 📍 ${orderData.deliveryAddress}
 🕒 Prête depuis ${orderData.preparationTime}
@@ -391,7 +402,7 @@ ${orderData.orderItems}
 
     return `🔄 *COMMANDE DISPONIBLE À NOUVEAU* 🔄
 📋 N°${orderData.orderNumber} • ${orderData.restaurantName}${itemsSection}
-💳 *Total : ${orderData.totalAmount.toFixed(2)}€*
+💳 *Total : ${orderData.totalAmount.toLocaleString()} ${orderData.currency}*
 👤 Client: ${orderData.customerPhone}
 ℹ️ Nouvelle relance livreur
 

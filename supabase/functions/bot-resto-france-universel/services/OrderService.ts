@@ -465,9 +465,15 @@ export class OrderService {
       const orderNumber = await this.generateOrderNumber(restaurantId);
       
       // Générer code de validation pour livraison
-      const deliveryCode = deliveryMode === 'livraison' ? 
+      const deliveryCode = deliveryMode === 'livraison' ?
         this.generateDeliveryCode() : undefined;
-      
+
+      // Calculer created_at avec le fuseau restaurant
+      const { data: currentTime, error: timeError } = await this.supabase
+        .rpc('get_restaurant_current_time', {
+          p_restaurant_id: restaurantId
+        });
+
       // Préparer les données de commande
       const orderData: OrderData = {
         restaurant_id: restaurantId,
@@ -479,7 +485,8 @@ export class OrderService {
         status: 'pending',
         order_number: orderNumber,
         delivery_validation_code: deliveryCode,
-        delivery_fee: deliveryFee
+        delivery_fee: deliveryFee,
+        created_at: currentTime || new Date().toISOString()
       };
       
       // Ajouter l'adresse de livraison si fournie

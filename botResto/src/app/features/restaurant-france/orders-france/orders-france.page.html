@@ -230,7 +230,7 @@
         <div class="delivery-info">
           <h4>Informations commande:</h4>
           <p><strong>Créée le:</strong> {{ formatDateTime(order.created_at) }}</p>
-          <p><strong>Mise à jour:</strong> {{ formatDateTime(order.updated_at) }}</p>
+          <p *ngIf="order.status !== 'pending'"><strong>Mise à jour:</strong> {{ formatDateTime(order.updated_at) }}</p>
           <p><strong>Client:</strong> {{ order.phone_number }}</p>
         </div>
 
@@ -334,7 +334,7 @@
                     <small class="driver-names" *ngIf="order.pendingDriverNames">
                       ({{ order.pendingDriverNames }})
                     </small>
-                    <br><small>📡 Notifié {{ getNotificationTime(order) }}</small>
+                    <br><small>📡 Notifié {{ order.notificationTimeText }}</small>
                   </span>
                 </div>
                 
@@ -366,7 +366,7 @@
               <div *ngIf="!order.hasPendingAssignment">
                 <div class="notification-info">
                   <ion-icon name="notifications" color="primary"></ion-icon>
-                  <span class="notification-text">📡 Notifié à {{ getNotifiedDriversCount(order) }} livreurs - {{ getNotificationTime(order) }}</span>
+                  <span class="notification-text">📡 Notifié à {{ getNotifiedDriversCount(order) }} livreurs - {{ order.notificationTimeText }}</span>
                 </div>
                 
                 <!-- Boutons d'action normaux -->
