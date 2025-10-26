@@ -146,6 +146,13 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
       // Enrichir les commandes avec les noms WhatsApp
       this.orders = await this.addressWhatsAppService.enrichOrdersWithWhatsAppNames(orders);
 
+      // Calculer notificationTimeText pour chaque commande UNE FOIS
+      for (const order of this.orders) {
+        if (order.status === 'prete' && order.delivery_mode === 'livraison') {
+          order.notificationTimeText = await this.getNotificationTime(order);
+        }
+      }
+
       // NOUVEAU : Capturer infos abonnement depuis la première commande
       if (this.orders.length > 0 && (this.orders[0] as any).subscription_status) {
         this.subscriptionInfo = {
@@ -920,17 +927,23 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   /**
    * NOUVEAU : Obtenir le temps écoulé depuis la notification
    */
-  getNotificationTime(order: FranceOrder): string {
+  async getNotificationTime(order: FranceOrder): Promise<string> {
     // Utilise assignment_started_at si disponible (mis à jour lors des notifications/rappels)
     // Sinon utilise updated_at comme fallback
     const timestamp = order.assignment_started_at || order.updated_at;
-    
+
     if (!timestamp) {
       return 'il y a quelques instants';
     }
-    
-    // Utilise le service FuseauHoraire pour un calcul précis
-    return this.fuseauHoraireService.getTimeAgo(timestamp);
+
+    // Calculer avec RPC SQL (même fonction que pour "Prête depuis X min")
+    const { data: minutes } = await this.supabaseFranceService.client
+      .rpc('calculate_minutes_since_update', {
+        p_restaurant_id: order.restaurant_id,
+        p_updated_at: timestamp
+      });
+
+    return this.fuseauHoraireService.formatTimeAgo(minutes || 0);
   }
 
   /**

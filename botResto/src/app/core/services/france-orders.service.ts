@@ -88,6 +88,7 @@ export interface FranceOrder {
   payment_link_url?: string;  // URL du lien de paiement
   payment_link_sent_at?: string;  // Date d'envoi du lien
   payment_link_status?: string;  // Statut du lien (pending, sent, paid, etc.)
+  notificationTimeText?: string;
 }
 
 export interface OrderAction {
