@@ -1,0 +1,16 @@
+ id  |     name     |     slug     | display_order | is_active 
+-----+--------------+--------------+---------------+-----------
+ 169 | MENUS BAGELS | menus-bagels |             7 | t
+(1 row)
+
+ id  |                 name                 | description | base_price | price_on_site_base | price_delivery_base |     workflow_type     | requires_steps | is_active 
+-----+--------------------------------------+-------------+------------+--------------------+---------------------+-----------------------+----------------+-----------
+ 857 | 1 MENU BAGEL ACHETE = LE 2EME A -50% |             |            |               0.00 |                0.00 | universal_workflow_v2 | t              | t
+ 851 | VEGETARIEN                           |             |            |               9.00 |                9.00 | universal_workflow_v2 | t              | t
+ 852 | CHEVRE MIEL                          |             |            |               9.90 |                9.90 | universal_workflow_v2 | t              | t
+ 853 | PRIMEUR                              |             |            |               9.90 |                9.90 | universal_workflow_v2 | t              | t
+ 854 | SAUMON                               |             |            |              10.40 |               10.40 | universal_workflow_v2 | t              | t
+ 855 | DELICE                               |             |            |               9.90 |                9.90 | universal_workflow_v2 | t              | t
+ 856 | DU CHEF                              |             |            |              10.90 |               10.90 | universal_workflow_v2 | t              | t
+(7 rows)
+

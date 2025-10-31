@@ -1,0 +1,34 @@
+  option_group  |      option_name       | price_modifier | display_order | is_active 
+----------------+------------------------+----------------+---------------+-----------
+ Deuxième Pizza | REGINA                 |          13.50 |             1 | t
+ Deuxième Pizza | BARBECUE               |          13.50 |             2 | t
+ Deuxième Pizza | NAPOLITAINE            |          13.50 |             3 | t
+ Deuxième Pizza | TEXAS                  |          13.50 |             4 | t
+ Deuxième Pizza | TORINO                 |          13.50 |             5 | t
+ Deuxième Pizza | SPECIALE               |          13.50 |             6 | t
+ Deuxième Pizza | CAMPIONE               |          13.50 |             7 | t
+ Deuxième Pizza | CHICKEN                |          13.50 |             8 | t
+ Deuxième Pizza | 4 SAISONS              |          13.50 |             9 | t
+ Deuxième Pizza | SUPER                  |          13.50 |            10 | t
+ Deuxième Pizza | PAYSANNE               |          13.50 |            11 | t
+ Deuxième Pizza | 4 FROMAGES             |          13.50 |            12 | t
+ Deuxième Pizza | VEGETARIENNE           |          13.50 |            13 | t
+ Deuxième Pizza | ORIENTALE              |          13.50 |            14 | t
+ Deuxième Pizza | VENEZIA                |          13.50 |            15 | t
+ Deuxième Pizza | 4 JAMBONS              |          13.50 |            16 | t
+ Deuxième Pizza | INDIENNE               |          13.50 |            17 | t
+ Deuxième Pizza | PRONTO                 |          14.00 |            18 | t
+ Deuxième Pizza | OSLO                   |          14.00 |            19 | t
+ Deuxième Pizza | TARTIFLETTE            |          14.00 |            20 | t
+ Deuxième Pizza | SELSA                  |          14.00 |            21 | t
+ Deuxième Pizza | CHÈVRE MIEL            |          14.00 |            22 | t
+ Deuxième Pizza | TEXANE                 |          14.00 |            23 | t
+ Deuxième Pizza | MIA                    |          14.00 |            24 | t
+ Deuxième Pizza | BOURSIN                |          14.00 |            25 | t
+ Deuxième Pizza | RACLETTE               |          14.00 |            26 | t
+ Deuxième Pizza | FERMIERE POULET        |          14.00 |            27 | t
+ Deuxième Pizza | FERMIERE VIANDE HACHEE |          14.00 |            28 | t
+ Deuxième Pizza | GORGONZOLA             |          14.00 |            29 | t
+ Deuxième Pizza | CAMPAGNARDE            |          14.00 |            30 | t
+(30 rows)
+

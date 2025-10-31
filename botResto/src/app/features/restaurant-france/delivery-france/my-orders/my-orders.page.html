@@ -243,6 +243,18 @@
             </div>
           </div>
 
+          <!-- Statut de paiement en ligne -->
+          <div class="detail-section" *ngIf="order.online_payment_status === 'paid'">
+            <div class="detail-row">
+              <ion-chip color="success">
+                <ion-icon name="checkmark-circle" slot="start"></ion-icon>
+                <ion-label>
+                  Payé en ligne <small *ngIf="order.payment_date">- {{ order.payment_date | date:'dd/MM HH:mm' }}</small>
+                </ion-label>
+              </ion-chip>
+            </div>
+          </div>
+
           <!-- Temps de mise à jour (si récent) -->
           <div class="detail-section" *ngIf="shouldShowUpdateTime(order)">
             <div class="detail-row">
@@ -282,15 +294,14 @@
 
 <!-- TAB BAR EN BAS - SORTIR DU ION-CONTENT -->
 <ion-tab-bar slot="bottom">
-  <ion-tab-button 
+  <ion-tab-button
     routerLink="/restaurant-france/delivery-france/my-orders"
-    routerLinkActive="tab-selected"
-    (click)="refreshMyOrders()">
+    routerLinkActive="tab-selected">
     <ion-icon name="bicycle"></ion-icon>
     <ion-label>Mes commandes</ion-label>
-    <ion-badge 
-      *ngIf="currentCounters.myOrdersCount > 0" 
-      color="primary" 
+    <ion-badge
+      *ngIf="currentCounters.myOrdersCount > 0"
+      color="primary"
       class="tab-badge">
       {{ currentCounters.myOrdersCount }}
     </ion-badge>

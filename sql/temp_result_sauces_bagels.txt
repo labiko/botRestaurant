@@ -1,0 +1,21 @@
+ option_name | price_modifier | display_order | is_active 
+-------------+----------------+---------------+-----------
+ Algérienne  |           0.00 |             1 | t
+ Biggy       |           0.00 |             2 | t
+ Barbecue    |           0.00 |             3 | t
+ Samouraï    |           0.00 |             6 | t
+ Maison      |           0.00 |            10 | t
+ Ketchup     |           0.00 |            11 | t
+ Mayonnaise  |           0.00 |            12 | t
+(7 rows)
+
+ option_group  | option_name | price_modifier | display_order 
+---------------+-------------+----------------+---------------
+ Deuxieme Menu | SAUMON      |           5.20 |             1
+ Deuxieme Menu | DELICE      |           4.95 |             2
+ Deuxieme Menu | VEGETARIEN  |           4.50 |             3
+ Premier Menu  | SAUMON      |          10.40 |             1
+ Premier Menu  | DELICE      |           9.90 |             2
+ Premier Menu  | VEGETARIEN  |           9.00 |             3
+(6 rows)
+

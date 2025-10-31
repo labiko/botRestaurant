@@ -1,0 +1,10 @@
+ id  |   produit   | restaurant_id |  restaurant  |    phone    
+-----+-------------+---------------+--------------+-------------
+ 851 | VEGETARIEN  |            22 | Plan B Melun | 33164387777
+ 852 | CHEVRE MIEL |            22 | Plan B Melun | 33164387777
+ 853 | PRIMEUR     |            22 | Plan B Melun | 33164387777
+ 854 | SAUMON      |            22 | Plan B Melun | 33164387777
+ 855 | DELICE      |            22 | Plan B Melun | 33164387777
+ 856 | DU CHEF     |            22 | Plan B Melun | 33164387777
+(6 rows)
+

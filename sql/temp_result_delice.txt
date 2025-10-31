@@ -1,0 +1,29 @@
+ option_group | option_name | price_modifier | display_order | is_active 
+--------------+-------------+----------------+---------------+-----------
+ Condiments   | Ketchup     |           0.00 |             1 | t
+ Condiments   | Mayonnaise  |           0.00 |             2 | t
+ Condiments   | Moutarde    |           0.00 |             3 | t
+ Condiments   | Harissa     |           0.00 |             4 | t
+(4 rows)
+
+ option_group | option_name | price_modifier | display_order | is_active 
+--------------+-------------+----------------+---------------+-----------
+ Sauce        | Algérienne  |           0.00 |             1 | t
+ Sauce        | Biggy       |           0.00 |             2 | t
+ Sauce        | Barbecue    |           0.00 |             3 | t
+ Sauce        | Samouraï    |           0.00 |             6 | t
+ Sauce        | Maison      |           0.00 |            10 | t
+ Sauce        | Ketchup     |           0.00 |            11 | t
+ Sauce        | Mayonnaise  |           0.00 |            12 | t
+(7 rows)
+
+        option_group         | nb_options |                                                                                                                    liste_options                                                                                                                     
+-----------------------------+------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Accompagnement              |          2 | Frites, Frites cheddar bacon
+ Boisson 33cl                |         12 | Coca Cola, Coca Zero, Ice Tea, Ice Tea Pêche, Orangina, Fanta, Schweppes, Oasis, Tropico, Perrier, Sprite, Eau minérale
+ Choix Bagel                 |          6 | VEGETARIEN, CHEVRE MIEL, PRIMEUR, SAUMON, DELICE, DU CHEF
+ Condiments                  |          4 | Ketchup, Mayonnaise, Moutarde, Harissa
+ Ingredients Supplementaires |         22 | Cheddar, Bacon, Oeuf, Oignons, Champignons, Cornichons, Salade, Tomates, Oignons frits, Avocat, Raclette, Mozzarella, Chèvre, Emmental, Steak 120g, Double steak, Nuggets, Tenders, Lardons, Courgettes grillées, Aubergine, Galette pommes de terre
+ Sauce                       |          7 | Algérienne, Biggy, Barbecue, Samouraï, Maison, Ketchup, Mayonnaise
+(6 rows)
+

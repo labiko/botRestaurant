@@ -84,6 +84,11 @@ export class MyOrdersPage implements OnInit, OnDestroy {
     this.initializeData();
   }
 
+  ionViewWillEnter() {
+    console.log(`🔄 [MyOrders] ionViewWillEnter - Rechargement automatique`);
+    this.refreshMyOrders();
+  }
+
   ngOnDestroy() {
     this.userSubscription?.unsubscribe();
     this.myOrdersSubscription?.unsubscribe();

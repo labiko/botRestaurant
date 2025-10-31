@@ -1,0 +1,20 @@
+ id  |   produit   | sauce  | display_order | is_active 
+-----+-------------+--------+---------------+-----------
+ 851 | VEGETARIEN  | Maison |            10 | t
+ 852 | CHEVRE MIEL | Maison |            10 | t
+ 853 | PRIMEUR     | Maison |            10 | t
+ 854 | SAUMON      | Maison |            10 | t
+ 855 | DELICE      | Maison |            10 | t
+ 856 | DU CHEF     | Maison |            10 | t
+(6 rows)
+
+ nb_produits_avec_maison 
+-------------------------
+                       6
+(1 row)
+
+ total_produits_bagels 
+-----------------------
+                     7
+(1 row)
+

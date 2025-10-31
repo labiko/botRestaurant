@@ -1,0 +1,11 @@
+ id  |                 name                 | price_on_site_base | price_delivery_base | display_order | is_active 
+-----+--------------------------------------+--------------------+---------------------+---------------+-----------
+ 857 | 1 MENU BAGEL ACHETE = LE 2EME A -50% |               0.00 |                0.00 |             1 | t
+ 851 | VEGETARIEN                           |               9.00 |                9.00 |             1 | t
+ 852 | CHEVRE MIEL                          |               9.90 |                9.90 |             2 | t
+ 853 | PRIMEUR                              |               9.90 |                9.90 |             3 | t
+ 854 | SAUMON                               |              10.40 |               10.40 |             4 | t
+ 855 | DELICE                               |               9.90 |                9.90 |             5 | t
+ 856 | DU CHEF                              |              10.90 |               10.90 |             6 | t
+(7 rows)
+
