@@ -148,8 +148,8 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
       // Calculer notificationTimeText pour chaque commande UNE FOIS
       for (const order of this.orders) {
-        if (order.status === 'prete' && order.delivery_mode === 'livraison') {
-          order.notificationTimeText = await this.getNotificationTime(order);
+        if ((order.status === 'prete' || order.status === 'assignee' || order.status === 'en_livraison') && order.delivery_mode === 'livraison') {
+          order.notificationTimeText = await this.calculateNotificationTime(order);
         }
       }
 
@@ -539,17 +539,10 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    * Récupérer le nom du livreur assigné (prénom uniquement)
    */
   getDriverName(order: FranceOrder): string {
-    console.log('[DEBUG_DRIVER] getDriverName() appelé pour commande:', order.order_number);
-    console.log('[DEBUG_DRIVER] order.delivery_driver:', order.delivery_driver);
-    console.log('[DEBUG_DRIVER] order.driver_id:', order.driver_id);
-    console.log('[DEBUG_DRIVER] order.driver_assignment_status:', order.driver_assignment_status);
-
     if (order.delivery_driver) {
-      console.log('[DEBUG_DRIVER] ✅ delivery_driver trouvé:', order.delivery_driver.first_name);
       return order.delivery_driver.first_name || 'Livreur';
     }
 
-    console.log('[DEBUG_DRIVER] ❌ delivery_driver non disponible - retour fallback');
     return 'Livreur assigné';
   }
 
@@ -557,16 +550,10 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
    * Récupérer le téléphone du livreur assigné
    */
   getDriverPhone(order: FranceOrder): string {
-    console.log('[DEBUG_DRIVER] getDriverPhone() appelé pour commande:', order.order_number);
-    console.log('[DEBUG_DRIVER] order.delivery_driver:', order.delivery_driver);
-    console.log('[DEBUG_DRIVER] order.driver_id:', order.driver_id);
-
     if (order.delivery_driver?.phone_number) {
-      console.log('[DEBUG_DRIVER] ✅ phone_number trouvé:', order.delivery_driver.phone_number);
       return order.delivery_driver.phone_number;
     }
 
-    console.log('[DEBUG_DRIVER] ❌ phone_number non disponible - retour vide');
     return '';
   }
 
@@ -925,18 +912,15 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
   */
 
   /**
-   * NOUVEAU : Obtenir le temps écoulé depuis la notification
+   * NOUVEAU : Calculer le temps écoulé depuis la notification (async pour pré-calcul)
    */
-  async getNotificationTime(order: FranceOrder): Promise<string> {
-    // Utilise assignment_started_at si disponible (mis à jour lors des notifications/rappels)
-    // Sinon utilise updated_at comme fallback
+  private async calculateNotificationTime(order: FranceOrder): Promise<string> {
     const timestamp = order.assignment_started_at || order.updated_at;
 
     if (!timestamp) {
       return 'il y a quelques instants';
     }
 
-    // Calculer avec RPC SQL (même fonction que pour "Prête depuis X min")
     const { data: minutes } = await this.supabaseFranceService.client
       .rpc('calculate_minutes_since_update', {
         p_restaurant_id: order.restaurant_id,
@@ -945,6 +929,7 @@ export class OrdersFrancePage implements OnInit, OnDestroy {
 
     return this.fuseauHoraireService.formatTimeAgo(minutes || 0);
   }
+
 
   /**
    * Charger l'état des assignations pending pour les commandes prêtes

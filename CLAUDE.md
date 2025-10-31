@@ -9,10 +9,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **NE JAMAIS faire de commits partiels** avec seulement certains fichiers
 - **Committer TOUT le projet** à chaque fois
 - **Un seul commit global** pour toutes les modifications en cours
+- **⚠️ MISE À JOUR VERSION OBLIGATOIRE** : Si le back office est modifié, TOUJOURS mettre à jour le numéro de version dans la page login avant le commit
 
 ### **📝 MISE À JOUR VERSION**
 **⚠️ RÈGLE ABSOLUE** : Mettre à jour le numéro de version UNIQUEMENT dans :
-- ✅ **`botResto/src/app/features/restaurant-france/auth-france/login-france/login-france.page.ts`**
+- ✅ **`botResto/src/app/features/restaurant-france/auth-france/login-france/login-france.page.html`** (ligne 151)
 - ❌ **NE PAS modifier** `menu-ai-admin/src/app/login/page.tsx` (version séparée pour déploiements Vercel)
 
 ## 🚀 RÈGLE DÉPLOIEMENT MENU-AI-ADMIN (VERCEL)
