@@ -41,7 +41,8 @@ export class DeliveryOrdersService {
         .from('france_orders')
         .select(`
           *,
-          france_restaurants!inner(name, phone, whatsapp_number)
+          france_restaurants!inner(name, phone, whatsapp_number),
+          payment_links!left(paid_at, sent_at, payment_link_url, status)
         `)
         .eq('driver_id', driverId)
         .in('status', ['assignee', 'en_livraison'])
@@ -77,7 +78,8 @@ export class DeliveryOrdersService {
         .from('france_orders')
         .select(`
           *,
-          france_restaurants!inner(name, phone, whatsapp_number)
+          france_restaurants!inner(name, phone, whatsapp_number),
+          payment_links!left(paid_at, sent_at, payment_link_url, status)
         `)
         .eq('restaurant_id', restaurantId)
         .eq('delivery_mode', 'livraison');
@@ -125,11 +127,19 @@ export class DeliveryOrdersService {
   private processDeliveryOrder(order: any): DeliveryOrder {
     // Ajouter seulement le calcul des prix aux items sans changer le format existant
     const enhancedItems = this.enhanceItemsWithPrices(order.items);
-    
+
+    // Extraire les informations de paiement depuis payment_links (jointure retourne un array)
+    const paymentLink = order.payment_links && order.payment_links.length > 0 ? order.payment_links[0] : null;
+
     return {
       ...order,
       items: enhancedItems,
-      availableActions: this.getDeliveryActions(order.status, !!order.driver_id)
+      availableActions: this.getDeliveryActions(order.status, !!order.driver_id),
+      // Mapper les champs de payment_links vers les propriétés attendues
+      payment_date: paymentLink?.paid_at || undefined,
+      payment_link_sent_at: paymentLink?.sent_at || undefined,
+      payment_link_url: paymentLink?.payment_link_url || undefined,
+      payment_link_status: paymentLink?.status || undefined
     };
   }
 

@@ -1,0 +1,32 @@
+ id  |               name                | price_on_site_base | price_delivery_base |     workflow_type     | requires_steps |                      steps_config                      
+-----+-----------------------------------+--------------------+---------------------+-----------------------+----------------+--------------------------------------------------------
+ 782 | 2 PIZZAS ACHETEES LA 3EME OFFERTE |               0.00 |                0.00 | universal_workflow_v2 | t              | {\r                                                   +
+     |                                   |                    |                     |                       |                |     "steps": [\r                                      +
+     |                                   |                    |                     |                       |                |       {\r                                             +
+     |                                   |                    |                     |                       |                |         "step": 1,\r                                  +
+     |                                   |                    |                     |                       |                |         "type": "options_selection",\r                +
+     |                                   |                    |                     |                       |                |         "prompt": "votre première pizza",\r           +
+     |                                   |                    |                     |                       |                |         "option_groups": ["Première Pizza"],\r        +
+     |                                   |                    |                     |                       |                |         "required": true,\r                           +
+     |                                   |                    |                     |                       |                |         "max_selections": 1\r                         +
+     |                                   |                    |                     |                       |                |       },\r                                            +
+     |                                   |                    |                     |                       |                |       {\r                                             +
+     |                                   |                    |                     |                       |                |         "step": 2,\r                                  +
+     |                                   |                    |                     |                       |                |         "type": "options_selection",\r                +
+     |                                   |                    |                     |                       |                |         "prompt": "votre deuxième pizza",\r           +
+     |                                   |                    |                     |                       |                |         "option_groups": ["Deuxième Pizza"],\r        +
+     |                                   |                    |                     |                       |                |         "required": true,\r                           +
+     |                                   |                    |                     |                       |                |         "max_selections": 1\r                         +
+     |                                   |                    |                     |                       |                |       },\r                                            +
+     |                                   |                    |                     |                       |                |       {\r                                             +
+     |                                   |                    |                     |                       |                |         "step": 3,\r                                  +
+     |                                   |                    |                     |                       |                |         "type": "options_selection",\r                +
+     |                                   |                    |                     |                       |                |         "prompt": "votre troisième pizza (OFFERTE)",\r+
+     |                                   |                    |                     |                       |                |         "option_groups": ["Troisième Pizza"],\r       +
+     |                                   |                    |                     |                       |                |         "required": true,\r                           +
+     |                                   |                    |                     |                       |                |         "max_selections": 1\r                         +
+     |                                   |                    |                     |                       |                |       }\r                                             +
+     |                                   |                    |                     |                       |                |     ]\r                                               +
+     |                                   |                    |                     |                       |                |   }
+(1 row)
+

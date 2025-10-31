@@ -1,0 +1,26 @@
+ id  |         name          |         slug          | display_order | is_active 
+-----+-----------------------+-----------------------+---------------+-----------
+ 158 | PIZZAS TOMATE         | pizzas-tomate         |             1 | t
+ 159 | PIZZAS CRÈME FRAÎCHE  | pizzas-creme-fraiche  |             2 | t
+ 155 | BOWLS                 | bowls                 |             2 | f
+ 157 | MENUS DINA            | menus-dina            |             3 | t
+ 156 | MENUS QUATTRO         | menus-quattro         |             4 | t
+ 168 | BURGERS MAISON        | burgers-maison        |             5 | t
+ 165 | SMASH BURGERS         | smash-burgers         |             6 | t
+ 167 | MENUS BURGERS MAISON  | menus-burgers-maison  |             7 | t
+ 169 | MENUS BAGELS          | menus-bagels          |             7 | f
+ 166 | MENUS SMASH BURGERS   | menus-smash-burgers   |             8 | t
+ 163 | CLASSIC BURGERS       | classic-burgers       |             9 | t
+ 162 | TORTILLAS             | tortillas             |             9 | f
+ 164 | MENUS CLASSIC BURGERS | menus-classic-burgers |            10 | t
+ 171 | POULET CROUSTY        | poulet-crousty        |            10 | f
+ 161 | MENUS TORTILLAS       | menus-tortillas       |            11 | t
+ 172 | BUCKETS               | buckets               |            11 | f
+ 154 | MENUS BAMBINO         | menus-bambino         |            12 | t
+ 160 | SANDWICHS BAGUETTE    | sandwichs-baguette    |            13 | t
+ 173 | SALADES               | salades               |            14 | t
+ 177 | TEX MEX               | tex-mex               |            15 | t
+ 176 | DESSERTS              | desserts              |            16 | t
+ 175 | MILKSHAKES            | milkshakes            |            17 | t
+(22 rows)
+

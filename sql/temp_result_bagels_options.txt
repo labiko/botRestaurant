@@ -1,0 +1,16 @@
+        option_group         | nb_options | prix_min | prix_max 
+-----------------------------+------------+----------+----------
+ Accompagnement              |          2 |     0.00 |     2.50
+ Boisson 33cl                |         12 |     0.00 |     0.00
+ Choix Bagel                 |          6 |     0.00 |     0.00
+ Condiments                  |          4 |     0.00 |     0.00
+ Ingredients Supplementaires |         22 |     0.50 |     5.50
+ Sauce                       |          7 |     0.00 |     0.00
+(6 rows)
+
+ option_group  | nb_options | prix_min | prix_max 
+---------------+------------+----------+----------
+ Deuxieme Menu |          3 |     4.50 |     5.20
+ Premier Menu  |          3 |     9.00 |    10.40
+(2 rows)
+

@@ -1,0 +1,50 @@
+ option_group | option_name | price_modifier | display_order | is_active 
+--------------+-------------+----------------+---------------+-----------
+ Choix Bagel  | VEGETARIEN  |           0.00 |             1 | t
+ Choix Bagel  | CHEVRE MIEL |           0.00 |             2 | t
+ Choix Bagel  | PRIMEUR     |           0.00 |             3 | t
+ Choix Bagel  | SAUMON      |           0.00 |             4 | t
+ Choix Bagel  | DELICE      |           0.00 |             5 | t
+ Choix Bagel  | DU CHEF     |           0.00 |             6 | t
+(6 rows)
+
+ id  |   produit   | choix_bagel | price_modifier | display_order 
+-----+-------------+-------------+----------------+---------------
+ 851 | VEGETARIEN  | VEGETARIEN  |           0.00 |             1
+ 851 | VEGETARIEN  | CHEVRE MIEL |           0.00 |             2
+ 851 | VEGETARIEN  | PRIMEUR     |           0.00 |             3
+ 851 | VEGETARIEN  | SAUMON      |           0.00 |             4
+ 851 | VEGETARIEN  | DELICE      |           0.00 |             5
+ 851 | VEGETARIEN  | DU CHEF     |           0.00 |             6
+ 852 | CHEVRE MIEL | VEGETARIEN  |           0.00 |             1
+ 852 | CHEVRE MIEL | CHEVRE MIEL |           0.00 |             2
+ 852 | CHEVRE MIEL | PRIMEUR     |           0.00 |             3
+ 852 | CHEVRE MIEL | SAUMON      |           0.00 |             4
+ 852 | CHEVRE MIEL | DELICE      |           0.00 |             5
+ 852 | CHEVRE MIEL | DU CHEF     |           0.00 |             6
+ 853 | PRIMEUR     | VEGETARIEN  |           0.00 |             1
+ 853 | PRIMEUR     | CHEVRE MIEL |           0.00 |             2
+ 853 | PRIMEUR     | PRIMEUR     |           0.00 |             3
+ 853 | PRIMEUR     | SAUMON      |           0.00 |             4
+ 853 | PRIMEUR     | DELICE      |           0.00 |             5
+ 853 | PRIMEUR     | DU CHEF     |           0.00 |             6
+ 854 | SAUMON      | VEGETARIEN  |           0.00 |             1
+ 854 | SAUMON      | CHEVRE MIEL |           0.00 |             2
+ 854 | SAUMON      | PRIMEUR     |           0.00 |             3
+ 854 | SAUMON      | SAUMON      |           0.00 |             4
+ 854 | SAUMON      | DELICE      |           0.00 |             5
+ 854 | SAUMON      | DU CHEF     |           0.00 |             6
+ 855 | DELICE      | VEGETARIEN  |           0.00 |             1
+ 855 | DELICE      | CHEVRE MIEL |           0.00 |             2
+ 855 | DELICE      | PRIMEUR     |           0.00 |             3
+ 855 | DELICE      | SAUMON      |           0.00 |             4
+ 855 | DELICE      | DELICE      |           0.00 |             5
+ 855 | DELICE      | DU CHEF     |           0.00 |             6
+ 856 | DU CHEF     | VEGETARIEN  |           0.00 |             1
+ 856 | DU CHEF     | CHEVRE MIEL |           0.00 |             2
+ 856 | DU CHEF     | PRIMEUR     |           0.00 |             3
+ 856 | DU CHEF     | SAUMON      |           0.00 |             4
+ 856 | DU CHEF     | DELICE      |           0.00 |             5
+ 856 | DU CHEF     | DU CHEF     |           0.00 |             6
+(36 rows)
+

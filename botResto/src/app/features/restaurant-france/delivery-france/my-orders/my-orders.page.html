@@ -243,6 +243,18 @@
             </div>
           </div>
 
+          <!-- Statut de paiement en ligne -->
+          <div class="detail-section" *ngIf="order.online_payment_status === 'paid'">
+            <div class="detail-row">
+              <ion-chip color="success">
+                <ion-icon name="checkmark-circle" slot="start"></ion-icon>
+                <ion-label>
+                  Payé en ligne <small *ngIf="order.payment_date">- {{ order.payment_date | date:'dd/MM HH:mm' }}</small>
+                </ion-label>
+              </ion-chip>
+            </div>
+          </div>
+
           <!-- Temps de mise à jour (si récent) -->
           <div class="detail-section" *ngIf="shouldShowUpdateTime(order)">
             <div class="detail-row">

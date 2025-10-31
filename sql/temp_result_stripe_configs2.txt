@@ -1,0 +1,10 @@
+ id |          name          |    phone     | provider | payment_active |                                               api_key_public                                                | auto_send_on_order 
+----+------------------------+--------------+----------+----------------+-------------------------------------------------------------------------------------------------------------+--------------------
+  1 | Pizza Yolo 77          | 33164880606  | stripe   | f              | pk_test_51SD3HgRzslgA0Dk6loHK69YnBUhHJ6mPWgHxxC2COcwIVymLZx9rGbiuWFAEGGrlSH9VJapmIpBoo1p9JA609ZTs00oSmVOVl3 | f
+ 16 | Le Nouveau O'CV Moissy | 33160640099  |          |                |                                                                                                             | 
+ 17 | Le Carreman            | 224620766250 | lengopay | t              |                                                                                                             | t
+ 18 | Bh Tacos one           | 33675123456  |          |                |                                                                                                             | 
+ 19 | Le Nouveau O'CV - DEMO | 33101010101  |          |                |                                                                                                             | 
+ 22 | Plan B Melun           | 33164387777  | stripe   | f              | pk_test_51SD3HgRzslgA0Dk6loHK69YnBUhHJ6mPWgHxxC2COcwIVymLZx9rGbiuWFAEGGrlSH9VJapmIpBoo1p9JA609ZTs00oSmVOVl3 | f
+(6 rows)
+
