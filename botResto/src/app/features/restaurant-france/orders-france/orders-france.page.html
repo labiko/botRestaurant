@@ -309,7 +309,7 @@
                 </div>
                 <div class="assignment-meta">
                   <ion-icon name="time-outline" size="small" color="medium"></ion-icon>
-                  <span class="assignment-time">Assigné {{ getNotificationTime(order) }}</span>
+                  <span class="assignment-time">Assigné {{ order.notificationTimeText }}</span>
                 </div>
                 <div class="delivery-status" *ngIf="order.delivery_started_at && order.status === 'en_livraison'">
                   <div class="pulse-dot"></div>
